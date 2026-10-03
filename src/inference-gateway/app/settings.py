@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import re
@@ -38,6 +39,9 @@ from app.admission import (
 )
 from app.admission import (
     completion_prompt_texts as completion_prompt_texts,
+)
+from app.admission import (
+    disallowed_image_url as disallowed_image_url,
 )
 from app.admission import (
     iter_payload_strings as iter_payload_strings,
@@ -102,6 +106,12 @@ class Settings:
     max_completions_per_request: int = 1
     image_part_token_estimate: int = 768
     max_image_bytes: int = 0
+    # Hosts the runtime may fetch remote image_url parts from. Empty means data: URLs only.
+    image_url_allowed_hosts: tuple[str, ...] = ()
+    # Request fields forwarded to the runtime in addition to the reviewed set (app/params.py).
+    extra_forwarded_params: tuple[str, ...] = ()
+    # Dedicated Prometheus listener; 0 serves /metrics on the API port instead.
+    metrics_port: int = 0
     max_tools: int = 64
     max_tool_chars: int = 32768
     allow_streaming: bool = False
@@ -171,7 +181,8 @@ class Settings:
     batch_s3_bucket: str = ""
     batch_s3_region: str = "us-east-1"
     batch_s3_access_key_id: str = ""
-    batch_s3_secret_access_key: str = ""
+    # repr=False: a logged or printed Settings object must not carry the S3 credential.
+    batch_s3_secret_access_key: str = dataclasses.field(default="", repr=False)
     batch_store_backend: str = "memory"
     batch_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/2"
     batch_redis_timeout_seconds: float = 0.5
@@ -222,6 +233,8 @@ class Settings:
             raise ValueError("max_completions_per_request must be greater than zero")
         if self.image_part_token_estimate < 0:
             raise ValueError("image_part_token_estimate must be zero or greater")
+        if not 0 <= self.metrics_port <= 65535:
+            raise ValueError("metrics_port must be between 0 and 65535")
         if self.max_image_bytes < 0:
             raise ValueError("max_image_bytes must be zero or greater")
         if self.usd_per_1k_tokens < 0:
@@ -345,6 +358,9 @@ class Settings:
             max_completions_per_request=_positive_int_from_env("MAX_COMPLETIONS_PER_REQUEST", 1),
             image_part_token_estimate=_int_from_env("IMAGE_PART_TOKEN_ESTIMATE", 768),
             max_image_bytes=_int_from_env("MAX_IMAGE_BYTES", 0),
+            image_url_allowed_hosts=_csv_from_env("IMAGE_URL_ALLOWED_HOSTS", ()),
+            extra_forwarded_params=_csv_from_env("EXTRA_FORWARDED_PARAMS", ()),
+            metrics_port=_int_from_env("METRICS_PORT", 0),
             max_tools=_int_from_env("MAX_TOOLS", 64),
             max_tool_chars=_int_from_env("MAX_TOOL_CHARS", 32768),
             allow_streaming=_bool_from_env("ALLOW_STREAMING", False),
@@ -540,6 +556,13 @@ class Settings:
                     "too_many_completions",
                     f"n is {requested_completions}; limit is {self.max_completions_per_request}",
                 )
+        rejected_url = disallowed_image_url(messages, self.image_url_allowed_hosts)
+        if rejected_url is not None:
+            raise AdmissionPolicyError(
+                "image_url_not_allowed",
+                "remote image URLs are fetched by the runtime from inside the cluster; send the "
+                "image as a data: URL or add its host to IMAGE_URL_ALLOWED_HOSTS",
+            )
         if self.max_image_bytes > 0:
             oversized = largest_image_bytes(messages)
             if oversized > self.max_image_bytes:
@@ -575,8 +598,8 @@ class Settings:
         """
         self.validate_model(payload.get("model"))
         raw = payload.get("input")
-        texts = raw if isinstance(raw, list) else [raw]
-        texts = [str(item) for item in texts if item is not None and str(item) != ""]
+        items = raw if isinstance(raw, list) else [raw]
+        texts: list[str] = [str(item) for item in items if item is not None and str(item) != ""]
         if not texts:
             raise AdmissionPolicyError(
                 "missing_input",

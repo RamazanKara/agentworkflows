@@ -10,7 +10,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, start_http_server
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.audit import (
@@ -20,19 +20,20 @@ from app.audit import (
     persist_audit_head,
 )
 from app.batch_api import register_batch_routes
-from app.batchstore import build_batch_store
+from app.batchstore import BatchStoreError, build_batch_store
 from app.body_limit import RequestBodyLimitMiddleware
 from app.budget import (
     BudgetBackendError,
     build_sandbox_budget_tracker,
 )
 from app.cache import build_response_cache
+from app.concurrency import ConcurrencyLimitMiddleware
+from app.governance import state_backend_unavailable_detail
 from app.inference_api import register_inference_routes
 from app.jwt_auth import JwksUnavailableError, JwtVerifier
 from app.key_records import KeyRecordSet, key_record_effective_budget_updates
 from app.messages_api import register_messages_routes
 from app.metrics import (
-    INFLIGHT,
     RATE_LIMIT_FAIL_OPEN,
     REQUESTS,
 )
@@ -43,16 +44,17 @@ from app.objectstore import build_object_store
 from app.policy import ModelRoutingPolicy, SandboxPolicySet
 from app.ratelimit import build_rate_limiter
 from app.request_context import (
+    BATCH_REPLAY_SCOPE,
     ApiKeyOutcome,
     _api_key_principal,
     _auth_failure_response,
     _auth_required,
+    _bind_batch_replay,
     _bound_sandbox_id,
     _error_envelope,
     _install_openapi_contract,
     _jwks_unavailable_response,
     _jwt_principal,
-    _overloaded_response,
     _rate_limit_backend_unavailable_response,
     _rate_limited_response,
     _request_id_from_header,
@@ -61,7 +63,7 @@ from app.request_context import (
     _traceparent_from_header,
     _valid_jwt,
 )
-from app.response_store import build_response_store
+from app.response_store import ResponseStoreError, build_response_store
 from app.responses_api import register_responses_routes
 from app.runtime_client import RuntimeClient
 from app.sandbox_api import register_sandbox_routes
@@ -101,6 +103,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         RequestBodyLimitMiddleware,
         max_bytes=resolved.max_request_body_bytes,
         path_limits={"/v1/files": resolved.batch_max_file_bytes + 65536},
+    )
+    # Added before the request_context middleware below, so it runs inside it: only
+    # authenticated, rate-limit-admitted requests take a concurrency slot.
+    app.add_middleware(
+        ConcurrencyLimitMiddleware,
+        limit=resolved.max_concurrent_requests,
+        applies_to=_auth_required,
     )
     app.state.settings = resolved
     app.state.runtime_client = RuntimeClient(resolved)
@@ -148,6 +157,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.router.add_event_handler("startup", _audit_chain_startup)
     app.router.add_event_handler("shutdown", _audit_chain_shutdown)
+    if resolved.metrics_port:
+
+        async def _start_metrics_listener() -> None:
+            server, _thread = start_http_server(resolved.metrics_port)
+            app.state.metrics_server = server
+
+        async def _stop_metrics_listener() -> None:
+            server = getattr(app.state, "metrics_server", None)
+            if server is not None:
+                server.shutdown()
+                server.server_close()
+
+        app.router.add_event_handler("startup", _start_metrics_listener)
+        app.router.add_event_handler("shutdown", _stop_metrics_listener)
     app.state.response_cache = build_response_cache(resolved)
     app.state.model_routing_policy = (
         ModelRoutingPolicy.from_path(resolved.model_routing_policy_path, resolved)
@@ -194,6 +217,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
             request.state.traceparent = _traceparent_from_header(request)
             request.state.principal = None
+            # True only when the sandbox id comes from a verified binding (an API-key record
+            # with a sandbox, or a JWT tenant claim) rather than the client-asserted header.
+            request.state.sandbox_bound = False
             # Per-key budget overrides (from a matched API-key record) folded into the
             # request's effective settings; empty for flat keys and unauthenticated paths.
             request.state.key_budget_updates = {}
@@ -242,10 +268,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             if explicit is not None and validate_sandbox_id(explicit) != record.sandbox:
                                 return _sandbox_binding_response(request, "sandbox_identity_mismatch")
                             request.state.sandbox_id = record.sandbox
+                            request.state.sandbox_bound = True
                         # Fold per-key budget overrides into the request's effective settings
                         # via the same mechanism the sandbox policy set uses.
                         if record.has_budget_override():
                             request.state.key_budget_updates = key_record_effective_budget_updates(record)
+                        # The batch worker's key: acts for a tenant only while that tenant
+                        # has a running batch, and the receipt names the batch's submitter.
+                        if BATCH_REPLAY_SCOPE in record.scopes:
+                            replay_error = await _bind_batch_replay(request)
+                            if replay_error is not None:
+                                return replay_error
                 elif jwt_claims is not None:
                     request.state.principal = _jwt_principal(jwt_claims)
                     # Bind the sandbox to the verified tenant claim when configured,
@@ -260,6 +293,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         if explicit is not None and validate_sandbox_id(explicit) != bound:
                             return _sandbox_binding_response(request, "sandbox_identity_mismatch")
                         request.state.sandbox_id = bound
+                        request.state.sandbox_bound = True
 
             # Short-window per-sandbox throttle (distinct from the cumulative budget):
             # bounds burst abuse. Checked after sandbox binding so the limit applies to
@@ -290,42 +324,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     if not allowed:
                         return _rate_limited_response(request, retry_after)
 
-            # Bounded concurrency with fast-fail load shedding: the check + increment is
-            # synchronous (no await between), so it is atomic on the event loop. Excess
-            # load is rejected with 503 rather than queued behind the httpx pool.
-            limited = resolved.max_concurrent_requests > 0 and _auth_required(request.url.path)
-            if limited:
-                if request.app.state.inflight >= resolved.max_concurrent_requests:
-                    return _overloaded_response(request)
-                request.app.state.inflight += 1
-                INFLIGHT.set(request.app.state.inflight)
-            try:
-                response = await call_next(request)
-            except BaseException:
-                if limited:
-                    request.app.state.inflight -= 1
-                    INFLIGHT.set(request.app.state.inflight)
-                raise
-            if limited:
-                # Hold the concurrency slot until the response BODY completes, not just
-                # the headers: for a streaming response the expensive runtime work happens
-                # while the body is on the wire, so releasing at headers time would let
-                # unbounded concurrent streams pile up behind a "bounded" gateway.
-                body_iterator = getattr(response, "body_iterator", None)
-                if body_iterator is None:
-                    request.app.state.inflight -= 1
-                    INFLIGHT.set(request.app.state.inflight)
-                else:
-
-                    async def _release_when_body_done(iterator: Any = body_iterator) -> Any:
-                        try:
-                            async for chunk in iterator:
-                                yield chunk
-                        finally:
-                            request.app.state.inflight -= 1
-                            INFLIGHT.set(request.app.state.inflight)
-
-                    response.body_iterator = _release_when_body_done()
+            # Bounded concurrency is enforced by ConcurrencyLimitMiddleware inside this one.
+            response = await call_next(request)
             response.headers["X-Request-ID"] = request.state.request_id
             response.headers["X-Sandbox-ID"] = request.state.sandbox_id
             if request.state.traceparent:
@@ -338,6 +338,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 response.headers["X-Output-Guardrail"] = request.state.output_guardrail_action
             if getattr(request.state, "prompt_guardrail_action", None):
                 response.headers["X-Prompt-Guardrail"] = request.state.prompt_guardrail_action
+            if getattr(request.state, "dropped_params", None):
+                # Fields the parameter policy did not forward (app/params.py), so a client can
+                # see why a runtime-specific option had no effect.
+                response.headers["X-Dropped-Params"] = ",".join(request.state.dropped_params)
             return response
 
         tracer = request.app.state.tracer
@@ -355,6 +359,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=exc.status_code,
             content=_error_envelope(exc.status_code, exc.detail),
             headers=getattr(exc, "headers", None),
+        )
+
+    @app.exception_handler(ResponseStoreError)
+    @app.exception_handler(BatchStoreError)
+    async def state_backend_handler(request: Request, exc: Exception) -> JSONResponse:
+        # Files, batches, and stored-response reads run outside the governance rail; a
+        # Redis outage there is still a retryable 503, never a bare 500.
+        logging.getLogger("uvicorn.error").warning("state store unavailable: %s", type(exc).__name__)
+        return JSONResponse(
+            status_code=503,
+            content=_error_envelope(503, state_backend_unavailable_detail(request)),
+            headers={"Retry-After": "5"},
         )
 
     @app.get(
@@ -383,16 +399,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         backends = sorted({route.backend for route in policy.routes} or {resolved.runtime_backend})
         runtime_status: dict[str, Any] = {}
         healthy_backends: set[str] = set()
-        for backend in backends:
-            try:
-                runtime_health = await client.health(backend)
-                healthy_backends.add(backend)
-                runtime_status[backend] = {
-                    "status": "ok",
-                    "detail": runtime_health.get("status", "ok"),
-                }
-            except Exception:
+        # Probe concurrently: the kubelet's readiness timeout is a few seconds, and a
+        # sequential probe of a hung backend followed by a healthy one would time out the
+        # whole check and evict a pod that can still serve.
+        results = await asyncio.gather(*(client.health(backend) for backend in backends), return_exceptions=True)
+        for backend, result in zip(backends, results, strict=True):
+            if isinstance(result, BaseException):
                 runtime_status[backend] = {"status": "unavailable"}
+                continue
+            healthy_backends.add(backend)
+            runtime_status[backend] = {"status": "ok", "detail": result.get("status", "ok")}
         # A model remains available when any route in its declared failover chain
         # is healthy. Do not evict a gateway pod merely because its primary is down
         # while the exact request path would successfully fail over.
@@ -458,6 +474,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         operation_id="getGatewayMetrics",
     )
     async def metrics() -> Response:
+        if resolved.metrics_port:
+            # Metrics are served by the dedicated listener on METRICS_PORT. Refusing them here
+            # keeps an Ingress that routes the API from also publishing per-sandbox series.
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     register_sandbox_routes(app, resolved)

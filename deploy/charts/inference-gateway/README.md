@@ -29,7 +29,9 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | --- | --- |
 | `adminConsole.enabled` | `false` |
 | `admission.allowStreaming` | `true` |
+| `admission.extraForwardedParams` | `[]` |
 | `admission.imagePartTokenEstimate` | `768` |
+| `admission.imageUrlAllowedHosts` | `[]` |
 | `admission.maxCompletionTokens` | `1024` |
 | `admission.maxCompletionsPerRequest` | `1` |
 | `admission.maxImageBytes` | `0` |
@@ -77,6 +79,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `batch.worker.concurrency` | `4` |
 | `batch.worker.enabled` | `true` |
 | `batch.worker.gatewayUrl` | `""` |
+| `batch.worker.partLines` | `1000` |
 | `batch.worker.pollSeconds` | `2` |
 | `batch.worker.reclaimSeconds` | `300` |
 | `batch.worker.replicaCount` | `1` |
@@ -123,12 +126,14 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `keda.p95LatencyThresholdSeconds` | `5` |
 | `keda.prometheusServerAddress` | `http://kube-prometheus-stack-prometheus.monitoring:9090` |
 | `keda.threshold` | `10` |
+| `metrics.port` | `9090` |
 | `namespace.create` | `true` |
 | `namespace.name` | `""` |
 | `networkPolicy.allowDns` | `true` |
 | `networkPolicy.allowedIngressNamespaceLabels` | `[{"platform.ai/traceable-sandbox": "true"}]` |
 | `networkPolicy.allowedIngressNamespaces` | `["ai-agents", "ai-sandbox", "monitoring"]` |
 | `networkPolicy.enabled` | `true` |
+| `networkPolicy.metricsIngressNamespaces` | `["monitoring"]` |
 | `networkPolicy.runtimeEgress` | `[{"namespace": "ollama", "port": 11434}, {"namespace": "vllm", "port": 8000}, {"namespace": "budget", "port": 6379}]` |
 | `observability.tracing.enabled` | `false` |
 | `observability.tracing.otlpEndpoint` | `""` |
@@ -179,7 +184,9 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `sandboxPolicy.policy.enabled` | `false` |
 | `sandboxPolicy.policy.policies` | `[]` |
 | `sandboxPolicy.policyPath` | `""` |
+| `service.nodePort` | `null` |
 | `service.port` | `8080` |
+| `service.type` | `ClusterIP` |
 | `serviceAccount.automountServiceAccountToken` | `false` |
 | `serviceAccount.create` | `true` |
 | `serviceAccount.name` | `""` |
