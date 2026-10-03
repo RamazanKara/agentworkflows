@@ -14,6 +14,7 @@ This file lists unfinished project work. Released features belong in the [change
 - Add tested configuration examples for common OIDC providers without shipping customer-specific credentials.
 - Exercise JWKS rotation and loss of the last-known-good cache in an end-to-end environment.
 - Make verified tenant binding the normal customer RAG path and document the header-trusted fallback as a single-tenant option.
+- Offer per-batch delegated credentials as an alternative to the `batch_replay` worker scope for deployments whose identity provider supports token exchange.
 - Add negative multi-tenant tests that cover gateway, RAG, object-store, response-store, and batch data together.
 
 ## 3. Improve runtime compatibility testing
@@ -47,6 +48,7 @@ rather than blurred.
 - Generate version tables from pinned configuration where practical.
 - Ratchet type checking and coverage only when the checks stay useful and maintainable.
 - Keep sample evidence small and clearly separate from current release evidence.
+- Revisit a shared `src/common` package if the modules both services copy grow beyond the three ADR 0015 keeps identical.
 
 ## Not planned
 

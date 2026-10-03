@@ -12,17 +12,20 @@ configured.
 | Embeddings | Shipped | On | Gateway tests; same auth, budget, audit, and model policy |
 | Moderations | Shipped | On | Governance taxonomy, not OpenAI harm categories |
 | Anthropic Messages | Shipped | On, streaming and non-streaming | Native translation through the governed chat path; streaming obeys the shared `allowStreaming` toggle |
-| OpenAI Responses | Shipped | On, synchronous | Optional state is off by default; background and streaming remain out of scope |
+| OpenAI Responses | Shipped | On, synchronous | Function tools with multi-turn tool calls and image inputs; optional state is off by default; background, streaming, and built-in tools remain out of scope |
 | Responses server-side state | Shipped | Off | Tenant-scoped memory/Redis store with TTL and delete |
 | Synchronous batch fan-out | Shipped | On | Per-item admission/budget/guardrail tests |
-| Files + asynchronous Batch API | Shipped | Off | Bounded streaming upload, durable Redis queue, object-store blobs |
-| Python client SDK | Shipped | GitHub release downloads | Isolated build/test matrix, checksums, and release artifacts; PyPI Trusted Publishing is optional |
+| Files + asynchronous Batch API | Shipped | Off | Bounded streaming upload, durable Redis queue with owner-token claims, object-store blobs, streamed and checkpointed processing, replay bound to the running batch and its submitter |
+| Python client SDK | Shipped (typed) | GitHub release downloads | Isolated build/test matrix, checksums, and release artifacts; PyPI Trusted Publishing is optional |
 | API-key authentication | Shipped | Local on; chart base off | Hashed keys or scoped/expiring key records |
 | JWT/JWKS authentication | Shipped | Customer template on | Issuer/audience/time/algorithm validation and tenant binding |
 | Model allowlist and routing | Shipped | On | Per-model primary/fallback/canary/shadow routes |
 | Runtime failover | Shipped | Configured by policy | Readiness accepts a healthy declared fallback chain |
 | Prompt and tool-payload admission | Shipped | On | Recursive secret/blocked-term scan and size ceilings |
 | Output guardrail | Shipped | Off in base values | Scans visible content and generated tool/function arguments |
+| Runtime parameter policy | Shipped | On | OpenAI parameters and reviewed runtime extensions are forwarded; control-defeating extensions (`best_of` > 1, beam search, `chat_template`, `logits_processors`, `priority`, ...) are refused; others are dropped and named in `X-Dropped-Params`; `admission.extraForwardedParams` overrides |
+| Dedicated gateway metrics port | Shipped | Chart 9090; Compose uses the API port | `metrics.port`; the API port then answers `/metrics` with 404, and only `networkPolicy.metricsIngressNamespaces` reach the listener |
+| Remote image URLs | Shipped | Off (`data:` only) | `admission.imageUrlAllowedHosts` admits named hosts; other schemes are always refused |
 | Request/body limits | Shipped | 1 MiB JSON | Files use the independent bounded batch-file ceiling |
 | Rate limits and budgets | Shipped | Customer Redis profile on | Atomic shared counters; fixed windows; reservations settled against measured usage; fail policy is explicit |
 | Tamper-evident audit receipts | Shipped | On | Redacted fingerprints, chain verifier, head anchors, and chain-of-chains continuity across restarts |
@@ -30,6 +33,7 @@ configured.
 | RAG retrieval receipts | Shipped | On | Own chain, same primitives and same verifier as the gateway |
 | Audit chain head persistence | Shipped | Memory (no continuity) | `file` or `redis` backend needed for cross-restart linkage; storage is operator-provided |
 | Read-only operator console | Shipped | Off | `/console`; health, models, usage, and budget only |
+| Docker Compose evaluation stack | Shipped | `make compose-up` | Gateway, Ollama, RAG, optional offline Open WebUI on 127.0.0.1; `make compose-smoke` runs in CI on every pull request; no network policy, agent workspaces, or shared state |
 | Ollama runtime | Shipped | Local profile | Pinned image; local-only model-pull egress exception |
 | vLLM generation runtime | Shipped | Customer profile | NVIDIA/AMD values, explicit task, queue-based autoscaling |
 | vLLM embedding runtime | Shipped | Customer profile | Dedicated `--task embed` release consumed by RAG |
