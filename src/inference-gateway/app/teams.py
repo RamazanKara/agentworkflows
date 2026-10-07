@@ -72,12 +72,20 @@ def register_team_routes(app: FastAPI) -> None:
         projects = list(team.projects) if team else []
         if principal.get("project"):
             projects = [project_access(request)]
+        from app.workflow_notifications import channels
+
         return {
             "team_id": request.state.sandbox_id,
             "role": principal["role"],
             "projects": projects,
             "providers": sorted(team.provider_credentials) if team else [],
             "cost_limit_usd": team.cost_limit_usd if team else None,
+            "notifications": {
+                "channels": channels(team.notifications),
+                "budget_threshold": team.notifications.budget_threshold,
+            }
+            if team and team.notifications
+            else None,
             **(
                 {
                     "provider_configuration": {

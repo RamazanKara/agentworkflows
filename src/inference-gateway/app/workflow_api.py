@@ -44,6 +44,11 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
     from app.workflow_operations import describe_run, register_operation_routes, save_metadata
 
     register_operation_routes(app)
+    from app.workflow_notifications import register_notification_routes
+    from app.workflow_triggers import register_trigger_routes
+
+    register_trigger_routes(app)
+    register_notification_routes(app)
 
     @app.put("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Initialize an immutable per-run budget")
     async def initialize_run(request: Request, run_id: UUID, budget: RunBudget) -> dict[str, Any]:

@@ -166,6 +166,136 @@ Custom workflows expose a `status` query returning `stage` for progress and, whe
 support approvals, a `review(approved, reviewer)` update returning whether the waiting
 decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.
 
+## Triggers and notifications
+
+Open **Triggers** in the console to see cron expressions, upcoming times, signed webhook
+endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
+viewers and approvers can inspect them. Existing runs continue when a trigger is paused.
+
+```bash
+agentworkflows triggers list
+agentworkflows triggers pause DailyReportWorkflow daily
+agentworkflows triggers resume DailyReportWorkflow daily
+```
+
+Merge trigger definitions into each workflow in the existing `SandboxPolicySet`. Keep
+its provider/model/tool/egress policy and budgets. For example:
+
+```yaml
+workflows:
+  DailyReportWorkflow:
+    allowedProviders: [openai]
+    allowedModels: [demo-openai]
+    allowedEgress: [http://cloud-fake:8000]
+    triggers:
+      daily:
+        kind: cron
+        project: default
+        cron: "0 9 * * *"
+        input: {topic: Agent operations}
+  GitHubIssueTriageWorkflow:
+    allowedProviders: [openai]
+    allowedModels: [demo-openai]
+    allowedEgress: [http://cloud-fake:8000]
+    triggers:
+      github:
+        kind: webhook
+        project: engineering
+webhookSecretEnv: TEAM_WEBHOOK_SECRET
+notifications:
+  consoleUrl: https://agents.example.com/console/
+  slackWebhookEnv: TEAM_SLACK_WEBHOOK
+  webhookEnv: TEAM_OUTGOING_WEBHOOK
+  budgetThreshold: 0.8
+  smtp:
+    host: smtp.example.com
+    port: 587
+    startTls: true
+    usernameEnv: TEAM_SMTP_USERNAME
+    passwordEnv: TEAM_SMTP_PASSWORD
+    sender: workflows@example.com
+    recipients: [team@example.com]
+```
+
+Store secrets in the gateway environment/Secret deployment. Use a separate randomly
+generated webhook secret of at least 32 characters for each team. Webhook destination
+variables hold full HTTP(S) URLs; values and recipient addresses are never put in receipts.
+Only configure destinations your team is authorized to notify. Omit unused channels.
+SMTP authentication requires TLS; only the local fake uses unauthenticated plaintext SMTP.
+Set `consoleUrl` to the externally reachable console address, including any path prefix.
+Notification links carry no credentials: recipients sign in normally.
+
+Recreate the gateway after configuration changes. It reconciles
+[Temporal Schedules](https://docs.temporal.io/develop/python/workflows/schedules), never a
+custom cron scheduler. Expressions use UTC, overlap policy is **SKIP**, and catch-up is
+limited to five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
+the schedule action open until the target run ends. Each launch goes through the same
+governed start API. Redis persists interactive pauses across restarts; `paused: true` in
+configuration prevents console/CLI resumption until the admin changes the configuration.
+Removing a cron trigger removes its managed schedule on the next reconciliation. Schedule
+errors appear in the console; check Temporal and the gateway log for invalid expressions.
+
+For an inbound webhook, POST the **exact JSON bytes** to the endpoint shown in Triggers.
+Send `X-AW-Timestamp` (Unix seconds, within five minutes), `X-AW-Delivery` (a unique ID using
+letters, digits, underscores or hyphens, up to 128 characters) and `X-AW-Signature`:
+
+```python
+import hashlib, hmac, json, os, time, urllib.request, uuid
+
+path = "/v1/hooks/demo/GitHubIssueTriageWorkflow/github"
+body = json.dumps({"action": "opened", "issue": {
+    "number": 42, "title": "Sign-in regression", "body": "Please investigate."
+}}).encode()
+stamp, delivery = str(int(time.time())), str(uuid.uuid4())
+signed = f"{stamp}.{delivery}.{path}.".encode() + body
+signature = hmac.new(os.environ["TEAM_WEBHOOK_SECRET"].encode(), signed, hashlib.sha256).hexdigest()
+request = urllib.request.Request("http://127.0.0.1:8080" + path, data=body, headers={
+    "Content-Type": "application/json", "X-AW-Timestamp": stamp,
+    "X-AW-Delivery": delivery, "X-AW-Signature": "sha256=" + signature,
+})
+print(urllib.request.urlopen(request).read().decode())
+```
+
+Compose uses the public fake value `compose-webhook-secret-not-for-production` for this
+example. The original JSON becomes the workflow input; it is not stored in receipts.
+For GitHub, configure the shown endpoint as the repository webhook URL, use JSON content,
+select Issues events, and set its secret to the team's webhook secret. Native GitHub
+`X-Hub-Signature-256` plus `X-GitHub-Delivery` are also accepted. GitHub does not sign a
+timestamp or delivery ID, so the gateway persists the signed body fingerprint across
+the team: changing the delivery ID or destination cannot replay an accepted payload.
+Identical GitHub payload bytes are treated as retries. No GitHub credential or live GitHub
+write is used by the triage example.
+
+Completed delivery IDs return `409 webhook_replayed`; concurrent delivery and ambiguous
+Temporal failures use the same deterministic run ID. After a `503`, retry with the same
+delivery ID/body and a fresh timestamp/signature. Changed input for that ID is refused.
+Keep Redis trigger state, run start intents and Temporal history together in backups.
+Deleting that state removes the replay guarantee. A paused trigger returns `409 trigger_paused`.
+
+Notifications cover console-managed runs: waiting approval, failure (including execution
+timeout), and reaching the configured fraction of either the run token or USD limit.
+The existing run monitor checks roughly every 30 seconds; SDK approval events are persisted
+so a quick review is not missed. Accounting includes conservative outstanding reservations.
+Budget crossings are also persisted at reservation/settlement, even if usage subsequently falls.
+Custom workflows should inherit `ApprovalWorkflow` (or expose the existing `status` query).
+Already-running histories remain replay-compatible via a Temporal patch marker.
+
+Each channel has persistent per-run/event delivery state and a replica-safe lease. Attempts
+retry up to five times with exponential backoff, without blocking approval. Every attempt
+and outcome appears in the run timeline; `retrying` or `failed` means inspect the destination
+and gateway configuration. Successful deliveries are deduplicated across restarts. Delivery
+is **at least once**, not exactly once: a crash after sending but before recording success
+can duplicate a message. Outgoing webhooks carry a stable `Idempotency-Key` and JSON `id`;
+SMTP uses a stable Message-ID. Notifications contain IDs, event type and a console link,
+not drafts, prompts or raw failure details. Approvals remain in the console/API.
+
+The Compose trial includes both workflows and `notification-fake`, a Slack/webhook sink
+and SMTP catcher. View its inbox at `http://127.0.0.1:8025/` (override the published port
+with `AGENTWORKFLOWS_INBOX_PORT`). `make compose-smoke` backfills a daily schedule through
+Temporal, posts a signed issue payload, checks pause/replay protection, exercises approval
+and failure delivery to all three channels, and verifies the receipt chain. It uses no
+real credentials. Both examples return reviewed content without publishing to external services.
+
 ## Operate the service
 
 `agentworkflows usage` aggregates providers and tools for the bound team or project.

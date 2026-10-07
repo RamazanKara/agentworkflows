@@ -258,12 +258,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse(status_code=400, content={"detail": reason})
 
         async def dispatch() -> Response:
+            from app.workflow_triggers import bind_webhook
+
             try:
-                step_credential = await bind_step_credential(request)
+                webhook_credential = await bind_webhook(request)
+                step_credential = False if webhook_credential else await bind_step_credential(request)
             except StarletteHTTPException as exc:
                 return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
             if (
                 not step_credential
+                and not webhook_credential
                 and (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled)
                 and _auth_required(request.url.path)
             ):

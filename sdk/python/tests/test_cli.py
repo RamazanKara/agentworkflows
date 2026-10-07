@@ -33,6 +33,19 @@ def test_missing_key_is_actionable(monkeypatch, capsys):
             "hello team",
         ),
         (["usage"], "/v1/usage", {"sandbox_id": "demo"}, '"sandbox_id": "demo"'),
+        (["triggers", "list"], "/v1/workflow-triggers", {"triggers": []}, '"triggers": []'),
+        (
+            ["triggers", "pause", "Report", "daily"],
+            "/v1/workflow-triggers/Report/daily",
+            {"paused": True},
+            '"paused": true',
+        ),
+        (
+            ["triggers", "resume", "Report", "daily"],
+            "/v1/workflow-triggers/Report/daily",
+            {"paused": False},
+            '"paused": false',
+        ),
     ],
 )
 def test_commands_use_gateway(monkeypatch, capsys, args, path, body, output):
@@ -44,6 +57,9 @@ def test_commands_use_gateway(monkeypatch, capsys, args, path, body, output):
         assert request.headers["Authorization"] == "Bearer test-key"
         if args[0] == "chat":
             assert b'"model":"demo-openai"' in request.content
+        if args[0] == "triggers" and args[1] != "list":
+            assert request.method == "PATCH"
+            assert json.loads(request.content) == {"paused": args[1] == "pause"}
         return httpx.Response(200, json=body)
 
     real_client = httpx.Client

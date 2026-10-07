@@ -52,6 +52,11 @@ CONTRACTS = {
             "/v1/workflow-runs/{run_id}/cancel": RouteContract("post"),
             "/v1/workflow-runs/{run_id}/retry": RouteContract("post", success_status="201"),
             "/v1/workflow-runs/{run_id}/approve": RouteContract("post", request_schema="Approval"),
+            "/v1/workflow-runs/{run_id}/approval-waiting": RouteContract("post"),
+            "/v1/workflow-triggers": RouteContract("get"),
+            "/v1/workflow-triggers/{workflow}/{name}": RouteContract("patch", request_schema="TriggerState"),
+            "/v1/workflow-triggers/{workflow}/{name}/fire": RouteContract("post", request_schema="ScheduleFiring"),
+            "/v1/hooks/{team}/{workflow}/{name}": RouteContract("post", success_status="201"),
             "/v1/models": RouteContract("get"),
             "/v1/chat/completions": RouteContract(
                 "post",
@@ -118,6 +123,10 @@ CONTRACTS = {
                 "/v1/workflow-runs/{run_id}/cancel",
                 "/v1/workflow-runs/{run_id}/retry",
                 "/v1/workflow-runs/{run_id}/approve",
+                "/v1/workflow-runs/{run_id}/approval-waiting",
+                "/v1/workflow-triggers",
+                "/v1/workflow-triggers/{workflow}/{name}",
+                "/v1/workflow-triggers/{workflow}/{name}/fire",
                 "/v1/chat/completions",
                 "/v1/completions",
                 "/v1/messages",
@@ -440,7 +449,13 @@ def validate_schema(service: str, contract: ServiceContract, schema: dict[str, A
                 f"{service}: {route.method.upper()} {path} must use {route.request_schema}",
             )
         names = security_scheme_names(operation)
-        if path in contract.protected_paths:
+        if path == "/v1/hooks/{team}/{workflow}/{name}":
+            require(
+                errors,
+                names == {"WebhookSignature", "GitHubSignature"},
+                f"{service}: webhooks require exclusive HMAC authentication",
+            )
+        elif path in contract.protected_paths:
             require(
                 errors,
                 {"BearerAuth", "ApiKeyAuth"} <= names,

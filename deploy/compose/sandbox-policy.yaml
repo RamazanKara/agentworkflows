@@ -4,6 +4,18 @@ spec:
   policies:
     - sandboxId: demo
       projects: [default, engineering]
+      webhookSecretEnv: COMPOSE_WEBHOOK_SECRET
+      notifications:
+        consoleUrl: http://127.0.0.1:8080/console/
+        slackWebhookEnv: COMPOSE_SLACK_WEBHOOK
+        webhookEnv: COMPOSE_OUTGOING_WEBHOOK
+        budgetThreshold: 0.8
+        smtp:
+          host: notification-fake
+          port: 1025
+          startTls: false
+          sender: agentworkflows@example.test
+          recipients: [team@example.test]
       providerCredentials:
         openai: OPENAI_API_KEY
         anthropic: COMPOSE_PROVIDER_KEY
@@ -26,6 +38,28 @@ spec:
           tools:
             search: 0.01
       workflows:
+        DailyReportWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedEgress: [http://cloud-fake:8000]
+          tokenLimit: 10000
+          costLimitUsd: 5
+          triggers:
+            daily:
+              kind: cron
+              project: default
+              cron: "0 9 * * *"
+              input: {topic: Agent operations}
+        GitHubIssueTriageWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedEgress: [http://cloud-fake:8000]
+          tokenLimit: 10000
+          costLimitUsd: 5
+          triggers:
+            github:
+              kind: webhook
+              project: engineering
         ResearchWorkflow:
           allowedProviders: [openai, anthropic]
           allowedModels: [demo-openai, demo-anthropic]

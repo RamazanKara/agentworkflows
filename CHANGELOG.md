@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add Temporal cron schedules and replay-protected, team-signed inbound webhooks,
+  configured per workflow and visible/pausable in the console and CLI.
+- Receipt trigger firings and Slack, outgoing webhook and SMTP notification attempts
+  for approvals, failures and run budget thresholds; link to authenticated console review.
+- Include daily report and GitHub issue triage workflows plus local notification fakes
+  in the Compose smoke trial. See the workflow guide for signing and retry guarantees.
+
 ## v0.2.0 - 2026-10-07
 
 First public release of AgentWorkflows, the agent workflow platform for teams.

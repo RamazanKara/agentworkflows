@@ -16,6 +16,7 @@ from temporalio.worker import Worker
 
 from agentworkflows.activities import GatewayActivities
 from agentworkflows.adapters import AgentContext
+from agentworkflows.triggers import ScheduledTrigger
 
 
 async def serve(
@@ -37,8 +38,8 @@ async def serve(
     worker = Worker(
         client,
         task_queue=queue,
-        workflows=workflows,
-        activities=[activities.call],
+        workflows=[*workflows, ScheduledTrigger],
+        activities=[activities.call, activities.trigger],
         max_concurrent_activities=2,
         max_concurrent_workflow_tasks=2,
         graceful_shutdown_timeout=timedelta(seconds=180),

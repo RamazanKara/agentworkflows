@@ -4,11 +4,12 @@ import { api, type Session, type Team } from './api';
 import { ErrorMessage, Icon } from './ui';
 import { Approvals, RunDetail, Runs, StartRun } from './runs';
 import { Costs, GetStarted, Providers } from './team';
+import { Triggers } from './triggers';
 import './style.css';
 
 const navigation = [
   ['start', 'Get started'], ['runs', 'Workflow runs'], ['approvals', 'Approvals'],
-  ['providers', 'Providers & budgets'], ['costs', 'Costs'],
+  ['triggers', 'Triggers'], ['providers', 'Providers & budgets'], ['costs', 'Costs'],
 ];
 
 function SignIn({ onSignIn, cancel, message }: {
@@ -94,7 +95,7 @@ function App() {
     <main id="main" ref={main} tabIndex={-1} key={`${session.id}:${route}`}>
       {route === 'start' ? <GetStarted session={session}/> : route === 'runs' ? <Runs session={session}/> :
         route === 'new' ? <StartRun session={session}/> : route === 'approvals' ? <Approvals session={session}/> :
-        route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> :
+        route === 'triggers' ? <Triggers session={session}/> : route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> :
         /^run\/[a-f0-9-]{36}$/.test(route) ? <RunDetail session={session} runId={route.slice(4)}/> :
         <><h1>Page not found</h1><a href="#runs">Return to workflow runs</a></>}
     </main>

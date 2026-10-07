@@ -5,6 +5,12 @@ This guide adds retrieval, self-hosted models, full smoke checks, and the Kubern
 
 ## Full Compose smoke test
 
+The trial also includes a scheduled daily report and signed GitHub issue payload triage.
+The smoke test uses Temporal schedule backfill, then verifies Slack/webhook/SMTP delivery
+against the local catcher at `http://127.0.0.1:8025/`. See
+[triggers and notifications](workflows.md#triggers-and-notifications) for configuration,
+webhook signing and console/CLI pause controls.
+
 With Bash, Make, Python 3.12+, curl, and Node.js 24/npm installed:
 
 ```bash

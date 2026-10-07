@@ -215,12 +215,30 @@ def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
             "name": settings.api_key_header,
             "description": "API key header accepted by gateway middleware when API key authentication is enabled.",
         }
+        security_schemes["WebhookSignature"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-AW-Signature",
+            "description": "sha256=<HMAC-SHA256(team secret, timestamp.delivery.path.raw_body)>; "
+            "also send X-AW-Timestamp (Unix seconds, within 5 minutes) and X-AW-Delivery (unique ID).",
+        }
+        security_schemes["GitHubSignature"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-Hub-Signature-256",
+            "description": "GitHub HMAC-SHA256 of the raw body using the team's secret. "
+            "Also send X-GitHub-Delivery. The signed body fingerprint protects against replay.",
+        }
         for path, operations in schema.get("paths", {}).items():
             if not _auth_required(path):
                 continue
             for method, operation in operations.items():
                 if method.lower() in {"get", "post", "put", "patch", "delete"}:
-                    operation["security"] = [{"BearerAuth": []}, {"ApiKeyAuth": []}]
+                    operation["security"] = (
+                        [{"WebhookSignature": []}, {"GitHubSignature": []}]
+                        if path.startswith("/v1/hooks/")
+                        else [{"BearerAuth": []}, {"ApiKeyAuth": []}]
+                    )
         app.openapi_schema = schema
         return app.openapi_schema
 

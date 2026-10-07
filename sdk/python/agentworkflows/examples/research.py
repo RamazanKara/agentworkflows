@@ -69,8 +69,18 @@ async def main() -> None:
             sub.add_argument("--reviewer", required=True)
     args = parser.parse_args()
     if args.command == "worker":
+        from agentworkflows.examples.triggered import DailyReportWorkflow, GitHubIssueTriageWorkflow
+
         await serve(
-            [ResearchWorkflow, SupportTriageWorkflow, CodeReviewWorkflow, FrameworkWorkflow, CodeWorkflow],
+            [
+                ResearchWorkflow,
+                SupportTriageWorkflow,
+                CodeReviewWorkflow,
+                FrameworkWorkflow,
+                CodeWorkflow,
+                DailyReportWorkflow,
+                GitHubIssueTriageWorkflow,
+            ],
             agents=AGENTS,
         )
         return

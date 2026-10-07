@@ -67,6 +67,9 @@ services:
       VLLM_BASE_URL: http://cloud-fake:8000/local-overload
       COMPOSE_PROVIDER_KEY: compose-fake-only
       OPENAI_API_KEY: compose-fake-only
+      COMPOSE_WEBHOOK_SECRET: compose-webhook-secret-not-for-production
+      COMPOSE_SLACK_WEBHOOK: http://notification-fake:8025/slack
+      COMPOSE_OUTGOING_WEBHOOK: http://notification-fake:8025/webhook
       DEFAULT_SANDBOX_ID: demo
       # Every request needs a key. The demo key "local-development-only" is a key record
       # bound to the `demo` sandbox with its own token budget; see key-records.yaml.
@@ -118,6 +121,20 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+
+  notification-fake:
+    image: *gateway-image
+    pull_policy: never
+    command: ["python", "/fixtures/notification-fake.py"]
+    volumes:
+      - ./notification-fake.py:/fixtures/notification-fake.py:ro
+    ports:
+      - "127.0.0.1:${AGENTWORKFLOWS_INBOX_PORT:-8025}:8025"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: 0.25
+    mem_limit: 128m
 
   budget-redis:
     image: redis:8.0-alpine@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4

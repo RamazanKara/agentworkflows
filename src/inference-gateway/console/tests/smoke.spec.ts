@@ -12,6 +12,13 @@ test('Compose first run, approval, receipts, provider budgets, costs and team is
   page.on('pageerror', error => errors.push(error.message));
   await signIn(page, 'local-development-only');
   await expect(page.getByRole('heading', { name: 'Your first governed workflow' })).toBeVisible();
+  await page.getByRole('link', { name: 'Triggers', exact: true }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'DailyReportWorkflow' })).toContainText('0 9 * * *');
+  await page.getByRole('button', { name: 'Pause daily' }).click();
+  await expect(page.getByRole('button', { name: 'Resume daily' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Resume daily' }).click();
+  await expect(page.getByRole('button', { name: 'Pause daily' })).toBeEnabled();
+  await page.getByRole('link', { name: 'Get started', exact: true }).click();
   await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
   await page.getByLabel('Research topic').fill('Console smoke: evaluate governed team agents');
   await page.getByRole('button', { name: 'Start run' }).click();
