@@ -28,6 +28,7 @@ from app.budget import (
 )
 from app.cache import build_response_cache
 from app.concurrency import ConcurrencyLimitMiddleware
+from app.container_api import register_container_routes
 from app.governance import state_backend_unavailable_detail
 from app.inference_api import register_inference_routes
 from app.jwt_auth import JwksUnavailableError, JwtVerifier
@@ -73,6 +74,7 @@ from app.settings import (
 )
 from app.tracing import configure_tracing, trace_request
 from app.workflow_api import bind_workflow, register_workflow_routes
+from app.workflow_credentials import bind_step_credential
 
 SERVICE_VERSION = "0.1.0"
 OPENAPI_DESCRIPTION = (
@@ -236,7 +238,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse(status_code=400, content={"detail": reason})
 
         async def dispatch() -> Response:
-            if (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled) and _auth_required(request.url.path):
+            try:
+                step_credential = await bind_step_credential(request)
+            except StarletteHTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
+            if (
+                not step_credential
+                and (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled)
+                and _auth_required(request.url.path)
+            ):
                 api_key_outcome = (
                     _resolve_api_key(request, resolved, request.app.state.key_record_set)
                     if resolved.api_key_auth_enabled
@@ -329,11 +339,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
             # Bounded concurrency is enforced by ConcurrencyLimitMiddleware inside this one.
             if getattr(request.state, "workflow_run_id", None) and not (
-                request.url.path == "/v1/chat/completions"
+                request.url.path in {"/v1/chat/completions", "/v1/messages", "/v1/tools"}
                 or (request.url.path.startswith("/v1/tools/") and request.url.path.endswith("/call"))
+                or (request.url.path.startswith("/v1/agents/") and request.url.path.endswith(("/start", "/finish")))
             ):
                 return JSONResponse(
-                    status_code=400, content={"detail": "Workflow activities support chat and tool calls only."}
+                    status_code=400,
+                    content={"detail": "Workflow steps support chat, messages, tools, and container agents."},
                 )
             response = await call_next(request)
             response.headers["X-Request-ID"] = request.state.request_id
@@ -495,6 +507,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_messages_routes(app, resolved)
     register_responses_routes(app, resolved)
     register_workflow_routes(app, resolved)
+    register_container_routes(app, resolved)
 
     _install_openapi_contract(app, resolved)
     return app

@@ -20,14 +20,18 @@ class RunBudget(BaseModel):
 
     token_limit: int = Field(default=10000, gt=0, le=1_000_000_000, strict=True)
     cost_limit_usd: float = Field(default=5.0, gt=0, le=1_000_000, allow_inf_nan=False)
+    workflow: str = Field(default="", max_length=128)
 
 
 INIT = """
 if redis.call('EXISTS', KEYS[1]) == 1 then
   if redis.call('HGET', KEYS[1], 'token_limit') ~= ARGV[1] or
-     redis.call('HGET', KEYS[1], 'cost_limit') ~= ARGV[2] then return 0 end
+     redis.call('HGET', KEYS[1], 'cost_limit') ~= ARGV[2] or
+     (redis.call('HGET', KEYS[1], 'workflow') or '') ~= ARGV[3] or
+     (redis.call('HGET', KEYS[1], 'policy_required') or '0') ~= ARGV[4] then return 0 end
 else
-  redis.call('HSET', KEYS[1], 'token_limit', ARGV[1], 'cost_limit', ARGV[2], 'tokens', 0, 'cost', 0)
+  redis.call('HSET', KEYS[1], 'token_limit', ARGV[1], 'cost_limit', ARGV[2], 'tokens', 0, 'cost', 0,
+             'workflow', ARGV[3], 'policy_required', ARGV[4])
 end
 return 1
 """
@@ -104,6 +108,21 @@ async def reserve_run(request: Request, tokens: int, cost: float) -> tuple[int, 
         )
     request.state.workflow_charge = {"tokens": tokens, "cost_usd": cost}
     return tokens, amount
+
+
+async def load_run_policy(request: Request) -> None:
+    if not getattr(request.state, "workflow_run_id", None):
+        return
+    raw = await redis_call(request, "hgetall", run_key(request))
+    if not raw:
+        raise AdmissionPolicyError("workflow_run_missing", "Initialize this run with PUT /v1/workflow-runs/{run_id}.")
+    name = raw.get("workflow", "")
+    request.state.workflow_name = name
+    team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    policy = team.workflows.get(name) if team else None
+    if policy is None and (raw.get("policy_required") == "1" or (team and team.workflows)):
+        raise AdmissionPolicyError("workflow_not_allowed", "Choose a workflow from GET /v1/workflow-policies.")
+    request.state.workflow_policy = policy
 
 
 def model_charge(settings: Settings, route: ModelRoute, payload: dict[str, Any]) -> tuple[int, float]:

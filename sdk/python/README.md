@@ -12,6 +12,11 @@ Both model and tool calls go through gateway policy, budgets, DLP, and receipts.
 [workflow guide](https://ramazankara.github.io/agentworkflows/latest/workflows/) for the
 research → draft → approval → publish example and crash-recovery walkthrough.
 
+`WorkflowGateway.agent` adapts existing framework agents, `.tool` calls approved HTTP/MCP
+tools, and `.container` runs code in an approved agent-sandbox workspace. Install
+`python -m pip install './sdk/python[frameworks]'` for the OpenAI, Anthropic, Agents SDK,
+and LangGraph examples. The base package does not require those frameworks.
+
 ```bash
 python -m pip install ./sdk/python
 ```

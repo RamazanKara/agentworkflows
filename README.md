@@ -12,9 +12,10 @@ AWS Bedrock, and Vertex Gemini behind one API. Bind credentials to teams, contro
 models they can call, account for usage, and inspect the audit trail. Self-hosted Ollama
 and vLLM models are optional add-ons.
 
-Version **0.1.0** delivered governed cloud providers. This checkout adds **Milestone 2:
-durable agent workflows** with Temporal, human approval signals, per-run budgets, and
-model/tool receipts. See the [workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
+Version **0.1.0** delivered governed cloud providers. This checkout adds durable Temporal
+workflows and **Milestone 3: bring your agents** — framework adapters, centrally approved MCP
+tools, container steps, and workflow policies. See the [workflow guide](docs/workflows.md)
+and [roadmap](ROADMAP.md).
 
 ## Try it in ten minutes
 
@@ -36,6 +37,10 @@ are synthetic; this demonstrates gateway behavior, not live provider compatibili
 It also runs research → draft → approval → publish, kills the worker, and proves recovery
 without repeating completed model calls. Open Temporal at <http://localhost:8233> or
 [start and approve your own run](docs/workflows.md).
+
+The same walkthrough runs OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph agents,
+calls an approved MCP tool, and proves workflow allowlists and tool argument DLP.
+Try [your existing agent as a workflow step](docs/workflows.md#bring-your-agent) next.
 
 Open the read-only console at <http://127.0.0.1:8080/console>. Use the public demo key
 `local-development-only` to inspect models, usage, and budgets. It is only for this local trial.
@@ -77,6 +82,8 @@ models, troubleshooting, and the Kubernetes lab.
 | --- | --- |
 | Governed cloud providers and ordered fallback | [Provider configuration](docs/client-examples.md); provider credentials stay on the server |
 | Durable agent workflows and human approvals | [Temporal workflow SDK and walkthrough](docs/workflows.md); retry, pause, and resume with per-run token/cost budgets |
+| Framework agents and MCP tools | [Bring your agent](docs/workflows.md#bring-your-agent); point clients at the gateway and register tools once per team |
+| Workflow policy and container steps | [Workflow policy](docs/workflows.md#workflow-policy) limits providers, models, tools, egress, and budget; [container agents](docs/agent-sandbox-integration.md#container-workflow-steps) use hardened workspaces |
 | Team usage and budgets | Bind a key to a sandbox/team; inspect `/v1/usage`, `/v1/sandbox/budget`, or the [console](runbooks/api-access.md) |
 | OpenAI and Anthropic API compatibility | [Client examples](docs/client-examples.md) for chat, streaming, embeddings, Messages, Files, Batch, and Responses; support varies by provider |
 | Model and tool-action receipts | Workflow tool execution is governed and receipted automatically; [other producers report actions](runbooks/audit-chain.md) with `POST /v1/receipts` |

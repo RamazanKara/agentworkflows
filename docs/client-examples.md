@@ -8,6 +8,10 @@ These examples use `http://127.0.0.1:8080`, where the [Docker Compose stack](qui
 serves the gateway with API key `local-development-only`. In the `kind` lab, port-forward the
 gateway service first; in a customer cluster, use your ingress host.
 
+For durable, budgeted agent steps, start with [bring your agent](workflows.md#bring-your-agent):
+the workflow adapters configure these clients with run correlation and show OpenAI Agents SDK,
+LangGraph, and approved MCP tools. The standalone examples below do not create Temporal runs.
+
 The `model` id must be on the active profile's allowlist. Compose defaults to the synthetic
 `demo-openai` route; its fixtures demonstrate chat, not embeddings or model quality.
 Configure an approved provider for real inference using [model selection](model-selection.md#cloud-routes-milestone-1).

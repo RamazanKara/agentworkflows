@@ -5,12 +5,16 @@ default, and what remains operator-owned. “Shipped” means code, configuratio
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.
 
-Milestone 2 adds [durable workflows and approval signals](workflows.md) through Temporal.
+Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workflow policy](workflows.md).
 
 | Capability | Status | Default | Verification / boundary |
 | --- | --- | --- | --- |
 | Durable workflows | Shipped | Compose on; Helm/GitOps chart | Temporal with dedicated Postgres; worker-SIGKILL recovery smoke |
 | Governed tool execution | Shipped | Deny unless configured in team policy | Fixed URLs, DLP, budget reservations, idempotency keys, run/step receipts |
+| Framework agent steps | Shipped | Optional SDK framework dependencies | OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph; local-fake Compose proof |
+| Team MCP tools | Shipped | Explicit server/tool registration | Streamable HTTP 2025-03-26, argument/output DLP, costs, and receipts |
+| Workflow policy | Shipped | Configured under each team | Provider/model/tool/egress allowlists and immutable run budget caps |
+| Container agent steps | Shipped | Existing Kubernetes workspace required | Hardened workspace checks, scoped expiring credentials, one attempt, and completion receipts |
 | Workflow token/cost budgets | Shipped | 10,000 tokens / $5 per run in SDK | Immutable team-scoped Redis counters; unknown attempts retain reservations |
 | Human approvals | Shipped | Signal + query in example | Durable wait with expiry; verified approver identity and production Temporal authorization remain operator-owned |
 | OpenAI chat completions | Shipped | On | Gateway tests, OpenAPI contract, local smoke |

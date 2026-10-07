@@ -96,6 +96,7 @@ networkPolicy:
     namespace: inference
     port: 8080
   rag:
+    enabled: true
     namespace: rag
     port: 8080
   allowedEgressCidrs: []

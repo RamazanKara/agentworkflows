@@ -100,6 +100,7 @@ async def main() -> None:
     from temporalio.worker import Worker
 
     from agentworkflows.activities import GatewayActivities
+    from agentworkflows.examples.frameworks import AGENTS, CodeWorkflow, FrameworkWorkflow
 
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -119,11 +120,11 @@ async def main() -> None:
         key = os.getenv("AGENTWORKFLOWS_API_KEY")
         if not key:
             parser.error("Set AGENTWORKFLOWS_API_KEY to a team-bound gateway key (local-development-only for Compose).")
-        activities = GatewayActivities(os.getenv("AGENTWORKFLOWS_URL", "http://localhost:8080"), key)
+        activities = GatewayActivities(os.getenv("AGENTWORKFLOWS_URL", "http://localhost:8080"), key, agents=AGENTS)
         async with Worker(
             client,
             task_queue="research",
-            workflows=[ResearchWorkflow],
+            workflows=[ResearchWorkflow, FrameworkWorkflow, CodeWorkflow],
             activities=[activities.call],
             max_concurrent_activities=2,
             max_concurrent_workflow_tasks=2,

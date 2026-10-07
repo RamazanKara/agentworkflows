@@ -20,6 +20,16 @@ uses provider protocol fixtures; live provider acceptance is deployment-specific
 
 The existing Batch API and stored Responses are not a durable workflow engine.
 
+## Milestone 3: bring your agents — delivered in this checkout
+
+- OpenAI/Anthropic clients, OpenAI Agents SDK, and LangGraph as governed Temporal steps.
+- Team MCP registrations with explicit tool allowlists, argument DLP, costs, and receipts.
+- Container steps in existing hardened agent-sandbox workspaces with expiring run credentials.
+- Per-workflow provider, model, tool, egress, and budget policy in the existing team configuration.
+
+Compose exercises framework and MCP flows with local fakes. Container execution requires
+the existing Kubernetes workspace runtime and an enforcing NetworkPolicy CNI.
+
 ## Then: approvals and team operations
 
 - Connect approval decisions to verified team identities and a team-facing review experience.

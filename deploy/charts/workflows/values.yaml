@@ -7,6 +7,8 @@ worker:
   image: ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.1.0
   gatewayUrl: http://inference-gateway.inference.svc.cluster.local:8080
   existingSecret: workflow-gateway-key
+  # Existing agent-workspace installations the worker may inspect and execute in.
+  workspaces: []
   resources:
     requests: {cpu: 100m, memory: 128Mi}
     limits: {cpu: "1", memory: 512Mi}

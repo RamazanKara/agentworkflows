@@ -121,6 +121,44 @@ ok "cloud requests share prompt credential blocking"
 step "7c. Durable research workflow: human approval, worker crash, and replay without repeated model calls"
 bash scripts/workflow-smoke.sh
 
+step "7d. Four framework agents share workflow policy, MCP tools, budgets, and receipts"
+"${COMPOSE[@]}" run --rm --no-deps -T workflow-worker python -m agentworkflows.examples.frameworks \
+  "Evaluate our team's agents" >"$OUT/frameworks.json"
+agent_run="$(python3 -c "import json; print(json.load(open('$OUT/frameworks.json'))['run_id'])")"
+status="$(request GET /v1/workflow-policies)"
+[[ "$status" == "200" ]] || fail "workflow policy discovery returned $status"
+[[ "$(json "d['workflows']['FrameworkWorkflow']['allowedTools']")" == "['team.search']" ]] || fail "MCP allowlist missing"
+status="$(request POST /v1/tools/publish/call '{"arguments":{}}' \
+  -H "X-Workflow-Run-ID: $agent_run" -H 'X-Workflow-Step-ID: smoke-denied')"
+[[ "$status" == "403" ]] || fail "workflow tool denial returned $status"
+status="$(request POST /v1/tools/team.search/call "{\"arguments\":{\"nested\":[{\"token\":\"$fake_token\"}]}}" \
+  -H "X-Workflow-Run-ID: $agent_run" -H 'X-Workflow-Step-ID: smoke-dlp')"
+[[ "$status" == "400" ]] || fail "MCP argument DLP returned $status"
+status="$(request POST /v1/chat/completions '{"model":"demo-vertex","messages":[{"role":"user","content":"hello"}]}' \
+  -H "X-Workflow-Run-ID: $agent_run" -H 'X-Workflow-Step-ID: smoke-model')"
+[[ "$status" == "403" ]] || fail "workflow model denial returned $status"
+"${COMPOSE[@]}" logs --no-color --no-log-prefix inference-gateway >"$OUT/frameworks-audit.log" 2>&1
+python3 - "$OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+output = pathlib.Path(sys.argv[1])
+result = json.loads((output / "frameworks.json").read_text())
+assert set(result["agents"]) == {"openai", "anthropic", "agents-sdk", "langgraph"}, result
+events = []
+for line in (output / "frameworks-audit.log").read_text().splitlines():
+    if '"record_hash"' in line:
+        event = json.loads(line[line.index("{"):])
+        if event.get("workflow_run_id") == result["run_id"]:
+            events.append(event)
+assert sum(e["action_type"] == "model_call" and e["status_code"] == 200 for e in events) == 4, events
+assert any(e.get("tool") == "team.search" and e["backend"] == "mcp" and e["status_code"] == 200 for e in events)
+assert {e["status_code"] for e in events} >= {200, 400, 403}
+assert all(e["workflow"] == "FrameworkWorkflow" for e in events)
+print("[agents] four framework steps and MCP succeeded; tool/model denials and argument DLP receipted")
+PY
+
 step "8. Usage and estimated cost for the sandbox"
 status="$(request GET /v1/usage)"
 [[ "$status" == "200" ]] || fail "usage returned $status"
