@@ -2,6 +2,23 @@
 # An entry here is an accepted finding with a reason, not a way to make the scan quiet:
 # anything without a justification that survives review does not belong in this file.
 
+vulnerabilities:
+  - id: GHSA-2mjx-qc3c-rqvc
+    paths:
+      - "usr/local/lib/python3.14/site-packages/temporalio/bridge/Cargo.lock"
+    purls:
+      - "pkg:cargo/rustls@0.23.42"
+    expired_at: 2026-11-06
+    statement: >-
+      No fixed Temporal Python wheel is published as of 2026-10-07. The latest
+      release, temporalio 1.34.0, embeds rustls 0.23.42 in its compiled bridge;
+      Python requirements cannot override this Rust dependency. Upstream merged
+      the rustls 0.23.45 fix in https://github.com/temporalio/sdk-python/pull/1930
+      (bdc3ee3d872a03539b83c958645859b3d4b385c4), after the 1.34.0 release.
+      This is a real TLS handshake validation finding, not a false positive.
+      Remove this exception and update both runtime and dev/SDK locks when a
+      fixed wheel is released; do not delete or rewrite the bundled Cargo.lock.
+
 misconfigurations:
   - id: KSV-0109
     paths:
