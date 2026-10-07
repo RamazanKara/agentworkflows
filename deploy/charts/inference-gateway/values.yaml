@@ -352,6 +352,7 @@ networkPolicy:
   # monitoring must stay listed: the Prometheus scrape (ServiceMonitor) and the KEDA
   # scaler's query source both go dark on a NetworkPolicy-enforcing CNI without it.
   allowedIngressNamespaces:
+    - workflows
     - ai-agents
     - ai-sandbox
     - monitoring

@@ -7,6 +7,7 @@ The published site is at [ramazankara.github.io/agentworkflows](https://ramazank
 | Need | Document |
 | --- | --- |
 | Try it with Docker Compose, then the local Kubernetes lab | [Quickstart](quickstart.md) |
+| Write, approve, and resume durable agents | [Temporal workflows](workflows.md) |
 | Validation and common operator tasks | [Getting started](getting-started.md) |
 | Customer cluster template | [Customer deployment](../deploy/clusters/customer/README.md) |
 | Client and SDK examples | [Client examples](client-examples.md), [Python SDK](../sdk/python/README.md) |

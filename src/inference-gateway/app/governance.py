@@ -452,9 +452,11 @@ def route_settings(settings: Settings, model_route: Any) -> Settings:
 
 def admission_status(reason: str, settings: Settings) -> tuple[int, dict[str, str] | None]:
     """Map an admission-rejection reason to its HTTP status and retry headers."""
+    if reason in {"workflow_token_budget_exceeded", "workflow_cost_budget_exceeded", "tool_not_allowed"}:
+        return 403, None
     if reason == "data_classification_denied":
         return 403, None
-    if reason == "provider_not_configured":
+    if reason in {"provider_not_configured", "tool_not_configured"}:
         return 503, None
     if reason.startswith("sandbox_") and reason.endswith("_exceeded"):
         headers = None

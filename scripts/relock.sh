@@ -58,6 +58,7 @@ for service in inference-gateway rag-service; do
 done
 compile requirements-quality.lock --allow-unsafe --no-strip-extras "$@" requirements-quality.txt
 compile requirements-sdk-build.lock --no-strip-extras "$@" requirements-sdk-build.in
+compile sdk/python/requirements.lock --no-strip-extras "$@" sdk/python/requirements.txt
 compile requirements-sdk-test.lock --no-strip-extras "$@" requirements-sdk-test.in
 compile requirements-docs.txt --no-strip-extras "$@" requirements-docs.in
 compile requirements-relock.lock --allow-unsafe --no-strip-extras "$@" requirements-relock.in

@@ -4,7 +4,13 @@ Python client for the [AgentWorkflows](https://github.com/RamazanKara/agentworkf
 inference gateway: a cloud-first, OpenAI- and Anthropic-compatible LLM gateway that enforces
 model allowlists, sandbox budgets, and guardrails, and writes a tamper-evident receipt for every call.
 
-The only dependency is `httpx`. The package ships inline type annotations (`py.typed`).
+The package uses `httpx` and the official `temporalio` SDK, with inline type annotations (`py.typed`).
+
+For durable agents, use `agentworkflows.workflows.WorkflowGateway` inside native Temporal
+workflows and register `agentworkflows.activities.GatewayActivities.call` on the worker.
+Both model and tool calls go through gateway policy, budgets, DLP, and receipts. Follow the
+[workflow guide](https://ramazankara.github.io/agentworkflows/latest/workflows/) for the
+research → draft → approval → publish example and crash-recovery walkthrough.
 
 ```bash
 python -m pip install ./sdk/python

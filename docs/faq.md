@@ -2,7 +2,7 @@
 
 ## Is this production-ready?
 
-AgentWorkflows 0.1.0 is for evaluation. Governed cloud providers are implemented; durable workflows, human approvals, and hosted delivery are planned. Production deployments need identity, secrets, ingress, transport encryption, storage, observability, backups, and current evidence. See [Production readiness](production-readiness.md).
+AgentWorkflows is for evaluation. Governed cloud providers, Temporal workflows, and approval signals are implemented; hosted delivery is planned. Production deployments need identity, secrets, ingress, transport encryption, storage, observability, backups, and current evidence. See [Production readiness](production-readiness.md) and [workflows](workflows.md).
 
 ## What does the project install?
 

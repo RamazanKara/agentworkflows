@@ -1,6 +1,6 @@
 """First-party Python client for the AgentWorkflows inference gateway.
 
-A thin, dependency-light wrapper (httpx only) that sets the platform headers
+A thin wrapper that sets the platform headers
 (``X-Sandbox-ID``, bearer auth) and covers the gateway's API: OpenAI-compatible chat,
 completions, embeddings, moderations, Files/Batch and Responses, the Anthropic Messages
 endpoint, agent-action receipts, and the sandbox usage/budget reads.
@@ -32,7 +32,10 @@ from importlib import metadata
 from types import TracebackType
 from typing import Any
 
-import httpx
+from temporalio import workflow as _workflow
+
+with _workflow.unsafe.imports_passed_through():
+    import httpx
 
 __all__ = [
     "GatewayClient",

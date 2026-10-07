@@ -54,6 +54,7 @@ services:
     volumes:
       - ./key-records.yaml:/etc/agentworkflows/key-records.yaml:ro
       - ./model-routing.yaml:/etc/agentworkflows/model-routing.yaml:ro
+      - ./sandbox-policy.yaml:/etc/agentworkflows/sandbox-policy.yaml:ro
     environment:
       # The legacy runtime backs demo-overload; the routing policy selects cloud adapters.
       RUNTIME_BACKEND: vllm
@@ -61,6 +62,7 @@ services:
       MODEL_ID: ${AGENTWORKFLOWS_MODEL:-demo-openai}
       ALLOWED_MODELS: qwen2.5:0.5b,demo-openai,demo-anthropic,demo-azure-openai,demo-bedrock,demo-vertex,demo-overload
       MODEL_ROUTING_POLICY_PATH: /etc/agentworkflows/model-routing.yaml
+      SANDBOX_POLICY_PATH: /etc/agentworkflows/sandbox-policy.yaml
       VLLM_BASE_URL: http://cloud-fake:8000/local-overload
       COMPOSE_PROVIDER_KEY: compose-fake-only
       DEFAULT_SANDBOX_ID: demo
@@ -71,6 +73,8 @@ services:
       ALLOW_STREAMING: "true"
       MAX_COMPLETION_TOKENS: "512"
       SANDBOX_BUDGET_ENABLED: "true"
+      SANDBOX_BUDGET_BACKEND: redis
+      SANDBOX_BUDGET_REDIS_URL: redis://budget-redis:6379/0
       SANDBOX_ESTIMATED_TOKEN_BUDGET: "200000"
       USD_PER_1K_TOKENS: "0.002"
       PROMPT_SECRET_MODE: block
@@ -81,6 +85,8 @@ services:
       ADMIN_CONSOLE_ENABLED: "true"
       AUDIT_LOG_ENABLED: "true"
     depends_on:
+      budget-redis:
+        condition: service_healthy
       cloud-fake:
         condition: service_started
     healthcheck:
@@ -104,6 +110,89 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+
+  budget-redis:
+    image: redis:8.0-alpine@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always"]
+    volumes:
+      - workflow-budgets:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cpus: 0.5
+    mem_limit: 128m
+
+  temporal-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal-development-only
+    volumes:
+      - temporal-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cpus: 0.5
+    mem_limit: 256m
+
+  temporal:
+    image: temporalio/auto-setup:1.29.1
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal-development-only
+      POSTGRES_SEEDS: temporal-postgres
+      NUM_HISTORY_SHARDS: "4"
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "127.0.0.1:${AGENTWORKFLOWS_TEMPORAL_PORT:-7233}:7233"
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "temporal:7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    cpus: 1
+    mem_limit: 1g
+
+  temporal-ui:
+    image: temporalio/ui:2.54.1
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "127.0.0.1:${AGENTWORKFLOWS_TEMPORAL_UI_PORT:-8233}:8080"
+    depends_on:
+      temporal:
+        condition: service_healthy
+    cpus: 0.5
+    mem_limit: 256m
+
+  workflow-worker:
+    build:
+      context: ../..
+      dockerfile: sdk/python/Dockerfile
+    image: agentworkflows/workflow-worker:compose
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      AGENTWORKFLOWS_URL: http://inference-gateway:8080
+      AGENTWORKFLOWS_API_KEY: local-development-only
+    depends_on:
+      temporal:
+        condition: service_healthy
+      inference-gateway:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    cpus: 0.5
+    mem_limit: 512m
 
   rag-service:
     build:
@@ -156,5 +245,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  temporal-postgres:
+  workflow-budgets:
   ollama-models:
   open-webui-data:

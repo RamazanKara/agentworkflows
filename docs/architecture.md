@@ -28,6 +28,7 @@ RAG is a separate service. It returns retrieved passages and grounded message ob
 | Component | Namespace | Source | Notes |
 | --- | --- | --- | --- |
 | Inference gateway | `inference` | `src/inference-gateway`, `deploy/charts/inference-gateway` | First-party API and policy point |
+| Temporal, PostgreSQL, workflow worker | `workflows` | `sdk/python`, `deploy/charts/workflows` | Official Temporal chart; governed activities, durable history, and approval signals |
 | RAG service | `rag` | `src/rag-service`, `deploy/charts/rag-service` | Lexical or Qdrant retrieval |
 | Budget Redis | `budget` | `deploy/charts/budget-redis` | Single-node reference store by default |
 | Qdrant | `vector` | `deploy/charts/qdrant-vector-store` | Single-instance chart; customer values enable persistence |
@@ -89,6 +90,10 @@ Use the [restricted-egress tenant walkthrough](regulated-offline-tenant-example.
 
 ## Stateful and failure boundaries
 
-The bundled Redis, Qdrant, and Loki configurations are development/reference footprints. Redis has no persistence in the bundled chart, Qdrant is a single instance, and the local observability stack is not an HA logging service. The [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) describes the handoff path.
+The bundled Redis, PostgreSQL, Qdrant, and Loki configurations are development/reference footprints. Redis uses AOF and a PVC for run budgets; Temporal has dedicated PostgreSQL storage. Both are single instances. Qdrant is a single instance, and the local observability stack is not an HA logging service. The [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) describes the handoff path.
+
+Workflow state lives in Temporal, not in the gateway. The SDK schedules model/tool activities
+on the existing governed gateway path; Redis holds accounting only. See [workflows](workflows.md)
+for replay, ambiguous in-flight calls, idempotent tools, and approval trust boundaries.
 
 The gateway audit chain is per process/replica. Export records and store chain-head anchors outside the gateway if the log is intended as tamper or rollback evidence.

@@ -19,6 +19,8 @@ Local Redis-compatible store for shared sandbox budget accounting.
 | `namespace.name` | `""` |
 | `networkPolicy.allowedIngressNamespaces` | `["inference"]` |
 | `networkPolicy.enabled` | `true` |
+| `persistence.enabled` | `true` |
+| `persistence.size` | `1Gi` |
 | `podDisruptionBudget.enabled` | `true` |
 | `podDisruptionBudget.minAvailable` | `0` |
 | `podLabels.platform.ai/cost-center` | `platform` |

@@ -131,7 +131,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `namespace.name` | `""` |
 | `networkPolicy.allowDns` | `true` |
 | `networkPolicy.allowedIngressNamespaceLabels` | `[{"platform.ai/traceable-sandbox": "true"}]` |
-| `networkPolicy.allowedIngressNamespaces` | `["ai-agents", "ai-sandbox", "monitoring"]` |
+| `networkPolicy.allowedIngressNamespaces` | `["workflows", "ai-agents", "ai-sandbox", "monitoring"]` |
 | `networkPolicy.enabled` | `true` |
 | `networkPolicy.metricsIngressNamespaces` | `["monitoring"]` |
 | `networkPolicy.runtimeEgress` | `[{"namespace": "ollama", "port": 11434}, {"namespace": "vllm", "port": 8000}, {"namespace": "budget", "port": 6379}]` |
