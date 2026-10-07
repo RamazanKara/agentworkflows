@@ -72,6 +72,7 @@ from app.settings import (
     Settings,
     validate_sandbox_id,
 )
+from app.state_migrations import migrate
 from app.tracing import configure_tracing, trace_request
 from app.workflow_api import bind_workflow, register_workflow_routes
 from app.workflow_credentials import bind_step_credential
@@ -118,6 +119,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.runtime_client = RuntimeClient(resolved)
     app.router.add_event_handler("shutdown", app.state.runtime_client.aclose)
     app.state.budget_tracker = build_sandbox_budget_tracker(resolved)
+
+    async def _migrate_state() -> None:
+        if app.state.budget_tracker.backend == "redis":
+            await asyncio.to_thread(migrate, app.state.budget_tracker.client, resolved.sandbox_budget_key_prefix)
+
+    app.router.add_event_handler("startup", _migrate_state)
     app.state.rate_limiter = build_rate_limiter(resolved)
     app.state.inflight = 0
     app.state.audit_prev_hash = AUDIT_GENESIS
@@ -487,6 +494,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         dependency_ready = True
         if resolved.sandbox_budget_enabled:
             dependency_ready &= await redis_dependency("budget_store", app.state.budget_tracker)
+        if resolved.rate_limit_enabled and not resolved.rate_limit_fail_open:
+            dependency_ready &= await redis_dependency("rate_limit_store", app.state.rate_limiter)
+        if resolved.audit_chain_store_backend == "redis":
+            dependency_ready &= await redis_dependency("audit_store", app.state.chain_store)
+        if os.getenv("TEMPORAL_ADDRESS"):
+            from app.workflow_operations import temporal_client
+
+            async def temporal_ready() -> bool:
+                temporal = await temporal_client(app)
+                return bool(await temporal.service_client.check_health())
+
+            try:
+                reachable = await asyncio.wait_for(temporal_ready(), timeout=2)
+            except Exception:
+                reachable = False
+            dependencies["temporal"] = {"status": "ok" if reachable else "unavailable"}
+            dependency_ready &= reachable
         if resolved.responses_store_enabled:
             dependency_ready &= await redis_dependency("response_store", app.state.response_store)
         if resolved.batch_api_enabled:

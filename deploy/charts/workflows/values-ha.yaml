@@ -1,0 +1,16 @@
+worker:
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+temporal:
+  server:
+    replicaCount: 3
+    frontend:
+      podDisruptionBudget: {minAvailable: 2}
+    history:
+      podDisruptionBudget: {minAvailable: 2}
+    matching:
+      podDisruptionBudget: {minAvailable: 2}
+    worker:
+      podDisruptionBudget: {minAvailable: 2}

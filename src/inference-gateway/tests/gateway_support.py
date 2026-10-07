@@ -76,6 +76,9 @@ class FakeRedisBudgetStore:
     def __init__(self):
         self.data = {}
 
+    def get(self, key):
+        return self.data.get(key)
+
     def hgetall(self, key):
         return dict(self.data.get(key, {}))
 
@@ -86,6 +89,9 @@ class FakeRedisBudgetStore:
         return True
 
     def eval(self, script, numkeys, key, *args):
+        if key.endswith(":schema-version"):
+            self.data[key] = "1"
+            return 1
         if script == REDIS_USAGE_SCRIPT:
             counters = self.data.setdefault(key, {})
             for name, value in zip(args[1::2], args[2::2], strict=True):

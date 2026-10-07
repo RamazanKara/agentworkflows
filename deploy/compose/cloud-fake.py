@@ -2,8 +2,9 @@
 
 import json
 import struct
+import time
 import zlib
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar
 
 
@@ -39,6 +40,8 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         provider = self.path.split("/")[1]
         self.counts[provider] = self.counts.get(provider, 0) + 1
+        if "hardening slow step" in json.dumps(body):
+            time.sleep(5)
         if provider == "mcp":
             method = body.get("method")
             if method == "notifications/initialized":
@@ -149,4 +152,4 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    HTTPServer(("0.0.0.0", 8000), Handler).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", 8000), Handler).serve_forever()

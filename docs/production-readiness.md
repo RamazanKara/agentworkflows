@@ -60,7 +60,7 @@ AgentWorkflows is cloud-first. The local trial demonstrates its governed provide
 
 ## Stateful stores: dev/reference footprints and their HA path
 
-Three bundled stateful stores ship as **single-node reference footprints** so a laptop lab and
+Four bundled stateful stores ship as **single-node reference footprints** so a laptop lab and
 a fresh cluster start with no external dependencies. They are deliberately not production
 topologies. State this plainly to any operator sizing a production environment, and swap each to
 its external/HA path before a regulated or multi-tenant handoff. The full opt-in procedure
@@ -68,13 +68,190 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 
 | Bundled store | Reference footprint | Production / HA path |
 | --- | --- | --- |
+| Temporal PostgreSQL (`deploy/charts/workflows`) | 1 replica and a persistent volume for history and visibility | Configure both Temporal SQL datastores for managed HA Postgres; back up both databases and validate restore before switching traffic |
 | Budget / response-cache Redis (`deploy/charts/budget-redis`) | 1 replica, AOF and PVC persistence, `minAvailable: 0` (disk loss can lose counters; an outage fails budgets closed) | Point `budget.redisUrl` / `responseCache.redisUrl` at an external **managed Redis, Redis Sentinel failover pair, or Redis Cluster** and stop syncing the bundled Application. Budgets stay fail-closed on outage; the rate limiter can opt into fail-open (`rateLimit.failOpen`) as an availability-vs-enforcement tradeoff |
 | Qdrant vector store (`deploy/charts/qdrant-vector-store`) | Single-instance, **schema-enforced** (`replicaCount` max 1) on one RWO PVC | Use an **external managed Qdrant or a Qdrant cluster** (sharded/replicated) and point `retrieval.vectorStore.url` at it; the bundled chart intentionally does not model clustering |
 | Loki (`deploy/observability/applications.yaml`) | `SingleBinary`, `replication_factor: 1`, filesystem storage | Move to a **scalable/distributed Loki mode with object storage and replication**; forward the tamper-evident audit receipts onward to a SIEM for durable long-term hold |
 
-These three are the "external HA stores" operator-owned item tracked in
+These stores are the "external HA stores" operator-owned item tracked in
 [Scope and non-goals](scope-and-non-goals.md); the bundled charts are working references and are
 never removed, so rolling back to the reference footprint for a demo is a one-line values change.
+
+## Workflow upgrades and recovery
+
+The 0.2.0 gateway uses **Redis**, not PostgreSQL, for run indexes, step timelines and
+team/run budgets. Temporal owns workflow history in `temporal` and SQL visibility in
+`temporal_visibility`, both on the existing PostgreSQL service. Back up all three stores
+together with the complete receipt export. No gateway PostgreSQL database or new service
+is introduced by this milestone.
+
+Gateway startup applies numbered Lua migrations from `app/migrations` atomically with
+the schema marker in the existing budget Redis. Migration 001 adopts the unversioned
+0.2.0 keys without rewriting counters, run IDs, receipts or expiry times. Repeated and
+concurrent startups are safe. Unknown/newer schema versions prevent startup; restore a
+pre-upgrade backup when rolling back across an incompatible future migration.
+
+Temporal uses its upstream versioned SQL migrations for **both** databases. Compose pins
+server/auto-setup to 1.29.1; the existing Helm dependency uses server/admin-tools 1.32.0,
+now explicitly pinned together. These are separate upgrade tracks: do not move a Compose
+database directly across those server minors. Follow the
+[Temporal upgrade sequence](https://docs.temporal.io/self-hosted-guide/upgrade-server),
+apply schema updates before rolling servers, and never change `numHistoryShards` on an
+existing database. The chart explicitly declares the visibility store and schema management.
+
+For the first Helm install, `temporal.schema.useHelmHooks=false` lets the bundled Postgres
+start before the schema Job. For upgrades on an existing release, run:
+
+```sh
+helm dependency build deploy/charts/workflows
+helm upgrade workflows deploy/charts/workflows -n workflows -f your-workflow-values.yaml \
+  --set temporal.schema.useHelmHooks=true --wait --wait-for-jobs --timeout 10m
+```
+
+Keep the same release, namespace, database names, secrets and PVCs. For GitOps, order the
+schema Job before the server rollout using the controller's sync phases. Keep old worker
+workflow code compatible with retained histories; this migration does not rewrite histories.
+
+Run the isolated fixture drills (Docker, Git and Python 3.12+; no provider credentials):
+
+```sh
+make workflow-upgrade-test
+make workflow-restore-drill
+make workflow-helm-upgrade-test  # also requires kind, Helm and kubectl
+```
+
+On Windows, the first two entry points also run directly in PowerShell as
+`python scripts/workflow-recovery.py upgrade` and `python scripts/workflow-recovery.py drill`.
+The Helm test uses native Helm/kubectl and the gateway's Python environment (PyYAML),
+with kind and Docker in WSL Ubuntu.
+
+The upgrade drill builds the 0.2.0 release commit `f17850aa91091c306921db577c18c15df7da3ef0`,
+starts a run and waits for approval, then replaces images while retaining volumes. It checks
+all retained gateway values, both SQL schema versions, run listing, receipt IDs and budgets,
+then approves the original execution. The restore drill dumps both Postgres databases,
+snapshots Redis, destroys only its own disposable volumes, restores and resumes that run.
+Both verify the receipt chain and terminate a worker during an active model call, checking
+that the call completes once. Reports and backups go under `.out/aw-hardening-*`; all drill
+containers and volumes are removed even on failure. Builds are sequential, workers have
+two activity slots, and Windows invokes Docker through `wsl.exe -d Ubuntu -e docker`.
+The Helm test creates a separate kind cluster, caps its node at two CPUs and 4 GiB, installs
+the previous charts/images, then upgrades the same releases to two gateway and worker
+replicas. It checks retained PVC identities, run state, budgets and receipts, resumes the
+waiting run and deletes the cluster. It uses an isolated kubeconfig, local fixtures and
+temporary loopback ports. This single-node drill tests upgrades, not multi-node failover.
+Seeding the old Helm release supplies the required `connectProtocol: tcp` operator override
+for both SQL stores; current chart defaults include it. The database contents and previous
+application images remain the 0.2.0 baseline.
+
+For your Compose trial, take a quiesced backup and restore into a **new** project:
+
+```sh
+python scripts/workflow-recovery.py backup --project agentworkflows \
+  --directory .out/workflow-backup --receipts /path/to/complete-retained-receipts.jsonl
+# Stop the source before reusing its published ports, or select unused Compose ports.
+python scripts/workflow-recovery.py restore --project agentworkflows-restored \
+  --directory .out/workflow-backup
+```
+
+Omit `--receipts` only for a first container lifetime with no earlier receipts. Backup stops
+workers, drains the gateway, stops Temporal, then takes `pg_dump -Fc` of each database and
+a Redis RDB snapshot; it restarts the source afterward. Restore refuses existing Temporal
+tables or nonempty Redis. It restores the archived receipts alongside the backup and
+verifies them with `audit-verify --anchor --strict-continuity`, including new restart links.
+Checksum or chain errors fail before database writes. Copy the backup and its manifest/head
+anchors to separately controlled storage; checksums alone do not authenticate a rewritten
+backup. Retain policy files, credentials and exact deployment values through your existing
+secret/configuration backup process. A completed backup defines the recovery point; writes
+after it are outside that backup. Measure recovery time on your own data volume.
+
+For Helm/managed stores, use the same maintenance order and database-native `pg_dump -Fc`
+and `pg_restore --create --exit-on-error` for **both** Temporal databases, plus a persistence
+snapshot of every gateway Redis database and the SIEM receipt export. Restore to isolated
+databases first, verify schema versions and receipts with the included verifier, point a
+test gateway/worker at those stores, and resume a waiting run before switching traffic.
+The Compose drill is a reproducible application recovery test, not a managed-database
+failover or Kubernetes storage certification.
+
+## Multiple replicas and shutdown
+
+Merge the chart's `values-ha.yaml` after your reviewed deployment values:
+
+```sh
+helm upgrade inference-gateway deploy/charts/inference-gateway -n inference \
+  -f your-gateway-values.yaml -f deploy/charts/inference-gateway/values-ha.yaml
+helm upgrade workflows deploy/charts/workflows -n workflows \
+  -f your-workflow-values.yaml -f deploy/charts/workflows/values-ha.yaml \
+  --set temporal.schema.useHelmHooks=true --wait --wait-for-jobs --timeout 10m
+```
+
+The gateway and its bundled console run in two replicas; the console has no separate
+server or in-memory session to synchronize. The worker has two replicas on the same team
+task queue. Each deployment keeps at least one pod available during voluntary disruptions
+and rolls with zero unavailable pods. Topology spread distributes pods when nodes permit.
+KEDA's minimum is two in the gateway HA values. Temporal's example uses three replicas
+per server role with PDBs keeping two. Use enough nodes to realize those guarantees.
+The bundled Postgres and Redis remain single-node references; application replication
+does not make storage highly available. Point the existing store settings at your managed
+HA stores and configure persistence, backups and networking there.
+
+`/healthz` checks the running event loop and intentionally stays live during dependency
+outages. Gateway `/readyz` checks required Redis stores, local runtimes, cloud credential configuration and
+Temporal when `workflows.temporalAddress`/`TEMPORAL_ADDRESS` is set. Worker port 8081
+`/readyz` requires an active worker, Temporal and gateway readiness; `/healthz` checks
+its event loop. Dependency outages withdraw readiness without causing restart storms.
+
+SIGTERM stops worker polling and lets active activities finish for 180 seconds before
+Temporal's shutdown cancellation. Pods and Compose allow 210 seconds; the gateway drains
+requests for 180 seconds, with a five-second Kubernetes pre-stop delay for endpoint removal.
+Set the pod grace above your longest custom activity and SDK shutdown timeout when extending
+the supplied three-minute activity limit. Forced kills or exhausted grace may retry an
+activity: Temporal retains the step, but arbitrary external side effects cannot be promised
+exactly once. Tools must honor their idempotency key; container steps deliberately do not
+automatically retry. Retain every replica's audit stream and external head anchors; the
+shared head key alone cannot prove completeness of concurrent replica lifetimes.
+
+## Live providers and concurrent runs
+
+`make test` excludes the paid acceptance directory. Even explicit acceptance runs skip
+unless `AGENTWORKFLOWS_LIVE_PROVIDERS=1`, and always skip when `CI` is set. Each provider
+also requires its own real environment credential; absent credentials skip that provider.
+The suite covers chat, streamed content and usage, forced tool calls, a deterministic
+primary outage followed by a real-provider fallback, and receipt/provider cost accounting.
+Do not place credentials in tracked files or command arguments.
+
+| Provider | Credential variable | Configuration prefix |
+| --- | --- | --- |
+| OpenAI | `OPENAI_API_KEY` | `LIVE_OPENAI` |
+| Anthropic | `ANTHROPIC_API_KEY` | `LIVE_ANTHROPIC` |
+| Azure OpenAI | `AZURE_OPENAI_API_KEY` | `LIVE_AZURE_OPENAI` |
+| Bedrock bearer-token API | `AWS_BEARER_TOKEN_BEDROCK` | `LIVE_BEDROCK` |
+| Vertex OpenAI-compatible endpoint | `VERTEX_ACCESS_TOKEN` | `LIVE_VERTEX` |
+
+For each enabled provider set `<PREFIX>_MODEL`, `<PREFIX>_INPUT_USD_PER_1K`, and
+`<PREFIX>_OUTPUT_USD_PER_1K` to the approved model and current prices. Set
+`<PREFIX>_BASE_URL` for Azure, Bedrock and Vertex; OpenAI and Anthropic use their standard
+API URLs. Choose models supporting tools and reported streaming usage. Cost assertions
+use configured prices, not invoices. With your environment already provisioned:
+
+```sh
+AGENTWORKFLOWS_LIVE_PROVIDERS=1 make test-live-providers
+```
+
+No real-provider calls were made for this hardening change. The default test gate checks
+the same adapters with local protocol fixtures.
+
+With the fake Compose trial running, `make workflow-loadtest` submits 20 workflow runs at
+concurrency two, checks their results, receipt IDs and per-run budgets, and asserts the
+aggregate team spend is exactly $0.220 in synthetic configured prices. It writes throughput,
+median/p95 latency and failures to `results/loadtest/workflow-runs.json`. This small test
+checks concurrent accounting and completion; it does not establish provider latency or
+production capacity.
+
+Local result on 2026-10-07 (Windows client, WSL Docker, fake Compose providers, one worker
+with two activity slots): **20/20 completed**, 0 failures, 3.476 seconds total, 5.754 runs/s,
+0.337 s median and 0.353 s p95 end-to-end latency. All 20 receipt IDs and run budgets
+verified; shared spend increased by $0.220. This was a short functional load check on a
+shared machine, with warm containers and synthetic provider responses.
 
 ## Promotion Review
 
