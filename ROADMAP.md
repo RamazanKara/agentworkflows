@@ -3,7 +3,7 @@
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
 Version 0.2.0 is the first public release and includes milestones 1–5 plus the guided
-quickstart and project templates. Production hardening is the next milestone.
+quickstart and project templates. Production hardening evidence is tracked below.
 
 ## Milestone 1: governed cloud providers — delivered in 0.2.0
 
@@ -53,12 +53,17 @@ and workers are trusted operator surfaces; end users use the authenticated gatew
 - Guided Bash and Windows PowerShell quickstart and editable research, support-triage,
   and code-review templates through `agentworkflows init`.
 
-## Milestone 6: production hardening and broader coverage — next
+## Milestone 6: production hardening and broader coverage
 
-Strengthen upgrade, backup, availability, and live-provider acceptance evidence. Validate
-team operations under deployment-specific identity, networking, and retention policies.
-Expand instrumented model/tool integrations and measurable receipt coverage. The current
-audit chain cannot prove unreported tool activity or direct calls outside the gateway.
+- Versioned gateway Redis state and Temporal SQL schemas; previous-release upgrade drills.
+- Quiesced backups of gateway state, Temporal history/visibility and receipts, with verified restore drills.
+- Gateway/console and worker replica values, disruption budgets, dependency probes and graceful draining.
+- Explicitly opted-in, environment-keyed provider acceptance, disabled in CI; concurrent workflow accounting tests.
+
+See [production readiness](docs/production-readiness.md) for commands and evidence limits.
+Deployment-specific identity, networking, storage failover and retention remain operator
+validation work. Broader instrumented integrations and measurable receipt coverage remain
+ongoing: the audit chain cannot prove unreported tool activity or direct calls outside the gateway.
 
 ## Usability and release standard
 

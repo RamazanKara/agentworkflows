@@ -1,0 +1,23 @@
+replicaCount: 2
+keda:
+  minReplicaCount: 2
+workflows:
+  temporalAddress: temporal-frontend.workflows.svc.cluster.local:7233
+adminConsole:
+  enabled: true
+budget:
+  backend: redis
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+topologySpread:
+  enabled: true
+responses:
+  store:
+    backend: redis
+batch:
+  store:
+    backend: redis
+traceability:
+  auditChainStore:
+    backend: redis

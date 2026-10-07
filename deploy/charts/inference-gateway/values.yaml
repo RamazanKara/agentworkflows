@@ -1,4 +1,9 @@
 replicaCount: 1
+terminationGracePeriodSeconds: 210
+
+workflows:
+  # Set when workflow operations are enabled; readiness checks Temporal as well as Redis.
+  temporalAddress: ""
 
 image:
   repository: ghcr.io/ramazankara/agentworkflows/inference-gateway

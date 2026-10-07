@@ -5,6 +5,10 @@ metadata:
   labels:
     {{- include "inference-gateway.labels" . | nindent 4 }}
 spec:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   {{- if not .Values.keda.enabled }}
   {{- /* When KEDA owns scaling, omit replicas so Argo CD selfHeal does not revert
          every scale-up back to the Git value (a permanent autoscaling flap). */}}
@@ -18,6 +22,7 @@ spec:
       labels:
         {{- include "inference-gateway.labels" . | nindent 8 }}
     spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       serviceAccountName: {{ include "inference-gateway.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       securityContext:
@@ -38,6 +43,10 @@ spec:
           image: {{ include "inference-gateway.image" .Values.image | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            {{- if .Values.workflows.temporalAddress }}
+            - name: TEMPORAL_ADDRESS
+              value: {{ .Values.workflows.temporalAddress | quote }}
+            {{- end }}
             {{- range .Values.providerCredentials }}
             - name: {{ .env | quote }}
               valueFrom:
@@ -294,6 +303,10 @@ spec:
             periodSeconds: 10
             # /readyz may loop over configured backends, so keep the timeout below periodSeconds.
             timeoutSeconds: 5
+          lifecycle:
+            preStop:
+              exec:
+                command: [python, -c, "import time; time.sleep(5)"]
           livenessProbe:
             httpGet:
               path: /healthz

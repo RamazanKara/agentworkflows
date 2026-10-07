@@ -1,0 +1,71 @@
+import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import httpx
+import pytest
+from app.main import create_app
+from fastapi.testclient import TestClient
+
+from tests.gateway_support import FakeRuntimeClient, _tool_settings
+from tests.test_cloud_providers import reply, streamed_reply
+
+
+@pytest.mark.parametrize("healthy", [True, False])
+def test_temporal_readiness_and_independent_liveness(monkeypatch, healthy):
+    monkeypatch.setenv("TEMPORAL_ADDRESS", "temporal:7233")
+    app = create_app(_tool_settings())
+    app.state.runtime_client = FakeRuntimeClient()
+    app.state.temporal_client = SimpleNamespace(
+        service_client=SimpleNamespace(check_health=AsyncMock(return_value=healthy))
+    )
+    with TestClient(app) as client:
+        response = client.get("/readyz")
+        assert response.status_code == (200 if healthy else 503)
+        assert response.json()["dependencies"]["temporal"]["status"] == ("ok" if healthy else "unavailable")
+        assert client.get("/healthz").status_code == 200
+
+
+def test_temporal_readiness_is_bounded_and_redacts_failures(monkeypatch):
+    monkeypatch.setenv("TEMPORAL_ADDRESS", "temporal:7233")
+    app = create_app(_tool_settings())
+    app.state.runtime_client = FakeRuntimeClient()
+
+    async def hung():
+        await asyncio.sleep(60)
+
+    app.state.temporal_client = SimpleNamespace(service_client=SimpleNamespace(check_health=hung))
+    with TestClient(app) as client:
+        response = client.get("/readyz")
+        assert response.status_code == 503 and "temporal:7233" not in response.text
+
+
+@pytest.mark.parametrize("provider", ["openai", "anthropic", "azure-openai", "bedrock", "vertex"])
+@pytest.mark.parametrize("case", ["chat", "streaming", "tools", "fallback"])
+def test_live_acceptance_assertions_with_protocol_fixtures(monkeypatch, caplog, provider, case):
+    from tests.live.test_providers import PROVIDERS, test_live_provider
+
+    prefix = "LIVE_" + provider.upper().replace("-", "_")
+    monkeypatch.setenv(PROVIDERS[provider][0], "fixture-only-never-a-real-key")
+    for suffix, value in {
+        "MODEL": "fixture-model",
+        "BASE_URL": "https://fake.invalid/v1",
+        "INPUT_USD_PER_1K": "1",
+        "OUTPUT_USD_PER_1K": "3",
+    }.items():
+        monkeypatch.setenv(f"{prefix}_{suffix}", value)
+
+    def respond(request):
+        if case == "streaming":
+            return httpx.Response(200, content=streamed_reply(provider))
+        import json
+
+        payload = json.dumps(reply(provider, tool=case == "tools"))
+        payload = payload.replace("lookup", "echo").replace('\\"q\\"', '\\"text\\"').replace('"q"', '"text"')
+        return httpx.Response(200, content=payload)
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kwargs: original(**{**kwargs, "transport": httpx.MockTransport(respond)})
+    )
+    test_live_provider(provider, case, caplog, monkeypatch)
