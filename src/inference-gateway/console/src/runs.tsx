@@ -242,6 +242,7 @@ function StepCard({ step }: { step: Step }) {
 }
 
 const channelName: Record<string, string> = { slack: 'Slack', webhook: 'Webhook', email: 'Email' };
+const notificationEvent: Record<string, string> = { awaiting_approval: 'Approval requested', failed: 'Run failed', budget_threshold: 'Budget threshold reached' };
 
 function Notifications({ steps }: { steps: Step[] }) {
   // Each delivery writes an "attempted" receipt, then its outcome; show the latest per channel and event.
@@ -251,7 +252,7 @@ function Notifications({ steps }: { steps: Step[] }) {
     <p className="muted">{date(steps[0].timestamp)}</p>
     <ul className="notifications">{[...latest.values()].map(step => <li key={step.receipt_id}>
       <strong>{channelName[String(step.receipt.channel)] || String(step.receipt.channel || 'Channel')}</strong>
-      <span>{label(String(step.receipt.notification_event || 'event'))}</span>
+      <span>{notificationEvent[String(step.receipt.notification_event)] || label(String(step.receipt.notification_event || 'event'))}</span>
       <span className="muted">{label(String(step.receipt.outcome || 'recorded'))}</span></li>)}</ul>
     <details><summary>{steps.length} receipts</summary>{steps.map(step => <Receipt key={step.receipt_id} step={step}/>)}</details>
   </article>;
