@@ -13,23 +13,20 @@ cancel, retry, and approve runs through one authenticated API and CLI. A step ti
 connects providers, tokens, costs, durations, and receipt IDs. This repository provides a
 self-managed service, not a hosted offering. Start with the [team walkthrough](workflows.md).
 
-## Start in ten minutes
+## Your first hour
 
-With Docker Compose, Git, Make, Bash, Python 3.12+, and curl installed:
+1. **[Quickstart](quickstart.md)** — in about five minutes, install, scaffold research,
+   review and approve a draft, and verify receipts. Use the built-in fake or an explicit
+   real OpenAI route. Windows PowerShell and Bash commands are included.
+2. **[Concepts](concepts.md)** — understand teams, runs, activities, budgets, and approvals.
+3. **[Guides](templates.md)** — edit research, support triage, or code review, run your
+   worker, then connect [your team's agents and tools](workflows.md#bring-your-agent).
+4. **[Reference](sdk-reference.md)** — find CLI commands, SDK defaults, environment
+   variables, and remedies for errors.
 
-```bash
-git clone https://github.com/RamazanKara/agentworkflows.git
-cd agentworkflows
-make compose-up
-make compose-smoke
-```
-
-The trial uses local cloud-protocol fixtures and synthetic prices, so it needs no provider
-account, model download, GPU, or Kubernetes. Open <http://127.0.0.1:8080/console> with demo
-key `local-development-only` to inspect models, usage, and budgets. Stop with `make compose-down`.
-
-Follow the [quickstart](quickstart.md) for your first request, the Python package and CLI,
-real provider configuration, and actionable troubleshooting.
+The fake needs no cloud key, GPU, model download, or Kubernetes. Initial container/package
+downloads can extend the first run. The local stack is an evaluation environment;
+[team setup](workflows.md#teams-projects-and-roles) explains roles and deployment controls.
 
 ## Find a capability
 

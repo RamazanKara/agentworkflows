@@ -21,6 +21,7 @@ export type Run = {
   progress?: { stage: string; draft?: string; message?: string };
   budget: { tokens: number; cost_usd: number; token_limit: number; cost_limit_usd: number };
   timeline?: Step[];
+  result?: unknown;
 };
 export type RunPage = { runs: Run[]; next_offset: number | null };
 export type CostRow = { calls?: number; tokens?: number; cost_usd?: number };

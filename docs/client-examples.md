@@ -4,7 +4,7 @@ The gateway implements a documented subset of the OpenAI API. Clients that use t
 routes can point their base URL at the gateway and send the platform headers. Check the
 [OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json)
 and [scope](scope-and-non-goals.md) before assuming that an SDK feature is supported.
-These examples use `http://127.0.0.1:8080`, where the [Docker Compose stack](quickstart.md#docker-compose)
+These examples use `http://127.0.0.1:8080`, where the [Docker Compose stack](quickstart.md)
 serves the gateway with API key `local-development-only`. In the `kind` lab, port-forward the
 gateway service first; in a customer cluster, use your ingress host.
 

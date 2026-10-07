@@ -80,6 +80,32 @@ test('invalid auth and expiry give a clear recovery path', async ({ page }) => {
   await expect(page.getByLabel('Team credential')).toHaveValue('');
 });
 
+test('template inputs are ready to run and completed results are readable', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: {
+    ...policies.workflows,
+    SupportTriageWorkflow: policies.workflows.ResearchWorkflow,
+    CodeReviewWorkflow: policies.workflows.ResearchWorkflow,
+  } } }));
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({
+    status: 'completed', progress: undefined, result: 'Priority: high. Suggested owner: account support.',
+  }) }));
+  await login(page);
+  await expect(page).toHaveTitle(/AgentWorkflows/);
+  await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption('CodeReviewWorkflow');
+  expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty('diff');
+  await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption('SupportTriageWorkflow');
+  expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty('ticket');
+  const request = page.waitForRequest(r => r.url().endsWith('/v1/workflow-runs') && r.method() === 'POST');
+  await page.getByRole('button', { name: 'Start run' }).click();
+  expect((await request).postDataJSON().input).toHaveProperty('ticket');
+  await expect(page.getByRole('heading', { name: 'Result', exact: true })).toBeVisible();
+  await expect(page.getByText('Priority: high. Suggested owner: account support.', { exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('start is idempotent after a lost response and validates custom JSON', async ({ page }) => {
   const starts: Record<string, unknown>[] = [];
   await page.route('**/v1/workflow-runs', route => {

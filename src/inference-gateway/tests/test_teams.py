@@ -84,6 +84,9 @@ class Execution:
     async def cancel(self, **kwargs):
         self.status = "CANCELED"
 
+    async def result(self, **kwargs):
+        return {"status": "published", "publication": "fixture"}
+
     def get_update_handle(self, id):
         from temporalio.service import RPCError, RPCStatusCode
 
@@ -199,6 +202,41 @@ def test_start_roles_and_verified_team(team_gateway, role, code):
     assert start(client, role).status_code == code
     assert client.post("/v1/workflow-runs", json={"input": {}}).status_code == 401
     assert client.get("/v1/team", headers={**auth(role), "X-Sandbox-ID": "other"}).status_code == 403
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        "topic",
+        {},
+        {"topic": ""},
+        {"topic": 123},
+        {"topic": "ok", "typo": 1},
+        {"topic": "ok", "model": None},
+        {"topic": "ok", "token_limit": -1},
+        {"topic": "ok", "cost_limit_usd": "1"},
+        {"topic": "ok", "cost_limit_usd": True},
+    ],
+)
+def test_bad_template_input_does_not_start_a_stuck_execution(team_gateway, value):
+    client, app = team_gateway
+    response = start(client, input=value)
+    assert response.status_code == 422
+    assert response.json()["detail"]["reason"] == "workflow_input_invalid"
+    assert "input.json" in response.json()["detail"]["message"]
+    assert not app.state.temporal_client.executions
+
+
+def test_completed_run_exposes_result_in_detail_not_listing(team_gateway):
+    client, app = team_gateway
+    run = start(client).json()
+    execution = app.state.temporal_client.executions[run["workflow_id"]]
+    execution.status = "COMPLETED"
+    detail = client.get(f"/v1/workflow-runs/{run['run_id']}", headers=auth("viewer")).json()
+    assert detail["result"] == {"status": "published", "publication": "fixture"}
+    listing = client.get("/v1/workflow-runs", headers=auth("viewer")).json()
+    assert "result" not in listing["runs"][0]
 
 
 def test_start_idempotency_project_and_run_isolation(team_gateway):

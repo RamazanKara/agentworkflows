@@ -6,11 +6,17 @@ model allowlists, sandbox budgets, and guardrails, and writes a tamper-evident r
 
 The package uses `httpx` and the official `temporalio` SDK, with inline type annotations (`py.typed`).
 
-For durable agents, use `agentworkflows.workflows.WorkflowGateway` inside native Temporal
-workflows and register `agentworkflows.activities.GatewayActivities.call` on the worker.
-Both model and tool calls go through gateway policy, budgets, DLP, and receipts. Follow the
-[workflow guide](https://ramazankara.github.io/agentworkflows/latest/workflows/) for the
-research → draft → approval → publish example and crash-recovery walkthrough.
+Start with the [five-minute quickstart](https://ramazankara.github.io/agentworkflows/latest/quickstart/)
+to run, approve, and verify your first workflow. `agentworkflows init my-research` scaffolds
+an editable project; `--template support-triage` and `--template code-review` provide the
+other starter workflows. No server or key is needed to scaffold.
+
+Inside Temporal workflows, `WorkflowGateway.text(prompt)` returns text from a governed
+model activity. Inherit `ApprovalWorkflow` and call `await self.approval(draft)` for the
+standard console/CLI review flow. Start your worker with `run_worker([MyWorkflow])` from
+`agentworkflows.worker`. All model and tool activities retain budgets, DLP, and receipts.
+See [templates](https://ramazankara.github.io/agentworkflows/latest/templates/) and the
+[CLI/SDK reference](https://ramazankara.github.io/agentworkflows/latest/sdk-reference/).
 
 `WorkflowGateway.agent` adapts existing framework agents, `.tool` calls approved HTTP/MCP
 tools, and `.container` runs code in an approved agent-sandbox workspace. Install

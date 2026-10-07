@@ -6,11 +6,27 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import httpx
 
 from agentworkflows import GatewayClient, GatewayError, __version__
+from agentworkflows.scaffold import TEMPLATES, init_project
+
+
+def workflow_input(value: str) -> object:
+    try:
+        text = Path(value[1:]).read_text(encoding="utf-8-sig") if value.startswith("@") else value
+        parsed = json.loads(text)
+        json.dumps(parsed, allow_nan=False)
+        return parsed
+    except (OSError, UnicodeError):
+        raise argparse.ArgumentTypeError("Cannot read input file. Use --input @path/to/input.json (UTF-8).") from None
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            'Input must be valid JSON. Use --input @input.json or --input \'{"topic":"Evaluate agents"}\'.'
+        ) from None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -21,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
+    init = commands.add_parser("init", help="Create an editable workflow project; no key or server required.")
+    init.add_argument("directory", nargs="?", default=".", type=Path, help="New or empty directory (default: current).")
+    init.add_argument(
+        "--template", choices=TEMPLATES, default="research", help="Workflow template (default: research)."
+    )
     commands.add_parser("models", help="List the models your team can use.")
     chat = commands.add_parser("chat", help="Send a prompt through the governed gateway.")
     chat.add_argument("prompt")
@@ -34,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     start = operations.add_parser("start", help="Start an approved workflow; defaults to ResearchWorkflow.")
     start.add_argument("workflow", nargs="?", default="ResearchWorkflow")
     start.add_argument(
-        "--input", required=True, type=json.loads, help='JSON input, e.g. \'{"topic":"Evaluate AI agents"}\'.'
+        "--input", required=True, type=workflow_input, help="JSON or @file, e.g. @input.json from agentworkflows init."
     )
     start.add_argument("--project", help="Project from agentworkflows team; defaults to your credential's project.")
     start.add_argument(
@@ -57,6 +78,22 @@ def main(argv: list[str] | None = None) -> int:
         if operation == "approve":
             sub.add_argument("--reject", action="store_true", help="Reject the draft without publishing.")
     args = parser.parse_args(argv)
+    if args.command == "init":
+        try:
+            init_project(args.directory, args.template)
+        except ValueError as exc:
+            parser.error(str(exc))
+        except OSError:
+            parser.error("Cannot write the project. Choose a writable, empty directory and retry.")
+        name = TEMPLATES[args.template][1]
+        print(f"Created {args.template} project in {args.directory.resolve()}")
+        print(f'Next: cd "{args.directory}"')
+        print(
+            "Start the stack and set your gateway key: https://ramazankara.github.io/agentworkflows/latest/quickstart/"
+        )
+        print(f"Then: agentworkflows runs start {name} --input '@input.json'")
+        print("Edit workflow.py; README.md explains how to run your edited worker.")
+        return 0
     api_key = os.environ.get("AGENTWORKFLOWS_API_KEY")
     if not api_key:
         parser.error("set AGENTWORKFLOWS_API_KEY to your gateway key (local-development-only for the Compose demo)")
@@ -100,19 +137,29 @@ def main(argv: list[str] | None = None) -> int:
         hints = {
             401: "Check AGENTWORKFLOWS_API_KEY.",
             403: "Ask your team administrator to check the credential scope and routing policy.",
+            404: "Check AGENTWORKFLOWS_URL points to AgentWorkflows, not another service on the same port. "
+            "For a missing run, use 'agentworkflows runs list'.",
             429: "Check 'agentworkflows usage' and the team's budget or rate limit before retrying.",
         }
         hint = hints.get(exc.status_code, "Check the gateway logs using the request ID.")
         if exc.reason == "model_not_allowed":
             hint = "Choose an approved model from 'agentworkflows models'."
+        elif exc.reason == "workflow_run_missing":
+            hint = "Use 'agentworkflows runs list' with the correct team's gateway key and project."
         print(
             f"agentworkflows: {exc}. {hint} Request ID: {exc.request_id or 'unavailable'}.{start_hint}", file=sys.stderr
         )
         return 1
     except httpx.HTTPError:
         print(
-            "agentworkflows: cannot reach the gateway. Check AGENTWORKFLOWS_URL and gateway health." + start_hint,
+            "agentworkflows: cannot reach the gateway. Check AGENTWORKFLOWS_URL "
+            "(default http://127.0.0.1:8080) and start the stack using the Quickstart." + start_hint,
             file=sys.stderr,
+        )
+        return 1
+    except httpx.InvalidURL:
+        print(
+            "agentworkflows: invalid AGENTWORKFLOWS_URL. Use a full URL such as http://127.0.0.1:8080.", file=sys.stderr
         )
         return 1
     return 0
