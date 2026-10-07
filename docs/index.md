@@ -7,10 +7,11 @@ OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini. Route calls thr
 gateway, bind credentials to teams, enforce model policies and budgets, and inspect receipts.
 Ollama and vLLM are optional self-hosted model backends.
 
-**Version 0.2.0 adds team operations to durable Temporal workflows.** Teams have projects,
-admin/builder/approver/viewer roles, provider keys, and shared cost limits. Start, inspect,
-cancel, retry, and approve runs through one authenticated API and CLI. A step timeline
-connects providers, tokens, costs, durations, and receipt IDs. This repository provides a
+**AgentWorkflows v0.2.0 is the first public release.** It brings governed cloud providers, durable
+Temporal workflows, agent and tool integrations, team roles and budgets, and a web console.
+Scaffold research, support triage, or code review; start, inspect, cancel, retry, and approve
+runs through the console or CLI. Step timelines connect providers, tokens, costs, durations,
+and receipt IDs. This repository provides a
 self-managed service, not a hosted offering. Start with the [team walkthrough](workflows.md).
 
 ## Your first hour
@@ -58,4 +59,4 @@ See [evidence and validation](proof.md) and [security boundaries](threat-model.m
 Built on [private-ai-platform-kit](https://github.com/RamazanKara/private-ai-platform-kit)
 ([DOI: 10.5281/zenodo.21038652](https://doi.org/10.5281/zenodo.21038652)). The kit stays a
 separate self-hosted project with its own paper and DOI. AgentWorkflows starts its product
-versions at 0.1.0 and preserves the upstream history and Apache-2.0 attribution.
+versions at 0.2.0 and preserves the upstream history and Apache-2.0 attribution.

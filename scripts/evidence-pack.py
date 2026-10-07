@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
@@ -64,7 +65,8 @@ def exists(*paths: str) -> bool:
 
 def executable(path: str) -> bool:
     target = ROOT / path
-    return target.exists() and target.stat().st_mode & 0o111 != 0
+    # repo-hygiene checks Git's executable bit; Windows has no POSIX mode bits.
+    return target.exists() and os.access(target, os.X_OK)
 
 
 def latest_artifact(name: str, patterns: list[str], kind: str) -> Artifact | None:
@@ -194,9 +196,9 @@ def static_controls() -> list[Control]:
 
     return [
         control(
-            "Local-first customer-owned Kubernetes",
-            "local" in readme
-            and "customer-owned clusters" in readme
+            "Governed cloud and optional self-hosted deployments",
+            "cloud providers" in readme
+            and "self-hosted" in readme
             and exists("deploy/clusters/local/kind-config.yaml", "deploy/clusters/customer/README.md"),
             "The README describes governed cloud providers and optional self-hosted deployments.",
             ["README.md", "deploy/clusters/local/kind-config.yaml", "deploy/clusters/customer/README.md"],

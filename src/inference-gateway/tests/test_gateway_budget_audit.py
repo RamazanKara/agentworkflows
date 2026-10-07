@@ -258,9 +258,7 @@ def test_audit_events_carry_agent_action_receipts(caplog):
 
     assert allowed.status_code == 200
     assert denied.status_code == 400
-    events = [
-        json.loads(record.getMessage()) for record in caplog.records if record.name == "agentworkflows.audit"
-    ]
+    events = [json.loads(record.getMessage()) for record in caplog.records if record.name == "agentworkflows.audit"]
     receipts = {event["request_id"]: event for event in events if event.get("event") == "inference_request"}
     assert receipts["receipt-allowed"]["action_type"] == "model_call"
     assert receipts["receipt-allowed"]["decision"] == "allowed"
