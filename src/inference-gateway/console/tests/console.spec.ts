@@ -92,7 +92,7 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('failed');
   await expect(page.getByRole('heading', { name: 'No matching runs on this page' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('');
-  await page.getByRole('link', { name: 'ResearchWorkflow', exact: true }).click();
+  await page.getByRole('link', { name: 'Research', exact: true }).click();
   await page.getByText('Receipt ·', { exact: false }).click();
   await expect(page.getByText('"prev_hash"', { exact: false })).toBeVisible();
   await page.getByText('Step logs', { exact: true }).click();
@@ -101,7 +101,7 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   await expect(page.getByText('Key present', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Costs', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'By workflow' })).toBeVisible();
-  await expect(page.getByRole('row', { name: 'ResearchWorkflow 2 63 $0.0432' })).toBeVisible();
+  await expect(page.getByRole('row', { name: 'Research 2 63 $0.04' })).toBeVisible();
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual([0, 0, '']);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Team credential')).toHaveValue('');
@@ -213,13 +213,13 @@ test('conflicting approval is actionable, viewer cannot decide or configure', as
 test('team switching clears prior team data and reload clears identities', async ({ page }) => {
   await login(page);
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
-  await page.getByRole('button', { name: 'Add team / identity' }).click();
+  await page.getByRole('button', { name: 'Add identity' }).click();
   await page.getByLabel('Team credential').fill('other');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Your first workflow starts here' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ResearchWorkflow' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Research' })).toHaveCount(0);
   await page.getByLabel('Team / identity', { exact: true }).selectOption({ label: 'demo / admin' });
-  await expect(page.getByRole('link', { name: 'ResearchWorkflow' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Research' })).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Team credential')).toBeVisible();
 });
@@ -243,7 +243,42 @@ test('tool steps show the tool name even when a receipt carries the gateway defa
   } }));
   await login(page);
   await page.getByRole('link', { name: 'Open latest run and receipts' }).click();
-  await expect(page.getByRole('heading', { name: 'research', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Research', exact: true, level: 3 })).toBeVisible();
   await expect(page.locator('.step-facts')).toContainText('research');
   await expect(page.locator('.step-facts')).not.toContainText('demo-openai');
+});
+
+test('fallback holds are explained and notification receipts read as one step', async ({ page }) => {
+  const detail = run();
+  const step = detail.timeline[0];
+  const notification = (channel: string, outcome: string, n: number) => ({
+    ...step, step_id: 'notification', action: 'notification', provider: '', model: '', tokens: 0, cost_usd: 0, attempts: [],
+    receipt_id: String(n).repeat(64), receipt: { channel, notification_event: 'awaiting_approval', outcome },
+  });
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: { ...detail, timeline: [
+    { ...step, tokens: 548, cost_usd: 1.634, attempts: [
+      { provider: 'openai', status: 'failed', reserved: { tokens: 541, cost_usd: 1.623 } },
+      { provider: 'anthropic', status: 'served', reserved: { tokens: 541, cost_usd: 1.623 }, charged: { tokens: 7, cost_usd: .011 } },
+    ] },
+    notification('slack', 'attempted', 1), notification('slack', 'delivered', 2), notification('email', 'delivered', 3),
+  ] } }));
+  await login(page);
+  await page.getByRole('link', { name: 'Open latest run and receipts' }).click();
+  await expect(page.getByText('openai failed, so anthropic served this step. $1.62 and 541 tokens stay held for the failed openai attempt')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toHaveCount(1);
+  await expect(page.locator('.step-facts').first()).toContainText('$0.01');
+  await expect(page.locator('.notifications li')).toHaveCount(2);
+  await expect(page.locator('.notifications')).toContainText('Slack');
+  await expect(page.getByText('3 receipts')).toBeVisible();
+  await expect(page.locator('.timeline')).not.toContainText('Step notification');
+});
+
+test('rejected runs read as rejected in the run list, with a readable result', async ({ page }) => {
+  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [run({ status: 'completed', progress: undefined, outcome: 'rejected' })], next_offset: null } }));
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({ status: 'completed', progress: undefined, result: { status: 'rejected', reviewer: 'approver' } }) }));
+  await login(page);
+  await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
+  await expect(page.locator('.runs-stack .badge')).toHaveText('Rejected');
+  await page.getByRole('link', { name: 'Research', exact: true }).click();
+  await expect(page.getByText('Rejected by approver. Nothing was published.')).toBeVisible();
 });

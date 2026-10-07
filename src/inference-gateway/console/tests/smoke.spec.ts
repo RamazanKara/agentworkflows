@@ -13,7 +13,7 @@ test('Compose first run, approval, receipts, provider budgets, costs and team is
   await signIn(page, 'local-development-only');
   await expect(page.getByRole('heading', { name: 'Your first governed workflow' })).toBeVisible();
   await page.getByRole('link', { name: 'Triggers', exact: true }).click();
-  await expect(page.getByRole('row').filter({ hasText: 'DailyReportWorkflow' })).toContainText('0 9 * * *');
+  await expect(page.getByRole('row').filter({ hasText: 'Daily report' })).toContainText('0 9 * * *');
   await page.getByRole('button', { name: 'Pause daily' }).click();
   await expect(page.getByRole('button', { name: 'Resume daily' })).toBeEnabled();
   await page.getByRole('button', { name: 'Resume daily' }).click();
@@ -46,12 +46,12 @@ test('Compose first run, approval, receipts, provider budgets, costs and team is
   await expect(page.locator('details[open]').filter({ hasText: 'Step logs' }).locator('pre')).toContainText('"status_code"');
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('completed');
-  await expect(page.getByRole('link', { name: 'ResearchWorkflow', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Research', exact: true }).first()).toBeVisible();
   await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
   await expect(page.getByText('Key present', { exact: true })).toHaveCount(5);
   await page.getByRole('link', { name: 'Costs', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'By workflow table' })).toContainText('ResearchWorkflow');
-  await page.getByRole('button', { name: 'Add team / identity' }).click();
+  await expect(page.getByRole('region', { name: 'By workflow table' })).toContainText('Research');
+  await page.getByRole('button', { name: 'Add identity' }).click();
   await page.getByLabel('Team credential').fill('demo-other-team');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.goto(runUrl);

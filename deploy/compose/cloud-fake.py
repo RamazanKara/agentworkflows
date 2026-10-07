@@ -152,8 +152,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         text = f"Local fake for {provider}; no cloud request was made."
         prompt = body.get("messages", [{}])[-1].get("content", "")
+        if isinstance(prompt, list):  # Anthropic and Bedrock send content blocks.
+            prompt = "".join(part.get("text", "") for part in prompt if isinstance(part, dict))
         if isinstance(prompt, str):
-            if prompt.startswith("Review this PR diff"):
+            if prompt.startswith("Write a concise team briefing"):
+                text = (
+                    "Synthetic briefing: evaluate agents on task success rate, cost per finished task and how "
+                    "often reviewers override them [S1]. Start with one low-risk workflow, keep a human approval "
+                    "step, and compare against the current manual process for two weeks [S2]."
+                )
+            elif prompt.startswith("Review this PR diff"):
                 text = (
                     "Synthetic PR review: HIGH auth.py:10 returns True for every user, bypassing the admin check. "
                     "Restore user.is_admin and test admin/non-admin access. Confirm caller context before approval."

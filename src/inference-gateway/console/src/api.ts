@@ -23,6 +23,7 @@ export type Run = {
   budget: { tokens: number; cost_usd: number; token_limit: number; cost_limit_usd: number };
   timeline?: Step[];
   result?: unknown;
+  outcome?: string;
 };
 export type RunPage = { runs: Run[]; next_offset: number | null };
 export type CostRow = { calls?: number; tokens?: number; cost_usd?: number };
@@ -79,8 +80,13 @@ export function useData<T>(token: string, path: string, revision = 0) {
   return state;
 }
 
-export const money = (value: number | null | undefined) => value == null ? '—' : `$${value.toFixed(4)}`;
+export const money = (value: number | null | undefined) => value == null ? '—' : `$${value.toFixed(value !== 0 && Math.abs(value) < 0.01 ? 4 : 2)}`;
+// ResearchWorkflow → Research, DocumentQAWorkflow → Document QA, GitHubIssueTriageWorkflow → GitHub issue triage.
+export const workflowName = (value: string) => value.replace(/Workflow$/, '').split(/(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/)
+  .map((word, i) => i === 0 || /[A-Z].*[A-Z]/.test(word) ? word : word.toLowerCase()).join(' ').replace(/\bGit hub\b/i, 'GitHub') || value;
+export const shortId = (value: string) => value.slice(-8);
 export const number = (value: number | undefined) => (value ?? 0).toLocaleString();
 export const date = (value: number) => new Date(value * 1000).toLocaleString();
-export const status = (run: Run) => run.progress?.stage === 'awaiting_approval' ? 'awaiting_approval' : run.status;
+export const status = (run: Run) => run.progress?.stage === 'awaiting_approval' ? 'awaiting_approval'
+  : run.status === 'completed' && (run.outcome ?? (run.result as { status?: string } | undefined)?.status) === 'rejected' ? 'rejected' : run.status;
 export const label = (value: string) => value.replaceAll('_', ' ').replace(/^./, char => char.toUpperCase());

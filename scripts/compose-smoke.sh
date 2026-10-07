@@ -107,10 +107,10 @@ for provider in anthropic bedrock; do
 done
 
 step "7b. Local overload falls back to the cloud adapter; confidential data refuses that fallback"
-status="$(request POST /v1/chat/completions '{"model":"demo-overload","max_tokens":24,"messages":[{"role":"user","content":"hello fixture"}]}')"
+status="$(request POST /v1/chat/completions '{"model":"demo-fallback","max_tokens":24,"messages":[{"role":"user","content":"hello fixture"}]}')"
 [[ "$status" == "200" ]] || fail "fallback returned $status"
 [[ "$(json "d['model']")" == "demo-openai" ]] || fail "wrong fallback model"
-status="$(request POST /v1/chat/completions '{"model":"demo-overload","data_classification":"confidential","messages":[{"role":"user","content":"private text"}]}')"
+status="$(request POST /v1/chat/completions '{"model":"demo-fallback","data_classification":"confidential","messages":[{"role":"user","content":"private text"}]}')"
 [[ "$status" == "403" ]] || fail "confidential fallback returned $status"
 [[ "$(json "d['detail']['reason']")" == "data_classification_denied" ]] || fail "classification refusal missing"
 ok "403: confidential requests cannot fall back to cloud"

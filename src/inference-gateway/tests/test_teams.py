@@ -85,7 +85,7 @@ class Execution:
         self.status = "CANCELED"
 
     async def result(self, **kwargs):
-        return {"status": "published", "publication": "fixture"}
+        return {"status": "rejected" if self.stage == "rejected" else "published", "publication": "fixture"}
 
     def get_update_handle(self, id):
         from temporalio.service import RPCError, RPCStatusCode
@@ -548,3 +548,16 @@ def test_managed_teams_require_durable_budgets_and_receipts(tmp_path):
     )
     with pytest.raises(ValueError, match="Team projects require"):
         create_app(_tool_settings(sandbox_policy_path=path))
+
+
+def test_run_list_shows_whether_a_completed_run_was_rejected(team_gateway):
+    client, app = team_gateway
+    published = start(client).json()
+    rejected = start(client).json()
+    for run, stage in ((published, "published"), (rejected, "rejected")):
+        execution = app.state.temporal_client.executions[run["workflow_id"]]
+        execution.status, execution.stage = "COMPLETED", stage
+    rows = {row["run_id"]: row for row in client.get("/v1/workflow-runs", headers=auth("viewer")).json()["runs"]}
+    assert rows[published["run_id"]]["outcome"] == "published"
+    assert rows[rejected["run_id"]]["outcome"] == "rejected"
+    assert "result" not in rows[rejected["run_id"]]

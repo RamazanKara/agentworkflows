@@ -2,12 +2,6 @@ apiVersion: platform.ai/v1alpha1
 kind: ModelRoutingPolicy
 spec:
   models:
-    - id: demo-overload
-      backend: vllm
-      fallbacks: [demo-openai]
-      pricing:
-        inputUsdPer1kTokens: 1
-        outputUsdPer1kTokens: 3
     - id: demo-openai
       backend: openai
       fallbacks: [demo-anthropic]
@@ -46,3 +40,10 @@ spec:
         model: google/fixture-gemini
         credentialEnv: COMPOSE_PROVIDER_KEY
       pricing: *fixture-pricing
+    # Always returns 503 so the smoke test and demo show ordered fallback.
+    - id: demo-fallback
+      backend: vllm
+      fallbacks: [demo-openai]
+      pricing:
+        inputUsdPer1kTokens: 1
+        outputUsdPer1kTokens: 3

@@ -2,7 +2,7 @@
 
 **Run team AI workflows with human approval, budgets, and a traceable record of each step.**
 
-AgentWorkflows is a self-managed Python workflow SDK, model gateway and team web console.
+AgentWorkflows is self-managed: Python and TypeScript workflow SDKs, a model gateway and a team web console.
 Temporal keeps runs durable; the gateway controls model and tool access and records usage
 and receipts. Start, inspect, approve, cancel and retry runs through the console or CLI.
 In v0.3.0, cron schedules and signed webhooks can start work, with notifications for waiting approvals,

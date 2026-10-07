@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { date, money, number, useData, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type Usage } from './api';
+import { date, money, number, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type Usage } from './api';
 import { Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
@@ -33,8 +33,8 @@ export function GetStarted({ session }: { session: Session }) {
 
 function CostTable({ title, rows }: { title: string; rows: Record<string, CostRow> }) {
   return <section><h2>{title}</h2><div className="panel">
-    {Object.keys(rows).length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}><table><thead><tr><th>{title === 'By provider' ? 'Provider' : 'Workflow'}</th><th>Calls</th><th>Tokens</th><th>Estimated cost</th></tr></thead>
-      <tbody>{Object.entries(rows).sort((a, b) => (b[1].cost_usd || 0) - (a[1].cost_usd || 0)).map(([name, row]) => <tr key={name}><th scope="row">{name}</th><td>{number(row.calls)}</td><td>{number(row.tokens)}</td><td>{money(row.cost_usd)}</td></tr>)}</tbody></table></div> :
+    {Object.keys(rows).length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}><table className="stack"><thead><tr><th>{title === 'By provider' ? 'Provider' : 'Workflow'}</th><th>Calls</th><th>Tokens</th><th>Estimated cost</th></tr></thead>
+      <tbody>{Object.entries(rows).sort((a, b) => (b[1].cost_usd || 0) - (a[1].cost_usd || 0)).map(([name, row]) => <tr key={name}><th scope="row">{title === 'By provider' ? (name === 'tool' ? 'Tools' : name) : workflowName(name)}</th><td data-label="Calls">{number(row.calls)}</td><td data-label="Tokens">{number(row.tokens)}</td><td data-label="Cost">{money(row.cost_usd)}</td></tr>)}</tbody></table></div> :
       <Empty title="No recorded spend yet"><p>Costs appear as governed calls finish. In-flight and unreported calls can retain reservations.</p></Empty>}
   </div></section>;
 }
@@ -52,7 +52,7 @@ export function Costs({ session }: { session: Session }) {
       {spend.project && <p className="callout">This credential is project-scoped. Team-wide spend is hidden; provider and workflow rows cover your project only.</p>}
       <CostTable title="By provider" rows={spend.providers}/>
       <CostTable title="By workflow" rows={spend.workflows || {}}/>
-      <p className="muted">{spend.accounting} Workflow rows cover calls recorded since console accounting was enabled; standalone calls appear only under providers. Run details show lifetime run budgets.</p>
+      <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes amounts held for failed attempts that reported no usage. Calls made outside a workflow appear only under By provider.</p>
     </>}
   </>;
 }
@@ -74,10 +74,10 @@ function ProviderSettings({ session }: { session: Session }) {
   return <><PageHeader title="Providers & budgets" subtitle="One governed gateway. Your team’s keys, models, and spending limits."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={team.error || budget.error || usage.error || policies.error} retry={() => setRevision(v => v + 1)}/>
     {!settings && !team.error && <Loading/>}
-    <Metrics items={[[ 'Team spend limit', settings ? settings.cost_limit_usd ? money(settings.cost_limit_usd) : 'No USD limit' : '—' ], ['Reserved + spent', money(usage.data?.spend.reserved_and_spent_usd)], ['Tokens / limit', budget.data ? `${number(budget.data.usage.estimated_tokens)} / ${budget.data.limits.estimated_tokens ? number(budget.data.limits.estimated_tokens) : 'No limit'}` : '—']]}/>
+    <Metrics items={[[ 'Team spend limit', settings ? settings.cost_limit_usd ? money(settings.cost_limit_usd) : 'No USD limit' : '—' ], ['Reserved + spent', money(usage.data?.spend.reserved_and_spent_usd)], ['Token budget used', budget.data ? `${number(budget.data.usage.estimated_tokens)} / ${budget.data.limits.estimated_tokens ? number(budget.data.limits.estimated_tokens) : 'No limit'}` : '—']]}/>
     <h2>Provider connections</h2><div className="panel">
-      {settings?.providers.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Provider connections table"><table><thead><tr><th>Provider</th><th>Server environment reference</th><th>Configuration</th></tr></thead><tbody>
-        {Object.entries(settings.provider_configuration || {}).map(([provider, configuration]) => <tr key={provider}><th scope="row">{provider}</th><td><code>{configuration.environment_variable}</code></td><td><span className={`badge ${configuration.configured ? 'recorded' : 'awaiting_approval'}`}>{configuration.configured ? 'Key present' : 'Key missing'}</span></td></tr>)}
+      {settings?.providers.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Provider connections table"><table className="stack"><thead><tr><th>Provider</th><th>Server environment reference</th><th>Configuration</th></tr></thead><tbody>
+        {Object.entries(settings.provider_configuration || {}).map(([provider, configuration]) => <tr key={provider}><th scope="row">{provider}</th><td data-label="Key"><code>{configuration.environment_variable}</code></td><td><span className={`badge ${configuration.configured ? 'recorded' : 'awaiting_approval'}`}>{configuration.configured ? 'Key present' : 'Key missing'}</span></td></tr>)}
       </tbody></table></div> : <Empty title="Connect your first provider"><p>Choose a cloud provider and follow the setup below. For a local evaluation, Compose comes with fake providers already connected.</p></Empty>}
     </div><p className="muted">Key presence is a configuration check, not a live provider test. Secret values never appear here.</p>
     <section className="setup panel"><h2>Connect a key and set a budget</h2>
@@ -91,6 +91,6 @@ function ProviderSettings({ session }: { session: Session }) {
       <p><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1">Cloud routes and prices</a></p>
       <p className="callout">The Compose demo already connects local fakes for OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex. Keep those keys for the trial, then <a href="#new">run the example</a>.</p>
     </section>
-    <section><h2>Workflow budget ceilings</h2><div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow budget ceilings table"><table><thead><tr><th>Workflow</th><th>Providers</th><th>Tokens</th><th>USD limit</th></tr></thead><tbody>{Object.entries(policies.data?.workflows || {}).map(([name, policy]) => <tr key={name}><th scope="row">{name}</th><td>{policy.allowedProviders.join(', ') || 'Team policy'}</td><td>{number(policy.tokenLimit)}</td><td>{money(policy.costLimitUsd)}</td></tr>)}</tbody></table></div></div><p className="muted">Changes use the existing reviewed policy and Secret deployment. Running workflows keep their immutable run budgets.</p></section>
+    <section><h2>Workflow budget ceilings</h2><div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow budget ceilings table"><table className="stack"><thead><tr><th>Workflow</th><th>Providers</th><th>Tokens</th><th>USD limit</th></tr></thead><tbody>{Object.entries(policies.data?.workflows || {}).map(([name, policy]) => <tr key={name}><th scope="row">{workflowName(name)}</th><td data-label="Providers">{policy.allowedProviders.join(', ') || 'Team policy'}</td><td data-label="Tokens">{number(policy.tokenLimit)}</td><td data-label="Limit">{money(policy.costLimitUsd)}</td></tr>)}</tbody></table></div></div><p className="muted">Changes use the existing reviewed policy and Secret deployment. Running workflows keep their immutable run budgets.</p></section>
   </>;
 }

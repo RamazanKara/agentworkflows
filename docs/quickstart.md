@@ -56,7 +56,7 @@ These commands work in either shell:
 ```sh
 agentworkflows init my-research
 cd my-research
-agentworkflows runs start --input '@input.json'
+agentworkflows runs start ResearchWorkflow --input '@input.json'
 ```
 
 You now have editable `workflow.py`, `worker.py`, and `input.json`, plus a README with
@@ -95,8 +95,9 @@ agentworkflows usage
 ```
 
 Repeat `inspect` if the run is still finishing. Success is **`status: completed`**, a
-**`result.status: published`**, and a timeline containing two model calls, `research`,
-`publish`, and your approval, each with a `receipt_id`. The approval records the identity
+**`result.status: published`**, and a timeline with `research`, two model calls, your
+approval and `publish`, plus six notification receipts from the local Slack, webhook and
+email fakes. Every entry has a `receipt_id`. The draft call falls back from OpenAI to Anthropic on purpose. The approval records the identity
 of your gateway key. `approve --reject` instead finishes without publishing.
 
 Open <http://127.0.0.1:8080/console/> and sign in with `local-development-only` to see the
