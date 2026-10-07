@@ -36,7 +36,7 @@ import tempfile
 from collections.abc import Iterator
 from dataclasses import dataclass
 from time import time
-from typing import Any
+from typing import Any, BinaryIO, cast
 
 import httpx
 
@@ -354,7 +354,8 @@ def _assemble_result_file(
                 spool.write(line)
                 lines += 1
         size = spool.tell()
-        object_store.put_stream(object_key, spool, size)
+        # On Windows, TemporaryFile is typed as a wrapper rather than BinaryIO.
+        object_store.put_stream(object_key, cast(BinaryIO, spool), size)
     batch_store.create_file(
         FileRecord(
             id=file_id,

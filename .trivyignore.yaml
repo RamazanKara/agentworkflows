@@ -14,3 +14,14 @@ misconfigurations:
       real secret in AgentWorkflows is a Kubernetes Secret or an External Secrets reference. The
       field is named for the domain term; renaming it to evade the heuristic would trade a
       correct name for a quiet scanner.
+  - id: KSV-0109
+    paths:
+      - "deploy/charts/workflows/charts/temporal/templates/server-configmap.yaml"
+    statement: >-
+      False positive in the Temporal 1.7.0 chart's config_template.yaml. The password
+      fields contain only runtime template expressions referencing
+      TEMPORAL_DEFAULT_STORE_PASSWORD and TEMPORAL_VISIBILITY_STORE_PASSWORD, not
+      credentials. Both environment variables use secretKeyRef to read the password
+      from temporal-postgres-auth, configured through each datastore's existingSecret
+      in deploy/charts/workflows/values.yaml. The server expands these expressions
+      in memory; no password is stored in the ConfigMap.
