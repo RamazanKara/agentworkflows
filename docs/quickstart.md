@@ -6,7 +6,8 @@ roles, verified approvals, and shared spend controls to the cloud gateway.
 
 ## Docker Compose
 
-Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. Run from a Bash shell
+Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. The browser smoke
+also requires Node.js 24/npm and downloads Chromium on first use. Run from a Bash shell
 (Linux, macOS, or WSL). No GPU, model download, provider key, or paid inference is needed.
 
 ```bash
@@ -26,9 +27,10 @@ provider account or measure model quality.
 
 The walkthrough ends with `All checks passed` after deliberately editing a receipt and
 checking that verification rejects it. The original log is `.out/compose/gateway-audit.jsonl`.
-Open <http://127.0.0.1:8080/console> and enter `local-development-only` to inspect health,
-models, usage, and budgets. This public demo key is bound to sandbox `demo`; do not reuse it
-outside the trial.
+Open <http://127.0.0.1:8080/console> and sign in with `local-development-only`. Follow
+**Get started → Run workflow → Approvals → Step timeline**, then inspect **Costs** and
+**Providers & budgets**. The smoke also checks these pages in headless Chromium.
+This public demo key is bound to team `demo`; do not reuse it outside the trial.
 
 Temporal history and approval signals are visible at <http://127.0.0.1:8233>. Follow the
 [workflow guide](workflows.md) to start a run, read its draft, approve or reject it, and
@@ -53,7 +55,8 @@ the same gateway; follow the [client examples](client-examples.md).
 Follow [team setup](workflows.md#teams-projects-and-roles) to issue builder/approver/viewer
 credentials, add projects, map provider keys, and set shared token/USD limits.
 `agentworkflows team` discovers your access; `agentworkflows runs --help` lists run commands.
-The console is read-only. Usage uses configured prices and conservative reservations.
+The [console walkthrough](workflows.md#web-console) covers role-based controls and team switching.
+Usage uses configured prices and conservative reservations.
 
 ## Connect a real provider
 

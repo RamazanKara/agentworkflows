@@ -16,6 +16,20 @@ Kubernetes, a GPU, or downloaded model weights. Initial environment setup instal
 hash-pinned packages and needs access to the package index, or a populated local
 package cache.
 
+The web console uses Node.js 24/npm, React, TypeScript, and Vite without a component library.
+Its source is `src/inference-gateway/console`; `make console-build` installs the lockfile
+and emits ignored static assets into the gateway's `app/console/`. Docker builds the same
+assets in a Node build stage; the runtime remains Python-only. Gateway tests build these
+assets first. For a local frontend loop, run `npm run dev` in the console directory beside
+a gateway on port 8080; Vite proxies `/v1` to it.
+
+`make test-console` builds and runs headless Chromium checks against local API fixtures
+with at most two workers. `make test` and `make validate` include them. On Linux, install
+browser libraries once with `cd src/inference-gateway/console && npm ci && npx playwright install --with-deps chromium`.
+`make compose-smoke` additionally tests the real gateway, Temporal worker, and local provider
+fakes from the browser. No cloud credentials are needed. Keep the API contract snapshot
+current with `make api-contract-update` when changing filters or other endpoint parameters.
+
 ## First development check
 
 ```bash

@@ -23,6 +23,9 @@ log "running inference gateway tests"
 log "running RAG service tests"
 ./scripts/test-rag.sh
 
+log "checking the web console in headless Chromium"
+./scripts/test-console.sh
+
 log "checking RAG retrieval-eval metrics and golden suite"
 src/inference-gateway/.venv/bin/python scripts/rag-eval.py --selftest
 src/inference-gateway/.venv/bin/python scripts/rag-eval.py --check-config --suite platform/evals/rag-retrieval-suite.yaml

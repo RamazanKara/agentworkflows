@@ -87,8 +87,11 @@ async def settle_team_cost(request: Request, response: dict[str, Any] | None) ->
             amount = nanodollars(getattr(request.state, "usage_cost", 0) or 0)
             tokens = total
         charged += amount
-        for prefix in ("provider", f"project.{project}.provider"):
-            base = f"{prefix}.{charge['provider']}"
+        bases = [f"provider.{charge['provider']}", f"project.{project}.provider.{charge['provider']}"]
+        workflow = getattr(request.state, "workflow_name", None)
+        if workflow:
+            bases.extend((f"workflow.{workflow}", f"project.{project}.workflow.{workflow}"))
+        for base in bases:
             args.extend((f"{base}.cost", amount, f"{base}.tokens", tokens, f"{base}.calls", 1))
     await redis_call(request, "eval", SETTLE_COST, 1, key, charged - reserved, *args)
     request.state.team_cost_usd = charged / 1_000_000_000
@@ -101,14 +104,16 @@ async def team_cost_report(request: Request) -> dict[str, Any]:
     key, start = cost_key(request)
     raw = await redis_call(request, "hgetall", key)
     project = (request.state.principal or {}).get("project")
-    prefix = f"project.{project}.provider." if project else "provider."
-    providers: dict[str, Any] = {}
-    for name, value in raw.items():
-        if name.startswith(prefix):
-            provider, field = name[len(prefix) :].split(".")
-            providers.setdefault(provider, {})["cost_usd" if field == "cost" else field] = (
-                int(value) / 1_000_000_000 if field == "cost" else int(value)
-            )
+    groups: dict[str, dict[str, Any]] = {"providers": {}, "workflows": {}}
+    for dimension, rows in groups.items():
+        prefix = f"project.{project}." if project else ""
+        prefix += dimension[:-1] + "."
+        for name, value in raw.items():
+            if name.startswith(prefix):
+                group, field = name[len(prefix) :].rsplit(".", 1)
+                rows.setdefault(group, {})["cost_usd" if field == "cost" else field] = (
+                    int(value) / 1_000_000_000 if field == "cost" else int(value)
+                )
     return {
         "team_id": request.state.sandbox_id,
         "project": project,
@@ -116,6 +121,6 @@ async def team_cost_report(request: Request) -> dict[str, Any]:
         "window_seconds": request.app.state.settings.sandbox_budget_window_seconds,
         "cost_limit_usd": team.cost_limit_usd,
         "reserved_and_spent_usd": None if project else int(raw.get("cost", 0)) / 1_000_000_000,
-        "providers": providers,
+        **groups,
         "accounting": "Configured prices; unreported calls retain conservative reservations. Not a provider invoice.",
     }

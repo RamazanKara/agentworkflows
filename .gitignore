@@ -35,6 +35,9 @@ results/**/*.log
 /docs/runbooks/
 /.venv-docs/
 .DS_Store
+node_modules/
+/src/inference-gateway/app/console/
+/src/inference-gateway/console/test-results/
 
 # Vendored Helm subchart dependencies (umbrella chart, built at package time)
 /deploy/charts/*/charts/

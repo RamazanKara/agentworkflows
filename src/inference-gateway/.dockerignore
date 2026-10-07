@@ -5,3 +5,6 @@ tests/
 *.pyc
 *.pyo
 *.log
+console/node_modules/
+console/test-results/
+app/console/

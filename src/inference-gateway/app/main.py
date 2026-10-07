@@ -210,8 +210,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Server-side Responses state (ADR 0012): built only when enabled; the /v1/responses handler
     # rejects store / previous_response_id when it is None (the stateless subset).
     app.state.response_store = build_response_store(resolved) if resolved.responses_store_enabled else None
-    # Opt-in read-only admin console (ADR 0013): the gateway serves the bundled static page at
-    # /console, same-origin so its /v1 fetches need no CORS. Off by default.
+    # Bundled console uses same-origin, authenticated APIs; no separate identity store.
     if resolved.admin_console_enabled:
         app.mount(
             "/console",
@@ -369,6 +368,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     content={"detail": "Workflow steps support chat, messages, tools, and container agents."},
                 )
             response = await call_next(request)
+            if request.url.path.startswith("/console"):
+                response.headers["Content-Security-Policy"] = (
+                    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+                    "img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+                )
+                response.headers["X-Content-Type-Options"] = "nosniff"
+            if request.url.path.startswith(("/v1/", "/console")):
+                response.headers["Cache-Control"] = "no-store"
             response.headers["X-Request-ID"] = request.state.request_id
             response.headers["X-Sandbox-ID"] = request.state.sandbox_id
             if request.state.traceparent:

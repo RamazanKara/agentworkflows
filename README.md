@@ -19,7 +19,8 @@ Temporal keeps agent workflows durable across worker failures. Start with the
 
 ## Try it in ten minutes
 
-You need Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. The demo uses local
+You need Docker with Compose, Git, Make, Bash, Python 3.12+, and curl; browser smoke also
+uses Node.js 24/npm and downloads headless Chromium. The demo uses local
 cloud-protocol fixtures: no cloud account, paid API calls, model download, GPU, or Kubernetes.
 
 ```bash
@@ -42,8 +43,10 @@ The same walkthrough runs OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph ag
 calls an approved MCP tool, and proves workflow allowlists and tool argument DLP.
 Try [your existing agent as a workflow step](docs/workflows.md#bring-your-agent) next.
 
-Open the read-only console at <http://127.0.0.1:8080/console>. Use the public demo key
-`local-development-only` to inspect models, usage, and budgets. It is only for this local trial.
+Open the team console at <http://127.0.0.1:8080/console>. Sign in with the public demo key
+`local-development-only`, keep the fake providers, and choose **Run workflow**. Review the
+draft in **Approvals**, then open its step receipts and **Costs**. This key is only for the
+local trial. See the [console walkthrough](docs/workflows.md#web-console).
 
 Send your first request:
 
@@ -86,6 +89,7 @@ models, troubleshooting, and the Kubernetes lab.
 
 | Capability | How to use it |
 | --- | --- |
+| Team web console | [Console walkthrough](docs/workflows.md#web-console); sign in, switch identities, filter runs, approve work, and inspect receipts and costs |
 | Governed cloud providers and ordered fallback | [Provider configuration](docs/client-examples.md); provider credentials stay on the server |
 | Durable agent workflows and human approvals | [Temporal workflow SDK and walkthrough](docs/workflows.md); retry, pause, and resume with per-run token/cost budgets |
 | Framework agents and MCP tools | [Bring your agent](docs/workflows.md#bring-your-agent); point clients at the gateway and register tools once per team |
