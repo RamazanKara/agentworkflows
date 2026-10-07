@@ -1944,6 +1944,11 @@
 <p>Start with the <a href="../quickstart/">five-minute quickstart</a> for an approved workflow.
 This guide adds retrieval, self-hosted models, full smoke checks, and the Kubernetes lab.</p>
 <h2 id="full-compose-smoke-test">Full Compose smoke test<a class="headerlink" href="#full-compose-smoke-test" title="Permanent link">&para;</a></h2>
+<p>The trial also includes a scheduled daily report and signed GitHub issue payload triage.
+The smoke test uses Temporal schedule backfill, then verifies Slack/webhook/SMTP delivery
+against the local catcher at <code>http://127.0.0.1:8025/</code>. See
+<a href="../workflows/#triggers-and-notifications">triggers and notifications</a> for configuration,
+webhook signing and console/CLI pause controls.</p>
 <p>With Bash, Make, Python 3.12+, curl, and Node.js 24/npm installed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>compose-up
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>compose-smoke

@@ -1029,6 +1029,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#triggers-and-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers and notifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#operate-the-service" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1882,6 +1893,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#triggers-and-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers and notifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#operate-the-service" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2198,6 +2220,119 @@ The Python <code>GatewayClient</code> exposes <code>team</code>, <code>start_run
 Custom workflows expose a <code>status</code> query returning <code>stage</code> for progress and, when they
 support approvals, a <code>review(approved, reviewer)</code> update returning whether the waiting
 decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.</p>
+<h2 id="triggers-and-notifications">Triggers and notifications<a class="headerlink" href="#triggers-and-notifications" title="Permanent link">&para;</a></h2>
+<p>Open <strong>Triggers</strong> in the console to see cron expressions, upcoming times, signed webhook
+endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
+viewers and approvers can inspect them. Existing runs continue when a trigger is paused.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>list
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>pause<span class="w"> </span>DailyReportWorkflow<span class="w"> </span>daily
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>resume<span class="w"> </span>DailyReportWorkflow<span class="w"> </span>daily
+</code></pre></div>
+<p>Merge trigger definitions into each workflow in the existing <code>SandboxPolicySet</code>. Keep
+its provider/model/tool/egress policy and budgets. For example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">workflows</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">DailyReportWorkflow</span><span class="p">:</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">demo-openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">http</span><span class="p p-Indicator">:</span><span class="nv">//cloud-fake</span><span class="p p-Indicator">:</span><span class="nv">8000</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">triggers</span><span class="p">:</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="nt">daily</span><span class="p">:</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cron</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="nt">project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">"0</span><span class="nv"> </span><span class="s">9</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*"</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="nt">input</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">topic</span><span class="p">:</span><span class="w"> </span><span class="nv">Agent operations</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span><span class="nt">GitHubIssueTriageWorkflow</span><span class="p">:</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">demo-openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">http</span><span class="p p-Indicator">:</span><span class="nv">//cloud-fake</span><span class="p p-Indicator">:</span><span class="nv">8000</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="nt">triggers</span><span class="p">:</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">      </span><span class="nt">github</span><span class="p">:</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">        </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">webhook</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">        </span><span class="nt">project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">engineering</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="nt">webhookSecretEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_WEBHOOK_SECRET</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="nt">notifications</span><span class="p">:</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">  </span><span class="nt">consoleUrl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://agents.example.com/console/</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">  </span><span class="nt">slackWebhookEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_SLACK_WEBHOOK</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="w">  </span><span class="nt">webhookEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_OUTGOING_WEBHOOK</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">  </span><span class="nt">budgetThreshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">  </span><span class="nt">smtp</span><span class="p">:</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">smtp.example.com</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">587</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">    </span><span class="nt">startTls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="w">    </span><span class="nt">usernameEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_SMTP_USERNAME</span>
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">    </span><span class="nt">passwordEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_SMTP_PASSWORD</span>
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">    </span><span class="nt">sender</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">workflows@example.com</span>
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="w">    </span><span class="nt">recipients</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team@example.com</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>Store secrets in the gateway environment/Secret deployment. Use a separate randomly
+generated webhook secret of at least 32 characters for each team. Webhook destination
+variables hold full HTTP(S) URLs; values and recipient addresses are never put in receipts.
+Only configure destinations your team is authorized to notify. Omit unused channels.
+SMTP authentication requires TLS; only the local fake uses unauthenticated plaintext SMTP.
+Set <code>consoleUrl</code> to the externally reachable console address, including any path prefix.
+Notification links carry no credentials: recipients sign in normally.</p>
+<p>Recreate the gateway after configuration changes. It reconciles
+<a href="https://docs.temporal.io/develop/python/workflows/schedules">Temporal Schedules</a>, never a
+custom cron scheduler. Expressions use UTC, overlap policy is <strong>SKIP</strong>, and catch-up is
+limited to five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
+the schedule action open until the target run ends. Each launch goes through the same
+governed start API. Redis persists interactive pauses across restarts; <code>paused: true</code> in
+configuration prevents console/CLI resumption until the admin changes the configuration.
+Removing a cron trigger removes its managed schedule on the next reconciliation. Schedule
+errors appear in the console; check Temporal and the gateway log for invalid expressions.</p>
+<p>For an inbound webhook, POST the <strong>exact JSON bytes</strong> to the endpoint shown in Triggers.
+Send <code>X-AW-Timestamp</code> (Unix seconds, within five minutes), <code>X-AW-Delivery</code> (a unique ID using
+letters, digits, underscores or hyphens, up to 128 characters) and <code>X-AW-Signature</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span><span class="o">,</span><span class="w"> </span><span class="nn">hmac</span><span class="o">,</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">time</span><span class="o">,</span><span class="w"> </span><span class="nn">urllib.request</span><span class="o">,</span><span class="w"> </span><span class="nn">uuid</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">path</span> <span class="o">=</span> <span class="s2">"/v1/hooks/demo/GitHubIssueTriageWorkflow/github"</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"action"</span><span class="p">:</span> <span class="s2">"opened"</span><span class="p">,</span> <span class="s2">"issue"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="s2">"number"</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Sign-in regression"</span><span class="p">,</span> <span class="s2">"body"</span><span class="p">:</span> <span class="s2">"Please investigate."</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="p">}})</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">stamp</span><span class="p">,</span> <span class="n">delivery</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())),</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">signed</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stamp</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">delivery</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">."</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span> <span class="o">+</span> <span class="n">body</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">signature</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"TEAM_WEBHOOK_SECRET"</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">signed</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">request</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="s2">"Content-Type"</span><span class="p">:</span> <span class="s2">"application/json"</span><span class="p">,</span> <span class="s2">"X-AW-Timestamp"</span><span class="p">:</span> <span class="n">stamp</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="s2">"X-AW-Delivery"</span><span class="p">:</span> <span class="n">delivery</span><span class="p">,</span> <span class="s2">"X-AW-Signature"</span><span class="p">:</span> <span class="s2">"sha256="</span> <span class="o">+</span> <span class="n">signature</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">})</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+</code></pre></div>
+<p>Compose uses the public fake value <code>compose-webhook-secret-not-for-production</code> for this
+example. The original JSON becomes the workflow input; it is not stored in receipts.
+For GitHub, configure the shown endpoint as the repository webhook URL, use JSON content,
+select Issues events, and set its secret to the team's webhook secret. Native GitHub
+<code>X-Hub-Signature-256</code> plus <code>X-GitHub-Delivery</code> are also accepted. GitHub does not sign a
+timestamp or delivery ID, so the gateway persists the signed body fingerprint across
+the team: changing the delivery ID or destination cannot replay an accepted payload.
+Identical GitHub payload bytes are treated as retries. No GitHub credential or live GitHub
+write is used by the triage example.</p>
+<p>Completed delivery IDs return <code>409 webhook_replayed</code>; concurrent delivery and ambiguous
+Temporal failures use the same deterministic run ID. After a <code>503</code>, retry with the same
+delivery ID/body and a fresh timestamp/signature. Changed input for that ID is refused.
+Keep Redis trigger state, run start intents and Temporal history together in backups.
+Deleting that state removes the replay guarantee. A paused trigger returns <code>409 trigger_paused</code>.</p>
+<p>Notifications cover console-managed runs: waiting approval, failure (including execution
+timeout), and reaching the configured fraction of either the run token or USD limit.
+The existing run monitor checks roughly every 30 seconds; SDK approval events are persisted
+so a quick review is not missed. Accounting includes conservative outstanding reservations.
+Budget crossings are also persisted at reservation/settlement, even if usage subsequently falls.
+Custom workflows should inherit <code>ApprovalWorkflow</code> (or expose the existing <code>status</code> query).
+Already-running histories remain replay-compatible via a Temporal patch marker.</p>
+<p>Each channel has persistent per-run/event delivery state and a replica-safe lease. Attempts
+retry up to five times with exponential backoff, without blocking approval. Every attempt
+and outcome appears in the run timeline; <code>retrying</code> or <code>failed</code> means inspect the destination
+and gateway configuration. Successful deliveries are deduplicated across restarts. Delivery
+is <strong>at least once</strong>, not exactly once: a crash after sending but before recording success
+can duplicate a message. Outgoing webhooks carry a stable <code>Idempotency-Key</code> and JSON <code>id</code>;
+SMTP uses a stable Message-ID. Notifications contain IDs, event type and a console link,
+not drafts, prompts or raw failure details. Approvals remain in the console/API.</p>
+<p>The Compose trial includes both workflows and <code>notification-fake</code>, a Slack/webhook sink
+and SMTP catcher. View its inbox at <code>http://127.0.0.1:8025/</code> (override the published port
+with <code>AGENTWORKFLOWS_INBOX_PORT</code>). <code>make compose-smoke</code> backfills a daily schedule through
+Temporal, posts a signed issue payload, checks pause/replay protection, exercises approval
+and failure delivery to all three channels, and verifies the receipt chain. It uses no
+real credentials. Both examples return reviewed content without publishing to external services.</p>
 <h2 id="operate-the-service">Operate the service<a class="headerlink" href="#operate-the-service" title="Permanent link">&para;</a></h2>
 <p><code>agentworkflows usage</code> aggregates providers and tools for the bound team or project.
 <code>spend</code> shows the UTC-aligned cost window, limit, and reserved-plus-spent USD. Its length
@@ -2232,27 +2367,27 @@ model correctness, or that a release was signed/published.</p>
 <h2 id="write-your-workflow">Write your workflow<a class="headerlink" href="#write-your-workflow" title="Permanent link">&para;</a></h2>
 <p>Use Temporal's decorators and the SDK's call methods. Do not perform model, network,
 or tool I/O directly in workflow code; replay must remain deterministic.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">temporalio</span><span class="w"> </span><span class="kn">import</span> <span class="n">workflow</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.workflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">Budget</span><span class="p">,</span> <span class="n">WorkflowGateway</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nd">@workflow</span><span class="o">.</span><span class="n">defn</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Briefing</span><span class="p">:</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="nd">@workflow</span><span class="o">.</span><span class="n">run</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        <span class="n">gateway</span> <span class="o">=</span> <span class="n">WorkflowGateway</span><span class="p">(</span><span class="n">Budget</span><span class="p">(</span><span class="n">token_limit</span><span class="o">=</span><span class="mi">4000</span><span class="p">,</span> <span class="n">cost_limit_usd</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">gateway</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"research"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">topic</span><span class="p">})</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>        <span class="k">return</span> <span class="k">await</span> <span class="n">gateway</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>            <span class="sa">f</span><span class="s2">"Summarize with citations: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>            <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>            <span class="n">max_tokens</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        <span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">temporalio</span><span class="w"> </span><span class="kn">import</span> <span class="n">workflow</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.workflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">Budget</span><span class="p">,</span> <span class="n">WorkflowGateway</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nd">@workflow</span><span class="o">.</span><span class="n">defn</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Briefing</span><span class="p">:</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="nd">@workflow</span><span class="o">.</span><span class="n">run</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="n">gateway</span> <span class="o">=</span> <span class="n">WorkflowGateway</span><span class="p">(</span><span class="n">Budget</span><span class="p">(</span><span class="n">token_limit</span><span class="o">=</span><span class="mi">4000</span><span class="p">,</span> <span class="n">cost_limit_usd</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>        <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">gateway</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"research"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">topic</span><span class="p">})</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        <span class="k">return</span> <span class="k">await</span> <span class="n">gateway</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>            <span class="sa">f</span><span class="s2">"Summarize with citations: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>            <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>            <span class="n">max_tokens</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>        <span class="p">)</span>
 </code></pre></div>
 <p>Run it from a separate <code>worker.py</code> entry point (keep network I/O outside workflow modules):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_worker</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">workflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Briefing</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">run_worker</span><span class="p">([</span><span class="n">Briefing</span><span class="p">])</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_worker</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">workflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Briefing</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">run_worker</span><span class="p">([</span><span class="n">Briefing</span><span class="p">])</span>
 </code></pre></div>
 <p>Set <code>AGENTWORKFLOWS_TEAM=research-team</code>, its worker gateway key, and the gateway/Temporal
 addresses. Register <code>Briefing</code> in the team workflow policy, then start with
@@ -2271,21 +2406,21 @@ and run-budget refusals are non-retryable; transient gateway failures honor <cod
 <p>Add tools to the existing <code>SandboxPolicySet</code>, mounted through <code>SANDBOX_POLICY_PATH</code> (Helm:
 <code>sandboxPolicy.policy.policies</code>). The absence of a tool denies its execution. Clients send
 a tool name and JSON arguments; only the administrator can set the destination URL:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platform.ai/v1alpha1</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SandboxPolicySet</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">policies</span><span class="p">:</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-cloud-model</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">tools</span><span class="p">:</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nt">research</span><span class="p">:</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://search.example.com/research</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">          </span><span class="nt">costUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">          </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SEARCH_TOOL_TOKEN</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">publish</span><span class="p">:</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://cms.example.com/briefings</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">          </span><span class="nt">costUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">          </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CMS_TOOL_TOKEN</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platform.ai/v1alpha1</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SandboxPolicySet</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">policies</span><span class="p">:</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-cloud-model</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">      </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">        </span><span class="nt">research</span><span class="p">:</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://search.example.com/research</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">          </span><span class="nt">costUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">          </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SEARCH_TOOL_TOKEN</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">        </span><span class="nt">publish</span><span class="p">:</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://cms.example.com/briefings</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">          </span><span class="nt">costUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">          </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CMS_TOOL_TOKEN</span>
 </code></pre></div>
 <p>Tool endpoints accept POST JSON and return JSON. <code>credentialEnv</code> names a gateway-side
 environment variable forwarded as bearer authentication; Helm can inject its Secret via
@@ -2299,8 +2434,8 @@ For Kubernetes, permit tool destinations through the gateway's existing approved
 policy or internal egress proxy, just as for cloud model endpoints.</p>
 <h2 id="bring-your-agent">Bring your agent<a class="headerlink" href="#bring-your-agent" title="Permanent link">&para;</a></h2>
 <p>With the Compose stack running, run all four examples in its existing worker:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--no-deps<span class="w"> </span>workflow-worker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>python<span class="w"> </span>-m<span class="w"> </span>agentworkflows.examples.frameworks<span class="w"> </span><span class="s2">"How should we evaluate team agents?"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--no-deps<span class="w"> </span>workflow-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>python<span class="w"> </span>-m<span class="w"> </span>agentworkflows.examples.frameworks<span class="w"> </span><span class="s2">"How should we evaluate team agents?"</span>
 </code></pre></div>
 <p>The result includes the run ID and answers from plain OpenAI and Anthropic clients,
 OpenAI Agents SDK, and LangGraph. The first agent calls <code>team.search</code> through MCP.
@@ -2309,23 +2444,23 @@ Open Temporal at <a href="http://localhost:8233">http://localhost:8233</a> and i
 policy refusals, DLP, and their receipts. No cloud credentials are needed.</p>
 <p>For your own worker, install <code>python -m pip install './sdk/python[frameworks]'</code>.
 Register your async agent function with the existing activity:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.activities</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayActivities</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">briefing</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"team.search"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">"topic"</span><span class="p">]})</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">openai</span><span class="p">()</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Summarize: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">}],</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="p">)</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">activities</span> <span class="o">=</span> <span class="n">GatewayActivities</span><span class="p">(</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="s2">"http://localhost:8080"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"AGENTWORKFLOWS_API_KEY"</span><span class="p">],</span> <span class="n">agents</span><span class="o">=</span><span class="p">{</span><span class="s2">"briefing"</span><span class="p">:</span> <span class="n">briefing</span><span class="p">},</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="p">)</span>
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1"># Register activities.call on your Temporal worker, as above.</span>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="c1"># Inside your workflow:</span>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c1"># answer = await WorkflowGateway().agent("briefing", {"topic": topic})</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.activities</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayActivities</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">briefing</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"team.search"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">"topic"</span><span class="p">]})</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">openai</span><span class="p">()</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Summarize: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">}],</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    <span class="p">)</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">activities</span> <span class="o">=</span> <span class="n">GatewayActivities</span><span class="p">(</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="s2">"http://localhost:8080"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"AGENTWORKFLOWS_API_KEY"</span><span class="p">],</span> <span class="n">agents</span><span class="o">=</span><span class="p">{</span><span class="s2">"briefing"</span><span class="p">:</span> <span class="n">briefing</span><span class="p">},</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="p">)</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="c1"># Register activities.call on your Temporal worker, as above.</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="c1"># Inside your workflow:</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="c1"># answer = await WorkflowGateway().agent("briefing", {"topic": topic})</span>
 </code></pre></div>
 <p><code>context.openai()</code> and <code>context.anthropic()</code> configure the official async clients with
 the gateway URL, team authentication, run/step headers, and no nested HTTP retries.
@@ -2346,14 +2481,14 @@ Use <a href="../agent-sandbox-integration/#container-workflow-steps">container s
 Do not enable external LangSmith tracing with sensitive activity data.</p>
 <h2 id="mcp-tools">MCP tools<a class="headerlink" href="#mcp-tools" title="Permanent link">&para;</a></h2>
 <p>Register a server once under the team's existing <code>SandboxPolicySet</code> entry:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">mcpServers</span><span class="p">:</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">team</span><span class="p">:</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://tools.example.com/mcp</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_MCP_TOKEN</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">tools</span><span class="p">:</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">      </span><span class="nt">search</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">      </span><span class="nt">publish</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">mcpServers</span><span class="p">:</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">team</span><span class="p">:</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://tools.example.com/mcp</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_MCP_TOKEN</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">      </span><span class="nt">search</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">      </span><span class="nt">publish</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
 </code></pre></div>
 <p>The map explicitly approves remote tool names and their cost in USD per attempt. Clients
 call <code>await gateway.tool("team.search", {"query": topic})</code> in workflow code or
@@ -2375,14 +2510,14 @@ results. Failed/ambiguous attempts retain their cost. For side effects, the serv
 persist and honor <code>Idempotency-Key</code>; MCP itself does not promise idempotent execution.</p>
 <h2 id="workflow-policy">Workflow policy<a class="headerlink" href="#workflow-policy" title="Permanent link">&para;</a></h2>
 <p>Define policy under the same team entry, keyed by the registered Temporal workflow type:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">workflows</span><span class="p">:</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">Briefing</span><span class="p">:</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">anthropic</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">approved-anthropic</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">allowedTools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team.search</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.openai.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.anthropic.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//tools.example.com</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">tokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">workflows</span><span class="p">:</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">Briefing</span><span class="p">:</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">approved-anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">allowedTools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team.search</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.openai.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.anthropic.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//tools.example.com</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">tokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 </code></pre></div>
 <p>Use canonical gateway model IDs, provider names from the model catalog, and exact URL origins
 (scheme, hostname, and optional port; no paths or wildcards). An empty allowlist denies that
@@ -2423,11 +2558,11 @@ install it in <code>workflows</code>; the gateway accepts that namespace. Before
 in that namespace through your secret manager. The worker key must bind to the intended
 team. Configure the gateway's cloud routes and team tool policy first.</p>
 <p>To evaluate the chart directly against an existing gateway:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
 </code></pre></div>
 <p>Build <code>sdk/python/Dockerfile</code> with the repository root as context for your worker image;
 set <code>worker.image</code> to an image reachable by the cluster. Replace the example workflow with
