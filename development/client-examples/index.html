@@ -2061,6 +2061,9 @@ and <a href="../scope-and-non-goals/">scope</a> before assuming that an SDK feat
 These examples use <code>http://127.0.0.1:8080</code>, where the <a href="../quickstart/#docker-compose">Docker Compose stack</a>
 serves the gateway with API key <code>local-development-only</code>. In the <code>kind</code> lab, port-forward the
 gateway service first; in a customer cluster, use your ingress host.</p>
+<p>For durable, budgeted agent steps, start with <a href="../workflows/#bring-your-agent">bring your agent</a>:
+the workflow adapters configure these clients with run correlation and show OpenAI Agents SDK,
+LangGraph, and approved MCP tools. The standalone examples below do not create Temporal runs.</p>
 <p>The <code>model</code> id must be on the active profile's allowlist. Compose defaults to the synthetic
 <code>demo-openai</code> route; its fixtures demonstrate chat, not embeddings or model quality.
 Configure an approved provider for real inference using <a href="../model-selection/#cloud-routes-milestone-1">model selection</a>.

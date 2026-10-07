@@ -1827,6 +1827,11 @@ The repository has a local profile, a customer-cluster profile, and tenant onboa
 </ol>
 <p>The exact HTTP surface is generated into <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json"><code>platform/api-contracts/inference-gateway.openapi.json</code></a>. Not every route performs model inference, and optional controls only apply when enabled in the active values.</p>
 <p>RAG is a separate service. It returns retrieved passages and grounded message objects; it does not automatically intercept gateway calls. The local profile uses the checked-in lexical corpus. The customer values select Qdrant and an embedding endpoint.</p>
+<p>Framework agents execute inside Temporal activities and point their clients at this gateway.
+Workflow policies and MCP registrations extend the existing <code>SandboxPolicySet</code>; run accounting
+and expiring container credentials use its existing Redis backend. MCP calls share input/output
+DLP, budgets, and receipts with HTTP tools. Container steps execute approved commands in existing
+agent-sandbox workspaces through narrowly scoped worker RBAC. See <a href="../workflows/">workflows</a>.</p>
 <h2 id="components">Components<a class="headerlink" href="#components" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

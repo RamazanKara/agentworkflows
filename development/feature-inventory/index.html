@@ -1637,7 +1637,7 @@
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.</p>
-<p>Milestone 2 adds <a href="../workflows/">durable workflows and approval signals</a> through Temporal.</p>
+<p>Milestones 2–3 add <a href="../workflows/">durable workflows, framework agents, MCP tools, and workflow policy</a>.</p>
 <table>
 <thead>
 <tr>
@@ -1659,6 +1659,30 @@ configured.</p>
 <td>Shipped</td>
 <td>Deny unless configured in team policy</td>
 <td>Fixed URLs, DLP, budget reservations, idempotency keys, run/step receipts</td>
+</tr>
+<tr>
+<td>Framework agent steps</td>
+<td>Shipped</td>
+<td>Optional SDK framework dependencies</td>
+<td>OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph; local-fake Compose proof</td>
+</tr>
+<tr>
+<td>Team MCP tools</td>
+<td>Shipped</td>
+<td>Explicit server/tool registration</td>
+<td>Streamable HTTP 2025-03-26, argument/output DLP, costs, and receipts</td>
+</tr>
+<tr>
+<td>Workflow policy</td>
+<td>Shipped</td>
+<td>Configured under each team</td>
+<td>Provider/model/tool/egress allowlists and immutable run budget caps</td>
+</tr>
+<tr>
+<td>Container agent steps</td>
+<td>Shipped</td>
+<td>Existing Kubernetes workspace required</td>
+<td>Hardened workspace checks, scoped expiring credentials, one attempt, and completion receipts</td>
 </tr>
 <tr>
 <td>Workflow token/cost budgets</td>

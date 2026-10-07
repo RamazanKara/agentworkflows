@@ -601,6 +601,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bring-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring your agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-accounting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run accounting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#deployment-and-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1730,6 +1774,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#bring-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring your agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-accounting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run accounting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#deployment-and-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1803,7 +1891,7 @@ replacement, and verifies publication plus exactly two completed model-call rece
 Evidence is under <code>.out/compose/</code>. <code>make compose-down</code> stops the trial and deletes its data;
 use <code>docker compose -f deploy/compose/compose.yaml stop</code> to retain history and budgets.</p>
 <h2 id="write-your-workflow">Write your workflow<a class="headerlink" href="#write-your-workflow" title="Permanent link">&para;</a></h2>
-<p>Use Temporal's decorators and the SDK's two call methods. Do not perform model, network,
+<p>Use Temporal's decorators and the SDK's call methods. Do not perform model, network,
 or tool I/O directly in workflow code; replay must remain deterministic.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">temporalio</span><span class="w"> </span><span class="kn">import</span> <span class="n">workflow</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.workflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">Budget</span><span class="p">,</span> <span class="n">WorkflowGateway</span>
@@ -1878,6 +1966,109 @@ defaults to <code>internal</code>; explicitly approve a higher classification on
 <code>GET /v1/tools</code> lists the caller's approved names.
 For Kubernetes, permit tool destinations through the gateway's existing approved egress
 policy or internal egress proxy, just as for cloud model endpoints.</p>
+<h2 id="bring-your-agent">Bring your agent<a class="headerlink" href="#bring-your-agent" title="Permanent link">&para;</a></h2>
+<p>With the Compose stack running, run all four examples in its existing worker:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--no-deps<span class="w"> </span>workflow-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>python<span class="w"> </span>-m<span class="w"> </span>agentworkflows.examples.frameworks<span class="w"> </span><span class="s2">"How should we evaluate team agents?"</span>
+</code></pre></div>
+<p>The result includes the run ID and answers from plain OpenAI and Anthropic clients,
+OpenAI Agents SDK, and LangGraph. The first agent calls <code>team.search</code> through MCP.
+Open Temporal at <a href="http://localhost:8233">http://localhost:8233</a> and inspect that run; use its ID with
+<code>GET /v1/workflow-runs/{run_id}</code> for usage. <code>make compose-smoke</code> checks these calls,
+policy refusals, DLP, and their receipts. No cloud credentials are needed.</p>
+<p>For your own worker, install <code>python -m pip install './sdk/python[frameworks]'</code>.
+Register your async agent function with the existing activity:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.activities</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayActivities</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">briefing</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"team.search"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">"topic"</span><span class="p">]})</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">openai</span><span class="p">()</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Summarize: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">}],</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="p">)</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">activities</span> <span class="o">=</span> <span class="n">GatewayActivities</span><span class="p">(</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="s2">"http://localhost:8080"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"AGENTWORKFLOWS_API_KEY"</span><span class="p">],</span> <span class="n">agents</span><span class="o">=</span><span class="p">{</span><span class="s2">"briefing"</span><span class="p">:</span> <span class="n">briefing</span><span class="p">},</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="p">)</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1"># Register activities.call on your Temporal worker, as above.</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1"># Inside your workflow:</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="c1"># answer = await WorkflowGateway().agent("briefing", {"topic": topic})</span>
+</code></pre></div>
+<p><code>context.openai()</code> and <code>context.anthropic()</code> configure the official async clients with
+the gateway URL, team authentication, run/step headers, and no nested HTTP retries.
+Use <code>context.agents_model(model)</code> with the Agents SDK's <code>Agent</code> and <code>Runner.run</code>;
+set <code>RunConfig(tracing_disabled=True)</code> to keep prompts out of external tracing.
+In LangGraph, use <code>context.openai()</code> in your graph nodes and <code>graph.ainvoke(...)</code>.
+The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/frameworks.py">complete examples</a>
+show all four, including a governed Agents SDK function tool.</p>
+<p>Each model/tool request gets its own step suffix and receipt. The activity result is
+durable; a crash before completion can replay the <strong>whole agent loop</strong> and charge new
+calls. Break long loops into separate workflow steps when finer recovery is needed.
+Streaming, Responses, and background model APIs are not workflow step transports here;
+use non-streaming Chat Completions or Anthropic Messages. Standalone gateway API support
+is unchanged. The optional frameworks are pinned in the worker/test locks.</p>
+<p>Framework callbacks run as trusted worker code. Route every side-effecting tool through
+<code>context.tool</code>; arbitrary local function tools and direct network clients are not intercepted.
+Use <a href="../agent-sandbox-integration/#container-workflow-steps">container steps</a> for code execution.
+Do not enable external LangSmith tracing with sensitive activity data.</p>
+<h2 id="mcp-tools">MCP tools<a class="headerlink" href="#mcp-tools" title="Permanent link">&para;</a></h2>
+<p>Register a server once under the team's existing <code>SandboxPolicySet</code> entry:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">mcpServers</span><span class="p">:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">team</span><span class="p">:</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://tools.example.com/mcp</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_MCP_TOKEN</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="nt">search</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">      </span><span class="nt">publish</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
+</code></pre></div>
+<p>The map explicitly approves remote tool names and their cost in USD per attempt. Clients
+call <code>await gateway.tool("team.search", {"query": topic})</code> in workflow code or
+<code>await context.tool(...)</code> in an agent callback. <code>GET /v1/tools</code> discovers team tools;
+add run/step headers to see only that workflow's allowed tools. Credentials and server URLs
+never come from agent arguments. Add the server's origin to the workflow's <code>allowedEgress</code>.</p>
+<p>The gateway negotiates MCP <strong>2025-03-26 Streamable HTTP</strong>, initializes a session, invokes
+<code>tools/call</code>, and closes the session. Both JSON and SSE responses are bounded by the gateway
+body limit. Legacy SSE/stdio servers, resources, prompts, sampling, and server-initiated
+requests are not supported. The registered allowlist is authoritative; discovery from an
+untrusted server cannot grant another tool. The gateway does not execute model-returned
+tool instructions automatically. See the <a href="https://modelcontextprotocol.io/specification/2025-03-26/basic/transports">MCP transport specification</a>.</p>
+<p>Nested JSON arguments use the existing input size, blocked-term, and secret policies before
+any server contact. Set <code>PROMPT_SECRET_MODE=block</code> (the Compose default) to prevent disclosure;
+<code>redact</code> rewrites matching arguments. Output follows the existing output DLP policy. Denied,
+successful, and failed calls receive run-linked tool receipts, with argument fingerprints
+rather than raw arguments. MCP errors and <code>isError</code> results are failures, never successful
+results. Failed/ambiguous attempts retain their cost. For side effects, the server <strong>must</strong>
+persist and honor <code>Idempotency-Key</code>; MCP itself does not promise idempotent execution.</p>
+<h2 id="workflow-policy">Workflow policy<a class="headerlink" href="#workflow-policy" title="Permanent link">&para;</a></h2>
+<p>Define policy under the same team entry, keyed by the registered Temporal workflow type:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">workflows</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">Briefing</span><span class="p">:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">approved-anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">allowedTools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team.search</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.openai.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.anthropic.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//tools.example.com</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">tokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</code></pre></div>
+<p>Use canonical gateway model IDs, provider names from the model catalog, and exact URL origins
+(scheme, hostname, and optional port; no paths or wildcards). An empty allowlist denies that
+capability. The existing team model/tool rules still apply. Every fallback must satisfy the
+workflow's provider, model, and egress lists. Container direct egress is restricted to DNS
+and the gateway; <code>allowedEgress</code> governs the gateway's upstream model/tool connections.</p>
+<p><code>GET /v1/workflow-policies</code> shows the authenticated team's policies and approved container
+agents. The SDK sends Temporal's workflow type when initializing the run. Once a team defines
+workflow policies, unknown workflow types are refused. Existing teams without a <code>workflows</code>
+map retain Milestone 2 behavior. Limits requested by the SDK are capped by configured limits;
+the run's effective budget and workflow binding cannot change on retry. Current allowlists
+are checked on every call; removing a bound policy revokes access. After changing budget caps,
+start a reviewed new run rather than changing an existing run's limits.</p>
+<p>Workers and team keys are trusted to select the correct workflow and run IDs. Restrict who
+can submit code to those workers; these headers are correlation, not proof of Temporal identity.
+Container step credentials cannot change their team/run binding or initialize another run.</p>
+<h2 id="run-accounting">Run accounting<a class="headerlink" href="#run-accounting" title="Permanent link">&para;</a></h2>
 <p>Each run defaults to 10,000 tokens and $5 estimated cost. Limits are initialized atomically
 and cannot be raised by a retry. They are scoped to the authenticated team and Temporal run
 UUID; <code>GET /v1/workflow-runs/{run_id}</code> returns only that team's accounting. Every attempted
@@ -1901,11 +2092,11 @@ install it in <code>workflows</code>; the gateway accepts that namespace. Before
 in that namespace through your secret manager. The worker key must bind to the intended
 team. Configure the gateway's cloud routes and team tool policy first.</p>
 <p>To evaluate the chart directly against an existing gateway:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
 </code></pre></div>
 <p>Build <code>sdk/python/Dockerfile</code> with the repository root as context for your worker image;
 set <code>worker.image</code> to an image reachable by the cluster. Replace the example workflow with
@@ -1955,6 +2146,22 @@ can submit workflows or approval signals.</p>
 <tr>
 <td><code>tool_not_allowed</code></td>
 <td>Inspect <code>GET /v1/tools</code> and the bound team's sandbox policy</td>
+</tr>
+<tr>
+<td><code>workflow_not_allowed</code> / <code>workflow_model_denied</code></td>
+<td>Inspect <code>GET /v1/workflow-policies</code>; use the registered workflow type and an allowed canonical model/provider</td>
+</tr>
+<tr>
+<td><code>workflow_egress_denied</code></td>
+<td>Add the reviewed tool server origin to that workflow's <code>allowedEgress</code></td>
+</tr>
+<tr>
+<td><code>mcp_protocol_unsupported</code></td>
+<td>Use Streamable HTTP with MCP 2025-03-26 tool support</td>
+</tr>
+<tr>
+<td><code>workspace_busy</code> / <code>agent_failed</code></td>
+<td>Wait for the previous step to finish, or inspect the workspace before explicitly starting another run</td>
 </tr>
 <tr>
 <td>Approval cannot be submitted</td>
