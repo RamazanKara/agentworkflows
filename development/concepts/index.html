@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/capacity-sizing/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/concepts/">
       
       
-        <link rel="prev" href="../benchmarks-and-evals/">
+        <link rel="prev" href="../quickstart/">
       
       
-        <link rel="next" href="../cost-model/">
+        <link rel="next" href="../decision-guide/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Capacity and sizing - AgentWorkflows</title>
+        <title>Workflow essentials - AgentWorkflows</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#capacity-and-sizing" class="md-skip">
+        <a href="#workflow-concepts" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Capacity and sizing
+              Workflow essentials
             
           </span>
         </div>
@@ -265,11 +265,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -309,12 +311,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../sdk-reference/" class="md-tabs__link">
           
   
@@ -432,6 +432,8 @@
       
   
   
+    
+  
   
   
     
@@ -465,16 +467,19 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -496,13 +501,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -517,10 +522,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow essentials
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -536,6 +568,48 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#follow-one-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Follow one run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#durability-and-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Durability and limits
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1150,10 +1224,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1189,22 +1261,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -1222,7 +1291,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1433,37 +1502,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Capacity and sizing
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../capacity-sizing/" class="md-nav__link">
         
   
   
@@ -1479,92 +1521,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#inputs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inputs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gateway" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gateway
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#vllm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vLLM
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#qdrant-and-rag" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Qdrant and RAG
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#redis-object-storage-and-logs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Redis, object storage, and logs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation-loop" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation loop
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1772,10 +1728,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#inputs" class="md-nav__link">
+  <a href="#follow-one-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inputs
+        Follow one run
       
     </span>
   </a>
@@ -1783,54 +1739,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#gateway" class="md-nav__link">
+  <a href="#durability-and-limits" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Gateway
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#vllm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        vLLM
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#qdrant-and-rag" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Qdrant and RAG
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#redis-object-storage-and-logs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Redis, object storage, and logs
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation-loop" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation loop
+        Durability and limits
       
     </span>
   </a>
@@ -1854,7 +1766,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/capacity-sizing.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/concepts.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1862,93 +1774,77 @@
   
 
 
-<h1 id="capacity-and-sizing">Capacity and sizing<a class="headerlink" href="#capacity-and-sizing" title="Permanent link">&para;</a></h1>
-<p>The chart values are examples, not sizing recommendations. Measure the selected model and workload before setting production requests, limits, or autoscaling bounds.</p>
-<h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h2>
-<p>Collect these first:</p>
-<ul>
-<li>model artifact, precision, and runtime version;</li>
-<li>prompt and completion length distributions;</li>
-<li>peak concurrent requests and arrival rate;</li>
-<li>latency and availability objectives;</li>
-<li>GPU memory and measured decode/prefill throughput;</li>
-<li>RAG document, chunk, vector-dimension, and growth counts;</li>
-<li>retention and backup requirements;</li>
-<li>allowed cold-start time and maximum replica cost.</li>
-</ul>
-<p><code>make loadtest-local</code> does not measure model capacity. It starts a mock OpenAI-compatible runtime. Use it for gateway-path regression tests, then run <code>make loadtest</code> against the real deployment.</p>
-<h2 id="gateway">Gateway<a class="headerlink" href="#gateway" title="Permanent link">&para;</a></h2>
-<p>The gateway chart can scale with KEDA on four Prometheus signals:</p>
-<ul>
-<li>total <code>/v1/*</code> request rate;</li>
-<li>in-flight request count;</li>
-<li>load-shed rate;</li>
-<li>p95 request latency.</li>
-</ul>
-<p>The current customer values set a floor of 2 and a ceiling of 20 replicas. Treat the thresholds as initial configuration. Verify that the Prometheus queries return data in the target cluster before relying on them.</p>
-<p><code>concurrency.maxConcurrentRequests</code> is a per-process load-shed limit. <code>0</code> disables that limit. A higher value does not add model capacity; it only lets more work reach the runtime. Size the gateway and runtime together and watch 503 responses, queue depth, and tail latency.</p>
-<h2 id="vllm">vLLM<a class="headerlink" href="#vllm" title="Permanent link">&para;</a></h2>
-<p>The NVIDIA customer example currently sets:</p>
+<h1 id="workflow-concepts">Workflow concepts<a class="headerlink" href="#workflow-concepts" title="Permanent link">&para;</a></h1>
+<p>A workflow is a Python function run durably by Temporal. A worker executes its steps;
+the AgentWorkflows gateway decides whether each model or tool call is allowed, accounts
+for its cost, and writes a receipt. The console, CLI, and SDK share that same gateway API.</p>
 <table>
 <thead>
 <tr>
-<th>Setting</th>
-<th>Value</th>
+<th>Concept</th>
+<th>What it means for your team</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Replica floor/ceiling</td>
-<td>2 / 8 with KEDA</td>
+<td>Team</td>
+<td>An authenticated sandbox ID with members, allowed providers, and a shared budget</td>
 </tr>
 <tr>
-<td>GPUs per replica</td>
-<td>4</td>
+<td>Project</td>
+<td>A group of runs inside a team; a credential can be restricted to one project</td>
 </tr>
 <tr>
-<td>Tensor parallel size</td>
-<td>4</td>
+<td>Workflow</td>
+<td>A named, reviewed implementation with allowed models, tools, destinations, and per-run limits</td>
 </tr>
 <tr>
-<td>Maximum model length</td>
-<td>262,144 tokens</td>
+<td>Run</td>
+<td>One execution, identified by an exact UUID; retries create a new run and budget</td>
 </tr>
 <tr>
-<td>Shared model cache</td>
-<td>400 GiB, <code>ReadWriteMany</code></td>
+<td>Activity</td>
+<td>A model, tool, agent, or container step; completed activities are replayed from history after worker failure</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>A durable pause with a reviewable draft; an admin or approver submits one authenticated decision</td>
+</tr>
+<tr>
+<td>Receipt</td>
+<td>A redacted, hash-chained gateway event with run/step IDs, policy decision, provider, usage, and cost</td>
 </tr>
 </tbody>
 </table>
-<p>This profile assumes a large coding model and a cluster that can place a four-GPU pod. For another model, change the values together:</p>
-<ul>
-<li>GPU count must match the tensor-parallel layout;</li>
-<li>weights, KV cache, activations, and runtime overhead must all fit;</li>
-<li>long context can consume more memory than the weights;</li>
-<li>each replica must fit the node topology unless a separately installed multi-node operator is used;</li>
-<li>scale-up time includes scheduling and model loading.</li>
-</ul>
-<p>KEDA uses <code>vllm:num_requests_waiting</code> in the provided values. Confirm the metric name against the deployed vLLM version and keep enough floor capacity for the accepted cold-start time.</p>
-<h2 id="qdrant-and-rag">Qdrant and RAG<a class="headerlink" href="#qdrant-and-rag" title="Permanent link">&para;</a></h2>
-<p>The bundled Qdrant chart supports one replica and a single PVC. It is a reference footprint, not an HA topology. Estimate raw vector storage as:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>vectors * dimensions * 4 bytes
-</code></pre></div>
-<p>Then add payload, HNSW index, segment, compaction, snapshot, and growth headroom. Measure memory and query latency after loading representative data. The customer values currently request a 100 GiB PVC; that number alone says nothing about supported document count.</p>
-<p>Embedding dimensions in the RAG values must match the selected embedding model and collection. Changing them is a collection migration, not an in-place tuning change.</p>
-<h2 id="redis-object-storage-and-logs">Redis, object storage, and logs<a class="headerlink" href="#redis-object-storage-and-logs" title="Permanent link">&para;</a></h2>
-<p>The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. Disk loss or deleting the PVC can still lose counters and optional state. Use the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> before relying on it for a multi-replica customer deployment.</p>
-<p>Files and asynchronous batches require an object store when enabled. Include upload limits, object retention, failed-batch output, and cleanup in the storage estimate.</p>
-<p>Prometheus, logs, and audit exports grow with traffic and retention. The customer profile expects the operator to supply those systems.</p>
-<h2 id="validation-loop">Validation loop<a class="headerlink" href="#validation-loop" title="Permanent link">&para;</a></h2>
+<h2 id="follow-one-run">Follow one run<a class="headerlink" href="#follow-one-run" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Render the exact values and confirm pod placement against real node shapes.</li>
-<li>Load the exact model and representative RAG data.</li>
-<li>Warm the runtime, then test sustained and burst traffic separately.</li>
-<li>Record successful throughput, queue depth, GPU memory, p50/p95/p99 latency, errors, and cold-start time.</li>
-<li>Test one dependency failure and one replica loss at peak load.</li>
-<li>Set replica floors from the accepted baseline and ceilings from both capacity and cost limits.</li>
-<li>Repeat after model, runtime, context, quantization, or hardware changes.</li>
+<li>A <strong>builder</strong> starts an approved workflow in a project through the gateway.</li>
+<li>Temporal schedules it on the team's queue (<code>TEAM-workflows</code>). Its <strong>worker</strong> executes
+   activities using a team-bound credential with <code>workflows:execute</code>.</li>
+<li>Every activity goes through the gateway's allowlists, data classification, secret checks,
+   and team/run budgets. Provider credentials stay on the gateway.</li>
+<li><code>ApprovalWorkflow.approval(draft)</code> exposes the draft in the console and CLI and waits up
+   to seven days. An <strong>approver</strong> or <strong>admin</strong> approves or rejects it as their verified identity.</li>
+<li>Inspect the run's <strong>result</strong>, <strong>budget</strong>, and <strong>timeline</strong>. Export and verify the retained
+   audit log when you need evidence beyond receipt IDs in the UI.</li>
 </ol>
-<p>The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/gpu-capacity.md">GPU capacity runbook</a> has scheduling diagnostics. The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/slo-error-budget.md">SLO runbook</a> covers acceptance thresholds.</p>
+<p>The local trial's admin key can perform all human roles for convenience. Separate member
+and worker credentials before team use; <a href="../workflows/#teams-projects-and-roles">team setup</a>
+describes the existing policy files. Do not give end users direct Temporal or worker access.</p>
+<h2 id="durability-and-limits">Durability and limits<a class="headerlink" href="#durability-and-limits" title="Permanent link">&para;</a></h2>
+<p>Temporal saves completed activity results. A worker restart resumes waiting approval and
+completed steps without repeating those results. An activity interrupted during an external
+action may run again: approved tools must honor the supplied idempotency key. Container
+steps do not automatically retry. Cancellation cannot undo a tool action already sent.</p>
+<p>The tighter of the workflow's requested budget and the team's workflow policy applies.
+All runs also consume the shared team budget. Accounting uses configured token prices and
+conservative reservations, not provider invoices. Failed attempts can still cost money.</p>
+<p>Receipts detect changes and internal gaps in retained chains. They do not prove an
+unreported action, and external anchors are needed to detect complete rewrites or truncation.
+The fake produces synthetic answers, tool results, and prices. It proves the governed path,
+not research quality or live provider access.</p>
+<p>Continue with <a href="../templates/">templates</a>, <a href="../architecture/">architecture</a>,
+<a href="../security-overview/">security boundaries</a>, and the <a href="../workflows/">workflow guide</a>.</p>
 
 
 
@@ -1986,7 +1882,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../benchmarks-and-evals/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Benchmarks and evals">
+          <a href="../quickstart/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quickstart">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1996,20 +1892,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Benchmarks and evals
+                Quickstart
               </div>
             </div>
           </a>
         
         
           
-          <a href="../cost-model/" class="md-footer__link md-footer__link--next" aria-label="Next: Cost model">
+          <a href="../decision-guide/" class="md-footer__link md-footer__link--next" aria-label="Next: Is it a fit?">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Cost model
+                Is it a fit?
               </div>
             </div>
             <div class="md-footer__button md-icon">
