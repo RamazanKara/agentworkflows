@@ -498,7 +498,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             dependency_ready &= await redis_dependency("rate_limit_store", app.state.rate_limiter)
         if resolved.audit_chain_store_backend == "redis":
             dependency_ready &= await redis_dependency("audit_store", app.state.chain_store)
-        if os.getenv("TEMPORAL_ADDRESS"):
+        if resolved.temporal_address:
             from app.workflow_operations import temporal_client
 
             async def temporal_ready() -> bool:

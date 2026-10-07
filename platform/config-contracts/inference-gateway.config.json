@@ -1301,6 +1301,18 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "workflows.temporalAddress",
+      "description": "Temporal frontend host:port for workflow operations. When set, readiness also checks Temporal; empty uses the in-cluster workflow endpoint on demand.",
+      "field": "temporal_address",
+      "name": "TEMPORAL_ADDRESS",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": 0.0,
       "chart_default": 0,
       "chart_value": "cost.usdPer1kTokens",

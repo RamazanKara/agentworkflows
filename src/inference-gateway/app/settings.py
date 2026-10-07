@@ -83,6 +83,7 @@ class Settings:
     vllm_base_url: str
     model_id: str
     request_timeout_seconds: float
+    temporal_address: str = ""
     audit_log_enabled: bool = True
     # Where the audit chain head is persisted so a restart continues the chain of chains
     # instead of starting an unlinked one. "memory" keeps the pre-continuity behavior and
@@ -336,6 +337,7 @@ class Settings:
             ).rstrip("/"),
             model_id=model_id,
             request_timeout_seconds=_float_from_env("REQUEST_TIMEOUT_SECONDS", 120.0),
+            temporal_address=os.getenv("TEMPORAL_ADDRESS", ""),
             audit_log_enabled=_bool_from_env("AUDIT_LOG_ENABLED", True),
             audit_chain_store_backend=os.getenv("AUDIT_CHAIN_STORE_BACKEND", "memory").strip().lower(),
             audit_chain_store_path=os.getenv(
