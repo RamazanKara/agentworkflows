@@ -12,10 +12,10 @@ spend; platform engineers control shared model and tool access. Connect OpenAI, 
 Azure OpenAI, AWS Bedrock and Vertex Gemini through one governed API. Self-hosted Ollama
 and vLLM models are optional add-ons. You operate the service and own your integrations.
 
-Version **0.2.0**, the first public release, includes governed cloud providers, durable
-Temporal workflows, agent and tool integrations, team roles and budgets, and a web console.
-Triggers and notifications add scheduled runs, signed webhooks and approval/failure/budget
-alerts. Start with the [template gallery](docs/templates.md) and [workflow guide](docs/workflows.md).
+Version **0.3.0** adds scheduled runs, signed webhooks, Slack/webhook/email notifications,
+and five team workflow templates to the governed providers, durable Temporal workflows,
+team roles, budgets, and web console shipped in the first public release.
+Start with the [template gallery](docs/templates.md) and [workflow guide](docs/workflows.md).
 
 ## Your first approved workflow in five minutes
 
@@ -98,10 +98,10 @@ To generate a GitOps overlay for a release after it has been published:
 
 ```bash
 make customer-overlay CUSTOMER_REPO_URL=https://github.com/<you>/<fork>.git \
-  CUSTOMER_REVISION=v0.2.0 CUSTOMER_GPU_PROFILE=nvidia
+  CUSTOMER_REVISION=v0.3.0 CUSTOMER_GPU_PROFILE=nvidia
 ```
 
-The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.2.0
+The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.3.0
 is ready for evaluation; this repository does not yet provide a hosted service.
 
 | Task | Start here |

@@ -5,7 +5,7 @@
 AgentWorkflows is a self-managed Python workflow SDK, model gateway and team web console.
 Temporal keeps runs durable; the gateway controls model and tool access and records usage
 and receipts. Start, inspect, approve, cancel and retry runs through the console or CLI.
-Cron schedules and signed webhooks can start work, with notifications for waiting approvals,
+In v0.3.0, cron schedules and signed webhooks can start work, with notifications for waiting approvals,
 failures and budget thresholds.
 
 It is for **developers** turning agent scripts into repeatable jobs, **team leads** reviewing

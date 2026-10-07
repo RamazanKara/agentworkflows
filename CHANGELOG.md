@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0 - 2026-10-07
 
 - Add Temporal cron schedules and replay-protected, team-signed inbound webhooks,
   configured per workflow and visible/pausable in the console and CLI.
@@ -8,6 +8,11 @@
   for approvals, failures and run budget thresholds; link to authenticated console review.
 - Include daily report and GitHub issue triage workflows plus local notification fakes
   in the Compose smoke trial. See the workflow guide for signing and retry guarantees.
+- Scaffold five team workflow templates: PR review with human approval, support triage,
+  weekly reports, incident summaries, and document Q&A with citations. Each has a
+  credential-free Compose walkthrough with sample inputs and expected results.
+- Refresh the docs landing page, template gallery, and comparison with LiteLLM plus
+  Temporal to explain where AgentWorkflows fits and what teams still need to operate.
 
 ## v0.2.0 - 2026-10-07
 

@@ -296,7 +296,7 @@ The platform ships a minimal, retry-aware first-party client (`sdk/python`, pack
 `agentworkflows`) for scripts that do not want the full `openai` dependency:
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.2.0/agentworkflows-0.2.0-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.3.0/agentworkflows-0.3.0-py3-none-any.whl
 ```
 
 The wheel and checksums are attached to each [GitHub release](https://github.com/RamazanKara/agentworkflows/releases).
