@@ -1,6 +1,6 @@
 # Security overview
 
-This page summarizes the security-relevant defaults in release `v0.3.0`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
+This page summarizes the security-relevant defaults in release `v0.4.0`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
 
 ## Defaults that matter
 
@@ -63,7 +63,7 @@ Also review runtime, ingress, proxy, RAG, object-store, and application logs. Ga
 
 ## Supply chain
 
-Release workflows build the two first-party images, create SBOM and vulnerability-scan artifacts, sign image/chart digests with Cosign, and publish provenance. GitHub Actions are pinned by commit.
+The tag-only release workflow builds the first-party images, signs image and chart digests with Cosign, and attaches SDK checksums. SBOM and vulnerability scans run locally with `make supply-chain-check` and `make image-scan`. GitHub Actions are pinned by commit.
 
 That boundary does not cover the integrity or license of customer model weights, customer base images, external Helm charts, private mirrors, or the target cluster. Verify those separately. Forks that publish their own images must update the Kyverno image reference and signing identity or admission will reject them.
 

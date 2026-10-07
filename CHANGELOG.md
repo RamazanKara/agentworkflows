@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.4.0 - 2026-10-08
+
+- Add the TypeScript workflow SDK with governed model and tool activities, human approval,
+  and PR review and support triage examples that run against the local fakes.
+- Make the console easier to read: friendly workflow names, distinct run IDs, one grouped
+  card for notification receipts, a summary for published or rejected results, and a
+  Rejected badge in the run list. Run lists now include each completed run's outcome.
+- Explain provider fallback on the run page, including the conservative hold kept for a
+  failed attempt that reported no usage, and note it on the Costs page.
+- Show run lists, triggers, costs and providers as stacked cards on phones, with a compact
+  single-row navigation.
+- Return a realistic synthetic briefing from the research fake, rename the always-failing
+  demo route to `demo-fallback`, and align the quickstart with the real step timeline.
+- Publish releases from a tag-only workflow: multi-arch images and Helm charts signed with
+  Cosign, plus the Python wheel, source archive and TypeScript SDK package with checksums.
+
 ## v0.3.0 - 2026-10-07
 
 - Add Temporal cron schedules and replay-protected, team-signed inbound webhooks,

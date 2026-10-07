@@ -54,7 +54,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | GitOps delivery | Shipped | Argo CD | Immutable release revisions; every declared app is health-gated and customer sync fails closed |
 | Evidence and release gates | Shipped | CI/nightly | Conformance and model-quality evidence are labeled separately |
 | Egress exception expiry | Shipped | Report-only | Rendered onto the NetworkPolicy; Kyverno denies expired, CronJob retires them when enforcement is on |
-| SBOM, provenance, signatures | Shipped | Release CI | Build once, promote digest, digest-bound charts, Sigstore bundles |
+| Signed releases | Shipped | Release workflow | Tag-built multi-arch images and digest-bound charts signed with Cosign; SBOM and scans run locally (`make supply-chain-check`, `make image-scan`) |
 | Multi-node model serving | Example/integration | Off | LeaderWorkerSet/Ray installation and topology are operator-owned |
 | End-user multi-user chat UI | Example only | Off | Open WebUI manifest/runbook; identity and storage are operator-owned |
 | Training, fine-tuning, audio, images | Out of scope | n/a | Use purpose-built systems; see [Scope and non-goals](scope-and-non-goals.md) |
