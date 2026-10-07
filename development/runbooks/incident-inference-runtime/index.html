@@ -1649,6 +1649,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#team-workflow-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team workflow operations
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1691,6 +1702,14 @@ kubectl describe pod -n vllm -l app.kubernetes.io/name=vllm
 <p>Switch the gateway to the healthy backend by updating <code>RUNTIME_BACKEND</code> values in the environment overlay, then sync Argo CD. For vLLM GPU pending issues, follow <code>runbooks/gpu-capacity.md</code>.</p>
 <h2 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h2>
 <p>Capture gateway logs, the <code>inference_request</code> audit event for the failed <code>request_id</code>, runtime pod events, Argo CD application health, and the failed smoke-test response.</p>
+<h2 id="team-workflow-operations">Team workflow operations<a class="headerlink" href="#team-workflow-operations" title="Permanent link">&para;</a></h2>
+<p>Use <code>agentworkflows runs list</code> and <code>agentworkflows runs inspect RUN_ID</code> with a team credential.
+Check the step's provider, duration, failure, cost, and receipt ID before retrying; a fresh
+retry can repeat tool side effects. Waiting approvals need an approver/admin credential.
+For no throughput, check the team's worker logs and <code>&lt;team&gt;-workflows</code> task queue. For spend
+alerts, inspect <code>agentworkflows usage</code> and <code>budgets.costLimitUsd</code>; failed/unreported provider
+attempts keep conservative charges. For stale metrics, check Temporal/Redis connectivity
+and history retention. See <a href="https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service">team operations</a>.</p>
 
 
 

@@ -1933,8 +1933,8 @@
 
 <h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
 <p>Try AgentWorkflows in ten minutes: discover models, send a governed call, inspect your
-team's usage, run a durable workflow, and verify its receipts. This checkout adds Temporal
-execution and human approvals to the governed cloud gateway.</p>
+team's usage, run a durable workflow, and verify its receipts. Version 0.2.0 adds projects,
+roles, verified approvals, and shared spend controls to the cloud gateway.</p>
 <h2 id="docker-compose">Docker Compose<a class="headerlink" href="#docker-compose" title="Permanent link">&para;</a></h2>
 <p>Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. Run from a Bash shell
 (Linux, macOS, or WSL). No GPU, model download, provider key, or paid inference is needed.</p>
@@ -1970,11 +1970,10 @@ Redis. Both survive ordinary container restarts.</p>
 <code>http://127.0.0.1:8080</code>; set it when using a remote gateway. The Python import is
 <code>from agentworkflows import GatewayClient</code>. Existing OpenAI and Anthropic clients can use
 the same gateway; follow the <a href="../client-examples/">client examples</a>.</p>
-<p>The console is read-only. Set team credentials and scopes in <code>deploy/compose/key-records.yaml</code>:
-each key stores a SHA-256 digest and binds to one sandbox, which is the current team budget
-boundary. Set <code>budget.estimatedTokenLimit</code> on that record and recreate the gateway to apply it.
-Usage and provider cost are estimates based on token counts and configured prices, not a bill.
-See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md">API access</a> and <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md">budget controls</a>.</p>
+<p>Follow <a href="../workflows/#teams-projects-and-roles">team setup</a> to issue builder/approver/viewer
+credentials, add projects, map provider keys, and set shared token/USD limits.
+<code>agentworkflows team</code> discovers your access; <code>agentworkflows runs --help</code> lists run commands.
+The console is read-only. Usage uses configured prices and conservative reservations.</p>
 <h2 id="connect-a-real-provider">Connect a real provider<a class="headerlink" href="#connect-a-real-provider" title="Permanent link">&para;</a></h2>
 <p>Use the <a href="../model-selection/#cloud-routes-milestone-1">cloud route example</a> for one approved
 provider and model. It includes the connection, pricing, and server-side credential mapping.</p>
@@ -1982,7 +1981,9 @@ provider and model. It includes the connection, pricing, and server-side credent
 <li>Replace fixture routes with approved provider URLs, model IDs, and contracted token prices.</li>
 <li>Supply the named credential through the gateway's environment or Kubernetes Secret.
    Never put provider keys in client requests or tracked files.</li>
-<li>Bind each team's gateway key to its sandbox and budget. Review data classification:
+<li>Set the team's <code>providerCredentials</code> mapping to those environment variable names and add
+   the provider origin to workflow <code>allowedEgress</code>. Bind gateway keys to roles/projects.
+   Review data classification:
    confidential requests cannot use a cloud route, even as a fallback.</li>
 <li>Restart the gateway, list models, and make one authorized call. Cloud readiness checks
    credential presence only; a successful real call is required to validate account access.</li>
@@ -1997,6 +1998,9 @@ The Compose fixtures and public key are evaluation defaults.</p>
 <p>Append this item under <code>spec.models</code> in <code>deploy/compose/model-routing.yaml</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen2.5:0.5b</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">      </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ollama</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">      </span><span class="nt">pricing</span><span class="p">:</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="nt">inputUsdPer1kTokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">outputUsdPer1kTokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
 </code></pre></div>
 <p>Then load the policy and call the model:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>restart<span class="w"> </span>inference-gateway

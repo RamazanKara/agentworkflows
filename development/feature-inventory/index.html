@@ -1224,6 +1224,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature inventory
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1240,6 +1258,36 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#team-operations-020" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team operations (0.2.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1609,6 +1657,25 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#team-operations-020" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team operations (0.2.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1951,6 +2018,13 @@ protocols and the extended Compose walkthrough are tested with local fakes. See
 <a href="../model-selection/#cloud-routes-milestone-1">model selection</a> for configuration and limits.</p>
 <p>For operational acceptance criteria, use the <a href="../production-readiness/">Production readiness matrix</a>.
 For exact supported versions, use the <a href="../version-matrix/">Version matrix</a>.</p>
+<h2 id="team-operations-020">Team operations (0.2.0)<a class="headerlink" href="#team-operations-020" title="Permanent link">&para;</a></h2>
+<p>Projects and admin/builder/approver/viewer roles extend existing sandbox identities.
+The authenticated API/CLI starts, lists, inspects, cancels, retries, and approves runs;
+timelines include provider, model, tokens, estimated cost, duration, and receipt IDs.
+Team provider-key mappings, shared token/USD budgets, reports, and Grafana dashboards/alerts
+are included. Onboarding is declarative; Temporal and workers remain trusted operator
+surfaces. Follow the <a href="../workflows/">team walkthrough</a>.</p>
 
 
 

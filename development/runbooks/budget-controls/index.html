@@ -1660,6 +1660,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#shared-team-spend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared team spend
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1785,6 +1796,13 @@ kubectl -n budget exec deploy/budget-redis -- redis-cli ping
 </code></pre></div>
 <h2 id="response">Response<a class="headerlink" href="#response" title="Permanent link">&para;</a></h2>
 <p>If the sandbox is intentionally load testing or running an approved evaluation, raise the budget in the environment values and redeploy. If the traffic is unexpected, keep the budget in place, identify the caller through request IDs and sandbox IDs, and review the model catalog and admission limits before allowing more traffic.</p>
+<h2 id="shared-team-spend">Shared team spend<a class="headerlink" href="#shared-team-spend" title="Permanent link">&para;</a></h2>
+<p>Teams are existing sandbox identities. Add <code>projects</code>, <code>providerCredentials</code>, and
+<code>budgets.costLimitUsd</code> to the SandboxPolicySet; role-bound keys cannot raise team limits.
+Redis atomically reserves cost across eligible providers and tools. <code>agentworkflows usage</code>
+reports current-window provider totals and conservative reservations. Configure prices
+for every route, including local models. See <a href="https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service">team operations</a>
+for examples, window semantics, retained history, and accounting limits.</p>
 
 
 

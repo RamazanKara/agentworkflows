@@ -1764,10 +1764,11 @@
 OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini. Route calls through one
 gateway, bind credentials to teams, enforce model policies and budgets, and inspect receipts.
 Ollama and vLLM are optional self-hosted model backends.</p>
-<p><strong>This checkout extends v0.1.0 with Milestone 2: durable workflows on Temporal.</strong> Model and tool activities
-share gateway governance, run budgets, and receipts; human approval signals and worker
-recovery are included. Start with the <a href="workflows/">workflow walkthrough</a>. This repository
-is not yet a hosted service.</p>
+<p><strong>Version 0.2.0 adds team operations to durable Temporal workflows.</strong> Teams have projects,
+admin/builder/approver/viewer roles, provider keys, and shared cost limits. Start, inspect,
+cancel, retry, and approve runs through one authenticated API and CLI. A step timeline
+connects providers, tokens, costs, durations, and receipt IDs. This repository provides a
+self-managed service, not a hosted offering. Start with the <a href="workflows/">team walkthrough</a>.</p>
 <h2 id="start-in-ten-minutes">Start in ten minutes<a class="headerlink" href="#start-in-ten-minutes" title="Permanent link">&para;</a></h2>
 <p>With Docker Compose, Git, Make, Bash, Python 3.12+, and curl installed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
@@ -1798,8 +1799,8 @@ real provider configuration, and actionable troubleshooting.</p>
 <td><a href="workflows/">Workflow walkthrough</a></td>
 </tr>
 <tr>
-<td>Set team credentials, scopes, and budgets</td>
-<td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md">API access</a>, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md">budget controls</a></td>
+<td>Set team roles, projects, provider keys, and budgets</td>
+<td><a href="workflows/#teams-projects-and-roles">Team setup</a>, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md">budget controls</a></td>
 </tr>
 <tr>
 <td>Verify model and reported tool-action receipts</td>
