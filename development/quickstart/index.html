@@ -1936,7 +1936,8 @@
 team's usage, run a durable workflow, and verify its receipts. Version 0.2.0 adds projects,
 roles, verified approvals, and shared spend controls to the cloud gateway.</p>
 <h2 id="docker-compose">Docker Compose<a class="headerlink" href="#docker-compose" title="Permanent link">&para;</a></h2>
-<p>Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. Run from a Bash shell
+<p>Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. The browser smoke
+also requires Node.js 24/npm and downloads Chromium on first use. Run from a Bash shell
 (Linux, macOS, or WSL). No GPU, model download, provider key, or paid inference is needed.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows
@@ -1952,9 +1953,10 @@ approval, publication, and no repeated completed model calls. It does not valida
 provider account or measure model quality.</p>
 <p>The walkthrough ends with <code>All checks passed</code> after deliberately editing a receipt and
 checking that verification rejects it. The original log is <code>.out/compose/gateway-audit.jsonl</code>.
-Open <a href="http://127.0.0.1:8080/console">http://127.0.0.1:8080/console</a> and enter <code>local-development-only</code> to inspect health,
-models, usage, and budgets. This public demo key is bound to sandbox <code>demo</code>; do not reuse it
-outside the trial.</p>
+Open <a href="http://127.0.0.1:8080/console">http://127.0.0.1:8080/console</a> and sign in with <code>local-development-only</code>. Follow
+<strong>Get started → Run workflow → Approvals → Step timeline</strong>, then inspect <strong>Costs</strong> and
+<strong>Providers &amp; budgets</strong>. The smoke also checks these pages in headless Chromium.
+This public demo key is bound to team <code>demo</code>; do not reuse it outside the trial.</p>
 <p>Temporal history and approval signals are visible at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a>. Follow the
 <a href="../workflows/">workflow guide</a> to start a run, read its draft, approve or reject it, and
 inspect its token/cost budget. Temporal uses its own PostgreSQL; run budgets use persistent
@@ -1973,7 +1975,8 @@ the same gateway; follow the <a href="../client-examples/">client examples</a>.<
 <p>Follow <a href="../workflows/#teams-projects-and-roles">team setup</a> to issue builder/approver/viewer
 credentials, add projects, map provider keys, and set shared token/USD limits.
 <code>agentworkflows team</code> discovers your access; <code>agentworkflows runs --help</code> lists run commands.
-The console is read-only. Usage uses configured prices and conservative reservations.</p>
+The <a href="../workflows/#web-console">console walkthrough</a> covers role-based controls and team switching.
+Usage uses configured prices and conservative reservations.</p>
 <h2 id="connect-a-real-provider">Connect a real provider<a class="headerlink" href="#connect-a-real-provider" title="Permanent link">&para;</a></h2>
 <p>Use the <a href="../model-selection/#cloud-routes-milestone-1">cloud route example</a> for one approved
 provider and model. It includes the connection, pricing, and server-side credential mapping.</p>

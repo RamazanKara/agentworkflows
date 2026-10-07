@@ -1914,16 +1914,16 @@ configured.</p>
 <td><code>file</code> or <code>redis</code> backend needed for cross-restart linkage; storage is operator-provided</td>
 </tr>
 <tr>
-<td>Read-only operator console</td>
+<td>Team web console</td>
 <td>Shipped</td>
-<td>Off</td>
-<td><code>/console</code>; health, models, usage, and budget only</td>
+<td>On in Compose/umbrella Helm; opt-in standalone</td>
+<td><code>/console</code>; existing auth, identity switching, filtered runs, approvals, step receipts/logs, admin configuration guidance, and costs</td>
 </tr>
 <tr>
 <td>Docker Compose evaluation stack</td>
 <td>Shipped</td>
 <td><code>make compose-up</code></td>
-<td>Gateway, Ollama, RAG, optional offline Open WebUI on 127.0.0.1; <code>make compose-smoke</code> runs in CI on every pull request; no network policy, agent workspaces, or shared state</td>
+<td>Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; headless browser smoke in CI; no Kubernetes network policy or agent workspaces</td>
 </tr>
 <tr>
 <td>Ollama runtime</td>

@@ -579,6 +579,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#web-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web console
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#teams-projects-and-roles" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1785,6 +1796,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#web-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web console
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#teams-projects-and-roles" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1960,10 +1982,49 @@ the authenticated API, and verifies publication plus exactly two completed model
 It also checks roles, team isolation, timelines, shared spend, cancellation, and retry.
 Evidence is under <code>.out/compose/</code>. <code>make compose-down</code> stops the trial and deletes its data;
 use <code>docker compose -f deploy/compose/compose.yaml stop</code> to retain history and budgets.</p>
+<h2 id="web-console">Web console<a class="headerlink" href="#web-console" title="Permanent link">&para;</a></h2>
+<p>After <code>make compose-up</code>, open <a href="http://127.0.0.1:8080/console">http://127.0.0.1:8080/console</a>:</p>
+<ol>
+<li>Sign in with <code>local-development-only</code> (demo admin). Keep the local fake providers on
+   <strong>Get started</strong>; no cloud key or paid call is needed.</li>
+<li>Choose <strong>Run workflow</strong>, keep <code>ResearchWorkflow</code> and the suggested topic/model, and
+   select <strong>Start run</strong>. Its detail page refreshes while the workflow is active.</li>
+<li>Open <strong>Approvals</strong>, read the draft, then <strong>Approve</strong> or <strong>Reject</strong>. Approval allows
+   the configured publish tool to run; rejection finishes without publishing.</li>
+<li>Open the run from <strong>Workflow runs</strong>. Expand <strong>Receipt</strong> and <strong>Step logs</strong> in its timeline
+   to inspect provider/model, usage, cost, routing attempts, and the full redacted receipt.</li>
+<li>Open <strong>Costs</strong> for current-window team, provider, and workflow costs. <strong>Providers &amp; budgets</strong>
+   shows admins key presence and limits, with a copyable fragment and links for configuring
+   real providers through the existing reviewed policy and gateway Secret deployment.</li>
+</ol>
+<p>Use project, workflow, and status filters to find runs. <strong>Load more</strong> advances through older
+index pages, including pages with no matches. The approvals inbox walks every page of every
+available project. Expired Temporal executions are omitted from lists; direct inspection
+reports that the run is unavailable.</p>
+<p><strong>Add team / identity</strong> verifies another team key or signed JWT before adding it to the
+switcher. Each selection uses that credential's server-verified team, role, and project
+access; a browser header cannot grant membership. Credentials live only in memory and are
+cleared on reload/sign-out. There is no separate password store or membership editor.
+Use <code>demo-builder</code>, <code>demo-approver</code>, <code>demo-viewer</code>, or <code>demo-other-team</code> to explore roles.</p>
+<p>The gateway image includes the built console; no Node server or extra container runs in
+production. Compose enables it. For a standalone gateway Helm release, set
+<code>adminConsole.enabled=true</code>; the umbrella chart uses <code>inference-gateway.adminConsole.enabled=true</code>.
+Keep the existing team auth, Redis, workflow worker, TLS ingress, and Temporal settings.
+The same gateway host serves <code>/console/</code> and <code>/v1/</code>; no cross-origin API setting is needed.</p>
+<p>Run <code>make compose-smoke</code> for browser checks as well as gateway/worker recovery checks.
+It requires Node.js 24/npm and installs Chromium on first use. Linux hosts missing browser
+libraries can run <code>cd src/inference-gateway/console &amp;&amp; npm ci &amp;&amp; npx playwright install --with-deps chromium</code>.
+CI installs those libraries before validation. Keyboard users can use <strong>Skip to content</strong>,
+standard Tab/Enter navigation, and native disclosure controls. Tables scroll within their
+panels on small screens.</p>
+<p>Step logs here are gateway event/routing records, not worker stdout or full Temporal history.
+Receipt hashes must still be checked against the retained audit export and head anchors.
+Provider keys and budget edits remain reviewed deployment configuration; key presence does
+not prove live provider acceptance.</p>
 <h2 id="teams-projects-and-roles">Teams, projects, and roles<a class="headerlink" href="#teams-projects-and-roles" title="Permanent link">&para;</a></h2>
 <p>A <strong>team is the existing sandbox ID</strong>. Projects group and restrict run access. Operators
 review the existing <code>API_KEY_RECORDS_PATH</code> and <code>SANDBOX_POLICY_PATH</code> files, then recreate
-the gateway. The read-only console shows models and budgets; the CLI controls runs.
+the gateway. The console and CLI use the same authenticated workflow API.
 Managed teams require authentication, <code>SANDBOX_BUDGET_ENABLED=true</code>,
 <code>SANDBOX_BUDGET_BACKEND=redis</code>, and <code>AUDIT_LOG_ENABLED=true</code>; Compose sets these already.</p>
 <table>
@@ -2061,8 +2122,8 @@ not receive direct Temporal access or worker keys.</p>
 <td>Start with <code>workflow</code>, JSON <code>input</code>, optional <code>project</code> and UUID <code>request_id</code></td>
 </tr>
 <tr>
-<td><code>GET /v1/workflow-runs?project=briefing&amp;offset=0&amp;limit=20</code></td>
-<td>Page through project runs</td>
+<td><code>GET /v1/workflow-runs?project=briefing&amp;offset=0&amp;limit=20&amp;status=awaiting_approval</code></td>
+<td>Page through project runs; optional <code>status</code> and <code>workflow</code> filters</td>
 </tr>
 <tr>
 <td><code>GET /v1/workflow-runs/{run_id}</code></td>
@@ -2082,7 +2143,7 @@ not receive direct Temporal access or worker keys.</p>
 </tr>
 <tr>
 <td><code>GET /v1/usage</code></td>
-<td>Current-window team/project usage and provider costs</td>
+<td>Current-window team/project usage, provider costs, and <code>spend.workflows</code> costs</td>
 </tr>
 </tbody>
 </table>
@@ -2111,6 +2172,9 @@ decision was accepted. The research example implements both.</p>
 <p><code>agentworkflows usage</code> aggregates providers and tools for the bound team or project.
 <code>spend</code> shows the UTC-aligned cost window, limit, and reserved-plus-spent USD. Its length
 uses <code>SANDBOX_BUDGET_WINDOW_SECONDS</code> (default 86400); zero means lifetime accounting.
+Workflow cost rows accumulate from this version onward, in the same window as provider
+costs. They count governed model/tool calls, not run starts, and exclude standalone calls.
+Project-bound credentials see only their project's rows. Earlier windows are not backfilled.
 Token/request budgets retain their existing window semantics. Spend reservations are
 atomic in the existing Redis, covering eligible fallbacks before a call. Managed-team
 calls retry through the caller or Temporal so each attempt has a budget and receipt.

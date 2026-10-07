@@ -1844,6 +1844,18 @@ Python SDK supports Python 3.11 and newer.</p>
 Kubernetes, a GPU, or downloaded model weights. Initial environment setup installs
 hash-pinned packages and needs access to the package index, or a populated local
 package cache.</p>
+<p>The web console uses Node.js 24/npm, React, TypeScript, and Vite without a component library.
+Its source is <code>src/inference-gateway/console</code>; <code>make console-build</code> installs the lockfile
+and emits ignored static assets into the gateway's <code>app/console/</code>. Docker builds the same
+assets in a Node build stage; the runtime remains Python-only. Gateway tests build these
+assets first. For a local frontend loop, run <code>npm run dev</code> in the console directory beside
+a gateway on port 8080; Vite proxies <code>/v1</code> to it.</p>
+<p><code>make test-console</code> builds and runs headless Chromium checks against local API fixtures
+with at most two workers. <code>make test</code> and <code>make validate</code> include them. On Linux, install
+browser libraries once with <code>cd src/inference-gateway/console &amp;&amp; npm ci &amp;&amp; npx playwright install --with-deps chromium</code>.
+<code>make compose-smoke</code> additionally tests the real gateway, Temporal worker, and local provider
+fakes from the browser. No cloud credentials are needed. Keep the API contract snapshot
+current with <code>make api-contract-update</code> when changing filters or other endpoint parameters.</p>
 <h2 id="first-development-check">First development check<a class="headerlink" href="#first-development-check" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span><span class="nb">test</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>quality

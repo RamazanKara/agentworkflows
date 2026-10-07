@@ -8,7 +8,7 @@
 #
 # WHY THIS IS AN EXAMPLE, NOT A SHIPPED/RENDERED MANIFEST:
 #   - A human-facing chat UI is a separate product surface. AgentWorkflows' non-goal list is explicit:
-#     "No bundled end-user chat UI": this UI is operator-owned; AgentWorkflows' read-only operator console
+#     "No bundled end-user chat UI": this UI is operator-owned; AgentWorkflows' team workflow console
 #     non-goal (see docs/scope-and-non-goals.md). Shipping and supporting a UI would cross the
 #     platform's "manifests, charts, service code, validation tooling, runbooks" boundary.
 #   - The image tag, storage, ingress/TLS, and human SSO wiring are all environment-specific.

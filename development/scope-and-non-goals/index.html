@@ -1844,7 +1844,9 @@ the gateway governs model/tool activities and per-run budgets. Self-hosted model
 <li>a general-purpose identity provider.</li>
 </ul>
 <p>Hosted delivery and team administration are product goals, not current capabilities.
-The read-only <code>/console</code> is an optional view over health, models, usage, and budget data. It is not a control plane.</p>
+The optional <code>/console</code> uses the authenticated workflow API for team runs, approvals, receipts,
+and costs. Admins inspect provider/budget configuration there; membership, provider keys,
+and policy edits remain reviewed deployment configuration. See the <a href="../workflows/#web-console">console guide</a>.</p>
 <h2 id="security-and-compliance-boundary">Security and compliance boundary<a class="headerlink" href="#security-and-compliance-boundary" title="Permanent link">&para;</a></h2>
 <p>The repository includes controls and crosswalks, not certifications. NetworkPolicy does not encrypt traffic. A container sandbox without a configured gVisor, Kata, or equivalent <code>RuntimeClass</code> does not provide a separate kernel boundary. Hash-chained logs are not durable or rollback-resistant until their heads are anchored outside the process. Checked-in sample evidence proves report shape, not the state of a release or deployment.</p>
 <p>Whether a deployment meets a law, standard, or internal policy depends on its use case, configuration, operations, and current evidence. See the <a href="../security-overview/">security overview</a>, <a href="../threat-model/">threat model</a>, and <a href="../production-readiness/">production readiness matrix</a>.</p>
