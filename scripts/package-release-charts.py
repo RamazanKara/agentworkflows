@@ -59,6 +59,11 @@ def package_charts(args: argparse.Namespace) -> dict:
         # The umbrella must vendor the digest-bound component copies, not stale
         # ignored archives from a developer checkout.
         subprocess.run(["helm", "dependency", "update", str(charts / "agentworkflows")], check=True)
+        subprocess.run(["helm", "dependency", "update", str(charts / "workflows")], check=True)
+        worker_values = charts / "workflows" / "values.yaml"
+        values = yaml.safe_load(worker_values.read_text(encoding="utf-8"))
+        values["worker"]["image"] = f"ghcr.io/ramazankara/agentworkflows/workflow-worker@{args.worker_digest}"
+        _write_yaml(worker_values, values)
 
         packages: list[dict[str, str]] = []
         for chart in sorted(charts.iterdir(), key=lambda path: (path.name == "agentworkflows", path.name)):
@@ -82,6 +87,7 @@ def package_charts(args: argparse.Namespace) -> dict:
         "images": {
             "inference-gateway": args.gateway_digest,
             "rag-service": args.rag_digest,
+            "workflow-worker": args.worker_digest,
         },
         "charts": packages,
     }
@@ -95,6 +101,7 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--gateway-digest", required=True, type=_digest)
     parser.add_argument("--rag-digest", required=True, type=_digest)
+    parser.add_argument("--worker-digest", required=True, type=_digest)
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--output-dir", default="chart-packages")
     args = parser.parse_args()

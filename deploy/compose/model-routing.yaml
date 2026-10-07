@@ -7,6 +7,7 @@ spec:
       fallbacks: [demo-openai]
     - id: demo-openai
       backend: openai
+      fallbacks: [demo-anthropic]
       connection:
         baseUrl: http://cloud-fake:8000/openai/v1
         model: fixture-model

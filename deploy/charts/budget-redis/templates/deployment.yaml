@@ -6,6 +6,8 @@ metadata:
     {{- include "budget-redis.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "budget-redis.selectorLabels" . | nindent 6 }}
@@ -32,7 +34,9 @@ spec:
             - --save
             - ""
             - --appendonly
-            - "no"
+            - {{ ternary "yes" "no" .Values.persistence.enabled | quote }}
+            - --appendfsync
+            - always
             - --protected-mode
             - "no"
             {{- if .Values.auth.enabled }}
@@ -83,4 +87,9 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
         - name: redis-data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "budget-redis.fullname" . }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}

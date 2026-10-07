@@ -873,6 +873,42 @@
         "title": "ResponsesRequest",
         "type": "object"
       },
+      "RunBudget": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_limit_usd": {
+            "default": 5.0,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000000.0,
+            "title": "Cost Limit Usd",
+            "type": "number"
+          },
+          "token_limit": {
+            "default": 10000,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000000000.0,
+            "title": "Token Limit",
+            "type": "integer"
+          }
+        },
+        "title": "RunBudget",
+        "type": "object"
+      },
+      "ToolCall": {
+        "additionalProperties": false,
+        "properties": {
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          }
+        },
+        "required": [
+          "arguments"
+        ],
+        "title": "ToolCall",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2055,6 +2091,99 @@
         ]
       }
     },
+    "/v1/tools": {
+      "get": {
+        "operationId": "tools_v1_tools_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Tools V1 Tools Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "List this team's approved workflow tools",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/tools/{tool}/call": {
+      "post": {
+        "operationId": "call_tool_v1_tools__tool__call_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool",
+            "required": true,
+            "schema": {
+              "title": "Tool",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolCall"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Call Tool V1 Tools  Tool  Call Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Execute an approved tool through gateway governance",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/v1/usage": {
       "get": {
         "operationId": "getSandboxUsage",
@@ -2083,6 +2212,120 @@
         "summary": "Get sandbox usage and estimated cost",
         "tags": [
           "sandbox"
+        ]
+      }
+    },
+    "/v1/workflow-runs/{run_id}": {
+      "get": {
+        "operationId": "run_usage_v1_workflow_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Usage V1 Workflow Runs  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Inspect this team's run budget",
+        "tags": [
+          "workflows"
+        ]
+      },
+      "put": {
+        "operationId": "initialize_run_v1_workflow_runs__run_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunBudget"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Initialize Run V1 Workflow Runs  Run Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Initialize an immutable per-run budget",
+        "tags": [
+          "workflows"
         ]
       }
     }

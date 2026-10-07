@@ -85,8 +85,15 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
     async def chat_completions(request: Request, payload: ChatCompletionRequest) -> dict[str, Any]:
         payload_dict = payload.model_dump(exclude_none=True)
         async with governed(request, settings, route="/v1/chat/completions", payload=payload_dict) as call:
+            workflow_call = bool(getattr(request.state, "workflow_run_id", None))
+            if workflow_call and payload_dict.get("stream"):
+                raise AdmissionPolicyError(
+                    "workflow_streaming_unsupported", "Workflow model activities return complete results; omit stream."
+                )
             _forward_only_reviewed_params(request, payload_dict, "chat", settings)
-            effective, chain, shadow_route = resolve_chat_routes(request, settings, payload_dict, progressive=True)
+            effective, chain, shadow_route = resolve_chat_routes(
+                request, settings, payload_dict, progressive=not workflow_call
+            )
             call.backend = chain[0].backend
             effective.validate_admission(payload_dict)
             # Redact/flag prompt secrets (non-block modes) before the payload is cached,
@@ -96,7 +103,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                 request.state.prompt_guardrail_action = prompt_action
             # Exact-match per-sandbox cache (non-streaming only). A hit returns the prior
             # response without a runtime call or budget reservation.
-            cache_enabled = settings.response_cache_enabled and not payload_dict.get("stream")
+            cache_enabled = settings.response_cache_enabled and not payload_dict.get("stream") and not workflow_call
             cache_id = ""
             if cache_enabled:
                 cache_id = cache_key(

@@ -26,8 +26,8 @@ help:
 		'AgentWorkflows targets' \
 		'' \
 		'Try it without Kubernetes (Docker Compose):' \
-		'  make compose-up            Build and start gateway, cloud fixtures, and RAG on 127.0.0.1' \
-		'  make compose-smoke         Walk the governed request path and verify the audit chain' \
+		'  make compose-up            Start gateway, Temporal, workflow worker, cloud fixtures, and RAG' \
+		'  make compose-smoke         Verify governance, worker crash recovery, and receipts' \
 		'  make compose-down          Stop the stack and delete its volumes' \
 		'' \
 		'Local platform:' \
@@ -116,6 +116,7 @@ COMPOSE := docker compose -f deploy/compose/compose.yaml
 compose-up:
 	$(COMPOSE) build inference-gateway
 	$(COMPOSE) build rag-service
+	$(COMPOSE) build workflow-worker
 	$(COMPOSE) up -d --wait
 
 compose-smoke:

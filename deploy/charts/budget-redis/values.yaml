@@ -1,6 +1,11 @@
 replicaCount: 1
 fullnameOverride: budget-redis
 
+# Workflow run budgets must outlive a gateway or Redis restart.
+persistence:
+  enabled: true
+  size: 1Gi
+
 image:
   repository: redis
   # tag is kept as documentation; digest pins the multi-arch manifest list.

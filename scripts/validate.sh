@@ -38,8 +38,9 @@ log "running Python lint, format, and type checks"
 ./scripts/quality.sh
 
 log "linting and rendering local Helm charts"
+helm dependency update deploy/charts/workflows
 rendered_manifests=()
-for chart in deploy/charts/agent-workspace deploy/charts/budget-redis deploy/charts/inference-gateway deploy/charts/ollama deploy/charts/qdrant-vector-store deploy/charts/rag-service deploy/charts/vllm; do
+for chart in deploy/charts/agent-workspace deploy/charts/budget-redis deploy/charts/inference-gateway deploy/charts/ollama deploy/charts/qdrant-vector-store deploy/charts/rag-service deploy/charts/vllm deploy/charts/workflows; do
   helm lint "$chart"
   rendered="/tmp/$(basename "$chart")-rendered.yaml"
   helm template "validate-$(basename "$chart")" "$chart" >"$rendered"

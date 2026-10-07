@@ -4,6 +4,7 @@ import json
 import struct
 import zlib
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import ClassVar
 
 
 def bedrock_event(kind, data):
@@ -18,6 +19,9 @@ def bedrock_event(kind, data):
 
 
 class Handler(BaseHTTPRequestHandler):
+    counts: ClassVar[dict] = {}
+    publications: ClassVar[dict] = {}
+
     def log_message(self, *_args):
         pass
 
@@ -29,11 +33,39 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_GET(self):
-        self.send(200, b'{"status":"ok"}')
+        self.send(200, json.dumps(self.counts if self.path == "/stats" else {"status": "ok"}).encode())
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         provider = self.path.split("/")[1]
+        self.counts[provider] = self.counts.get(provider, 0) + 1
+        if provider == "tools":
+            tool = self.path.split("/")[-1]
+            if tool == "research":
+                result = [
+                    {
+                        "title": "Team research notes",
+                        "url": "https://example.org/research",
+                        "text": "Synthetic source: measure reliability and cost before rolling out agents.",
+                    }
+                ]
+            elif tool == "publish":
+                key = self.headers.get("Idempotency-Key")
+                if not key:
+                    self.send(400, b'{"error":"Idempotency-Key required"}')
+                    return
+                result = self.publications.setdefault(
+                    key, {"url": f"https://example.org/briefings/{key}", "published": True}
+                )
+            else:
+                self.send(404, b"{}")
+                return
+            self.send(200, json.dumps(result).encode())
+            return
+        # The example's second model call exercises fallback after research has completed.
+        if provider == "openai" and "Write a concise team briefing" in json.dumps(body):
+            self.send(503, b'{"error":"fixture drafting outage"}')
+            return
         if provider == "local-overload":
             self.send(503, b'{"error":"fixture overload"}')
             return

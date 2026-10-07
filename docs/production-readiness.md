@@ -68,7 +68,7 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 
 | Bundled store | Reference footprint | Production / HA path |
 | --- | --- | --- |
-| Budget / response-cache Redis (`deploy/charts/budget-redis`) | 1 replica, no persistence, `minAvailable: 0` (a restart drops counters; an outage fails budgets closed) | Point `budget.redisUrl` / `responseCache.redisUrl` at an external **managed Redis, Redis Sentinel failover pair, or Redis Cluster** and stop syncing the bundled Application. Budgets stay fail-closed on outage; the rate limiter can opt into fail-open (`rateLimit.failOpen`) as an availability-vs-enforcement tradeoff |
+| Budget / response-cache Redis (`deploy/charts/budget-redis`) | 1 replica, AOF and PVC persistence, `minAvailable: 0` (disk loss can lose counters; an outage fails budgets closed) | Point `budget.redisUrl` / `responseCache.redisUrl` at an external **managed Redis, Redis Sentinel failover pair, or Redis Cluster** and stop syncing the bundled Application. Budgets stay fail-closed on outage; the rate limiter can opt into fail-open (`rateLimit.failOpen`) as an availability-vs-enforcement tradeoff |
 | Qdrant vector store (`deploy/charts/qdrant-vector-store`) | Single-instance, **schema-enforced** (`replicaCount` max 1) on one RWO PVC | Use an **external managed Qdrant or a Qdrant cluster** (sharded/replicated) and point `retrieval.vectorStore.url` at it; the bundled chart intentionally does not model clustering |
 | Loki (`deploy/observability/applications.yaml`) | `SingleBinary`, `replication_factor: 1`, filesystem storage | Move to a **scalable/distributed Loki mode with object storage and replication**; forward the tamper-evident audit receipts onward to a SIEM for durable long-term hold |
 

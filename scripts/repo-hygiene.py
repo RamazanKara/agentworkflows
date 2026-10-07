@@ -310,6 +310,7 @@ def check_runtime_dependencies(errors: list[str]) -> None:
         ("requirements-docs.in", "requirements-docs.txt"),
         ("requirements-sdk-build.in", "requirements-sdk-build.lock"),
         ("requirements-sdk-test.in", "requirements-sdk-test.lock"),
+        ("sdk/python/requirements.txt", "sdk/python/requirements.lock"),
         ("requirements-relock.in", "requirements-relock.lock"),
     ):
         source = ROOT / source_name

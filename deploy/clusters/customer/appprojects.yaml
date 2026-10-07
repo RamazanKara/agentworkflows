@@ -16,6 +16,7 @@ spec:
     per workload by narrowing destinations and the resource whitelists.
   sourceRepos:
     - https://github.com/RamazanKara/agentworkflows.git
+    - https://go.temporal.io/helm-charts/
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"

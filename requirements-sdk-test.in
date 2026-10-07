@@ -1,4 +1,4 @@
 # Minimal, hash-pinned dependencies for testing the standalone Python SDK.
 # Regenerate with `make relock` (scripts/relock.sh).
-httpx==0.28.1
+-r sdk/python/requirements.txt
 pytest==9.1.1

@@ -7,9 +7,10 @@ OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini. Route calls thr
 gateway, bind credentials to teams, enforce model policies and budgets, and inspect receipts.
 Ollama and vLLM are optional self-hosted model backends.
 
-**v0.1.0 delivers Milestone 1: governed cloud providers.** Durable agent workflows, human
-approvals, and broader team administration are planned. The current Batch and Responses
-APIs do not constitute a durable workflow engine. This repository is not yet a hosted service.
+**This checkout extends v0.1.0 with Milestone 2: durable workflows on Temporal.** Model and tool activities
+share gateway governance, run budgets, and receipts; human approval signals and worker
+recovery are included. Start with the [workflow walkthrough](workflows.md). This repository
+is not yet a hosted service.
 
 ## Start in ten minutes
 
@@ -34,6 +35,7 @@ real provider configuration, and actionable troubleshooting.
 | You want to | Start here |
 | --- | --- |
 | Call cloud models and configure fallback | [Client examples](client-examples.md) |
+| Run durable workflows with human approvals | [Workflow walkthrough](workflows.md) |
 | Set team credentials, scopes, and budgets | [API access](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md), [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md) |
 | Verify model and reported tool-action receipts | [Audit chain](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md) |
 | Add retrieval or hardened workspaces | [RAG](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/rag-service.md), [agent-sandbox](agent-sandbox-integration.md) |
