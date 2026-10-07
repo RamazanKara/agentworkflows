@@ -18,6 +18,27 @@ temporal:
   fullnameOverride: temporal
   server:
     replicaCount: 1
+    securityContext: &temporalPodSecurityContext
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    frontend:
+      containerSecurityContext: &temporalContainerSecurityContext
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: [ALL]
+    internal-frontend:
+      containerSecurityContext: *temporalContainerSecurityContext
+    history:
+      containerSecurityContext: *temporalContainerSecurityContext
+    matching:
+      containerSecurityContext: *temporalContainerSecurityContext
+    worker:
+      containerSecurityContext: *temporalContainerSecurityContext
     resources:
       requests: {cpu: 100m, memory: 256Mi}
       limits: {cpu: "1", memory: 1Gi}
@@ -52,9 +73,13 @@ temporal:
   schema:
     # PostgreSQL is part of this release, so schema creation must not run as a pre-install hook.
     useHelmHooks: false
+    securityContext: *temporalPodSecurityContext
+    containerSecurityContext: *temporalContainerSecurityContext
   admintools:
     enabled: false
   web:
+    securityContext: *temporalPodSecurityContext
+    containerSecurityContext: *temporalContainerSecurityContext
     resources:
       requests: {cpu: 50m, memory: 64Mi}
       limits: {cpu: 500m, memory: 256Mi}
