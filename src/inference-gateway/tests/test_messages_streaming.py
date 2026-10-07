@@ -405,7 +405,7 @@ def test_messages_streaming_is_rejected_when_the_streaming_toggle_is_off():
 
 
 def test_messages_streaming_records_usage_latency_and_audit(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_settings())
     fake = FakeStreamingRuntimeClient(
         stream_chunks=[
@@ -425,7 +425,7 @@ def test_messages_streaming_records_usage_latency_and_audit(caplog):
     message_delta = next(event for name, event in _sse_events(body) if name == "message_delta")
     assert message_delta["usage"] == {"input_tokens": 7, "output_tokens": 3}
 
-    records = [json.loads(record.message) for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    records = [json.loads(record.message) for record in caplog.records if record.name == "agentworkflows.audit"]
     receipt = records[-1]
     assert receipt["status_code"] == 200
     assert receipt["usage"] == {"prompt_tokens": 7, "completion_tokens": 3, "total_tokens": 10}
@@ -433,7 +433,7 @@ def test_messages_streaming_records_usage_latency_and_audit(caplog):
 
 
 def test_messages_streaming_emits_an_anthropic_error_event_on_a_mid_stream_failure(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_settings())
     fake = FakeStreamingRuntimeClient(
         stream_chunks=[b'data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'],
@@ -452,7 +452,7 @@ def test_messages_streaming_emits_an_anthropic_error_event_on_a_mid_stream_failu
     assert events[-1][1]["type"] == "error"
     assert events[-1][1]["error"]["type"] == "api_error"
 
-    records = [json.loads(record.message) for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    records = [json.loads(record.message) for record in caplog.records if record.name == "agentworkflows.audit"]
     assert records[-1]["status_code"] == 502
     assert records[-1]["decision"] == "denied"
 

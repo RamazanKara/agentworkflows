@@ -1,6 +1,6 @@
 # Security overview
 
-This page summarizes the security-relevant defaults in release `v0.29.0`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
+This page summarizes the security-relevant defaults in release `v0.1.0`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
 
 ## Defaults that matter
 
@@ -54,10 +54,10 @@ Cloud calls use the same controls and record the selected provider, routing atte
 classification, usage, and estimated cost on that chain. Classification refusals are
 explicit 403 receipts. Provider credentials come only from server environment variables
 or Kubernetes Secret references, never caller headers or bodies. See
-[cloud route configuration](model-selection.md#cloud-routes-unreleased) for egress,
+[cloud route configuration](model-selection.md#cloud-routes-milestone-1) for egress,
 credential rotation, and protocol boundaries.
 
-The chain detects edits and reordering in an exported sequence. It does not by itself prevent deletion, survive a lost log stream, join replicas into one chain, or prove that the first and last records are complete. Export logs, retain the `chain_id`, and commit chain-head anchors to a separate trusted system. Use `make audit-verify` and follow the [audit-chain runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/audit-chain.md).
+The chain detects edits and reordering in an exported sequence. It does not by itself prevent deletion, survive a lost log stream, join replicas into one chain, or prove that the first and last records are complete. Export logs, retain the `chain_id`, and commit chain-head anchors to a separate trusted system. Use `make audit-verify` and follow the [audit-chain runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md).
 
 Also review runtime, ingress, proxy, RAG, object-store, and application logs. Gateway redaction does not control what another component logs.
 
@@ -85,6 +85,6 @@ At minimum:
 - [Threat model](threat-model.md)
 - [OWASP Top 10 for LLM Applications 2025 mapping](owasp-llm-top-10-mapping.md)
 - [AI governance crosswalk](ai-governance-crosswalk.md)
-- [Security policy](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/SECURITY.md)
-- [External stores](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/external-managed-stores.md)
-- [Guardrails](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/guardrails.md)
+- [Security policy](https://github.com/RamazanKara/agentworkflows/blob/main/SECURITY.md)
+- [External stores](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md)
+- [Guardrails](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/guardrails.md)

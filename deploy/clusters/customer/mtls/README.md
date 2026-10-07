@@ -1,6 +1,6 @@
 # Encryption in Transit (Opt-In Overlay)
 
-By default the kit's in-cluster data plane is **plaintext HTTP**. NetworkPolicies restrict *who*
+By default AgentWorkflows' in-cluster data plane is **plaintext HTTP**. NetworkPolicies restrict *who*
 may connect (default-deny plus explicit allows), but they do not encrypt traffic on the wire. For a
 private-AI platform the payloads that traverse the pod network (prompts, completions, retrieved RAG
 context, and the `X-API-Key` header) are exactly the data a regulated deployment must protect in

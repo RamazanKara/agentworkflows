@@ -124,7 +124,7 @@ class Settings:
     sandbox_budget_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/0"
     sandbox_budget_redis_timeout_seconds: float = 0.5
     sandbox_budget_window_seconds: int = 86400
-    sandbox_budget_key_prefix: str = "private-ai-platform-kit:sandbox-budget"
+    sandbox_budget_key_prefix: str = "agentworkflows:sandbox-budget"
     rate_limit_enabled: bool = False
     rate_limit_requests_per_window: int = 0
     rate_limit_window_seconds: int = 60
@@ -144,7 +144,7 @@ class Settings:
     response_cache_backend: str = "memory"
     response_cache_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/1"
     response_cache_redis_timeout_seconds: float = 0.5
-    response_cache_key_prefix: str = "private-ai-platform-kit:response-cache"
+    response_cache_key_prefix: str = "agentworkflows:response-cache"
     output_guardrail_enabled: bool = False
     output_guardrail_mode: str = "redact"
     output_guardrail_patterns: tuple[str, ...] = OUTPUT_DEFAULT_PATTERNS
@@ -186,7 +186,7 @@ class Settings:
     batch_store_backend: str = "memory"
     batch_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/2"
     batch_redis_timeout_seconds: float = 0.5
-    batch_key_prefix: str = "private-ai-platform-kit:batch"
+    batch_key_prefix: str = "agentworkflows:batch"
     batch_max_file_bytes: int = 104857600
     batch_max_requests_per_batch: int = 50000
     batch_completion_window: str = "24h"
@@ -197,7 +197,7 @@ class Settings:
     responses_store_backend: str = "memory"
     responses_redis_url: str = "redis://budget-redis.budget.svc.cluster.local:6379/3"
     responses_redis_timeout_seconds: float = 0.5
-    responses_key_prefix: str = "private-ai-platform-kit:responses"
+    responses_key_prefix: str = "agentworkflows:responses"
     responses_retention_seconds: int = 86400
     # Opt-in read-only admin console served at /console (ADR 0013). Off by default.
     admin_console_enabled: bool = False
@@ -390,7 +390,7 @@ class Settings:
             ),
             sandbox_budget_key_prefix=os.getenv(
                 "SANDBOX_BUDGET_KEY_PREFIX",
-                "private-ai-platform-kit:sandbox-budget",
+                "agentworkflows:sandbox-budget",
             ),
             rate_limit_enabled=_bool_from_env("RATE_LIMIT_ENABLED", False),
             rate_limit_requests_per_window=_int_from_env("RATE_LIMIT_REQUESTS_PER_WINDOW", 0),
@@ -414,7 +414,7 @@ class Settings:
             ),
             response_cache_key_prefix=os.getenv(
                 "RESPONSE_CACHE_KEY_PREFIX",
-                "private-ai-platform-kit:response-cache",
+                "agentworkflows:response-cache",
             ),
             output_guardrail_enabled=_bool_from_env("OUTPUT_GUARDRAIL_ENABLED", False),
             output_guardrail_mode=os.getenv("OUTPUT_GUARDRAIL_MODE", "redact").strip().lower(),
@@ -466,7 +466,7 @@ class Settings:
             batch_store_backend=os.getenv("BATCH_STORE_BACKEND", "memory").strip().lower(),
             batch_redis_url=os.getenv("BATCH_REDIS_URL", "redis://budget-redis.budget.svc.cluster.local:6379/2"),
             batch_redis_timeout_seconds=_float_from_env("BATCH_REDIS_TIMEOUT_SECONDS", 0.5),
-            batch_key_prefix=os.getenv("BATCH_KEY_PREFIX", "private-ai-platform-kit:batch"),
+            batch_key_prefix=os.getenv("BATCH_KEY_PREFIX", "agentworkflows:batch"),
             batch_max_file_bytes=_positive_int_from_env("BATCH_MAX_FILE_BYTES", 104857600),
             batch_max_requests_per_batch=_positive_int_from_env("BATCH_MAX_REQUESTS_PER_BATCH", 50000),
             batch_completion_window=os.getenv("BATCH_COMPLETION_WINDOW", "24h").strip(),
@@ -477,7 +477,7 @@ class Settings:
                 "RESPONSES_REDIS_URL", "redis://budget-redis.budget.svc.cluster.local:6379/3"
             ),
             responses_redis_timeout_seconds=_float_from_env("RESPONSES_REDIS_TIMEOUT_SECONDS", 0.5),
-            responses_key_prefix=os.getenv("RESPONSES_KEY_PREFIX", "private-ai-platform-kit:responses"),
+            responses_key_prefix=os.getenv("RESPONSES_KEY_PREFIX", "agentworkflows:responses"),
             responses_retention_seconds=_positive_int_from_env("RESPONSES_RETENTION_SECONDS", 86400),
             admin_console_enabled=_bool_from_env("ADMIN_CONSOLE_ENABLED", False),
         )

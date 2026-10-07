@@ -1,4 +1,4 @@
-name: OpenSSF Scorecard
+name: AgentWorkflows OpenSSF Scorecard
 
 on:
   workflow_dispatch:

@@ -2,7 +2,7 @@
 
 ## Is this production-ready?
 
-It is a reference implementation and customer template, not a managed product. The customer values still need identity, secrets, ingress, transport encryption, storage, observability, backup, model selection, capacity tests, and current release evidence. See [Production readiness](production-readiness.md).
+AgentWorkflows 0.1.0 is for evaluation. Governed cloud providers are implemented; durable workflows, human approvals, and hosted delivery are planned. Production deployments need identity, secrets, ingress, transport encryption, storage, observability, backups, and current evidence. See [Production readiness](production-readiness.md).
 
 ## What does the project install?
 
@@ -10,11 +10,11 @@ The local Argo CD profile installs the platform services and several lab add-ons
 
 ## Does the quickstart work offline?
 
-No. The first run downloads tools, manifests, images, charts, Python packages, and an Ollama model. Inference uses the local Ollama pod after setup. An offline deployment needs internal mirrors and preloaded artifacts.
+The first Compose build downloads images and Python packages. After setup, the default trial uses local protocol fixtures with no external inference. Real cloud routes need provider access. Optional self-hosted deployments need model downloads or preloaded artifacts.
 
 ## Do I need a GPU?
 
-Not for the local path. The local smoke test uses `qwen2.5:0.5b` with Ollama on CPU. The checked-in customer vLLM profiles expect GPU resources and must be resized for the target model and nodes.
+No. The default cloud-provider trial needs no model or GPU. Optional Ollama runs a small model on CPU; the customer vLLM profiles require GPU resources sized for the chosen model.
 
 ## Is in-cluster traffic encrypted?
 
@@ -30,7 +30,7 @@ A sandbox-bound key record or verified JWT tenant claim can bind the gateway req
 
 ## Does the gateway implement the full OpenAI or Anthropic API?
 
-No. It implements the routes in the checked-in [OpenAPI contract](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/api-contracts/inference-gateway.openapi.json). Chat completions and Anthropic Messages can stream; legacy completions and Responses cannot in this release. See [Scope and non-goals](scope-and-non-goals.md).
+No. It implements the routes in the checked-in [OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json). Chat completions and Anthropic Messages can stream; legacy completions and Responses cannot in this release. See [Scope and non-goals](scope-and-non-goals.md).
 
 ## What do the checked-in evidence files prove?
 
@@ -46,8 +46,8 @@ It renders a tenant namespace without external CIDR egress. It does not air-gap 
 
 ## How do I upgrade or roll back?
 
-Change the immutable `CUSTOMER_REVISION`, review the rendered changes, and let Argo CD reconcile. Roll back by returning to the prior tag. Follow the [upgrade runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/upgrade.md); stateful schema or collection changes may require a separate data rollback.
+Change the immutable `CUSTOMER_REVISION`, review the rendered changes, and let Argo CD reconcile. Roll back by returning to the prior tag. Follow the [upgrade runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/upgrade.md); stateful schema or collection changes may require a separate data rollback.
 
 ## Where should I report a security issue?
 
-Use the private process in [SECURITY.md](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/SECURITY.md). Do not put secrets, customer data, private prompts, or exploit details in a public issue.
+Use the private process in [SECURITY.md](https://github.com/RamazanKara/agentworkflows/blob/main/SECURITY.md). Do not put secrets, customer data, private prompts, or exploit details in a public issue.

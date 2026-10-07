@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in the platform kit.
+description: Report a reproducible problem in AgentWorkflows.
 title: "[Bug]: "
 labels: ["bug"]
 body:

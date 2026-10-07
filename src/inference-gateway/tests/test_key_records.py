@@ -235,7 +235,7 @@ def test_sandbox_bound_key_matching_header_is_accepted(tmp_path):
 
 
 def test_record_principal_is_recorded_in_audit(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _settings(
         tmp_path,
         [{"sha256": _sha256(KEY_ALPHA), "name": "team-a-key", "sandbox": "team-a", "scopes": ["chat:write"]}],

@@ -1,16 +1,16 @@
 apiVersion: platform.ai/v1alpha1
 kind: ControlFrameworkMap
 metadata:
-  name: private-ai-platform-kit-control-framework-map
+  name: agentworkflows-control-framework-map
 spec:
   # Maps the controls that already exist in this repo to external AI-governance
   # frameworks. This file is a documentation/crosswalk aid, not an enforcement input:
-  # the controls themselves live in the kit_implementation file references and are
+  # the controls themselves live in the platform_implementation file references and are
   # enforced by their own checks (make targets, gateway tests, Kyverno policies). The
-  # framework citations are operator references, not certifications -- the kit ships
+  # framework citations are operator references, not certifications -- the platform ships
   # mechanisms, not attestations of conformity. See docs/ai-governance-crosswalk.md.
   description: >-
-    Crosswalk from Private AI Platform Kit controls to NIST AI RMF 1.0,
+    Crosswalk from AgentWorkflows controls to NIST AI RMF 1.0,
     the EU AI Act, and ISO/IEC 42001:2023. Citations point at the framework
     function/article/clause the control contributes evidence toward; they do
     not assert audited conformity.
@@ -26,7 +26,7 @@ spec:
       title: EU AI Act (Regulation (EU) 2024/1689)
       note: >-
         Article numbers reference high-risk-system obligations. Whether a given
-        deployment is high-risk depends on the customer's use case; the kit
+        deployment is high-risk depends on the customer's use case; the platform
         provides the technical mechanisms an operator can use toward these
         obligations.
     iso_42001:

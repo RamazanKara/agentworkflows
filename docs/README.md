@@ -1,6 +1,6 @@
 # Documentation
 
-The published site is at [ramazankara.github.io/private-ai-platform-kit](https://ramazankara.github.io/private-ai-platform-kit/). This file is a smaller map for browsing the repository on GitHub.
+The published site is at [ramazankara.github.io/agentworkflows](https://ramazankara.github.io/agentworkflows/). This file is a smaller map for browsing the repository on GitHub.
 
 ## Setup and deployment
 

@@ -9,11 +9,11 @@ independent retention.
 Every sandbox-bound gateway request emits one redacted audit event (`event: inference_request`;
 batch calls emit `event: batch_request`). Three more event types share the same chain: an
 `agent_action` receipt for what a workspace did beyond calling a model (denied egress, tool
-execution, file writes; see [ADR 0014](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/adr/0014-agent-action-receipts.md)),
+execution, file writes; see [ADR 0014](https://github.com/RamazanKara/agentworkflows/blob/main/docs/adr/0014-agent-action-receipts.md)),
 a `rag_query` retrieval receipt from the RAG service on its own chain, and a `chain_start`
 record opening each chain. These events are the **tamper-evident receipts**: each
 is linked into a per-process SHA-256 hash chain (see
-[ADR 0006](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/adr/0006-tamper-evident-audit-hash-chain.md)):
+[ADR 0006](https://github.com/RamazanKara/agentworkflows/blob/main/docs/adr/0006-tamper-evident-audit-hash-chain.md)):
 
 - `h_0 = SHA-256("genesis")`
 - `record_hash = SHA-256(prev_hash || canonical(record))`, where `canonical` is
@@ -24,7 +24,7 @@ Each event carries a `chain_id` (`HOSTNAME:process_start:random`, hash-covered) 
 per-replica chain, and a chain-covered `ts`. The random suffix is load-bearing: a pod that
 restarts twice within one second would otherwise mint the same id twice and the verifier would
 splice two unrelated chains together and report the seam as tampering. Events are logged twice per request (once to the
-audit logger `ai_platform_ops_lab.audit` and once to `uvicorn.error`), so a pod-log stream (and
+audit logger `agentworkflows.audit` and once to `uvicorn.error`), so a pod-log stream (and
 Loki) carries two byte-identical copies of every record. The verifier deduplicates them.
 
 Any edit, insertion, deletion, or reordering of emitted records breaks the chain and is detected
@@ -73,7 +73,7 @@ SIEM index) so it is outside the reach of whoever could rewrite the log.
 
 A ready-to-adapt CronJob that pulls the gateway audit stream from Loki, anchors it, and stores the
 head in a ConfigMap ships as a documented example at
-[`docs/examples/audit-anchor-cronjob.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/examples/audit-anchor-cronjob.yaml). It is an
+[`docs/examples/audit-anchor-cronjob.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/docs/examples/audit-anchor-cronjob.yaml). It is an
 example rather than a rendered manifest because the log source (Loki URL, LogQL selector, tenant
 header, lookback) is environment-specific; adapt those fields before applying. The scripts are
 stdlib-only, so any `python:3-alpine` with `scripts/audit-anchor.py` and `scripts/audit-verify.py`
@@ -103,7 +103,7 @@ If Loki `auth_enabled` is turned on for multi-tenant isolation, add the `X-Scope
 header on **every** path: the Promtail push (`clients[].tenant_id`), the Grafana datasource, and
 any anchor/export query. Otherwise pushes and reads will 401. The bundled reference keeps
 `auth_enabled: false` (single-tenant); see the comment in
-[`deploy/observability/applications.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/observability/applications.yaml).
+[`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml).
 
 ## Chain continuity across restarts
 

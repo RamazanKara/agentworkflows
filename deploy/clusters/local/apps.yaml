@@ -10,8 +10,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/vendor/agent-sandbox/v0.5.0
   destination:
     server: https://kubernetes.default.svc
@@ -33,8 +33,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: platform/model-catalog/k8s
   destination:
     server: https://kubernetes.default.svc
@@ -54,8 +54,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/sandbox/base
   destination:
     server: https://kubernetes.default.svc
@@ -135,8 +135,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/observability
     directory:
       # Recurse so the PrometheusRule (alerts/) and the Grafana dashboard ConfigMaps
@@ -163,8 +163,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/policies/kyverno
   destination:
     server: https://kubernetes.default.svc
@@ -182,8 +182,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/ollama
     helm:
       releaseName: ollama
@@ -207,8 +207,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/vllm
     helm:
       releaseName: vllm
@@ -232,8 +232,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/budget-redis
     helm:
       releaseName: budget-redis
@@ -255,8 +255,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/inference-gateway
     helm:
       releaseName: inference-gateway
@@ -280,8 +280,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/qdrant-vector-store
     helm:
       releaseName: qdrant-vector-store
@@ -305,8 +305,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/rag-service
     helm:
       releaseName: rag-service
@@ -330,8 +330,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/agent-workspace
     helm:
       releaseName: agent-workspace
@@ -363,7 +363,7 @@ spec:
       values: |
         opencost:
           exporter:
-            defaultClusterId: private-ai-platform-kit-local
+            defaultClusterId: agentworkflows-local
           # Point OpenCost at the kube-prometheus-stack Prometheus this repo actually
           # installs; the chart default (prometheus-server.prometheus.svc) targets the
           # community prometheus chart and leaves every allocation panel empty.
@@ -391,8 +391,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/backup/velero
   destination:
     server: https://kubernetes.default.svc
@@ -412,8 +412,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/backup/restore-drill
     directory:
       include: "k8s/*.yaml"

@@ -54,7 +54,7 @@ operator must supply a compatible GPU, runtime image, and model artifact. MIG an
 also cluster/device-plugin settings; the chart can request the resulting resource name but does not
 configure GPU partitioning.
 
-See [Capacity and sizing](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/capacity-sizing.md)
+See [Capacity and sizing](https://github.com/RamazanKara/agentworkflows/blob/main/docs/capacity-sizing.md)
 for the measurement loop.
 
 ## Evidence

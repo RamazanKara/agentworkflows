@@ -19,7 +19,7 @@ Settlement runs on the streaming and non-streaming paths alike, and the correcti
 - A runtime that reports **no usage** leaves the reservation standing rather than refunding it, so a request that burned runtime capacity and then failed late is still charged.
 - A settlement that fails never fails a request that already succeeded. The response is committed, and an unsettled reservation can only over-charge, never hand out free budget.
 
-`estimatedCharsPerToken` is calibrated per model in [the model catalog](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/models.yaml) and carried into the routing policy, because one global divisor is wrong in opposite directions for different models: prose in a Latin script runs near four characters per token, source code nearer three, and non-Latin scripts closer to one. A model that declares none falls back to the gateway default.
+`estimatedCharsPerToken` is calibrated per model in [the model catalog](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/models.yaml) and carried into the routing policy, because one global divisor is wrong in opposite directions for different models: prose in a Latin script runs near four characters per token, source code nearer three, and non-Latin scripts closer to one. A model that declares none falls back to the gateway default.
 
 The gateway supports two budget backends. `memory` stores usage in the gateway process and is useful for unit tests or single-pod development. `redis` stores usage in a Redis-compatible service and is the default for local and customer values because it works across multiple gateway replicas.
 
@@ -37,7 +37,7 @@ Set budgets in Helm values:
       windowSeconds: 86400
       redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/0
       redisTimeoutSeconds: "0.5"
-      keyPrefix: private-ai-platform-kit:local:sandbox-budget
+      keyPrefix: agentworkflows:local:sandbox-budget
 
 The rendered gateway Deployment exposes these as:
 

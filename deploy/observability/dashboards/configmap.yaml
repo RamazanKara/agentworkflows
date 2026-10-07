@@ -121,15 +121,15 @@ data:
         }
       ],
       "schemaVersion": 39,
-      "tags": ["private-ai-platform-kit"],
-      "title": "Private AI Platform Kit Inference",
+      "tags": ["agentworkflows"],
+      "title": "AgentWorkflows Inference",
       "uid": "ai-platform-inference",
       "version": 1
     }
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     grafana_dashboard: '1'
   name: grafana-dashboard-inference-dashboard
   namespace: monitoring
@@ -199,15 +199,15 @@ data:
         }
       ],
       "schemaVersion": 39,
-      "tags": ["private-ai-platform-kit", "cost"],
-      "title": "Private AI Platform Kit Cost & Allocation",
+      "tags": ["agentworkflows", "cost"],
+      "title": "AgentWorkflows Cost & Allocation",
       "uid": "ai-platform-cost",
       "version": 1
     }
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     grafana_dashboard: '1'
   name: grafana-dashboard-opencost-dashboard
   namespace: monitoring
@@ -277,15 +277,15 @@ data:
         }
       ],
       "schemaVersion": 39,
-      "tags": ["private-ai-platform-kit"],
-      "title": "Private AI Platform Kit RAG",
+      "tags": ["agentworkflows"],
+      "title": "AgentWorkflows RAG",
       "uid": "ai-platform-rag",
       "version": 1
     }
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     grafana_dashboard: '1'
   name: grafana-dashboard-rag-dashboard
   namespace: monitoring
@@ -327,8 +327,8 @@ data:
         }
       ],
       "schemaVersion": 39,
-      "tags": ["private-ai-platform-kit", "restore-drill"],
-      "title": "Private AI Platform Kit Restore Drill",
+      "tags": ["agentworkflows", "restore-drill"],
+      "title": "AgentWorkflows Restore Drill",
       "uid": "ai-platform-restore-drill",
       "version": 1
     }
@@ -336,7 +336,7 @@ data:
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     grafana_dashboard: '1'
   name: grafana-dashboard-restore-drill-dashboard
   namespace: monitoring
@@ -470,15 +470,15 @@ data:
         }
       ],
       "schemaVersion": 39,
-      "tags": ["private-ai-platform-kit", "vllm", "gpu"],
-      "title": "Private AI Platform Kit vLLM and GPU",
+      "tags": ["agentworkflows", "vllm", "gpu"],
+      "title": "AgentWorkflows vLLM and GPU",
       "uid": "ai-platform-vllm-gpu",
       "version": 1
     }
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     grafana_dashboard: '1'
   name: grafana-dashboard-vllm-gpu-dashboard
   namespace: monitoring

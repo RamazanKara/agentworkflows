@@ -1,14 +1,14 @@
 # Support
 
-Thanks for using Private AI Platform Kit. This page routes you to the right place.
+Thanks for using AgentWorkflows. This page routes you to the right place.
 
 ## Questions and how-to help
 
 Start with the docs:
 
 - [Quickstart](../docs/quickstart.md) for a first local run.
-- [Decision guide](../docs/decision-guide.md) to check whether this kit fits your use case.
-- [Operational runbooks](../runbooks/README.md) and the [documentation index](../README.md#documentation).
+- [Decision guide](../docs/decision-guide.md) to check whether AgentWorkflows fits your use case.
+- [Operational runbooks](../runbooks/README.md) and the [documentation index](../README.md#deploy-and-operate).
 
 If the docs do not answer your question, open a discussion in the repository's
 **Discussions** tab. If Discussions is not enabled, open an issue using the

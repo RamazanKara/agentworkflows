@@ -1,6 +1,6 @@
 # Model Governance Runbook
 
-Use this runbook when adding, approving, deprecating, blocking, or reviewing models in the Private AI Platform Kit catalog.
+Use this runbook when adding, approving, deprecating, blocking, or reviewing models in the AgentWorkflows catalog.
 
 ## Required Artifacts
 
@@ -54,7 +54,7 @@ For a deprecated or blocked model, remove it from all gateway allowlists before 
 The 2026-09-23 review records Qwen3.8-27B, Qwen3.8-Flash-Next, GLM-5.3-Flash,
 DeepSeek-V4.1-Flash, and the existing Qwen3.6-35B-A3B comparison candidate. Each
 entry links to an immutable upstream model card and records its review date.
-See [model selection](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/model-selection.md) for licenses, context sizes,
+See [model selection](https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md) for licenses, context sizes,
 compatibility limits, and upgrade notes.
 
 These are discovery records, not promotion approvals. They need real-model evals,

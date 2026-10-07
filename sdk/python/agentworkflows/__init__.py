@@ -1,4 +1,4 @@
-"""First-party Python client for the Private AI Platform Kit inference gateway.
+"""First-party Python client for the AgentWorkflows inference gateway.
 
 A thin, dependency-light wrapper (httpx only) that sets the platform headers
 (``X-Sandbox-ID``, bearer auth) and covers the gateway's API: OpenAI-compatible chat,
@@ -14,7 +14,7 @@ the gateway provably did not process the request, so a retry never duplicates a 
 For the full OpenAI or Anthropic parameter surface, typed models, or async I/O, point the
 official ``openai`` / ``anthropic`` SDKs at the gateway instead (see docs/client-examples.md).
 
-    from ai_platform_client import GatewayClient
+    from agentworkflows import GatewayClient
 
     with GatewayClient("http://127.0.0.1:8080", api_key="...") as gw:
         reply = gw.chat([{"role": "user", "content": "hello"}])
@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 try:
-    __version__ = metadata.version("private-ai-platform-kit-client")
+    __version__ = metadata.version("agentworkflows")
 except metadata.PackageNotFoundError:  # running from a source checkout
     __version__ = "0+unknown"
 

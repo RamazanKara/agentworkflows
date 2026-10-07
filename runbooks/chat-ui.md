@@ -6,13 +6,13 @@ model allowlist, admission, budget, and audit controls.
 
 ## Scope and non-goal
 
-The kit does not bundle an end-user chat product. It does ship an opt-in read-only operator
+The platform does not bundle an end-user chat product. It does ship an opt-in read-only operator
 console at `/console`; a human-facing multi-user chat UI remains an **operator-owned example, not a
 supported component**, consistent with the explicit
-[product boundary](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/scope-and-non-goals.md).
+[product boundary](https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md).
 [Open WebUI](https://github.com/open-webui/open-webui) is the common choice and is used here, but
-any OpenAI-compatible chat frontend works. The kit ships a copy-adapt manifest at
-[`docs/examples/open-webui.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/examples/open-webui.yaml)
+any OpenAI-compatible chat frontend works. The platform ships a copy-adapt manifest at
+[`docs/examples/open-webui.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/docs/examples/open-webui.yaml)
 (Deployment + Service + NetworkPolicy + config) and this runbook; you own the image pinning,
 storage, ingress/TLS, and identity wiring.
 
@@ -62,7 +62,7 @@ it to the record's sandbox) and needs no extra proxy.
 ## 3. Human auth: SSO into the UI
 
 The UI itself must sit behind HTTPS and human SSO: the gateway's API key authenticates the *UI
-process*, not the *person* using it. The kit does not run an IdP; wire Open WebUI's OIDC to the
+process*, not the *person* using it. The platform does not run an IdP; wire Open WebUI's OIDC to the
 **same IdP** you already use for the platform dashboards.
 
 - The Grafana and Argo CD SSO templates in [API access](api-access.md) (OIDC via Keycloak/Auth0/
@@ -71,8 +71,8 @@ process*, not the *person* using it. The kit does not run an IdP; wire Open WebU
   map an IdP group to admin.
 - Open WebUI reads standard OIDC settings (issuer/client-id/client-secret/scopes) from its
   environment; set them the same way and put an Ingress with TLS in front. Human SSO for this UI
-  is an operator responsibility outside the kit's data-plane security boundary
-  ([Security overview](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/security-overview.md)).
+  is an operator responsibility outside AgentWorkflows' data-plane security boundary
+  ([Security overview](https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md)).
 
 If you also enable gateway JWT auth with a tenant claim, option (c) above can forward the user's
 verified token straight through and let the gateway derive the sandbox from the JWT tenant claim,

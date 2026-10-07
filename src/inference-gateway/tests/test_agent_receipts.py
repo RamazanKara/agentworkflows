@@ -65,7 +65,7 @@ def _client(settings=None):
 
 
 def _receipts(caplog):
-    return [json.loads(record.message) for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    return [json.loads(record.message) for record in caplog.records if record.name == "agentworkflows.audit"]
 
 
 def _egress_denied(**overrides):
@@ -80,7 +80,7 @@ def _egress_denied(**overrides):
 
 
 def test_a_denied_egress_attempt_becomes_a_chained_receipt(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
 
     response = client.post("/v1/receipts", headers={"X-Sandbox-ID": "agent-lab"}, json=_egress_denied())
@@ -97,7 +97,7 @@ def test_a_denied_egress_attempt_becomes_a_chained_receipt(caplog):
 
 
 def test_the_receipt_hash_covers_the_recorded_action(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
 
     client.post("/v1/receipts", json=_egress_denied())
@@ -108,7 +108,7 @@ def test_the_receipt_hash_covers_the_recorded_action(caplog):
 
 
 def test_agent_actions_share_one_chain_with_model_calls(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
 
     client.post("/v1/chat/completions", json={"messages": [{"role": "user", "content": "hi"}]})
@@ -123,7 +123,7 @@ def test_agent_actions_share_one_chain_with_model_calls(caplog):
 
 
 def test_the_operator_verifier_accepts_a_mixed_chain(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
     verifier = _load_verifier()
 
@@ -131,7 +131,7 @@ def test_the_operator_verifier_accepts_a_mixed_chain(caplog):
     client.post("/v1/receipts", json=_egress_denied())
     client.post("/v1/receipts", json={"action_type": "tool_exec", "decision": "allowed", "tool": "pytest"})
 
-    lines = [record.message for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    lines = [record.message for record in caplog.records if record.name == "agentworkflows.audit"]
     chains = verifier.group_into_chains(verifier.deduplicate(verifier.extract_audit_events(lines)))
     result = verifier.verify_chain(chains[0])
 
@@ -140,7 +140,7 @@ def test_the_operator_verifier_accepts_a_mixed_chain(caplog):
 
 
 def test_deleting_an_action_receipt_breaks_the_chain(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
     verifier = _load_verifier()
 
@@ -148,7 +148,7 @@ def test_deleting_an_action_receipt_breaks_the_chain(caplog):
     client.post("/v1/receipts", json=_egress_denied())
     client.post("/v1/chat/completions", json={"messages": [{"role": "user", "content": "hi"}]})
 
-    lines = [record.message for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    lines = [record.message for record in caplog.records if record.name == "agentworkflows.audit"]
     # Remove the inconvenient record: what the chain exists to make impossible.
     without_action = [line for line in lines if '"agent_action"' not in line]
     chains = verifier.group_into_chains(verifier.deduplicate(verifier.extract_audit_events(without_action)))
@@ -223,7 +223,7 @@ def test_a_malformed_detail_digest_is_rejected():
 
 
 def test_a_valid_detail_digest_is_recorded(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
     digest = "a" * 64
 
@@ -233,7 +233,7 @@ def test_a_valid_detail_digest_is_recorded(caplog):
 
 
 def test_a_credential_in_a_reported_command_is_redacted_before_chaining(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client(_settings(output_guardrail_enabled=True))
     token = "ghp_0123456789abcdefghijABCDEFGHIJ012345"
 
@@ -253,7 +253,7 @@ def test_control_characters_cannot_reach_the_audit_stream(caplog):
     # The receipt intake is the first endpoint where a caller-supplied string reaches the
     # audit stream, and that stream is machine-parsed evidence. A forged second record must
     # not be constructible from a field value.
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
     forged = '{"event":"agent_action","decision":"allowed"}'
 
@@ -262,7 +262,7 @@ def test_control_characters_cannot_reach_the_audit_stream(caplog):
         json={"action_type": "tool_exec", "decision": "allowed", "reason": f"real\n{forged}\r\nmore"},
     )
 
-    lines = [record.message for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    lines = [record.message for record in caplog.records if record.name == "agentworkflows.audit"]
     assert len(lines) == 1
     receipt = json.loads(lines[0])
     assert "\n" not in receipt["reason"]
@@ -330,7 +330,7 @@ def test_the_intake_requires_authentication():
 
 
 def test_a_receipt_can_be_correlated_with_the_model_call_that_prompted_it(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     client, _ = _client()
 
     completion = client.post(

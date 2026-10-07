@@ -1,6 +1,6 @@
 # restore-drill Integration
 
-Private AI Platform Kit uses `RamazanKara/restore-drill` for application-data restore verification. Velero covers Kubernetes resource and persistent-volume recovery; restore-drill proves that backup artifacts can be restored into disposable targets and validated with data checks.
+AgentWorkflows uses `RamazanKara/restore-drill` for application-data restore verification. Velero covers Kubernetes resource and persistent-volume recovery; restore-drill proves that backup artifacts can be restored into disposable targets and validated with data checks.
 
 Local run:
 

@@ -7,7 +7,7 @@ cd "$ROOT"
 
 TRIVY_BIN="${TRIVY_BIN:-trivy}"
 SYFT_BIN="${SYFT_BIN:-syft}"
-IMAGE_PREFIX="${IMAGE_PREFIX:-private-ai-platform-kit}"
+IMAGE_PREFIX="${IMAGE_PREFIX:-agentworkflows}"
 GATEWAY_IMAGE="${GATEWAY_IMAGE:-${IMAGE_PREFIX}/inference-gateway:local-scan}"
 RAG_IMAGE="${RAG_IMAGE:-${IMAGE_PREFIX}/rag-service:local-scan}"
 OUTPUT_DIR="${OUTPUT_DIR:-results/supply-chain}"
@@ -68,7 +68,7 @@ from pathlib import Path
 
 summary, stamp, gateway_image, rag_image, gateway_sbom, rag_sbom, gateway_sarif, rag_sarif, checksums = sys.argv[1:]
 payload = {
-    "project": "Private AI Platform Kit",
+    "project": "AgentWorkflows",
     "generated_at": stamp,
     "gate": "HIGH and CRITICAL image vulnerabilities must be zero",
     "status": "pass",

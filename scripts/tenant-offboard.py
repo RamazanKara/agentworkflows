@@ -4,7 +4,7 @@
 Onboarding created namespaces, quotas, network policies, workspaces, budgets, and RAG
 sources for a tenant; there was no counterpart to tear them down, so offboarded tenants
 left orphaned namespaces, budget counters, and vectors. This emits an ordered, auditable
-teardown plan (the operator runs the commands, matching the kit's manifests-and-runbooks
+teardown plan (the operator runs the commands, matching the platform's manifests-and-runbooks
 boundary) and never deletes audit/evidence, which is retained per the retention policy.
 
 Usage:
@@ -20,7 +20,7 @@ from typing import Any
 
 import yaml
 
-DEFAULT_BUDGET_KEY_PREFIX = "private-ai-platform-kit:sandbox-budget"
+DEFAULT_BUDGET_KEY_PREFIX = "agentworkflows:sandbox-budget"
 
 
 def load_spec(path: Path) -> dict[str, Any]:

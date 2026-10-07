@@ -4,9 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/common.sh"
 
-CLUSTER_NAME="${CLUSTER_NAME:-private-ai-platform-kit}"
-GATEWAY_IMAGE="${GATEWAY_IMAGE:-private-ai-platform-kit/inference-gateway:local}"
-RAG_IMAGE="${RAG_IMAGE:-private-ai-platform-kit/rag-service:local}"
+CLUSTER_NAME="${CLUSTER_NAME:-agentworkflows}"
+GATEWAY_IMAGE="${GATEWAY_IMAGE:-agentworkflows/inference-gateway:local}"
+RAG_IMAGE="${RAG_IMAGE:-agentworkflows/rag-service:local}"
 LOCAL_GATEWAY_HOST_PORT="${LOCAL_GATEWAY_HOST_PORT:-8080}"
 DEFAULT_KIND_NODE_IMAGE="kindest/node:v1.35.1"
 CGROUP_V1_KIND_NODE_IMAGE="kindest/node:v1.31.4"

@@ -1,6 +1,6 @@
 # Model selection and updates
 
-## Cloud routes (unreleased)
+## Cloud routes (Milestone 1)
 
 The gateway supports `openai`, `anthropic`, `azure-openai`, `bedrock`, and `vertex`
 alongside `ollama` and `vllm`. Cloud templates in the existing model catalog are
@@ -15,8 +15,8 @@ An operator's Helm/GitOps values can contain:
 
 ```yaml
 runtime:
-  modelId: qwen2.5:0.5b
-  allowedModels: [qwen2.5:0.5b, approved-cloud]
+  modelId: approved-cloud
+  allowedModels: [approved-cloud]
 providerCredentials:
   - env: OPENAI_API_KEY
     secretName: model-provider-credentials
@@ -25,9 +25,6 @@ routing:
   policy:
     enabled: true
     models:
-      - id: qwen2.5:0.5b
-        backend: ollama
-        fallbacks: [approved-cloud]
       - id: approved-cloud
         backend: openai
         connection:
@@ -37,12 +34,6 @@ routing:
         pricing:
           inputUsdPer1kTokens: 0 # replace with your contracted rate
           outputUsdPer1kTokens: 0 # replace with your contracted rate
-sandboxPolicy:
-  policy:
-    enabled: true
-    policies:
-      - sandboxId: private-team
-        dataClassification: confidential
 ```
 
 Create the referenced Secret using your existing secret backend; do not put credential
@@ -100,7 +91,7 @@ replay. Bind tenant identity to a key record or verified JWT claim for this to b
 tenant security boundary.
 
 Model metadata was reviewed against the publishers' repositories on **2026-09-23**
-for the v0.29.0 release. The catalog separates models approved for the existing lab
+for the v0.1.0 release. The catalog separates models approved for the existing lab
 profiles from newer candidates that still need evaluation.
 
 ## Models used by the shipped profiles
@@ -113,7 +104,7 @@ profiles from newer candidates that still need evaluation.
 | Customer RAG embeddings | `BAAI/bge-small-en-v1.5` | Now pins the upstream commit and weight inventory; the embedding deployment uses the same revision. |
 
 These approvals describe lab profiles. They do not establish production suitability
-for a customer's workloads. Read the [model cards](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/model-cards/README.md)
+for a customer's workloads. Read the [model cards](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/model-cards/README.md)
 for the existing evidence and limitations.
 
 ## Current GPU candidates
@@ -121,7 +112,7 @@ for the existing evidence and limitations.
 All rows below have `status: proposed` and are absent from the gateway allowlists.
 Context sizes are upstream configuration values, not measured capacity or enabled
 gateway limits. Candidate licenses and revision links are recorded in
-[`platform/model-catalog/models.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/models.yaml).
+[`platform/model-catalog/models.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/models.yaml).
 
 | Candidate | Upstream license | Context tokens | Evaluation focus |
 | --- | --- | --- | --- |
@@ -139,7 +130,7 @@ with the permissive license of Qwen3.8-27B.
 The newer models include upstream multimodal capabilities. Their presence in the
 catalog does not add image or video support to the gateway. The pinned runtime
 image and existing GPU profiles have not been validated with these candidates.
-Use the upstream recipe, then run the kit's real-model evals and load tests before
+Use the upstream recipe, then run AgentWorkflows' real-model evals and load tests before
 changing a serving profile or approving a model.
 
 ## Reproduce the approved model metadata
@@ -160,10 +151,10 @@ upstream SHA-256 checksums at one immutable commit. It is not a checksum of the
 entire model, and it does not verify bytes already installed in a customer model
 store. Compare those files against the inventory during model-store ingestion.
 
-See the [provenance runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/model-provenance.md)
+See the [provenance runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/model-provenance.md)
 for the manifest format and update commands.
 
-## Upgrade from v0.28.1
+## Self-hosted model revisions
 
 - The default vLLM chart and approved customer profiles now set `model.revision`.
   Custom overlays that change `model.name` must also set the matching revision.
@@ -173,5 +164,5 @@ for the manifest format and update commands.
   checkpoint placeholder instead of implying that an official Qwen AWQ repository
   exists. Supply an approved checkpoint and revision before using it.
 - No new candidate is automatically deployed or promoted. Follow the
-  [model governance runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/model-governance.md)
+  [model governance runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/model-governance.md)
   to collect evaluation, load, and security evidence for a promotion.

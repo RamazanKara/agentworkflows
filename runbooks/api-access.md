@@ -2,7 +2,7 @@
 
 Use this runbook when configuring or rotating access to the inference gateway or RAG service.
 
-For security boundaries and threat modeling, see [Threat model](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/threat-model.md).
+For security boundaries and threat modeling, see [Threat model](https://github.com/RamazanKara/agentworkflows/blob/main/docs/threat-model.md).
 
 ## Authentication Model
 
@@ -25,7 +25,7 @@ The inference gateway also supports optional JWT bearer validation beside API-ke
         enabled: true
         jwksUrl: https://idp.example/.well-known/jwks.json
         issuer: https://idp.example
-        audience: private-ai-platform-kit
+        audience: agentworkflows
         requiredScopes:
           - chat:write
 
@@ -67,7 +67,7 @@ Example `key-records.json`:
       ]
     }
 
-Because the file maps key hashes to tenant bindings, mount it from a Secret rather than committing it to values. Set `auth.keyRecords.existingSecret.name` (and `key`, default `key-records.json`) and the chart mounts it read-only at `auth.keyRecords.mountPath` (default `/etc/private-ai-platform-kit/auth`) and points `API_KEY_RECORDS_PATH` at it:
+Because the file maps key hashes to tenant bindings, mount it from a Secret rather than committing it to values. Set `auth.keyRecords.existingSecret.name` (and `key`, default `key-records.json`) and the chart mounts it read-only at `auth.keyRecords.mountPath` (default `/etc/agentworkflows/auth`) and points `API_KEY_RECORDS_PATH` at it:
 
     auth:
       enabled: true
@@ -148,11 +148,11 @@ Two distinct auth surfaces exist in this platform; do not conflate them:
 - **Machine auth on the data plane** - the inference gateway and RAG service authenticate *workloads* (agents, apps, CI) with the API keys, API-key records, and JWTs described above. This is what gates `POST /v1/chat/completions` and friends.
 - **Human SSO on the control plane** - the *operator dashboards* (Grafana, Argo CD) authenticate *people* via your OIDC identity provider. This is unrelated to the gateway's machine auth and never grants access to tenant inference traffic.
 
-The kit does **not** run an identity provider. The snippets below are operator templates that wire Grafana and Argo CD to an IdP you already operate (Keycloak, Auth0, Okta, Microsoft Entra ID, Google Workspace, etc.). Resolve `issuer`, auth, token, and userinfo/JWKS URLs from the IdP discovery document at `https://<issuer>/.well-known/openid-configuration`, and source every client secret from your secret manager - never commit it.
+The platform does **not** run an identity provider. The snippets below are operator templates that wire Grafana and Argo CD to an IdP you already operate (Keycloak, Auth0, Okta, Microsoft Entra ID, Google Workspace, etc.). Resolve `issuer`, auth, token, and userinfo/JWKS URLs from the IdP discovery document at `https://<issuer>/.well-known/openid-configuration`, and source every client secret from your secret manager - never commit it.
 
 ### Grafana OIDC
 
-Grafana ships as part of the `kube-prometheus-stack` Application in [deploy/observability/applications.yaml](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/observability/applications.yaml). Add OIDC under the chart's `grafana.grafana.ini` and map an IdP group to the Grafana admin role. Template - replace the placeholders:
+Grafana ships as part of the `kube-prometheus-stack` Application in [deploy/observability/applications.yaml](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml). Add OIDC under the chart's `grafana.grafana.ini` and map an IdP group to the Grafana admin role. Template - replace the placeholders:
 
     grafana:
       # Source GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET from a Secret via grafana.envFromSecret;
@@ -202,7 +202,7 @@ Argo CD authenticates operators through its `argocd-cm`/`argocd-rbac-cm` ConfigM
       policy.csv: |
         g, platform-admins, role:admin
 
-Human SSO for these dashboards is an operator responsibility outside the kit's data-plane security boundary; see [Security overview](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/security-overview.md) for where that boundary sits.
+Human SSO for these dashboards is an operator responsibility outside AgentWorkflows' data-plane security boundary; see [Security overview](https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md) for where that boundary sits.
 
 ## Troubleshooting
 

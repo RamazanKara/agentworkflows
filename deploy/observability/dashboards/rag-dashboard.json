@@ -60,8 +60,8 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["private-ai-platform-kit"],
-  "title": "Private AI Platform Kit RAG",
+  "tags": ["agentworkflows"],
+  "title": "AgentWorkflows RAG",
   "uid": "ai-platform-rag",
   "version": 1
 }

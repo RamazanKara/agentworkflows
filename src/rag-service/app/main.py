@@ -36,9 +36,9 @@ from app.retriever import LexicalRetriever, QdrantRetriever, VectorStoreError, b
 from app.settings import Settings, validate_sandbox_id
 from app.tracing import configure_tracing, trace_request
 
-AUDIT_LOGGER = logging.getLogger("ai_platform_ops_lab.rag.audit")
+AUDIT_LOGGER = logging.getLogger("agentworkflows.rag.audit")
 TRACEPARENT_PATTERN = re.compile(r"^[\da-f]{2}-[\da-f]{32}-[\da-f]{16}-[\da-f]{2}$")
-SERVICE_VERSION = "0.29.0"
+SERVICE_VERSION = "0.1.0"
 OPENAPI_DESCRIPTION = (
     "Private retrieval service for platform and customer knowledge. The service "
     "returns traceable retrieval results, optional context blocks, and "
@@ -497,7 +497,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """Build and configure the RAG service FastAPI application with its retriever."""
     resolved = settings or Settings.from_env()
     app = FastAPI(
-        title="Private AI Platform Kit RAG Service",
+        title="AgentWorkflows RAG Service",
         version=SERVICE_VERSION,
         description=OPENAPI_DESCRIPTION,
         openapi_tags=OPENAPI_TAGS,
@@ -566,7 +566,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # isolation on, callers only retrieve their own tenant's documents, so the
         # bootstrap corpus is invisible to tenants by design. Say so at startup instead
         # of leaving operators to debug an "empty" index.
-        logging.getLogger("ai_platform_ops_lab.rag").warning(
+        logging.getLogger("agentworkflows.rag").warning(
             "tenant isolation is enabled with knowledge bootstrap: bootstrapped platform "
             "documents (owner=platform-team) are excluded from tenant-scoped retrieval"
         )

@@ -44,8 +44,8 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `autoscaling.minReplicas` | `1` |
 | `autoscaling.targetCPUUtilizationPercentage` | `70` |
 | `image.pullPolicy` | `IfNotPresent` |
-| `image.repository` | `ghcr.io/ramazankara/private-ai-platform-kit/rag-service` |
-| `image.tag` | `v0.29.0` |
+| `image.repository` | `ghcr.io/ramazankara/agentworkflows/rag-service` |
+| `image.tag` | `v0.1.0` |
 | `ingestion.annotations` | `{}` |
 | `ingestion.backoffLimit` | `1` |
 | `ingestion.chunkChars` | `1200` |
@@ -55,7 +55,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `knowledge.documents.accelerators.md` | `# Accelerator Support<br><br>Ollama is the default local runtime. vLLM is the production-style runtime<br>for customer cluster...` |
 | `knowledge.documents.coding-agents.md` | `# Coding Agents<br><br>Coding agents should call the inference gateway with X-Request-ID,<br>X-Sandbox-ID, and traceparent whe...` |
 | `knowledge.documents.controls.md` | `# Platform Controls<br><br>The platform includes model catalog governance, gateway admission controls,<br>Redis-backed sandbox...` |
-| `knowledge.documents.platform-overview.md` | `# Private AI Platform Kit<br><br>Private AI Platform Kit is a local-first, provider-neutral Kubernetes platform<br>for private...` |
+| `knowledge.documents.platform-overview.md` | `# AgentWorkflows<br><br>AgentWorkflows is the cloud-first agent workflow platform for teams, with<br>governed providers, team ...` |
 | `knowledge.mountPath` | `/knowledge` |
 | `namespace.create` | `true` |
 | `namespace.name` | `""` |
@@ -103,7 +103,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `retrieval.tenantIsolation.enabled` | `false` |
 | `retrieval.tenantIsolation.field` | `owner` |
 | `retrieval.vectorStore.bootstrapFromKnowledge` | `true` |
-| `retrieval.vectorStore.collection` | `private-ai-platform-kit` |
+| `retrieval.vectorStore.collection` | `agentworkflows` |
 | `retrieval.vectorStore.collectionVersion` | `v1` |
 | `retrieval.vectorStore.dimensions` | `384` |
 | `retrieval.vectorStore.timeoutSeconds` | `1.0` |

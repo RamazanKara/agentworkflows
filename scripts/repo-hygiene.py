@@ -135,7 +135,7 @@ def check_makefile(errors: list[str]) -> None:
     for target in REQUIRED_MAKE_TARGETS:
         require(errors, re.search(rf"^{re.escape(target)}:", text, re.MULTILINE) is not None, f"Makefile missing target: {target}")
     require(errors, ".PHONY:" in text and "repo-hygiene" in text, "Makefile must include repo-hygiene in .PHONY")
-    require(errors, "help:" in text and "Private AI Platform Kit targets" in text, "Makefile must expose a useful help target")
+    require(errors, "help:" in text and "AgentWorkflows targets" in text, "Makefile must expose a useful help target")
     require(errors, "PYTHONDONTWRITEBYTECODE ?= 1" in text, "Makefile must default PYTHONDONTWRITEBYTECODE=1")
     require(errors, "export PYTHONDONTWRITEBYTECODE" in text, "Makefile must export PYTHONDONTWRITEBYTECODE")
     require(errors, "TOOLCHAIN_BIN_DIR ?= $(CURDIR)/.tools/bin" in text, "Makefile must define TOOLCHAIN_BIN_DIR")

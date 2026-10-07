@@ -54,7 +54,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `auth.jwt.tenantClaim` | `""` |
 | `auth.keyRecords.existingSecret.key` | `key-records.json` |
 | `auth.keyRecords.existingSecret.name` | `""` |
-| `auth.keyRecords.mountPath` | `/etc/private-ai-platform-kit/auth` |
+| `auth.keyRecords.mountPath` | `/etc/agentworkflows/auth` |
 | `auth.keyRecordsPath` | `""` |
 | `batch.completionWindow` | `24h` |
 | `batch.enabled` | `false` |
@@ -71,7 +71,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `batch.objectStore.s3.secretAccessKey` | `""` |
 | `batch.retentionSeconds` | `604800` |
 | `batch.store.backend` | `memory` |
-| `batch.store.keyPrefix` | `private-ai-platform-kit:batch` |
+| `batch.store.keyPrefix` | `agentworkflows:batch` |
 | `batch.store.redisTimeoutSeconds` | `0.5` |
 | `batch.store.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/2` |
 | `batch.worker.apiKey.existingSecret.key` | `batch-worker-api-key` |
@@ -92,7 +92,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `budget.enabled` | `true` |
 | `budget.estimatedCharsPerToken` | `4` |
 | `budget.estimatedTokenLimit` | `750000` |
-| `budget.keyPrefix` | `private-ai-platform-kit:sandbox-budget` |
+| `budget.keyPrefix` | `agentworkflows:sandbox-budget` |
 | `budget.promptCharLimit` | `2000000` |
 | `budget.redisTimeoutSeconds` | `0.5` |
 | `budget.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/0` |
@@ -110,8 +110,8 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `guardrails.promptSecretDetection.mode` | `block` |
 | `guardrails.promptSecretDetection.patterns` | `["private_key", "github_token", "slack_token", "aws_access_key_id", "google_api_key", "bearer_token", "generic_api_ke...` |
 | `image.pullPolicy` | `IfNotPresent` |
-| `image.repository` | `ghcr.io/ramazankara/private-ai-platform-kit/inference-gateway` |
-| `image.tag` | `v0.29.0` |
+| `image.repository` | `ghcr.io/ramazankara/agentworkflows/inference-gateway` |
+| `image.tag` | `v0.1.0` |
 | `ingress.annotations` | `{}` |
 | `ingress.className` | `""` |
 | `ingress.enabled` | `false` |
@@ -158,14 +158,14 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `resources.requests.memory` | `128Mi` |
 | `responseCache.backend` | `memory` |
 | `responseCache.enabled` | `false` |
-| `responseCache.keyPrefix` | `private-ai-platform-kit:response-cache` |
+| `responseCache.keyPrefix` | `agentworkflows:response-cache` |
 | `responseCache.maxEntries` | `1024` |
 | `responseCache.redisTimeoutSeconds` | `0.5` |
 | `responseCache.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/1` |
 | `responseCache.ttlSeconds` | `60` |
 | `responses.store.backend` | `memory` |
 | `responses.store.enabled` | `false` |
-| `responses.store.keyPrefix` | `private-ai-platform-kit:responses` |
+| `responses.store.keyPrefix` | `agentworkflows:responses` |
 | `responses.store.redisTimeoutSeconds` | `0.5` |
 | `responses.store.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/3` |
 | `responses.store.retentionSeconds` | `86400` |

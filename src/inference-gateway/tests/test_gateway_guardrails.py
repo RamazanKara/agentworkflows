@@ -145,7 +145,7 @@ class _UsageAwareStreamClient(FakeRuntimeClient):
 
 
 def test_streaming_injects_include_usage_and_filters_it_when_not_requested(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_tool_settings(allow_streaming=True))
     fake = _UsageAwareStreamClient()
     app.state.runtime_client = fake
@@ -165,7 +165,7 @@ def test_streaming_injects_include_usage_and_filters_it_when_not_requested(caplo
     event = next(
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "ai_platform_ops_lab.audit" and '"s-inject"' in record.getMessage()
+        if record.name == "agentworkflows.audit" and '"s-inject"' in record.getMessage()
     )
     assert event["usage"]["total_tokens"] == 10
     # ...but the client, which did not request usage, does not see the usage event.
@@ -532,7 +532,7 @@ def test_rewrite_stream_segment_drops_usage_event_without_stray_blank():
 
 
 def test_batch_item_records_prompt_guardrail_action(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_tool_settings(prompt_secret_mode="flag"))
     app.state.runtime_client = FakeRuntimeClient(response={"id": "x", "object": "chat.completion", "choices": []})
     client = TestClient(app)
@@ -551,7 +551,7 @@ def test_batch_item_records_prompt_guardrail_action(caplog):
     event = next(
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "ai_platform_ops_lab.audit" and '"batch_request"' in record.getMessage()
+        if record.name == "agentworkflows.audit" and '"batch_request"' in record.getMessage()
     )
     items = {entry["index"]: entry for entry in event["items"]}
     # The item carrying a secret is attributed individually; the clean item is not.

@@ -30,7 +30,7 @@ from app.metrics import AUDIT_CHAIN_PERSIST
 from app.settings import Settings, message_prompt_chars
 
 AUDIT_GENESIS = hashlib.sha256(b"genesis").hexdigest()
-AUDIT_LOGGER = logging.getLogger("ai_platform_ops_lab.audit")
+AUDIT_LOGGER = logging.getLogger("agentworkflows.audit")
 
 
 def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
@@ -74,7 +74,7 @@ class ChainStore(Protocol):
 class MemoryChainStore:
     """Process-local head store: keeps the API uniform but provides no continuity.
 
-    The default, because continuity needs storage that outlives the pod and the kit does
+    The default, because continuity needs storage that outlives the pod and the platform does
     not get to assume the operator has provisioned any. A gateway running on this backend
     emits ``chain_start`` records with no predecessor, which is honest: there is nothing
     to link to.
@@ -214,7 +214,7 @@ def write_audit_log(
     event = {
         "event": "inference_request",
         # Per-process chain identity (hash-covered): lets the verifier group records into
-        # independent per-replica chains and anchor each head. Pre-v0.23.0 events lack it.
+        # independent per-replica chains and anchor each head. Legacy upstream events lack it.
         "chain_id": getattr(request.app.state, "audit_chain_id", None),
         "action_type": "model_call",
         "decision": "allowed" if status_code < 400 else "denied",

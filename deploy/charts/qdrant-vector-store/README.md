@@ -1,6 +1,6 @@
 # Qdrant Vector Store Chart
 
-Optional local vector store profile for Private AI Platform Kit RAG.
+Optional local vector store profile for AgentWorkflows RAG.
 
 <!-- chart-docs:start -->
 ## Values

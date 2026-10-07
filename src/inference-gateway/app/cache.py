@@ -26,7 +26,7 @@ try:  # redis is an optional dependency; only present when the redis backend is 
 except ImportError:  # pragma: no cover - redis always installed in the gateway image
     _CACHE_BACKEND_ERRORS = (OSError,)
 
-_LOGGER = logging.getLogger("ai_platform_ops_lab.cache")
+_LOGGER = logging.getLogger("agentworkflows.cache")
 
 
 def cache_key(sandbox_id: str, payload: dict[str, Any]) -> str:

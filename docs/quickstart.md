@@ -1,83 +1,120 @@
 # Quickstart
 
-There are two ways to run the kit on one machine. Both use the same service images and the
-same configuration contract as a production cluster.
-
-| | Docker Compose | Local Kubernetes lab |
-| --- | --- | --- |
-| Needs | Docker with Compose | Linux or WSL, Docker, Python 3.12+, Bash, `curl` |
-| Time to first request | About two minutes | 15 to 30 minutes on the first run, mostly downloads |
-| Runs | Gateway, Ollama, RAG, optional Open WebUI | The full platform on `kind`: Argo CD, Kyverno, Calico, gateway, Ollama, RAG, Redis, agent workspaces, observability |
-| Good for | Trying the API and the audit trail | Evaluating the Kubernetes deployment, policies, and agent sandboxes |
-
-Both are development environments with a public demo API key, `local-development-only`.
-Never reuse it outside them.
+Try AgentWorkflows in ten minutes: discover models, send a governed call, inspect your
+team's usage, and verify a receipt. Version 0.1.0 implements governed cloud providers;
+durable workflows and human approvals are planned.
 
 ## Docker Compose
 
-From the repository root:
+Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. Run from a Bash shell
+(Linux, macOS, or WSL). No GPU, model download, provider key, or paid inference is needed.
 
 ```bash
+git clone https://github.com/RamazanKara/agentworkflows.git
+cd agentworkflows
 make compose-up
-```
-
-This builds the gateway and RAG images, starts Ollama, pulls `qwen2.5:0.5b` (about 400 MB, cached
-in a Docker volume), and waits until every service reports ready. Ports bind to `127.0.0.1`
-only: the gateway on `8080` and the RAG service on `8090`.
-
-Walk through the governed request path:
-
-```bash
 make compose-smoke
 ```
 
-The walkthrough also exercises all five cloud adapters against the bundled local
-`cloud-fake` service, including streaming, overload fallback, confidential-data
-refusal, credential blocking, and per-provider accounting. The `demo-*` models and
-their prices are synthetic fixtures; no provider account, real credential, or external
-inference request is used. The ordinary Ollama completion still uses a real local model.
+The images build one at a time. The gateway listens on `127.0.0.1:8080`, and retrieval on
+`127.0.0.1:8090`. The bundled `cloud-fake` service supplies synthetic responses and prices
+for all five provider protocols. This trial tests routing, streaming, budgets, secret
+blocking, confidential-data refusal, reported agent actions, and audit verification.
+It does not validate a live provider account or measure model quality.
 
-The script sends real requests and exits non-zero at the first one that misbehaves. A passing
-run ends with:
+The walkthrough ends with `All checks passed` after deliberately editing a receipt and
+checking that verification rejects it. The original log is `.out/compose/gateway-audit.jsonl`.
+Open <http://127.0.0.1:8080/console> and enter `local-development-only` to inspect health,
+models, usage, and budgets. This public demo key is bound to sandbox `demo`; do not reuse it
+outside the trial.
 
-```text
-== 9. Export the audit log and verify its hash chain
-chain 7f3c...: OK (21 record(s), head 6865...)
-   ok  21 receipt lines verified (.out/compose/gateway-audit.jsonl)
-
-== 10. Rewrite history: turn the blocked request's 400 into a 200 and verify again
-   ok  edit detected: BROKEN at position 3 (record_hash_mismatch)
-
-All checks passed. Open the read-only console at http://127.0.0.1:8080/console
-```
-
-Call the gateway from any OpenAI or Anthropic client with base URL `http://127.0.0.1:8080/v1`
-(OpenAI) or `http://127.0.0.1:8080` (Anthropic) and API key `local-development-only`; see
-[client examples](client-examples.md). The key is a record in
-`deploy/compose/key-records.yaml` bound to sandbox `demo`, so requests run as that sandbox
-whatever `X-Sandbox-ID` they send.
-
-Add a chat UI:
+## Make your first call
 
 ```bash
-docker compose -f deploy/compose/compose.yaml --profile ui up -d
+python -m pip install ./sdk/python
+export AGENTWORKFLOWS_API_KEY=local-development-only
+agentworkflows models
+agentworkflows chat "Hello, AgentWorkflows!" --model demo-openai
+agentworkflows usage
 ```
 
-Open WebUI then serves <http://127.0.0.1:3000>. It runs in offline mode and talks only to the
-gateway, so its chats appear in the same audit trail.
+`agentworkflows --help` lists the commands. `AGENTWORKFLOWS_URL` defaults to
+`http://127.0.0.1:8080`; set it when using a remote gateway. The Python import is
+`from agentworkflows import GatewayClient`. Existing OpenAI and Anthropic clients can use
+the same gateway; follow the [client examples](client-examples.md).
 
-Settings you can override in the environment: `PAK_MODEL` (any Ollama model tag),
-`PAK_GATEWAY_PORT`, `PAK_RAG_PORT`, and `PAK_UI_PORT`.
+The console is read-only. Set team credentials and scopes in `deploy/compose/key-records.yaml`:
+each key stores a SHA-256 digest and binds to one sandbox, which is the current team budget
+boundary. Set `budget.estimatedTokenLimit` on that record and recreate the gateway to apply it.
+Usage and provider cost are estimates based on token counts and configured prices, not a bill.
+See [API access](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md) and [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md).
 
-Stop and delete the stack, including the model volume:
+## Connect a real provider
+
+Use the [cloud route example](model-selection.md#cloud-routes-milestone-1) for one approved
+provider and model. It includes the connection, pricing, and server-side credential mapping.
+
+1. Replace fixture routes with approved provider URLs, model IDs, and contracted token prices.
+2. Supply the named credential through the gateway's environment or Kubernetes Secret.
+   Never put provider keys in client requests or tracked files.
+3. Bind each team's gateway key to its sandbox and budget. Review data classification:
+   confidential requests cannot use a cloud route, even as a fallback.
+4. Restart the gateway, list models, and make one authorized call. Cloud readiness checks
+   credential presence only; a successful real call is required to validate account access.
+
+Use [production readiness](production-readiness.md) before serving a team outside the trial.
+The Compose fixtures and public key are evaluation defaults.
+
+## Optional self-hosted models
+
+To add the small CPU Ollama model to the existing trial:
+
+```bash
+docker compose -f deploy/compose/compose.yaml --profile self-hosted up -d ollama
+docker compose -f deploy/compose/compose.yaml --profile self-hosted run --rm model-pull
+```
+
+Append this item under `spec.models` in `deploy/compose/model-routing.yaml`:
+
+```yaml
+    - id: qwen2.5:0.5b
+      backend: ollama
+```
+
+Then load the policy and call the model:
+
+```bash
+docker compose -f deploy/compose/compose.yaml restart inference-gateway
+agentworkflows chat "Hello from my local model" --model qwen2.5:0.5b
+```
+
+The pull downloads model weights and caches them in a Docker volume. vLLM and hardened
+agent workspaces are available through the Kubernetes lab below.
+
+## Troubleshooting and cleanup
+
+| Symptom | Action |
+| --- | --- |
+| Cannot connect | Run `make compose-up`; check `docker compose -f deploy/compose/compose.yaml ps` and gateway logs |
+| Port already in use | Stop your previous trial or set `AGENTWORKFLOWS_GATEWAY_PORT` / `AGENTWORKFLOWS_RAG_PORT`; set `AGENTWORKFLOWS_URL` to the chosen gateway port for the CLI |
+| 401 | Set `AGENTWORKFLOWS_API_KEY=local-development-only` for the demo; use your team's key on a real gateway |
+| Model refused | Run `agentworkflows models` and choose a listed ID |
+| 403 classification refusal | Use an approved self-hosted route for confidential data; keep the classification policy intact |
+| 429 budget or rate limit | Inspect `agentworkflows usage`; ask the team administrator to review the budget or wait for the rate window |
+| No real generated answer | `demo-*` models are protocol fixtures; connect an approved provider or add Ollama above |
+
+An optional chat UI is available with
+`docker compose -f deploy/compose/compose.yaml --profile ui up -d` at
+<http://127.0.0.1:3000>. It talks to the governed gateway.
+
+Stop the stack and remove its volumes:
 
 ```bash
 make compose-down
 ```
 
-The Compose stack deliberately leaves out what needs Kubernetes: network policy, the hardened
-agent workspaces, GitOps, Redis-backed shared state, and the observability stack. Use the lab
-below for those.
+Compose does not install Kubernetes network policies, hardened workspaces, GitOps, or
+Redis-backed shared state. The local lab below is for evaluating those optional components.
 
 ## Local Kubernetes lab
 
@@ -151,9 +188,9 @@ QUICKSTART_SKIP_RAG=1 make quickstart       # skip the RAG smoke test
 A complete default run ends with:
 
 ```text
-[private-ai-platform-kit] smoke test completed for ollama
-[private-ai-platform-kit] RAG smoke completed for agent-lab
-[private-ai-platform-kit] quickstart completed
+[agentworkflows] smoke test completed for ollama
+[agentworkflows] RAG smoke completed for agent-lab
+[agentworkflows] quickstart completed
 ```
 
 These lines confirm that the gateway reached Ollama and that the RAG service returned results.

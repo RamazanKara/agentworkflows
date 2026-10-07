@@ -60,7 +60,7 @@ def _double_logged_lines(caplog) -> list[str]:
     return [
         r.getMessage()
         for r in caplog.records
-        if r.name in ("ai_platform_ops_lab.audit", "uvicorn.error") and "record_hash" in r.getMessage()
+        if r.name in ("agentworkflows.audit", "uvicorn.error") and "record_hash" in r.getMessage()
     ]
 
 

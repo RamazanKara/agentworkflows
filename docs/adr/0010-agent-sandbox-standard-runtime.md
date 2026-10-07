@@ -8,7 +8,7 @@
 
 ADR 0009 adopted kubernetes-sigs/agent-sandbox as an *optional, profile-gated*
 workspace runtime behind a `sandbox.runtime` toggle, defaulting to the older
-namespace-only path. That caution is inconsistent with the rest of the kit,
+namespace-only path. That caution is inconsistent with the rest of the platform,
 which is deliberately opinionated: Kyverno policies ship in `Enforce`,
 namespaces are PSA-`restricted`, egress is default-deny, and images must be
 signed. The one workload that executes model-generated code, the very reason
@@ -20,7 +20,7 @@ The portability argument for the toggle proved weak in practice: the
 controller installs from vendored, checksummed manifests in seconds on any
 conformant cluster (verified on cgroup-v1 `kind`); only the kernel-isolation
 *runtime class* (gVisor/Kata) is environment-dependent, and that remains a
-separate, optional knob. The kit currently has no external users, so the cost
+separate, optional knob. The platform currently has no external users, so the cost
 of removing the fallback is zero and the cost of keeping it is permanent.
 
 Two adjacent duplications had accumulated around the same feature:
@@ -42,7 +42,7 @@ Two adjacent duplications had accumulated around the same feature:
    of ADR 0009; everything else in ADR 0009 stands.
 2. **The short-lived projected workspace credential is on by default**
    (`workspace.credentials.projectedToken.enabled: true`), consistent with
-   the kit's no-long-lived-secrets stance; it costs nothing where unused.
+   AgentWorkflows' no-long-lived-secrets stance; it costs nothing where unused.
 3. **The controller is a platform prerequisite**, installed as an
    `agent-sandbox-controller` Argo CD Application (server-side apply, early
    sync wave) in both cluster overlays, and by `make agent-sandbox-install`
@@ -79,7 +79,7 @@ Two adjacent duplications had accumulated around the same feature:
   process theater: there are no users, and the fallback would still cost a
   doubled test matrix for a release cycle.
 - **Keep the toggle indefinitely.** Rejected: permanent two-path tax and a
-  default that contradicts the kit's security posture.
+  default that contradicts AgentWorkflows' security posture.
 - **Also collapse the `platform` umbrella chart into GitOps-only.** Deferred:
   OCI chart distribution is a deliberate, separately recorded decision
-  (ADR 0008) about how the kit is consumed, not an accident of caution.
+  (ADR 0008) about how the platform is consumed, not an accident of caution.

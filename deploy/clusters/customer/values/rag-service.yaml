@@ -62,7 +62,7 @@ auth:
     # `make validate` stay green; the service only fetches it once a JWT is presented.
     jwksUrl: "https://idp.example.com/.well-known/jwks.json"
     issuer: "https://idp.example.com/"
-    audience: "private-ai-platform-kit-rag"
+    audience: "agentworkflows-rag"
     tenantClaim: "sandbox_id"
     cacheSeconds: 300
     requestTimeoutSeconds: 5.0

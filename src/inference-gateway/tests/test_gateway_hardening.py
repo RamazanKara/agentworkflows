@@ -34,7 +34,7 @@ def _sha256(value: str) -> str:
 
 
 def _receipts(caplog):
-    return [json.loads(r.message) for r in caplog.records if r.name == "ai_platform_ops_lab.audit"]
+    return [json.loads(r.message) for r in caplog.records if r.name == "agentworkflows.audit"]
 
 
 def _auth_settings(tmp_path, **overrides):
@@ -89,7 +89,7 @@ def test_concurrency_slot_is_released_after_an_unexpected_exception():
 
 
 def test_unexpected_exception_is_recorded_as_500_not_allowed(caplog):
-    caplog.set_level("INFO", logger="ai_platform_ops_lab.audit")
+    caplog.set_level("INFO", logger="agentworkflows.audit")
     app = create_app(_tool_settings())
     app.state.runtime_client = FakeRuntimeClient(error=RuntimeError("bug"))
     client = TestClient(app, raise_server_exceptions=False)
@@ -137,7 +137,7 @@ def test_batch_store_outage_is_a_retryable_503():
 
 
 def test_response_store_outage_is_a_503_and_recorded_as_one(caplog):
-    caplog.set_level("INFO", logger="ai_platform_ops_lab.audit")
+    caplog.set_level("INFO", logger="agentworkflows.audit")
     app = create_app(_tool_settings(responses_store_enabled=True))
     app.state.response_store = _DownResponseStore()
     app.state.runtime_client = FakeRuntimeClient(response=COMPLETION)
@@ -287,7 +287,7 @@ def _replay(client, batch_id=BATCH_ID, sandbox="team-a"):
 
 
 def test_replay_key_acts_for_a_running_batch_and_names_the_submitter(tmp_path, caplog):
-    caplog.set_level("INFO", logger="ai_platform_ops_lab.audit")
+    caplog.set_level("INFO", logger="agentworkflows.audit")
     client = TestClient(_replay_app(tmp_path))
 
     response = _replay(client)

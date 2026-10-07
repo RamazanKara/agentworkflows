@@ -161,7 +161,7 @@ if [[ "$RUNTIME" == "local" ]]; then
   # chaos/drills/qdrant-data-restore.yaml.
   require_cmd restore-drill "Install with: go install github.com/RamazanKara/restore-drill/cmd/restore-drill@v1.0.1"
   log "restore-tooling smoke: validating the restore pipeline against a synthetic Redis AOF fixture (not production data)"
-  export RESTORE_DRILL_REDIS_AOF="${RESTORE_DRILL_REDIS_AOF:-/tmp/private-ai-platform-kit-redis.aof}"
+  export RESTORE_DRILL_REDIS_AOF="${RESTORE_DRILL_REDIS_AOF:-/tmp/agentworkflows-redis.aof}"
   python3 - <<'PY'
 import os
 from pathlib import Path

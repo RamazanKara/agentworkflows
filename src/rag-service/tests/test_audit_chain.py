@@ -39,7 +39,7 @@ def _write_doc(tmp_path, name="agents.md", content="# Coding Agents\nUse the gat
 
 
 def _audit_lines(caplog):
-    return [record.message for record in caplog.records if record.name == "ai_platform_ops_lab.rag.audit"]
+    return [record.message for record in caplog.records if record.name == "agentworkflows.rag.audit"]
 
 
 def _query(client, text="agents"):
@@ -47,7 +47,7 @@ def _query(client, text="agents"):
 
 
 def test_retrieval_receipt_is_hash_chained(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     client = TestClient(create_app(Settings(document_dir=_write_doc(tmp_path))))
 
     _query(client)
@@ -64,7 +64,7 @@ def test_retrieval_receipt_is_hash_chained(tmp_path, caplog):
 
 
 def test_receipts_link_to_each_other_in_order(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     client = TestClient(create_app(Settings(document_dir=_write_doc(tmp_path))))
 
     _query(client, "agents")
@@ -75,7 +75,7 @@ def test_receipts_link_to_each_other_in_order(tmp_path, caplog):
 
 
 def test_a_denied_retrieval_is_recorded_as_a_denial(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     settings = Settings(document_dir=_write_doc(tmp_path), max_query_chars=8)
     client = TestClient(create_app(settings))
 
@@ -88,7 +88,7 @@ def test_a_denied_retrieval_is_recorded_as_a_denial(tmp_path, caplog):
 
 
 def test_the_receipt_never_carries_the_raw_query(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     client = TestClient(create_app(Settings(document_dir=_write_doc(tmp_path))))
 
     _query(client, "commercially sensitive phrase")
@@ -101,7 +101,7 @@ def test_the_receipt_never_carries_the_raw_query(tmp_path, caplog):
 
 
 def test_the_receipt_carries_correlation_ids_for_cross_service_tracing(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     client = TestClient(create_app(Settings(document_dir=_write_doc(tmp_path))))
     traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 
@@ -119,7 +119,7 @@ def test_the_receipt_carries_correlation_ids_for_cross_service_tracing(tmp_path,
 
 
 def test_auditing_disabled_emits_no_receipts(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     settings = Settings(document_dir=_write_doc(tmp_path), audit_log_enabled=False)
     client = TestClient(create_app(settings))
 
@@ -138,7 +138,7 @@ def _run_lifetime(settings, caplog, queries=2):
 
 
 def test_a_restarted_service_links_its_chain_to_the_previous_one(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     settings = Settings(
         document_dir=_write_doc(tmp_path),
         audit_chain_store_backend="file",
@@ -156,7 +156,7 @@ def test_a_restarted_service_links_its_chain_to_the_previous_one(tmp_path, caplo
 
 
 def test_the_operator_verifier_accepts_a_rag_chain(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     settings = Settings(
         document_dir=_write_doc(tmp_path),
         audit_chain_store_backend="file",
@@ -173,7 +173,7 @@ def test_the_operator_verifier_accepts_a_rag_chain(tmp_path, caplog):
 
 
 def test_the_operator_verifier_catches_a_tampered_retrieval_receipt(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     client = TestClient(create_app(Settings(document_dir=_write_doc(tmp_path))))
     verifier = _load_verifier()
 
@@ -212,7 +212,7 @@ def test_open_audit_chain_survives_an_unreadable_head_store(tmp_path):
 
 
 def test_the_head_is_persisted_on_shutdown(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     path = tmp_path / "head.json"
     settings = Settings(
         document_dir=_write_doc(tmp_path),

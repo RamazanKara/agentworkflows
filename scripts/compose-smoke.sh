@@ -19,10 +19,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/common.sh"
 cd "$ROOT"
 
-GATEWAY="${PAK_GATEWAY_URL:-http://127.0.0.1:${PAK_GATEWAY_PORT:-8080}}"
-RAG="${PAK_RAG_URL:-http://127.0.0.1:${PAK_RAG_PORT:-8090}}"
-KEY="${PAK_API_KEY:-local-development-only}"
-MODEL="${PAK_MODEL:-qwen2.5:0.5b}"
+GATEWAY="${AGENTWORKFLOWS_GATEWAY_URL:-http://127.0.0.1:${AGENTWORKFLOWS_GATEWAY_PORT:-8080}}"
+RAG="${AGENTWORKFLOWS_RAG_URL:-http://127.0.0.1:${AGENTWORKFLOWS_RAG_PORT:-8090}}"
+KEY="${AGENTWORKFLOWS_API_KEY:-local-development-only}"
+MODEL="${AGENTWORKFLOWS_MODEL:-demo-openai}"
 COMPOSE=(docker compose -f deploy/compose/compose.yaml)
 OUT="${OUTPUT_DIR:-.out/compose}"
 
@@ -55,7 +55,7 @@ done
 ok "gateway and runtime ready"
 
 step "1. Chat completion through the governed path"
-status="$(request POST /v1/chat/completions "{\"model\":\"$MODEL\",\"max_tokens\":24,\"temperature\":0,\"messages\":[{\"role\":\"user\",\"content\":\"Repeat exactly: Hello from your own hardware.\"}]}" -D "$OUT/headers.txt")"
+status="$(request POST /v1/chat/completions "{\"model\":\"$MODEL\",\"max_tokens\":24,\"temperature\":0,\"messages\":[{\"role\":\"user\",\"content\":\"Hello, AgentWorkflows!\"}]}" -D "$OUT/headers.txt")"
 [[ "$status" == "200" ]] || fail "chat returned $status: $(cat "$OUT/body.json")"
 ok "answer: $(json "repr(d['choices'][0]['message']['content'].strip()[:80])")"
 ok "request id $(grep -i '^x-request-id:' "$OUT/headers.txt" | tr -d '\r' | cut -d' ' -f2), sandbox $(grep -i '^x-sandbox-id:' "$OUT/headers.txt" | tr -d '\r' | cut -d' ' -f2), tokens left $(grep -i '^x-ratelimit-remaining-tokens:' "$OUT/headers.txt" | tr -d '\r' | cut -d' ' -f2)"

@@ -11,6 +11,6 @@ misconfigurations:
       secrets, and it matches "Token" inside estimatedCharsPerToken, the reviewed
       characters-per-token divisor used to estimate a request's token cost for budgeting.
       The value is a small integer (3 or 4), the catalog holds no credentials, and every
-      real secret in this kit is a Kubernetes Secret or an External Secrets reference. The
+      real secret in AgentWorkflows is a Kubernetes Secret or an External Secrets reference. The
       field is named for the domain term; renaming it to evade the heuristic would trade a
       correct name for a quiet scanner.

@@ -1,4 +1,4 @@
-name: CI
+name: AgentWorkflows CI
 
 on:
   pull_request:
@@ -126,7 +126,7 @@ jobs:
           set -euo pipefail
           python -m build --no-isolation --outdir sdk-dist sdk/python
           python -m pip install --no-deps --target /tmp/sdk-smoke sdk-dist/*.whl
-          PYTHONPATH=/tmp/sdk-smoke python -c 'from ai_platform_client import GatewayClient; print(GatewayClient.__name__)'
+          PYTHONPATH=/tmp/sdk-smoke python -c 'from agentworkflows import GatewayClient; print(GatewayClient.__name__)'
           sha256sum sdk-dist/* > sdk-checksums.txt
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
@@ -313,7 +313,7 @@ jobs:
           # Artifact Hub OCI discovery expects repository metadata at the special
           # artifacthub.io tag. The main umbrella chart is the public entry point;
           # its vendored dependencies remain available in the same OCI namespace.
-          oras push "ghcr.io/${IMAGE_REPO}/charts/platform:artifacthub.io" \
+          oras push "ghcr.io/${IMAGE_REPO}/charts/agentworkflows:artifacthub.io" \
             --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
             artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
       - uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26  # v0.24.2
@@ -466,7 +466,7 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" "${release_assets[@]}" --clobber
           else
             gh release create "$GITHUB_REF_NAME" "${release_assets[@]}" \
-              --title "Private AI Platform Kit ${GITHUB_REF_NAME}" \
+              --title "AgentWorkflows ${GITHUB_REF_NAME}" \
               --generate-notes \
               --verify-tag
           fi
@@ -497,7 +497,7 @@ jobs:
     if: github.ref_type == 'tag' && vars.PYPI_PUBLISH_ENABLED == 'true'
     environment:
       name: pypi
-      url: https://pypi.org/p/private-ai-platform-kit-client
+      url: https://pypi.org/p/agentworkflows
     permissions:
       contents: read
       id-token: write

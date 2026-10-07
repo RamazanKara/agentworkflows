@@ -218,7 +218,7 @@ def write_markdown(path: Path, report: QuotaReport) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate quota, budget, and chargeback governance for Private AI Platform Kit.")
+    parser = argparse.ArgumentParser(description="Validate quota, budget, and chargeback governance for AgentWorkflows.")
     parser.add_argument("--policy", default=str(DEFAULT_POLICY))
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--report", action="store_true")

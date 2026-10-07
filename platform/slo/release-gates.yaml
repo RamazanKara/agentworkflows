@@ -1,7 +1,7 @@
 apiVersion: platform.ai/v1alpha1
 kind: ReleaseGate
 metadata:
-  name: private-ai-platform-kit-local-release
+  name: agentworkflows-local-release
 spec:
   profile: local-customer-handoff
   description: >-
