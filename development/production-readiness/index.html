@@ -1434,6 +1434,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#workflow-upgrades-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow upgrades and recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-replicas-and-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple replicas and shutdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-providers-and-concurrent-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live providers and concurrent runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#promotion-review" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1754,6 +1787,39 @@
     <span class="md-ellipsis">
       
         Stateful stores: dev/reference footprints and their HA path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-upgrades-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow upgrades and recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-replicas-and-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple replicas and shutdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#live-providers-and-concurrent-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live providers and concurrent runs
       
     </span>
   </a>
@@ -2118,7 +2184,7 @@
 </tbody>
 </table>
 <h2 id="stateful-stores-devreference-footprints-and-their-ha-path">Stateful stores: dev/reference footprints and their HA path<a class="headerlink" href="#stateful-stores-devreference-footprints-and-their-ha-path" title="Permanent link">&para;</a></h2>
-<p>Three bundled stateful stores ship as <strong>single-node reference footprints</strong> so a laptop lab and
+<p>Four bundled stateful stores ship as <strong>single-node reference footprints</strong> so a laptop lab and
 a fresh cluster start with no external dependencies. They are deliberately not production
 topologies. State this plainly to any operator sizing a production environment, and swap each to
 its external/HA path before a regulated or multi-tenant handoff. The full opt-in procedure
@@ -2132,6 +2198,11 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>Temporal PostgreSQL (<code>deploy/charts/workflows</code>)</td>
+<td>1 replica and a persistent volume for history and visibility</td>
+<td>Configure both Temporal SQL datastores for managed HA Postgres; back up both databases and validate restore before switching traffic</td>
+</tr>
 <tr>
 <td>Budget / response-cache Redis (<code>deploy/charts/budget-redis</code>)</td>
 <td>1 replica, AOF and PVC persistence, <code>minAvailable: 0</code> (disk loss can lose counters; an outage fails budgets closed)</td>
@@ -2149,9 +2220,180 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 </tr>
 </tbody>
 </table>
-<p>These three are the "external HA stores" operator-owned item tracked in
+<p>These stores are the "external HA stores" operator-owned item tracked in
 <a href="../scope-and-non-goals/">Scope and non-goals</a>; the bundled charts are working references and are
 never removed, so rolling back to the reference footprint for a demo is a one-line values change.</p>
+<h2 id="workflow-upgrades-and-recovery">Workflow upgrades and recovery<a class="headerlink" href="#workflow-upgrades-and-recovery" title="Permanent link">&para;</a></h2>
+<p>The 0.2.0 gateway uses <strong>Redis</strong>, not PostgreSQL, for run indexes, step timelines and
+team/run budgets. Temporal owns workflow history in <code>temporal</code> and SQL visibility in
+<code>temporal_visibility</code>, both on the existing PostgreSQL service. Back up all three stores
+together with the complete receipt export. No gateway PostgreSQL database or new service
+is introduced by this milestone.</p>
+<p>Gateway startup applies numbered Lua migrations from <code>app/migrations</code> atomically with
+the schema marker in the existing budget Redis. Migration 001 adopts the unversioned
+0.2.0 keys without rewriting counters, run IDs, receipts or expiry times. Repeated and
+concurrent startups are safe. Unknown/newer schema versions prevent startup; restore a
+pre-upgrade backup when rolling back across an incompatible future migration.</p>
+<p>Temporal uses its upstream versioned SQL migrations for <strong>both</strong> databases. Compose pins
+server/auto-setup to 1.29.1; the existing Helm dependency uses server/admin-tools 1.32.0,
+now explicitly pinned together. These are separate upgrade tracks: do not move a Compose
+database directly across those server minors. Follow the
+<a href="https://docs.temporal.io/self-hosted-guide/upgrade-server">Temporal upgrade sequence</a>,
+apply schema updates before rolling servers, and never change <code>numHistoryShards</code> on an
+existing database. The chart explicitly declares the visibility store and schema management.</p>
+<p>For the first Helm install, <code>temporal.schema.useHelmHooks=false</code> lets the bundled Postgres
+start before the schema Job. For upgrades on an existing release, run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>-f<span class="w"> </span>your-workflow-values.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--set<span class="w"> </span>temporal.schema.useHelmHooks<span class="o">=</span><span class="nb">true</span><span class="w"> </span>--wait<span class="w"> </span>--wait-for-jobs<span class="w"> </span>--timeout<span class="w"> </span>10m
+</code></pre></div>
+<p>Keep the same release, namespace, database names, secrets and PVCs. For GitOps, order the
+schema Job before the server rollout using the controller's sync phases. Keep old worker
+workflow code compatible with retained histories; this migration does not rewrite histories.</p>
+<p>Run the isolated fixture drills (Docker, Git and Python 3.12+; no provider credentials):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>workflow-upgrade-test
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>workflow-restore-drill
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make<span class="w"> </span>workflow-helm-upgrade-test<span class="w">  </span><span class="c1"># also requires kind, Helm and kubectl</span>
+</code></pre></div>
+<p>On Windows, the first two entry points also run directly in PowerShell as
+<code>python scripts/workflow-recovery.py upgrade</code> and <code>python scripts/workflow-recovery.py drill</code>.
+The Helm test uses native Helm/kubectl and the gateway's Python environment (PyYAML),
+with kind and Docker in WSL Ubuntu.</p>
+<p>The upgrade drill builds the 0.2.0 release commit <code>f17850aa91091c306921db577c18c15df7da3ef0</code>,
+starts a run and waits for approval, then replaces images while retaining volumes. It checks
+all retained gateway values, both SQL schema versions, run listing, receipt IDs and budgets,
+then approves the original execution. The restore drill dumps both Postgres databases,
+snapshots Redis, destroys only its own disposable volumes, restores and resumes that run.
+Both verify the receipt chain and terminate a worker during an active model call, checking
+that the call completes once. Reports and backups go under <code>.out/aw-hardening-*</code>; all drill
+containers and volumes are removed even on failure. Builds are sequential, workers have
+two activity slots, and Windows invokes Docker through <code>wsl.exe -d Ubuntu -e docker</code>.
+The Helm test creates a separate kind cluster, caps its node at two CPUs and 4 GiB, installs
+the previous charts/images, then upgrades the same releases to two gateway and worker
+replicas. It checks retained PVC identities, run state, budgets and receipts, resumes the
+waiting run and deletes the cluster. It uses an isolated kubeconfig, local fixtures and
+temporary loopback ports. This single-node drill tests upgrades, not multi-node failover.
+Seeding the old Helm release supplies the required <code>connectProtocol: tcp</code> operator override
+for both SQL stores; current chart defaults include it. The database contents and previous
+application images remain the 0.2.0 baseline.</p>
+<p>For your Compose trial, take a quiesced backup and restore into a <strong>new</strong> project:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>backup<span class="w"> </span>--project<span class="w"> </span>agentworkflows<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--directory<span class="w"> </span>.out/workflow-backup<span class="w"> </span>--receipts<span class="w"> </span>/path/to/complete-retained-receipts.jsonl
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Stop the source before reusing its published ports, or select unused Compose ports.</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>python<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>restore<span class="w"> </span>--project<span class="w"> </span>agentworkflows-restored<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--directory<span class="w"> </span>.out/workflow-backup
+</code></pre></div>
+<p>Omit <code>--receipts</code> only for a first container lifetime with no earlier receipts. Backup stops
+workers, drains the gateway, stops Temporal, then takes <code>pg_dump -Fc</code> of each database and
+a Redis RDB snapshot; it restarts the source afterward. Restore refuses existing Temporal
+tables or nonempty Redis. It restores the archived receipts alongside the backup and
+verifies them with <code>audit-verify --anchor --strict-continuity</code>, including new restart links.
+Checksum or chain errors fail before database writes. Copy the backup and its manifest/head
+anchors to separately controlled storage; checksums alone do not authenticate a rewritten
+backup. Retain policy files, credentials and exact deployment values through your existing
+secret/configuration backup process. A completed backup defines the recovery point; writes
+after it are outside that backup. Measure recovery time on your own data volume.</p>
+<p>For Helm/managed stores, use the same maintenance order and database-native <code>pg_dump -Fc</code>
+and <code>pg_restore --create --exit-on-error</code> for <strong>both</strong> Temporal databases, plus a persistence
+snapshot of every gateway Redis database and the SIEM receipt export. Restore to isolated
+databases first, verify schema versions and receipts with the included verifier, point a
+test gateway/worker at those stores, and resume a waiting run before switching traffic.
+The Compose drill is a reproducible application recovery test, not a managed-database
+failover or Kubernetes storage certification.</p>
+<h2 id="multiple-replicas-and-shutdown">Multiple replicas and shutdown<a class="headerlink" href="#multiple-replicas-and-shutdown" title="Permanent link">&para;</a></h2>
+<p>Merge the chart's <code>values-ha.yaml</code> after your reviewed deployment values:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>inference-gateway<span class="w"> </span>deploy/charts/inference-gateway<span class="w"> </span>-n<span class="w"> </span>inference<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-f<span class="w"> </span>your-gateway-values.yaml<span class="w"> </span>-f<span class="w"> </span>deploy/charts/inference-gateway/values-ha.yaml
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-f<span class="w"> </span>your-workflow-values.yaml<span class="w"> </span>-f<span class="w"> </span>deploy/charts/workflows/values-ha.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--set<span class="w"> </span>temporal.schema.useHelmHooks<span class="o">=</span><span class="nb">true</span><span class="w"> </span>--wait<span class="w"> </span>--wait-for-jobs<span class="w"> </span>--timeout<span class="w"> </span>10m
+</code></pre></div>
+<p>The gateway and its bundled console run in two replicas; the console has no separate
+server or in-memory session to synchronize. The worker has two replicas on the same team
+task queue. Each deployment keeps at least one pod available during voluntary disruptions
+and rolls with zero unavailable pods. Topology spread distributes pods when nodes permit.
+KEDA's minimum is two in the gateway HA values. Temporal's example uses three replicas
+per server role with PDBs keeping two. Use enough nodes to realize those guarantees.
+The bundled Postgres and Redis remain single-node references; application replication
+does not make storage highly available. Point the existing store settings at your managed
+HA stores and configure persistence, backups and networking there.</p>
+<p><code>/healthz</code> checks the running event loop and intentionally stays live during dependency
+outages. Gateway <code>/readyz</code> checks required Redis stores, local runtimes, cloud credential configuration and
+Temporal when <code>workflows.temporalAddress</code>/<code>TEMPORAL_ADDRESS</code> is set. Worker port 8081
+<code>/readyz</code> requires an active worker, Temporal and gateway readiness; <code>/healthz</code> checks
+its event loop. Dependency outages withdraw readiness without causing restart storms.</p>
+<p>SIGTERM stops worker polling and lets active activities finish for 180 seconds before
+Temporal's shutdown cancellation. Pods and Compose allow 210 seconds; the gateway drains
+requests for 180 seconds, with a five-second Kubernetes pre-stop delay for endpoint removal.
+Set the pod grace above your longest custom activity and SDK shutdown timeout when extending
+the supplied three-minute activity limit. Forced kills or exhausted grace may retry an
+activity: Temporal retains the step, but arbitrary external side effects cannot be promised
+exactly once. Tools must honor their idempotency key; container steps deliberately do not
+automatically retry. Retain every replica's audit stream and external head anchors; the
+shared head key alone cannot prove completeness of concurrent replica lifetimes.</p>
+<h2 id="live-providers-and-concurrent-runs">Live providers and concurrent runs<a class="headerlink" href="#live-providers-and-concurrent-runs" title="Permanent link">&para;</a></h2>
+<p><code>make test</code> excludes the paid acceptance directory. Even explicit acceptance runs skip
+unless <code>AGENTWORKFLOWS_LIVE_PROVIDERS=1</code>, and always skip when <code>CI</code> is set. Each provider
+also requires its own real environment credential; absent credentials skip that provider.
+The suite covers chat, streamed content and usage, forced tool calls, a deterministic
+primary outage followed by a real-provider fallback, and receipt/provider cost accounting.
+Do not place credentials in tracked files or command arguments.</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Credential variable</th>
+<th>Configuration prefix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td><code>OPENAI_API_KEY</code></td>
+<td><code>LIVE_OPENAI</code></td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td><code>ANTHROPIC_API_KEY</code></td>
+<td><code>LIVE_ANTHROPIC</code></td>
+</tr>
+<tr>
+<td>Azure OpenAI</td>
+<td><code>AZURE_OPENAI_API_KEY</code></td>
+<td><code>LIVE_AZURE_OPENAI</code></td>
+</tr>
+<tr>
+<td>Bedrock bearer-token API</td>
+<td><code>AWS_BEARER_TOKEN_BEDROCK</code></td>
+<td><code>LIVE_BEDROCK</code></td>
+</tr>
+<tr>
+<td>Vertex OpenAI-compatible endpoint</td>
+<td><code>VERTEX_ACCESS_TOKEN</code></td>
+<td><code>LIVE_VERTEX</code></td>
+</tr>
+</tbody>
+</table>
+<p>For each enabled provider set <code>&lt;PREFIX&gt;_MODEL</code>, <code>&lt;PREFIX&gt;_INPUT_USD_PER_1K</code>, and
+<code>&lt;PREFIX&gt;_OUTPUT_USD_PER_1K</code> to the approved model and current prices. Set
+<code>&lt;PREFIX&gt;_BASE_URL</code> for Azure, Bedrock and Vertex; OpenAI and Anthropic use their standard
+API URLs. Choose models supporting tools and reported streaming usage. Cost assertions
+use configured prices, not invoices. With your environment already provisioned:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">AGENTWORKFLOWS_LIVE_PROVIDERS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>test-live-providers
+</code></pre></div>
+<p>No real-provider calls were made for this hardening change. The default test gate checks
+the same adapters with local protocol fixtures.</p>
+<p>With the fake Compose trial running, <code>make workflow-loadtest</code> submits 20 workflow runs at
+concurrency two, checks their results, receipt IDs and per-run budgets, and asserts the
+aggregate team spend is exactly $0.220 in synthetic configured prices. It writes throughput,
+median/p95 latency and failures to <code>results/loadtest/workflow-runs.json</code>. This small test
+checks concurrent accounting and completion; it does not establish provider latency or
+production capacity.</p>
+<p>Local result on 2026-10-07 (Windows client, WSL Docker, fake Compose providers, one worker
+with two activity slots): <strong>20/20 completed</strong>, 0 failures, 3.476 seconds total, 5.754 runs/s,
+0.337 s median and 0.353 s p95 end-to-end latency. All 20 receipt IDs and run budgets
+verified; shared spend increased by $0.220. This was a short functional load check on a
+shared machine, with warm containers and synthetic provider responses.</p>
 <h2 id="promotion-review">Promotion Review<a class="headerlink" href="#promotion-review" title="Permanent link">&para;</a></h2>
 <p>Use the matrix above as the source of truth, then review this shorter sequence before a customer handoff or production-style demo:</p>
 <ul>
