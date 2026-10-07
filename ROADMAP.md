@@ -2,17 +2,17 @@
 
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
-Version 0.2.0 delivers milestones 1–4. Milestone 5 is delivered in this checkout;
-milestone 6 remains planned.
+Version 0.2.0 is the first public release and includes milestones 1–5 plus the guided
+quickstart and project templates. Production hardening is the next milestone.
 
-## Milestone 1: governed cloud providers — delivered
+## Milestone 1: governed cloud providers — delivered in 0.2.0
 
 OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini share authentication,
 model policies, classification-aware fallback, token budgets, usage accounting, and audit
 receipts. Ollama and vLLM remain optional self-hosted backends. The local walkthrough
 uses provider protocol fixtures; live provider acceptance is deployment-specific.
 
-## Milestone 2: durable agent workflows — delivered in this checkout
+## Milestone 2: durable agent workflows — delivered in 0.2.0
 
 - Temporal with dedicated PostgreSQL, Compose, and an official-chart-based GitOps deployment.
 - Python workflow SDK: governed model/tool activities, backoff, timeouts, per-run budgets,
@@ -21,7 +21,7 @@ uses provider protocol fixtures; live provider acceptance is deployment-specific
 
 The existing Batch API and stored Responses are not a durable workflow engine.
 
-## Milestone 3: bring your agents — delivered in this checkout
+## Milestone 3: bring your agents — delivered in 0.2.0
 
 - OpenAI/Anthropic clients, OpenAI Agents SDK, and LangGraph as governed Temporal steps.
 - Team MCP registrations with explicit tool allowlists, argument DLP, costs, and receipts.
@@ -44,14 +44,16 @@ Team onboarding uses the existing reviewed key and sandbox policy files. Cost re
 configured prices and conservative reservations, not provider invoices. Temporal access
 and workers are trusted operator surfaces; end users use the authenticated gateway.
 
-## Milestone 5: team web console — delivered in this checkout
+## Milestone 5: team web console — delivered in 0.2.0
 
 - Same-origin React console bundled with the gateway in Compose and Helm.
 - Existing team auth, verified identity switching, filtered runs, receipt timelines, and approvals.
 - First-run walkthrough, admin provider/budget configuration guidance, and team/provider/workflow costs.
 - Responsive, keyboard-accessible pages and headless browser checks in the Compose walkthrough.
+- Guided Bash and Windows PowerShell quickstart and editable research, support-triage,
+  and code-review templates through `agentworkflows init`.
 
-## Milestone 6: production hardening and broader coverage — planned
+## Milestone 6: production hardening and broader coverage — next
 
 Strengthen upgrade, backup, availability, and live-provider acceptance evidence. Validate
 team operations under deployment-specific identity, networking, and retention policies.

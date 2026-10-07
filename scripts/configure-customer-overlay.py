@@ -14,6 +14,7 @@ ROOT_APP = ROOT / "deploy/gitops/argocd/root-app-customer.yaml"
 CUSTOMER_APPS = ROOT / "deploy/clusters/customer/apps.yaml"
 APPPROJECTS = ROOT / "deploy/clusters/customer/appprojects.yaml"
 CHANGELOG = ROOT / "CHANGELOG.md"
+TEMPORAL_CHART_REPO = "https://go.temporal.io/helm-charts/"
 
 
 def release_tag_default() -> str:
@@ -108,8 +109,8 @@ def check_overlay() -> list[str]:
         if platform_project is not None:
             require(
                 errors,
-                nested(platform_project, "spec", "sourceRepos") == [root_repo],
-                "agentworkflows AppProject sourceRepos must equal the customer root repoURL",
+                nested(platform_project, "spec", "sourceRepos") == [root_repo, TEMPORAL_CHART_REPO],
+                "agentworkflows AppProject sourceRepos must contain only the customer root repoURL and Temporal chart repo",
             )
 
     application_names: set[str] = set()
@@ -182,7 +183,7 @@ def configure_overlay(repo_url: str, target_revision: str, gpu_profile: str, dry
     if APPPROJECTS.exists():
         project_docs = load_yaml_documents(APPPROJECTS)
         for project in project_docs:
-            project.setdefault("spec", {})["sourceRepos"] = [repo_url]
+            project.setdefault("spec", {})["sourceRepos"] = [repo_url, TEMPORAL_CHART_REPO]
         if not dry_run:
             write_yaml_documents(APPPROJECTS, project_docs)
 

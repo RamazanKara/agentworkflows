@@ -91,7 +91,7 @@ replay. Bind tenant identity to a key record or verified JWT claim for this to b
 tenant security boundary.
 
 Model metadata was reviewed against the publishers' repositories on **2026-09-23**
-for the v0.1.0 release. The catalog separates models approved for the existing lab
+for the v0.2.0 release. The catalog separates models approved for the existing lab
 profiles from newer candidates that still need evaluation.
 
 ## Models used by the shipped profiles

@@ -4,7 +4,7 @@ AgentWorkflows is for teams that want cloud model access governed by one gateway
 team budgets and receipts they can verify. Self-hosted models and Kubernetes agent
 workspaces are optional. Start with the [ten-minute trial](quickstart.md).
 
-## Is 0.1.0 a fit?
+## Is 0.2.0 a fit?
 
 | Your need | Current support |
 | --- | --- |
