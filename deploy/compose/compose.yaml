@@ -56,12 +56,12 @@ services:
       - ./model-routing.yaml:/etc/agentworkflows/model-routing.yaml:ro
       - ./sandbox-policy.yaml:/etc/agentworkflows/sandbox-policy.yaml:ro
     environment:
-      # The legacy runtime backs demo-overload; the routing policy selects cloud adapters.
+      # The legacy runtime backs demo-fallback, which always fails over; the routing policy selects cloud adapters.
       TEMPORAL_ADDRESS: temporal:7233
       RUNTIME_BACKEND: vllm
       OLLAMA_BASE_URL: http://ollama:11434
       MODEL_ID: ${AGENTWORKFLOWS_MODEL:-demo-openai}
-      ALLOWED_MODELS: qwen2.5:0.5b,demo-openai,demo-anthropic,demo-azure-openai,demo-bedrock,demo-vertex,demo-overload
+      ALLOWED_MODELS: qwen2.5:0.5b,demo-openai,demo-anthropic,demo-azure-openai,demo-bedrock,demo-vertex,demo-fallback
       MODEL_ROUTING_POLICY_PATH: /etc/agentworkflows/model-routing.yaml
       SANDBOX_POLICY_PATH: /etc/agentworkflows/sandbox-policy.yaml
       VLLM_BASE_URL: http://cloud-fake:8000/local-overload

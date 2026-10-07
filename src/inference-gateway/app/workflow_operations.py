@@ -109,8 +109,13 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
     description = await handle.describe(rpc_timeout=RPC_TIMEOUT)
     result = {k: v for k, v in data.items() if k not in {"input", "fingerprint"}}
     result.update(run_id=run_id, status=description.status.name.lower())
-    if timeline and result["status"] == "completed":
-        result["result"] = await handle.result(rpc_timeout=RPC_TIMEOUT)
+    if result["status"] == "completed":
+        value = await handle.result(rpc_timeout=RPC_TIMEOUT)
+        if timeline:
+            result["result"] = value
+        # A completed run can still end in a reviewer's rejection; lists show that outcome.
+        if isinstance(value, dict) and isinstance(value.get("status"), str):
+            result["outcome"] = value["status"]
     if result["status"] == "running":
         try:
             result["progress"] = await handle.query("status", rpc_timeout=RPC_TIMEOUT)

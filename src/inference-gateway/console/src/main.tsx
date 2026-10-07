@@ -23,7 +23,7 @@ function SignIn({ onSignIn, cancel, message }: {
     <h1>Good work.<br/>Accounted for.</h1>
     <p>Cloud AI, durable workflows, and a receipt for every model and tool call.</p>
     <ol><li>Connect your team’s providers</li><li>Run a governed workflow</li><li>Review the work and its receipts</li></ol>
-  </div><main className="signin-form"><h2>{cancel ? 'Add team / identity' : 'Sign in to your team'}</h2>
+  </div><main className="signin-form"><h2>{cancel ? 'Add identity' : 'Sign in to your team'}</h2>
     <p>Use your existing team API key or signed JWT. Your role and projects come from the gateway.</p>
     <form onSubmit={async event => {
       event.preventDefault(); setBusy(true); setError(undefined);
@@ -38,7 +38,7 @@ function SignIn({ onSignIn, cancel, message }: {
       <div className="actions"><button disabled={busy}>{busy ? 'Verifying…' : 'Sign in'}</button>{cancel && <button type="button" className="secondary" onClick={cancel}>Back to workspace</button>}</div>
     </form>
     <details className="demo-help"><summary>Trying the local Compose demo?</summary>
-      <p>Start <code>make compose-up</code>, then sign in with <code>local-development-only</code>. The demo uses local fake providers, with no cloud charges.</p>
+      <p>Start the stack from the quickstart, then sign in with <code>local-development-only</code>. The demo uses local fake providers, with no cloud charges.</p>
       <p>For role testing: <code>demo-builder</code>, <code>demo-approver</code>, or <code>demo-viewer</code>.</p>
       <button className="secondary" onClick={() => setToken('local-development-only')}>Use demo credential</button>
     </details>
@@ -88,7 +88,7 @@ function App() {
         <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined}><Icon name={id}/>{text}</a>)}
       </nav>
       <div className="session-actions">
-        <button onClick={() => setAdding(true)}><Icon name="add"/>Add team / identity</button>
+        <button onClick={() => setAdding(true)}><Icon name="add"/>Add identity</button>
         <button onClick={() => { setSessions([]); setExpired(false); }}><Icon name="signout"/>Sign out</button>
       </div>
     </aside>
