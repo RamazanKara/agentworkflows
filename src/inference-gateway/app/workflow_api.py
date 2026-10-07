@@ -43,6 +43,23 @@ def bind_workflow(request: Request) -> None:
 def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
     @app.put("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Initialize an immutable per-run budget")
     async def initialize_run(request: Request, run_id: UUID, budget: RunBudget) -> dict[str, Any]:
+        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        policy = team.workflows.get(budget.workflow) if team else None
+        if team and team.workflows and policy is None:
+            raise HTTPException(
+                403,
+                detail={
+                    "reason": "workflow_not_allowed",
+                    "message": "Set workflow to a name from GET /v1/workflow-policies.",
+                },
+            )
+        if policy:
+            budget = budget.model_copy(
+                update={
+                    "token_limit": min(budget.token_limit, policy.token_limit),
+                    "cost_limit_usd": min(budget.cost_limit_usd, policy.cost_limit_usd),
+                }
+            )
         result = await redis_call(
             request,
             "eval",
@@ -51,6 +68,8 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             run_key(request, str(run_id)),
             budget.token_limit,
             nanodollars(budget.cost_limit_usd),
+            budget.workflow,
+            "1" if policy else "0",
         )
         if not result:
             raise HTTPException(
@@ -72,16 +91,37 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
         return {
             "run_id": str(run_id),
             "sandbox_id": request.state.sandbox_id,
+            "workflow": raw.get("workflow", ""),
             "token_limit": int(raw["token_limit"]),
             "cost_limit_usd": int(raw["cost_limit"]) / 1_000_000_000,
             "tokens": int(raw["tokens"]),
             "cost_usd": int(raw["cost"]) / 1_000_000_000,
         }
 
+    @app.get("/v1/workflow-policies", tags=["workflows"], summary="Discover this team's workflow policies")
+    async def workflow_policies(request: Request) -> dict[str, Any]:
+        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        return {
+            "workflows": {name: policy.model_dump(by_alias=True) for name, policy in team.workflows.items()}
+            if team
+            else {}
+        }
+
     @app.get("/v1/tools", tags=["workflows"], summary="List this team's approved workflow tools")
     async def tools(request: Request) -> dict[str, Any]:
         policy = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
-        return {"tools": sorted(policy.tools) if policy else []}
+        names = set(policy.tools) if policy else set()
+        if getattr(request.state, "workflow_run_id", None):
+            from app.workflow_budget import load_run_policy
+
+            try:
+                await load_run_policy(request)
+            except AdmissionPolicyError as exc:
+                raise HTTPException(403, detail={"reason": exc.reason, "message": str(exc)}) from exc
+            workflow = request.state.workflow_policy
+            if workflow:
+                names.intersection_update(workflow.allowed_tools)
+        return {"tools": sorted(names)}
 
     @app.post(
         "/v1/tools/{tool}/call", tags=["workflows"], summary="Execute an approved tool through gateway governance"
@@ -101,10 +141,15 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
                 )
             policy = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
             target = policy.tools.get(tool) if policy else None
-            if target is None:
+            workflow = getattr(request.state, "workflow_policy", None)
+            if target is None or (workflow and tool not in workflow.allowed_tools):
                 raise AdmissionPolicyError(
                     "tool_not_allowed",
                     "Choose an approved tool from GET /v1/tools; ask your administrator to add missing tools.",
+                )
+            if workflow and not workflow.permits_egress(str(target.url)):
+                raise AdmissionPolicyError(
+                    "workflow_egress_denied", "Approve this tool's origin in workflow allowedEgress."
                 )
             classification = request_classification(request, payload)
             if DATA_CLASSIFICATIONS.index(classification) > DATA_CLASSIFICATIONS.index(target.data_classification):
@@ -115,7 +160,9 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             effective.validate_tool_admission(payload)
             request.state.prompt_guardrail_action = _apply_prompt_secret_mode(effective, payload, call.route)
             arguments = json.loads(payload["messages"][0]["content"])
-            identity = f"{request.state.sandbox_id}:{request.state.workflow_run_id}:{request.state.workflow_step_id}"
+            identity = (
+                f"{request.state.sandbox_id}:{request.state.workflow_run_id}:{request.state.workflow_step_id}:{tool}"
+            )
             headers = {"Idempotency-Key": hashlib.sha256(identity.encode()).hexdigest()}
             if target.credential_env:
                 credential = os.environ.get(target.credential_env)
@@ -127,17 +174,16 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             await reserve_budget(request, effective, payload)
             await reserve_run(request, 0, target.cost_usd)
             request.state.workflow_charge = {"tokens": 0, "cost_usd": target.cost_usd}
-            async with (
-                httpx.AsyncClient(timeout=settings.request_timeout_seconds, follow_redirects=False) as client,
-                client.stream("POST", str(target.url), json=arguments, headers=headers) as response,
-            ):
-                response.raise_for_status()
-                content = bytearray()
-                async for chunk in response.aiter_bytes():
-                    content.extend(chunk)
-                    if len(content) > settings.max_request_body_bytes:
-                        raise ValueError("tool response exceeds the gateway body limit")
-            result = json.loads(content)
+            from app.mcp_client import call_mcp_tool, read_tool_response
+
+            async with httpx.AsyncClient(timeout=settings.request_timeout_seconds, follow_redirects=False) as client:
+                if target.mcp_tool:
+                    call.backend = "mcp"
+                    result = await call_mcp_tool(client, target, arguments, headers, settings.max_request_body_bytes)
+                else:
+                    result = await read_tool_response(
+                        client, str(target.url), arguments, headers, settings.max_request_body_bytes
+                    )
             guarded = {"choices": [{"message": {"content": json.dumps(result)}}]}
             _apply_output_guardrail(guarded, effective, call.route, request)
             text = guarded["choices"][0]["message"]["content"]

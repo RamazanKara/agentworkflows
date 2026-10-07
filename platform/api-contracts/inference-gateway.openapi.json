@@ -1,6 +1,31 @@
 {
   "components": {
     "schemas": {
+      "AgentResult": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "exit_code": {
+            "title": "Exit Code",
+            "type": "integer"
+          },
+          "output": {
+            "default": "",
+            "title": "Output",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential_id",
+          "exit_code"
+        ],
+        "title": "AgentResult",
+        "type": "object"
+      },
       "BatchRequest": {
         "additionalProperties": true,
         "description": "A batch of chat-completion requests processed in one call.\n\nEach item runs through the same auth (the batch is one authenticated request), model\nallowlist, admission, and budget controls; items are processed concurrently and the\nresponse reports per-item success or error so one bad item does not fail the batch.",
@@ -889,6 +914,12 @@
             "maximum": 1000000000.0,
             "title": "Token Limit",
             "type": "integer"
+          },
+          "workflow": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Workflow",
+            "type": "string"
           }
         },
         "title": "RunBudget",
@@ -1035,6 +1066,130 @@
         "summary": "Check gateway and configured runtime readiness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/agents/{agent}/finish": {
+      "post": {
+        "operationId": "finish_agent_v1_agents__agent__finish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "title": "Agent",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentResult"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Finish Agent V1 Agents  Agent  Finish Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Revoke a step credential and receipt its result",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/agents/{agent}/start": {
+      "post": {
+        "operationId": "start_agent_v1_agents__agent__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "title": "Agent",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolCall"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Agent V1 Agents  Agent  Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Authorize a container step in an existing workspace",
+        "tags": [
+          "workflows"
         ]
       }
     },
@@ -2212,6 +2367,37 @@
         "summary": "Get sandbox usage and estimated cost",
         "tags": [
           "sandbox"
+        ]
+      }
+    },
+    "/v1/workflow-policies": {
+      "get": {
+        "operationId": "workflow_policies_v1_workflow_policies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Workflow Policies V1 Workflow Policies Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Discover this team's workflow policies",
+        "tags": [
+          "workflows"
         ]
       }
     },

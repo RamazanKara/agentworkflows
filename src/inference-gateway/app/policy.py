@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import yaml
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
 from app.settings import Settings, validate_sandbox_id
 
@@ -242,6 +242,66 @@ class ToolRoute(BaseModel):
     data_classification: str = Field(
         default="internal", alias="dataClassification", pattern=r"^(public|internal|confidential|restricted)$"
     )
+    mcp_tool: str = Field(default="", alias="mcpTool")
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        if value.username or value.password or value.query or value.fragment:
+            raise ValueError("tool URLs must not contain credentials, queries, or fragments")
+        return value
+
+
+class MCPServer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    url: AnyHttpUrl
+    credential_env: str = Field(default="", alias="credentialEnv")
+    data_classification: str = Field(default="internal", alias="dataClassification")
+    tools: dict[str, float]
+
+
+class WorkspaceAgent(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    namespace: str = Field(pattern=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63)
+    sandbox: str = Field(pattern=r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", max_length=63)
+    command: list[str] = Field(min_length=1)
+    timeout_seconds: int = Field(default=120, alias="timeoutSeconds", ge=1, le=600, strict=True)
+    cost_usd: float = Field(default=0, alias="costUsd", ge=0, allow_inf_nan=False)
+
+
+class WorkflowPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    allowed_providers: list[str] = Field(alias="allowedProviders")
+    allowed_models: list[str] = Field(alias="allowedModels")
+    allowed_tools: list[str] = Field(default_factory=list, alias="allowedTools")
+    allowed_egress: list[str] = Field(default_factory=list, alias="allowedEgress")
+    token_limit: int = Field(default=10000, alias="tokenLimit", gt=0, le=1_000_000_000, strict=True)
+    cost_limit_usd: float = Field(default=5, alias="costLimitUsd", gt=0, le=1_000_000, allow_inf_nan=False)
+    agents: dict[str, WorkspaceAgent] = Field(default_factory=dict)
+
+    @field_validator("allowed_providers")
+    @classmethod
+    def validate_providers(cls, values: list[str]) -> list[str]:
+        if set(values) - VALID_BACKENDS:
+            raise ValueError(f"allowedProviders must use providers from {sorted(VALID_BACKENDS)}")
+        return values
+
+    @field_validator("allowed_egress")
+    @classmethod
+    def validate_origins(cls, values: list[str]) -> list[str]:
+        for value in values:
+            url = urlsplit(value)
+            if url.scheme not in {"http", "https"} or not url.netloc or value != f"{url.scheme}://{url.netloc}":
+                raise ValueError("allowedEgress entries must be exact HTTP(S) origins, e.g. https://api.openai.com")
+            ToolRoute.validate_url(AnyHttpUrl(value))
+        return values
+
+    def permits_egress(self, url: str) -> bool:
+        parsed = urlsplit(url)
+        return f"{parsed.scheme}://{parsed.netloc}" in self.allowed_egress
 
 
 @dataclass(frozen=True)
@@ -259,6 +319,7 @@ class SandboxPolicy:
     estimated_token_budget: int | None = None
     data_classification: str = "internal"
     tools: dict[str, ToolRoute] = field(default_factory=dict)
+    workflows: dict[str, WorkflowPolicy] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -305,6 +366,32 @@ class SandboxPolicySet:
             raw_tools = item.get("tools", {})
             if not isinstance(raw_tools, dict):
                 raise ValueError("SandboxPolicySet tools must map approved tool names to URLs and costUsd")
+            tools = {name: ToolRoute.model_validate(target) for name, target in raw_tools.items()}
+            servers = item.get("mcpServers", {})
+            workflows = item.get("workflows", {})
+            if not isinstance(servers, dict) or not isinstance(workflows, dict):
+                raise ValueError("mcpServers and workflows must be mappings keyed by name")
+            for name, raw in servers.items():
+                server = MCPServer.model_validate(raw)
+                for tool, cost in server.tools.items():
+                    qualified = f"{name}.{tool}"
+                    if qualified in tools:
+                        raise ValueError(f"duplicate tool: {qualified}")
+                    tools[qualified] = ToolRoute.model_validate(
+                        {
+                            "url": server.url,
+                            "credentialEnv": server.credential_env,
+                            "dataClassification": server.data_classification,
+                            "costUsd": cost,
+                            "mcpTool": tool,
+                        }
+                    )
+            if any(not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name) for name in tools):
+                raise ValueError("tool names must be 1-128 letters, digits, dots, underscores, or hyphens")
+            workflow_policies = {name: WorkflowPolicy.model_validate(raw) for name, raw in workflows.items()}
+            for name, workflow in workflow_policies.items():
+                if set(workflow.allowed_tools) - tools.keys():
+                    raise ValueError(f"workflow {name} allowedTools must name registered team tools")
             policies[sandbox_id] = SandboxPolicy(
                 sandbox_id=sandbox_id,
                 allowed_models=tuple(str(model) for model in item.get("allowedModels", []) if str(model)),
@@ -316,7 +403,8 @@ class SandboxPolicySet:
                 prompt_char_budget=_optional_non_negative_int(budgets, "promptCharLimit", sandbox_id),
                 estimated_token_budget=_optional_non_negative_int(budgets, "estimatedTokenLimit", sandbox_id),
                 data_classification=classification,
-                tools={name: ToolRoute.model_validate(target) for name, target in raw_tools.items()},
+                tools=tools,
+                workflows=workflow_policies,
             )
         return cls(policies)
 

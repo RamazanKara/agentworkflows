@@ -98,6 +98,9 @@ CONTRACTS = {
             "/v1/workflow-runs/{run_id}": RouteContract("put", request_schema="RunBudget"),
             "/v1/tools": RouteContract("get"),
             "/v1/tools/{tool}/call": RouteContract("post", request_schema="ToolCall"),
+            "/v1/workflow-policies": RouteContract("get"),
+            "/v1/agents/{agent}/start": RouteContract("post", request_schema="ToolCall"),
+            "/v1/agents/{agent}/finish": RouteContract("post", request_schema="AgentResult"),
         },
         protected_paths=frozenset(
             {
@@ -123,6 +126,9 @@ CONTRACTS = {
                 "/v1/workflow-runs/{run_id}",
                 "/v1/tools",
                 "/v1/tools/{tool}/call",
+                "/v1/workflow-policies",
+                "/v1/agents/{agent}/start",
+                "/v1/agents/{agent}/finish",
             }
         ),
         required_schemas={

@@ -75,3 +75,19 @@ class WorkflowGateway:
     async def tool(self, name: str, arguments: dict[str, Any]) -> Any:
         result = await self._call(Call("tool", {"arguments": arguments}, self.budget, name, self.data_classification))
         return result["result"]
+
+    async def agent(self, name: str, arguments: dict[str, Any]) -> Any:
+        result = await self._call(Call("agent", arguments, self.budget, name, self.data_classification))
+        return result["result"]
+
+    async def container(self, name: str, arguments: dict[str, Any]) -> str:
+        # Arbitrary code may have side effects that cannot be safely retried after a worker crash.
+        result = await workflow.execute_activity(
+            "agentworkflows.call",
+            Call("container", {"arguments": arguments}, self.budget, name, self.data_classification),
+            result_type=dict[str, Any],
+            start_to_close_timeout=self.start_to_close_timeout,
+            schedule_to_close_timeout=self.schedule_to_close_timeout,
+            retry_policy=RetryPolicy(maximum_attempts=1),
+        )
+        return str(result["result"])

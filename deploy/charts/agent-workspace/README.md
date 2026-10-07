@@ -22,6 +22,7 @@ Isolated namespace template for coding agents that use the AgentWorkflows gatewa
 | `networkPolicy.expiryEnforcement.schedule` | `17 3 * * *` |
 | `networkPolicy.gateway.namespace` | `inference` |
 | `networkPolicy.gateway.port` | `8080` |
+| `networkPolicy.rag.enabled` | `true` |
 | `networkPolicy.rag.namespace` | `rag` |
 | `networkPolicy.rag.port` | `8080` |
 | `platform.gatewayUrl` | `http://inference-gateway-inference-gateway.inference.svc.cluster.local:8080` |

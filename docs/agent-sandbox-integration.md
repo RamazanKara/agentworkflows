@@ -90,6 +90,120 @@ token audience, working DNS, and blocked non-catalog egress.
 `make agent-sandbox-demo` adds the governed model-call and audit-receipt walkthrough used by the
 README animation.
 
+## Container workflow steps
+
+`await WorkflowGateway().container("coder", {"task": "Review this code"})` executes an
+administrator-approved command in an **existing** agent-sandbox workspace. It reuses this
+chart and controller; there is no additional execution service or Docker socket on the worker.
+The included `CodeWorkflow` and
+[container agent](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/container_agent.py)
+write `review.txt` inside `/workspace` and call the gateway with a short-lived credential.
+
+Use a dedicated workspace namespace with an enforcing NetworkPolicy CNI. The normal workspace
+chart defaults also allow RAG and a projected platform token; disable both for workflow code
+so it has only the step's gateway credential. With the controller already installed, build
+and push your worker image to your own registry, then use that same image for the example
+workspace. The image from `sdk/python/Dockerfile` includes Python, the runner, and kubectl.
+
+```bash
+helm upgrade --install code-workspace deploy/charts/agent-workspace \
+  --set namespace.name=team-code --set sandbox.id=coder \
+  --set workspace.container.image="$WORKER_IMAGE" \
+  --set workspace.credentials.projectedToken.enabled=false \
+  --set networkPolicy.rag.enabled=false \
+  --set sandbox.externalEgressAllowed=false
+```
+
+Keep `networkPolicy.enabled=true`, `allowedEgressCidrs=[]`, and the chart's hardening defaults.
+Set `networkPolicy.gateway.namespace` and `port` if your gateway uses different values.
+After changing an existing Sandbox template, recreate its pod as described above.
+The worker checks the actual pod's owner, hardening, volumes, image, and namespace policies
+before execution. Extra egress policies, external CIDRs, sidecars, secret/projected volumes,
+or ambient environment credentials cause an actionable refusal. An enforcing CNI is still
+a deployment prerequisite; inspecting policy objects cannot prove CNI enforcement.
+
+Add the agent to the team's gateway policy (substitute your approved routes/origins):
+
+```yaml
+workflows:
+  CodeWorkflow:
+    allowedProviders: [openai]
+    allowedModels: [demo-openai]
+    allowedTools: []
+    allowedEgress: [https://api.openai.com]
+    tokenLimit: 2000
+    costLimitUsd: 1
+    agents:
+      coder:
+        namespace: team-code
+        sandbox: coder
+        command: [python, /app/agentworkflows/examples/container_agent.py]
+        timeoutSeconds: 120
+        costUsd: 0.01
+```
+
+The route named `demo-openai` must exist in this gateway; the Compose fixture route uses
+`http://cloud-fake:8000`, while a live OpenAI route uses its configured origin. The example
+agent's model is explicit in its source. Credentials for providers stay on the gateway.
+Commands, namespace, and Sandbox names come only from this reviewed policy, never from
+workflow input. Agent input is JSON on stdin, scanned for secrets before authorization.
+
+In your existing workflows Helm values, grant the worker access to that workspace:
+
+```yaml
+worker:
+  image: your-registry/agentworkflows-worker:your-tag
+  gatewayUrl: http://inference-gateway.inference.svc.cluster.local:8080
+  workspaces:
+    - namespace: team-code
+      sandbox: coder
+```
+
+Upgrade the workflows release with those values. Its worker service account receives read
+access to the named Sandbox/pod and namespace policies, and exec access to that pod only.
+It cannot create pods, change network policies, or read Secrets. Use the actual gateway
+Service DNS URL: container steps validate that the approved egress rule reaches its namespace
+and port. Workers running outside Kubernetes instead need kubectl and equivalently scoped
+kubeconfig access. The example worker already registers `CodeWorkflow` on `research`:
+
+```bash
+python - <<'PY'
+import asyncio, os, uuid
+from datetime import timedelta
+from temporalio.client import Client
+from agentworkflows.examples.frameworks import CodeWorkflow
+
+async def run():
+    client = await Client.connect(os.getenv("TEMPORAL_ADDRESS", "localhost:7233"))
+    print(await client.execute_workflow(
+        CodeWorkflow.run, "Give three checks for a code review",
+        id=f"code-{uuid.uuid4()}", task_queue="research", execution_timeout=timedelta(minutes=5),
+    ))
+asyncio.run(run())
+PY
+```
+
+The gateway issues an opaque credential scoped to the team, run, step, and classification;
+it expires with `timeoutSeconds` (at most ten minutes). Only governed model/tool endpoints
+accept it, even when the agent omits correlation headers. The worker passes it through stdin,
+never command-line arguments or Temporal results, and revokes it when the step finishes.
+No team key, provider key, or Kubernetes credential enters the workspace. Failed/crashed
+steps retain their conservative cost; expiry bounds grants after a lost worker. A Redis lease
+prevents simultaneous workflow steps in one workspace. Failed execution holds the lease until
+its timeout plus 30 seconds, since remote work may still be stopping.
+
+Container steps default to **one attempt**: arbitrary code side effects cannot safely be
+replayed. The runner bounds runtime and output, kills its process group, and sends output
+through gateway DLP before returning it to Temporal. `agent_start` and `agent_exec` receipts
+correlate authorization and completion; a missing completion is an unknown outcome, not
+proof of success. Each model/tool call has its own receipt. Filesystem/process actions are
+not individually intercepted. Workspace data persists on its PVC; dedicate workspaces to a
+trust boundary and clean/recreate them between untrusted workloads.
+
+Compose validates framework/MCP flows without Kubernetes. Container unit tests validate the
+runner contract and refusals; `make agent-sandbox-smoke` verifies the actual cluster boundary.
+Use a gVisor/Kata RuntimeClass when a separate kernel boundary is required.
+
 ## Limits
 
 - A missing isolation `RuntimeClass` means the workspace shares the node kernel.

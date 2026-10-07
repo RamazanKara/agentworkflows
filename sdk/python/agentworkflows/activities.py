@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import asdict
 from datetime import timedelta
 from typing import Any
@@ -12,13 +13,21 @@ from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
 from agentworkflows import GatewayError, _raise_for_status
+from agentworkflows.adapters import AgentContext
 from agentworkflows.workflows import Call
 
 
 class GatewayActivities:
-    def __init__(self, base_url: str, api_key: str) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        *,
+        agents: Mapping[str, Callable[[AgentContext, dict[str, Any]], Awaitable[Any]]] | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
+        self.agents = agents or {}
 
     @activity.defn(name="agentworkflows.call")
     async def call(self, call: Call) -> dict[str, Any]:
@@ -26,7 +35,10 @@ class GatewayActivities:
         headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
             async with httpx.AsyncClient(base_url=self.base_url, headers=headers, timeout=120) as client:
-                initialized = await client.put(f"/v1/workflow-runs/{info.workflow_run_id}", json=asdict(call.budget))
+                initialized = await client.put(
+                    f"/v1/workflow-runs/{info.workflow_run_id}",
+                    json={**asdict(call.budget), "workflow": info.workflow_type},
+                )
                 _raise_for_status(initialized)
                 headers = {
                     "X-Workflow-Run-ID": info.workflow_run_id or "",
@@ -37,8 +49,25 @@ class GatewayActivities:
                     path = "/v1/chat/completions"
                 elif call.kind == "tool":
                     path = f"/v1/tools/{quote(call.tool, safe='')}/call"
+                elif call.kind == "agent":
+                    handler = self.agents.get(call.tool)
+                    if handler is None:
+                        raise ApplicationError(
+                            "Register this agent in GatewayActivities(agents={...}).", non_retryable=True
+                        )
+                    context = AgentContext(client, self.api_key, headers)
+                    try:
+                        return {"result": await handler(context, call.payload)}
+                    finally:
+                        await context.aclose()
+                elif call.kind == "container":
+                    from agentworkflows.containers import run_container
+
+                    return await run_container(client, call, headers)
                 else:
-                    raise ApplicationError("Use WorkflowGateway.model or .tool.", non_retryable=True)
+                    raise ApplicationError(
+                        "Use WorkflowGateway.model, .tool, .agent, or .container.", non_retryable=True
+                    )
                 response = await client.post(path, json=call.payload, headers=headers)
                 _raise_for_status(response)
                 result: dict[str, Any] = response.json()

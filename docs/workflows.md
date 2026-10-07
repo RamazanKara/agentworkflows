@@ -49,7 +49,7 @@ use `docker compose -f deploy/compose/compose.yaml stop` to retain history and b
 
 ## Write your workflow
 
-Use Temporal's decorators and the SDK's two call methods. Do not perform model, network,
+Use Temporal's decorators and the SDK's call methods. Do not perform model, network,
 or tool I/O directly in workflow code; replay must remain deterministic.
 
 ```python
@@ -137,6 +137,135 @@ defaults to `internal`; explicitly approve a higher classification only for elig
 For Kubernetes, permit tool destinations through the gateway's existing approved egress
 policy or internal egress proxy, just as for cloud model endpoints.
 
+## Bring your agent
+
+With the Compose stack running, run all four examples in its existing worker:
+
+```bash
+docker compose -f deploy/compose/compose.yaml run --rm --no-deps workflow-worker \
+  python -m agentworkflows.examples.frameworks "How should we evaluate team agents?"
+```
+
+The result includes the run ID and answers from plain OpenAI and Anthropic clients,
+OpenAI Agents SDK, and LangGraph. The first agent calls `team.search` through MCP.
+Open Temporal at <http://localhost:8233> and inspect that run; use its ID with
+`GET /v1/workflow-runs/{run_id}` for usage. `make compose-smoke` checks these calls,
+policy refusals, DLP, and their receipts. No cloud credentials are needed.
+
+For your own worker, install `python -m pip install './sdk/python[frameworks]'`.
+Register your async agent function with the existing activity:
+
+```python
+import os
+from agentworkflows.activities import GatewayActivities
+
+async def briefing(context, arguments):
+    sources = await context.tool("team.search", {"query": arguments["topic"]})
+    response = await context.openai().chat.completions.create(
+        model="demo-openai", max_tokens=128,
+        messages=[{"role": "user", "content": f"Summarize: {sources}"}],
+    )
+    return response.choices[0].message.content
+
+activities = GatewayActivities(
+    "http://localhost:8080", os.environ["AGENTWORKFLOWS_API_KEY"], agents={"briefing": briefing},
+)
+# Register activities.call on your Temporal worker, as above.
+# Inside your workflow:
+# answer = await WorkflowGateway().agent("briefing", {"topic": topic})
+```
+
+`context.openai()` and `context.anthropic()` configure the official async clients with
+the gateway URL, team authentication, run/step headers, and no nested HTTP retries.
+Use `context.agents_model(model)` with the Agents SDK's `Agent` and `Runner.run`;
+set `RunConfig(tracing_disabled=True)` to keep prompts out of external tracing.
+In LangGraph, use `context.openai()` in your graph nodes and `graph.ainvoke(...)`.
+The [complete examples](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/frameworks.py)
+show all four, including a governed Agents SDK function tool.
+
+Each model/tool request gets its own step suffix and receipt. The activity result is
+durable; a crash before completion can replay the **whole agent loop** and charge new
+calls. Break long loops into separate workflow steps when finer recovery is needed.
+Streaming, Responses, and background model APIs are not workflow step transports here;
+use non-streaming Chat Completions or Anthropic Messages. Standalone gateway API support
+is unchanged. The optional frameworks are pinned in the worker/test locks.
+
+Framework callbacks run as trusted worker code. Route every side-effecting tool through
+`context.tool`; arbitrary local function tools and direct network clients are not intercepted.
+Use [container steps](agent-sandbox-integration.md#container-workflow-steps) for code execution.
+Do not enable external LangSmith tracing with sensitive activity data.
+
+## MCP tools
+
+Register a server once under the team's existing `SandboxPolicySet` entry:
+
+```yaml
+sandboxId: research-team
+mcpServers:
+  team:
+    url: https://tools.example.com/mcp
+    credentialEnv: TEAM_MCP_TOKEN
+    tools:
+      search: 0.01
+      publish: 0.02
+```
+
+The map explicitly approves remote tool names and their cost in USD per attempt. Clients
+call `await gateway.tool("team.search", {"query": topic})` in workflow code or
+`await context.tool(...)` in an agent callback. `GET /v1/tools` discovers team tools;
+add run/step headers to see only that workflow's allowed tools. Credentials and server URLs
+never come from agent arguments. Add the server's origin to the workflow's `allowedEgress`.
+
+The gateway negotiates MCP **2025-03-26 Streamable HTTP**, initializes a session, invokes
+`tools/call`, and closes the session. Both JSON and SSE responses are bounded by the gateway
+body limit. Legacy SSE/stdio servers, resources, prompts, sampling, and server-initiated
+requests are not supported. The registered allowlist is authoritative; discovery from an
+untrusted server cannot grant another tool. The gateway does not execute model-returned
+tool instructions automatically. See the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports).
+
+Nested JSON arguments use the existing input size, blocked-term, and secret policies before
+any server contact. Set `PROMPT_SECRET_MODE=block` (the Compose default) to prevent disclosure;
+`redact` rewrites matching arguments. Output follows the existing output DLP policy. Denied,
+successful, and failed calls receive run-linked tool receipts, with argument fingerprints
+rather than raw arguments. MCP errors and `isError` results are failures, never successful
+results. Failed/ambiguous attempts retain their cost. For side effects, the server **must**
+persist and honor `Idempotency-Key`; MCP itself does not promise idempotent execution.
+
+## Workflow policy
+
+Define policy under the same team entry, keyed by the registered Temporal workflow type:
+
+```yaml
+workflows:
+  Briefing:
+    allowedProviders: [openai, anthropic]
+    allowedModels: [approved-openai, approved-anthropic]
+    allowedTools: [team.search]
+    allowedEgress: [https://api.openai.com, https://api.anthropic.com, https://tools.example.com]
+    tokenLimit: 4000
+    costLimitUsd: 1
+```
+
+Use canonical gateway model IDs, provider names from the model catalog, and exact URL origins
+(scheme, hostname, and optional port; no paths or wildcards). An empty allowlist denies that
+capability. The existing team model/tool rules still apply. Every fallback must satisfy the
+workflow's provider, model, and egress lists. Container direct egress is restricted to DNS
+and the gateway; `allowedEgress` governs the gateway's upstream model/tool connections.
+
+`GET /v1/workflow-policies` shows the authenticated team's policies and approved container
+agents. The SDK sends Temporal's workflow type when initializing the run. Once a team defines
+workflow policies, unknown workflow types are refused. Existing teams without a `workflows`
+map retain Milestone 2 behavior. Limits requested by the SDK are capped by configured limits;
+the run's effective budget and workflow binding cannot change on retry. Current allowlists
+are checked on every call; removing a bound policy revokes access. After changing budget caps,
+start a reviewed new run rather than changing an existing run's limits.
+
+Workers and team keys are trusted to select the correct workflow and run IDs. Restrict who
+can submit code to those workers; these headers are correlation, not proof of Temporal identity.
+Container step credentials cannot change their team/run binding or initialize another run.
+
+## Run accounting
+
 Each run defaults to 10,000 tokens and $5 estimated cost. Limits are initialized atomically
 and cannot be raised by a retry. They are scoped to the authenticated team and Temporal run
 UUID; `GET /v1/workflow-runs/{run_id}` returns only that team's accounting. Every attempted
@@ -205,4 +334,8 @@ can submit workflows or approval signals.
 | `workflow_price_missing` | Add input/output prices to that model and every fallback |
 | `workflow_*_budget_exceeded` | Inspect the run's usage; start a new reviewed run with an appropriate budget |
 | `tool_not_allowed` | Inspect `GET /v1/tools` and the bound team's sandbox policy |
+| `workflow_not_allowed` / `workflow_model_denied` | Inspect `GET /v1/workflow-policies`; use the registered workflow type and an allowed canonical model/provider |
+| `workflow_egress_denied` | Add the reviewed tool server origin to that workflow's `allowedEgress` |
+| `mcp_protocol_unsupported` | Use Streamable HTTP with MCP 2025-03-26 tool support |
+| `workspace_busy` / `agent_failed` | Wait for the previous step to finish, or inspect the workspace before explicitly starting another run |
 | Approval cannot be submitted | Wait for `awaiting_approval` and use the exact workflow ID and run ID |
