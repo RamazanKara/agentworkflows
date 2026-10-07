@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Self-hosted LLM gateway, retrieval, and coding-agent workspaces for Kubernetes, with a verifiable record of every model call and agent action.">
+        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/private-ai-platform-kit/development/quickstart/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/quickstart/">
       
       
         <link rel="prev" href="..">
@@ -27,7 +27,7 @@
     
     
       
-        <title>Quickstart - Private AI Platform Kit</title>
+        <title>Quickstart - AgentWorkflows</title>
       
     
     
@@ -96,7 +96,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Private AI Platform Kit" class="md-header__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href=".." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -110,7 +110,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Private AI Platform Kit
+            AgentWorkflows
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -198,13 +198,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
-    RamazanKara/private-ai-platform-kit
+    RamazanKara/agentworkflows
   </div>
 </a>
       </div>
@@ -354,23 +354,23 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Private AI Platform Kit" class="md-nav__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href=".." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    Private AI Platform Kit
+    AgentWorkflows
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
-    RamazanKara/private-ai-platform-kit
+    RamazanKara/agentworkflows
   </div>
 </a>
     </div>
@@ -542,6 +542,50 @@
     <span class="md-ellipsis">
       
         Docker Compose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#make-your-first-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Make your first call
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connect-a-real-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connect a real provider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-self-hosted-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional self-hosted models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting-and-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting and cleanup
       
     </span>
   </a>
@@ -1717,6 +1761,50 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#make-your-first-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Make your first call
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connect-a-real-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connect a real provider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-self-hosted-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional self-hosted models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting-and-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting and cleanup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#local-kubernetes-lab" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1805,7 +1893,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/private-ai-platform-kit/edit/main/docs/quickstart.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/quickstart.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1814,85 +1902,119 @@
 
 
 <h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
-<p>There are two ways to run the kit on one machine. Both use the same service images and the
-same configuration contract as a production cluster.</p>
+<p>Try AgentWorkflows in ten minutes: discover models, send a governed call, inspect your
+team's usage, and verify a receipt. Version 0.1.0 implements governed cloud providers;
+durable workflows and human approvals are planned.</p>
+<h2 id="docker-compose">Docker Compose<a class="headerlink" href="#docker-compose" title="Permanent link">&para;</a></h2>
+<p>Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. Run from a Bash shell
+(Linux, macOS, or WSL). No GPU, model download, provider key, or paid inference is needed.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>make<span class="w"> </span>compose-up
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>make<span class="w"> </span>compose-smoke
+</code></pre></div>
+<p>The images build one at a time. The gateway listens on <code>127.0.0.1:8080</code>, and retrieval on
+<code>127.0.0.1:8090</code>. The bundled <code>cloud-fake</code> service supplies synthetic responses and prices
+for all five provider protocols. This trial tests routing, streaming, budgets, secret
+blocking, confidential-data refusal, reported agent actions, and audit verification.
+It does not validate a live provider account or measure model quality.</p>
+<p>The walkthrough ends with <code>All checks passed</code> after deliberately editing a receipt and
+checking that verification rejects it. The original log is <code>.out/compose/gateway-audit.jsonl</code>.
+Open <a href="http://127.0.0.1:8080/console">http://127.0.0.1:8080/console</a> and enter <code>local-development-only</code> to inspect health,
+models, usage, and budgets. This public demo key is bound to sandbox <code>demo</code>; do not reuse it
+outside the trial.</p>
+<h2 id="make-your-first-call">Make your first call<a class="headerlink" href="#make-your-first-call" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./sdk/python
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>local-development-only
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>agentworkflows<span class="w"> </span>models
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>agentworkflows<span class="w"> </span>chat<span class="w"> </span><span class="s2">"Hello, AgentWorkflows!"</span><span class="w"> </span>--model<span class="w"> </span>demo-openai
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>agentworkflows<span class="w"> </span>usage
+</code></pre></div>
+<p><code>agentworkflows --help</code> lists the commands. <code>AGENTWORKFLOWS_URL</code> defaults to
+<code>http://127.0.0.1:8080</code>; set it when using a remote gateway. The Python import is
+<code>from agentworkflows import GatewayClient</code>. Existing OpenAI and Anthropic clients can use
+the same gateway; follow the <a href="../client-examples/">client examples</a>.</p>
+<p>The console is read-only. Set team credentials and scopes in <code>deploy/compose/key-records.yaml</code>:
+each key stores a SHA-256 digest and binds to one sandbox, which is the current team budget
+boundary. Set <code>budget.estimatedTokenLimit</code> on that record and recreate the gateway to apply it.
+Usage and provider cost are estimates based on token counts and configured prices, not a bill.
+See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md">API access</a> and <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md">budget controls</a>.</p>
+<h2 id="connect-a-real-provider">Connect a real provider<a class="headerlink" href="#connect-a-real-provider" title="Permanent link">&para;</a></h2>
+<p>Use the <a href="../model-selection/#cloud-routes-milestone-1">cloud route example</a> for one approved
+provider and model. It includes the connection, pricing, and server-side credential mapping.</p>
+<ol>
+<li>Replace fixture routes with approved provider URLs, model IDs, and contracted token prices.</li>
+<li>Supply the named credential through the gateway's environment or Kubernetes Secret.
+   Never put provider keys in client requests or tracked files.</li>
+<li>Bind each team's gateway key to its sandbox and budget. Review data classification:
+   confidential requests cannot use a cloud route, even as a fallback.</li>
+<li>Restart the gateway, list models, and make one authorized call. Cloud readiness checks
+   credential presence only; a successful real call is required to validate account access.</li>
+</ol>
+<p>Use <a href="../production-readiness/">production readiness</a> before serving a team outside the trial.
+The Compose fixtures and public key are evaluation defaults.</p>
+<h2 id="optional-self-hosted-models">Optional self-hosted models<a class="headerlink" href="#optional-self-hosted-models" title="Permanent link">&para;</a></h2>
+<p>To add the small CPU Ollama model to the existing trial:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>--profile<span class="w"> </span>self-hosted<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>ollama
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>--profile<span class="w"> </span>self-hosted<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>model-pull
+</code></pre></div>
+<p>Append this item under <code>spec.models</code> in <code>deploy/compose/model-routing.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">qwen2.5:0.5b</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">      </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ollama</span>
+</code></pre></div>
+<p>Then load the policy and call the model:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>restart<span class="w"> </span>inference-gateway
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>agentworkflows<span class="w"> </span>chat<span class="w"> </span><span class="s2">"Hello from my local model"</span><span class="w"> </span>--model<span class="w"> </span>qwen2.5:0.5b
+</code></pre></div>
+<p>The pull downloads model weights and caches them in a Docker volume. vLLM and hardened
+agent workspaces are available through the Kubernetes lab below.</p>
+<h2 id="troubleshooting-and-cleanup">Troubleshooting and cleanup<a class="headerlink" href="#troubleshooting-and-cleanup" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th></th>
-<th>Docker Compose</th>
-<th>Local Kubernetes lab</th>
+<th>Symptom</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Needs</td>
-<td>Docker with Compose</td>
-<td>Linux or WSL, Docker, Python 3.12+, Bash, <code>curl</code></td>
+<td>Cannot connect</td>
+<td>Run <code>make compose-up</code>; check <code>docker compose -f deploy/compose/compose.yaml ps</code> and gateway logs</td>
 </tr>
 <tr>
-<td>Time to first request</td>
-<td>About two minutes</td>
-<td>15 to 30 minutes on the first run, mostly downloads</td>
+<td>Port already in use</td>
+<td>Stop your previous trial or set <code>AGENTWORKFLOWS_GATEWAY_PORT</code> / <code>AGENTWORKFLOWS_RAG_PORT</code>; set <code>AGENTWORKFLOWS_URL</code> to the chosen gateway port for the CLI</td>
 </tr>
 <tr>
-<td>Runs</td>
-<td>Gateway, Ollama, RAG, optional Open WebUI</td>
-<td>The full platform on <code>kind</code>: Argo CD, Kyverno, Calico, gateway, Ollama, RAG, Redis, agent workspaces, observability</td>
+<td>401</td>
+<td>Set <code>AGENTWORKFLOWS_API_KEY=local-development-only</code> for the demo; use your team's key on a real gateway</td>
 </tr>
 <tr>
-<td>Good for</td>
-<td>Trying the API and the audit trail</td>
-<td>Evaluating the Kubernetes deployment, policies, and agent sandboxes</td>
+<td>Model refused</td>
+<td>Run <code>agentworkflows models</code> and choose a listed ID</td>
+</tr>
+<tr>
+<td>403 classification refusal</td>
+<td>Use an approved self-hosted route for confidential data; keep the classification policy intact</td>
+</tr>
+<tr>
+<td>429 budget or rate limit</td>
+<td>Inspect <code>agentworkflows usage</code>; ask the team administrator to review the budget or wait for the rate window</td>
+</tr>
+<tr>
+<td>No real generated answer</td>
+<td><code>demo-*</code> models are protocol fixtures; connect an approved provider or add Ollama above</td>
 </tr>
 </tbody>
 </table>
-<p>Both are development environments with a public demo API key, <code>local-development-only</code>.
-Never reuse it outside them.</p>
-<h2 id="docker-compose">Docker Compose<a class="headerlink" href="#docker-compose" title="Permanent link">&para;</a></h2>
-<p>From the repository root:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>compose-up
+<p>An optional chat UI is available with
+<code>docker compose -f deploy/compose/compose.yaml --profile ui up -d</code> at
+<a href="http://127.0.0.1:3000">http://127.0.0.1:3000</a>. It talks to the governed gateway.</p>
+<p>Stop the stack and remove its volumes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>compose-down
 </code></pre></div>
-<p>This builds the gateway and RAG images, starts Ollama, pulls <code>qwen2.5:0.5b</code> (about 400 MB, cached
-in a Docker volume), and waits until every service reports ready. Ports bind to <code>127.0.0.1</code>
-only: the gateway on <code>8080</code> and the RAG service on <code>8090</code>.</p>
-<p>Walk through the governed request path:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>compose-smoke
-</code></pre></div>
-<p>The walkthrough also exercises all five cloud adapters against the bundled local
-<code>cloud-fake</code> service, including streaming, overload fallback, confidential-data
-refusal, credential blocking, and per-provider accounting. The <code>demo-*</code> models and
-their prices are synthetic fixtures; no provider account, real credential, or external
-inference request is used. The ordinary Ollama completion still uses a real local model.</p>
-<p>The script sends real requests and exits non-zero at the first one that misbehaves. A passing
-run ends with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>== 9. Export the audit log and verify its hash chain
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>chain 7f3c...: OK (21 record(s), head 6865...)
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>   ok  21 receipt lines verified (.out/compose/gateway-audit.jsonl)
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>== 10. Rewrite history: turn the blocked request's 400 into a 200 and verify again
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>   ok  edit detected: BROKEN at position 3 (record_hash_mismatch)
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>All checks passed. Open the read-only console at http://127.0.0.1:8080/console
-</code></pre></div>
-<p>Call the gateway from any OpenAI or Anthropic client with base URL <code>http://127.0.0.1:8080/v1</code>
-(OpenAI) or <code>http://127.0.0.1:8080</code> (Anthropic) and API key <code>local-development-only</code>; see
-<a href="../client-examples/">client examples</a>. The key is a record in
-<code>deploy/compose/key-records.yaml</code> bound to sandbox <code>demo</code>, so requests run as that sandbox
-whatever <code>X-Sandbox-ID</code> they send.</p>
-<p>Add a chat UI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>--profile<span class="w"> </span>ui<span class="w"> </span>up<span class="w"> </span>-d
-</code></pre></div>
-<p>Open WebUI then serves <a href="http://127.0.0.1:3000">http://127.0.0.1:3000</a>. It runs in offline mode and talks only to the
-gateway, so its chats appear in the same audit trail.</p>
-<p>Settings you can override in the environment: <code>PAK_MODEL</code> (any Ollama model tag),
-<code>PAK_GATEWAY_PORT</code>, <code>PAK_RAG_PORT</code>, and <code>PAK_UI_PORT</code>.</p>
-<p>Stop and delete the stack, including the model volume:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>compose-down
-</code></pre></div>
-<p>The Compose stack deliberately leaves out what needs Kubernetes: network policy, the hardened
-agent workspaces, GitOps, Redis-backed shared state, and the observability stack. Use the lab
-below for those.</p>
+<p>Compose does not install Kubernetes network policies, hardened workspaces, GitOps, or
+Redis-backed shared state. The local lab below is for evaluating those optional components.</p>
 <h2 id="local-kubernetes-lab">Local Kubernetes lab<a class="headerlink" href="#local-kubernetes-lab" title="Permanent link">&para;</a></h2>
 <p>The lab creates a single-node <code>kind</code> cluster, builds the two first-party images, deploys the
 platform through Argo CD, and runs gateway and RAG smoke tests against <code>qwen2.5:0.5b</code> on Ollama.
@@ -1914,10 +2036,10 @@ cluster unless overridden. Stop the Compose stack first (<code>make compose-down
 <p>On macOS or a managed workstation, install <code>kind</code>, <code>kubectl</code>, and Helm separately and run
 <code>make quickstart</code>; the repository's tool installer is Linux-only.</p>
 <h3 id="run-it">Run it<a class="headerlink" href="#run-it" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>bootstrap
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>make<span class="w"> </span>bootstrap
 </code></pre></div>
 <p>If the required cluster tools are already installed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>make<span class="w"> </span>quickstart
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>quickstart
 </code></pre></div>
 <p>The command runs, in order:</p>
 <ol>
@@ -1931,38 +2053,38 @@ cluster unless overridden. Stop the Compose stack first (<code>make compose-down
 </ol>
 <p>The Argo CD path needs the configured Git repository to be reachable from the cluster. For a
 reduced workstation check that applies the core charts directly, use:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
 </code></pre></div>
 <p>Direct apply skips the Argo CD application set, including the full observability, policy,
 cost, and backup add-ons. It is useful for the gateway and RAG smoke path, not as a GitOps or
 production-readiness test.</p>
 <p>Other switches:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">QUICKSTART_INSTALL_TOOLS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">  </span><span class="c1"># install the pinned CLI set first</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">QUICKSTART_SKIP_VALIDATE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">  </span><span class="c1"># skip static validation</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nv">QUICKSTART_SKIP_RAG</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">       </span><span class="c1"># skip the RAG smoke test</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">QUICKSTART_INSTALL_TOOLS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">  </span><span class="c1"># install the pinned CLI set first</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">QUICKSTART_SKIP_VALIDATE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">  </span><span class="c1"># skip static validation</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">QUICKSTART_SKIP_RAG</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">       </span><span class="c1"># skip the RAG smoke test</span>
 </code></pre></div>
 <h3 id="check-the-result">Check the result<a class="headerlink" href="#check-the-result" title="Permanent link">&para;</a></h3>
 <p>A complete default run ends with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>[private-ai-platform-kit] smoke test completed for ollama
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>[private-ai-platform-kit] RAG smoke completed for agent-lab
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>[private-ai-platform-kit] quickstart completed
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>[agentworkflows] smoke test completed for ollama
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>[agentworkflows] RAG smoke completed for agent-lab
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>[agentworkflows] quickstart completed
 </code></pre></div>
 <p>These lines confirm that the gateway reached Ollama and that the RAG service returned results.
 They do not validate a customer identity provider, GPU runtime, production storage, backup, or
 external observability system.</p>
 <p>The lab gateway is a ClusterIP service behind a default-deny network policy. Reach it from
 your workstation with a port-forward:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>inference<span class="w"> </span>port-forward<span class="w"> </span>svc/inference-gateway-inference-gateway<span class="w"> </span><span class="m">18080</span>:8080
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://127.0.0.1:18080/v1/models<span class="w"> </span>-H<span class="w"> </span><span class="s1">'X-API-Key: local-development-only'</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>inference<span class="w"> </span>port-forward<span class="w"> </span>svc/inference-gateway-inference-gateway<span class="w"> </span><span class="m">18080</span>:8080
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://127.0.0.1:18080/v1/models<span class="w"> </span>-H<span class="w"> </span><span class="s1">'X-API-Key: local-development-only'</span>
 </code></pre></div>
 <p>Then run the hardened agent workspace demo and any focused checks you need:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>make<span class="w"> </span>agent-sandbox-demo
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>make<span class="w"> </span>status
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>make<span class="w"> </span>trace-smoke
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>make<span class="w"> </span>tenant-smoke
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>make<span class="w"> </span>agent-smoke
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>make<span class="w"> </span>agent-sandbox-smoke
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>make<span class="w"> </span>agent-sandbox-demo
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>make<span class="w"> </span>status
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>make<span class="w"> </span>trace-smoke
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>make<span class="w"> </span>tenant-smoke
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>make<span class="w"> </span>agent-smoke
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>make<span class="w"> </span>agent-sandbox-smoke
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <h3 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h3>
 <p>Docker must be reachable with <code>docker info</code>. If cluster creation stopped partway through,
@@ -1970,18 +2092,18 @@ remove the cluster with <code>make local-down</code> before retrying.</p>
 <p>The default node image is set in <code>scripts/local-up.sh</code> and
 <code>deploy/clusters/local/kind-config.yaml</code>. Docker hosts using cgroup v1 automatically fall back
 to <code>kindest/node:v1.31.4</code>. To select a node image explicitly:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nv">LOCAL_KIND_NODE_IMAGE</span><span class="o">=</span>kindest/node:v1.31.4<span class="w"> </span>make<span class="w"> </span>quickstart
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nv">LOCAL_KIND_NODE_IMAGE</span><span class="o">=</span>kindest/node:v1.31.4<span class="w"> </span>make<span class="w"> </span>quickstart
 </code></pre></div>
 <p>If host port <code>8080</code> is taken, reserve another one for the cluster:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nv">LOCAL_GATEWAY_HOST_PORT</span><span class="o">=</span><span class="m">18081</span><span class="w"> </span>make<span class="w"> </span>quickstart
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nv">LOCAL_GATEWAY_HOST_PORT</span><span class="o">=</span><span class="m">18081</span><span class="w"> </span>make<span class="w"> </span>quickstart
 </code></pre></div>
 <p>The smoke scripts use temporary local port-forwards. Override <code>LOCAL_PORT</code> for an individual
 smoke command if its default port is occupied.</p>
 <p>For model-pull progress:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>ollama<span class="w"> </span>logs<span class="w"> </span>statefulset/ollama
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>ollama<span class="w"> </span>logs<span class="w"> </span>statefulset/ollama
 </code></pre></div>
 <h3 id="remove-the-lab">Remove the lab<a class="headerlink" href="#remove-the-lab" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>make<span class="w"> </span>local-down
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>make<span class="w"> </span>local-down
 </code></pre></div>
 <p>This deletes the <code>kind</code> cluster. It does not remove downloaded tools, Docker images, or caches.
 <code>make clean-all</code> removes repository-local tool environments and generated files; Docker cleanup

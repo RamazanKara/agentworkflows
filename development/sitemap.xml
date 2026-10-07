@@ -1,343 +1,343 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/agent-sandbox-integration/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/agent-sandbox-integration/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/ai-governance-crosswalk/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/ai-governance-crosswalk/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/architecture/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/architecture/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/benchmarks-and-evals/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/benchmarks-and-evals/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/capacity-sizing/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/capacity-sizing/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/client-examples/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/client-examples/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/cost-model/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/cost-model/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/customer-handoff-example/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/customer-handoff-example/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/decision-guide/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/decision-guide/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/development/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/development/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/distribution/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/distribution/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/faq/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/faq/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/feature-inventory/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/feature-inventory/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/getting-started/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/getting-started/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/glossary/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/glossary/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/gpu-coding-agent-tenant-example/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/gpu-coding-agent-tenant-example/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/model-selection/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/model-selection/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/owasp-llm-top-10-mapping/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/owasp-llm-top-10-mapping/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/production-readiness/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/production-readiness/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/proof/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/proof/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/quickstart/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/quickstart/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/references/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/references/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/regulated-offline-tenant-example/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/regulated-offline-tenant-example/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/release-verification/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/release-verification/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/repository-map/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/repository-map/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/scope-and-non-goals/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/scope-and-non-goals/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/security-overview/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/security-overview/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/threat-model/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/threat-model/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/version-matrix/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/version-matrix/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0001-gitops-with-argo-cd/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0001-gitops-with-argo-cd/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0002-policy-engine-kyverno/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0002-policy-engine-kyverno/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0003-inference-runtime-vllm-and-ollama/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0003-inference-runtime-vllm-and-ollama/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0004-vector-store-qdrant/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0004-vector-store-qdrant/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0005-openai-compatible-gateway/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0005-openai-compatible-gateway/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0006-tamper-evident-audit-hash-chain/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0006-tamper-evident-audit-hash-chain/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0007-local-first-kind-then-customer-cluster/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0007-local-first-kind-then-customer-cluster/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0008-helm-packaging-and-oci/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0008-helm-packaging-and-oci/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0009-adopt-agent-sandbox-workspace-runtime/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0009-adopt-agent-sandbox-workspace-runtime/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0010-agent-sandbox-standard-runtime/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0010-agent-sandbox-standard-runtime/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0011-async-files-and-batch-api/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0011-async-files-and-batch-api/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0012-stateful-responses-store/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0012-stateful-responses-store/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0013-bundled-admin-console/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0013-bundled-admin-console/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0014-agent-action-receipts/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0014-agent-action-receipts/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0015-shared-service-modules/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0015-shared-service-modules/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/adr/0016-batch-claims-checkpoints-and-replay-identity/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/adr/0016-batch-claims-checkpoints-and-replay-identity/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/agent-workspaces/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/agent-workspaces/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/api-access/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/api-access/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/audit-chain/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/audit-chain/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/batch-api/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/batch-api/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/budget-controls/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/budget-controls/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/chaos-drills/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/chaos-drills/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/chat-ui/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/chat-ui/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/data-retention/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/data-retention/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/disaster-recovery/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/disaster-recovery/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/egress-governance/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/egress-governance/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/evaluation-harness/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/evaluation-harness/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/evidence-pack/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/evidence-pack/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/external-managed-stores/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/external-managed-stores/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/failure-modes/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/failure-modes/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/gpu-capacity/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/gpu-capacity/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/guardrails/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/guardrails/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/incident-inference-runtime/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/incident-inference-runtime/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/incident-response/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/incident-response/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/model-drift-monitoring/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/model-drift-monitoring/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/model-governance/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/model-governance/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/model-provenance/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/model-provenance/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/oidc-jwks-rotation/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/oidc-jwks-rotation/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/policy-blocked-deploy/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/policy-blocked-deploy/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/qdrant-migration/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/qdrant-migration/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/quota-chargeback/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/quota-chargeback/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/rag-service/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/rag-service/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/release-gates/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/release-gates/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/repository-settings/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/repository-settings/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/restore-drill/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/restore-drill/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/runtime-threat-detection/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/runtime-threat-detection/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/scorecard-triage/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/scorecard-triage/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/slo-error-budget/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/slo-error-budget/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/tenant-labs/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/tenant-labs/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/traceability-sandbox/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/traceability-sandbox/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/upgrade/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/upgrade/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/validation-toolchain/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/validation-toolchain/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
     <url>
-         <loc>https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/vector-rag/</loc>
+         <loc>https://ramazankara.github.io/agentworkflows/development/runbooks/vector-rag/</loc>
          <lastmod>2026-10-07</lastmod>
     </url>
 </urlset>

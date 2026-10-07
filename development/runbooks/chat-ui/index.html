@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Self-hosted LLM gateway, retrieval, and coding-agent workspaces for Kubernetes, with a verifiable record of every model call and agent action.">
+        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/private-ai-platform-kit/development/runbooks/chat-ui/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/runbooks/chat-ui/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>End-User Chat UI Runbook (Open WebUI) - Private AI Platform Kit</title>
+        <title>End-User Chat UI Runbook (Open WebUI) - AgentWorkflows</title>
       
     
     
@@ -92,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Private AI Platform Kit" class="md-header__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href="../.." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -106,7 +106,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Private AI Platform Kit
+            AgentWorkflows
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
-    RamazanKara/private-ai-platform-kit
+    RamazanKara/agentworkflows
   </div>
 </a>
       </div>
@@ -348,23 +348,23 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Private AI Platform Kit" class="md-nav__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href="../.." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    Private AI Platform Kit
+    AgentWorkflows
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
-    RamazanKara/private-ai-platform-kit
+    RamazanKara/agentworkflows
   </div>
 </a>
     </div>
@@ -1669,7 +1669,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/private-ai-platform-kit/edit/main/runbooks/chat-ui.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/runbooks/chat-ui.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1682,13 +1682,13 @@
 humans can type into a chat box, while every request still flows through the gateway's auth,
 model allowlist, admission, budget, and audit controls.</p>
 <h2 id="scope-and-non-goal">Scope and non-goal<a class="headerlink" href="#scope-and-non-goal" title="Permanent link">&para;</a></h2>
-<p>The kit does not bundle an end-user chat product. It does ship an opt-in read-only operator
+<p>The platform does not bundle an end-user chat product. It does ship an opt-in read-only operator
 console at <code>/console</code>; a human-facing multi-user chat UI remains an <strong>operator-owned example, not a
 supported component</strong>, consistent with the explicit
-<a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/scope-and-non-goals.md">product boundary</a>.
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md">product boundary</a>.
 <a href="https://github.com/open-webui/open-webui">Open WebUI</a> is the common choice and is used here, but
-any OpenAI-compatible chat frontend works. The kit ships a copy-adapt manifest at
-<a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/examples/open-webui.yaml"><code>docs/examples/open-webui.yaml</code></a>
+any OpenAI-compatible chat frontend works. The platform ships a copy-adapt manifest at
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/examples/open-webui.yaml"><code>docs/examples/open-webui.yaml</code></a>
 (Deployment + Service + NetworkPolicy + config) and this runbook; you own the image pinning,
 storage, ingress/TLS, and identity wiring.</p>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
@@ -1749,7 +1749,7 @@ fail-closed (a UI request cannot spoof another sandbox via the header, because t
 it to the record's sandbox) and needs no extra proxy.</p>
 <h2 id="3-human-auth-sso-into-the-ui">3. Human auth: SSO into the UI<a class="headerlink" href="#3-human-auth-sso-into-the-ui" title="Permanent link">&para;</a></h2>
 <p>The UI itself must sit behind HTTPS and human SSO: the gateway's API key authenticates the <em>UI
-process</em>, not the <em>person</em> using it. The kit does not run an IdP; wire Open WebUI's OIDC to the
+process</em>, not the <em>person</em> using it. The platform does not run an IdP; wire Open WebUI's OIDC to the
 <strong>same IdP</strong> you already use for the platform dashboards.</p>
 <ul>
 <li>The Grafana and Argo CD SSO templates in <a href="../api-access/">API access</a> (OIDC via Keycloak/Auth0/
@@ -1758,8 +1758,8 @@ process</em>, not the <em>person</em> using it. The kit does not run an IdP; wir
   map an IdP group to admin.</li>
 <li>Open WebUI reads standard OIDC settings (issuer/client-id/client-secret/scopes) from its
   environment; set them the same way and put an Ingress with TLS in front. Human SSO for this UI
-  is an operator responsibility outside the kit's data-plane security boundary
-  (<a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/security-overview.md">Security overview</a>).</li>
+  is an operator responsibility outside AgentWorkflows' data-plane security boundary
+  (<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md">Security overview</a>).</li>
 </ul>
 <p>If you also enable gateway JWT auth with a tenant claim, option (c) above can forward the user's
 verified token straight through and let the gateway derive the sandbox from the JWT tenant claim,

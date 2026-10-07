@@ -31,7 +31,7 @@
 
   <!-- kind cluster boundary -->
   <rect x="30" y="98" width="1120" height="580" rx="16" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="3 6"/>
-  <text x="48" y="124" class="muted small">kind cluster: private-ai-platform-kit</text>
+  <text x="48" y="124" class="muted small">kind cluster: agentworkflows</text>
 
   <!-- Users -->
   <rect x="50" y="150" width="210" height="330" rx="14" class="panel soft"/>

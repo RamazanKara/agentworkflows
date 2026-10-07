@@ -6,11 +6,11 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Self-hosted LLM gateway, retrieval, and coding-agent workspaces for Kubernetes, with a verifiable record of every model call and agent action.">
+        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/private-ai-platform-kit/development/adr/0006-tamper-evident-audit-hash-chain/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/adr/0006-tamper-evident-audit-hash-chain/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>0006. Tamper-evident audit hash chain - Private AI Platform Kit</title>
+        <title>0006. Tamper-evident audit hash chain - AgentWorkflows</title>
       
     
     
@@ -92,7 +92,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Private AI Platform Kit" class="md-header__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href="../.." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -106,7 +106,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            Private AI Platform Kit
+            AgentWorkflows
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -194,13 +194,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
-    RamazanKara/private-ai-platform-kit
+    RamazanKara/agentworkflows
   </div>
 </a>
       </div>
@@ -348,23 +348,23 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Private AI Platform Kit" class="md-nav__button md-logo" aria-label="Private AI Platform Kit" data-md-component="logo">
+    <a href="../.." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    Private AI Platform Kit
+    AgentWorkflows
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/RamazanKara/private-ai-platform-kit" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
-    RamazanKara/private-ai-platform-kit
+    RamazanKara/agentworkflows
   </div>
 </a>
     </div>
@@ -1625,7 +1625,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/private-ai-platform-kit/edit/main/docs/adr/0006-tamper-evident-audit-hash-chain.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/adr/0006-tamper-evident-audit-hash-chain.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1650,7 +1650,7 @@ must not weaken the existing redaction guarantees.</p>
 <p>Link each audit event into a per-process tamper-evident SHA-256 hash chain.</p>
 <ul>
 <li>Construction, in
-  <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/src/inference-gateway/app/main.py"><code>src/inference-gateway/app/main.py</code></a>: <code>h_0 =
+  <a href="https://github.com/RamazanKara/agentworkflows/blob/main/src/inference-gateway/app/main.py"><code>src/inference-gateway/app/main.py</code></a>: <code>h_0 =
   SHA-256("genesis")</code>; for each record <code>h_i = SHA-256(h_{i-1} || canonical(record_i))</code>, where
   <code>canonical</code> is <code>json.dumps(..., sort_keys=True, separators=(",", ":"))</code>. The function
   <code>_chain_audit_event</code> computes the record hash over the event before adding the chain fields, then
@@ -1672,10 +1672,8 @@ must not weaken the existing redaction guarantees.</p>
   v0.20.0 lack the field; the verifier falls back to genesis-restart segmentation for them.
   Per-process chains (a new one per replica and per restart) are expected, and verification is
   per chain.</li>
-<li>The live construction matches the auditor/verifier reference in
-  <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/paper/evidence-model/audit_chain.py"><code>paper/evidence-model/audit_chain.py</code></a> byte for byte
-  (same genesis, same canonical form, same <code>SHA-256(prev || canonical(record))</code>), so the same tooling
-  that an auditor runs verifies the live log.</li>
+<li>The operator verifier in <code>scripts/audit-verify.py</code> checks the live record hashes using
+  the same genesis, canonical form, and <code>SHA-256(prev || canonical(record))</code>.</li>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1687,13 +1685,12 @@ must not weaken the existing redaction guarantees.</p>
   re-chaining is caught by the internal consistency check, while a full re-chain is caught only by an
   anchor mismatch against an externally committed head.</li>
 <li>As of v0.20.0 the operator tooling for both checks ships in-tree:
-  <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/audit-verify.py"><code>scripts/audit-verify.py</code></a>
+  <a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/audit-verify.py"><code>scripts/audit-verify.py</code></a>
   (<code>make audit-verify</code>) reads a gateway JSONL log, deduplicates the double-logged copies, groups by
-  <code>chain_id</code>, and <strong>verifies the gateway's embedded <code>prev_hash</code>/<code>record_hash</code></strong> (unlike the
-  <code>paper/evidence-model</code> reference, which re-chains from genesis for its evidence demo); it is
+  <code>chain_id</code>, and <strong>verifies the gateway's embedded <code>prev_hash</code>/<code>record_hash</code></strong>; it is
   stdlib-only so an auditor runs it offline, has a <code>--selftest</code> wired into <code>make validate</code>, and
   exits non-zero on any break.
-  <a href="https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/audit-anchor.py"><code>scripts/audit-anchor.py</code></a>
+  <a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/audit-anchor.py"><code>scripts/audit-anchor.py</code></a>
   (<code>make audit-anchor</code>) emits the per-chain head (<code>{chain_id, count, last record_hash}</code>); a later
   <code>audit-verify --anchor &lt;file&gt;</code> flags a shrunk chain (rollback), a changed head (re-chain), or a
   missing chain. A CronJob example that anchors the head into a ConfigMap and the SIEM-forwarding
@@ -1703,7 +1700,7 @@ must not weaken the existing redaction guarantees.</p>
   replicas there are multiple chains, and a process restart starts a new chain from genesis.
   Verification therefore operates per-chain, and cross-replica/long-horizon integrity depends on the
   log shipping and anchoring the operator puts around it.</li>
-<li>Keeping the gateway implementation and the paper/evidence verifier in lockstep is a maintenance
+<li>Keeping the gateway implementation and the operator verifier in lockstep is a maintenance
   obligation: the canonical form and genesis must not drift, or the auditor tooling stops matching.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
@@ -1713,7 +1710,7 @@ must not weaken the existing redaction guarantees.</p>
 <li><strong>External managed audit log / SIEM with immutability guarantees.</strong> Strong for retention and
   cross-service correlation, and operators are encouraged to ship these events into one. Rejected as
   the in-service mechanism because it adds an infrastructure dependency to get a property a few lines
-  of SHA-256 provide locally, and it does not let the bundled <code>paper/evidence-model</code> tooling verify
+  of SHA-256 provide locally, and it does not let the bundled operator tooling verify
   integrity offline.</li>
 <li><strong>Merkle tree per batch.</strong> Gives efficient inclusion proofs at scale. Rejected as over-engineered
   for a per-request, per-process event stream; a linear hash chain (Crosby &amp; Wallach style, as the
