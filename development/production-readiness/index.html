@@ -421,6 +421,8 @@
       
         
       
+        
+      
     
     
     
@@ -481,6 +483,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -2051,7 +2081,7 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 <tbody>
 <tr>
 <td>Budget / response-cache Redis (<code>deploy/charts/budget-redis</code>)</td>
-<td>1 replica, no persistence, <code>minAvailable: 0</code> (a restart drops counters; an outage fails budgets closed)</td>
+<td>1 replica, AOF and PVC persistence, <code>minAvailable: 0</code> (disk loss can lose counters; an outage fails budgets closed)</td>
 <td>Point <code>budget.redisUrl</code> / <code>responseCache.redisUrl</code> at an external <strong>managed Redis, Redis Sentinel failover pair, or Redis Cluster</strong> and stop syncing the bundled Application. Budgets stay fail-closed on outage; the rate limiter can opt into fail-open (<code>rateLimit.failOpen</code>) as an availability-vs-enforcement tradeoff</td>
 </tr>
 <tr>

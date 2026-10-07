@@ -421,6 +421,8 @@
       
         
       
+        
+      
     
     
     
@@ -481,6 +483,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -1815,6 +1845,12 @@ The repository has a local profile, a customer-cluster profile, and tenant onboa
 <td>First-party API and policy point</td>
 </tr>
 <tr>
+<td>Temporal, PostgreSQL, workflow worker</td>
+<td><code>workflows</code></td>
+<td><code>sdk/python</code>, <code>deploy/charts/workflows</code></td>
+<td>Official Temporal chart; governed activities, durable history, and approval signals</td>
+</tr>
+<tr>
 <td>RAG service</td>
 <td><code>rag</code></td>
 <td><code>src/rag-service</code>, <code>deploy/charts/rag-service</code></td>
@@ -1899,7 +1935,10 @@ The repository has a local profile, a customer-cluster profile, and tenant onboa
 <p>The profile name does not make the cluster air-gapped. It does not control image pulls, model downloads, Argo CD, the gateway namespace, the identity provider, or other cluster services. An offline deployment also needs private registries and mirrors, preloaded model weights, internal Git and identity endpoints, and cluster-wide egress controls.</p>
 <p>Use the <a href="../regulated-offline-tenant-example/">restricted-egress tenant walkthrough</a> to render and inspect the manifests.</p>
 <h2 id="stateful-and-failure-boundaries">Stateful and failure boundaries<a class="headerlink" href="#stateful-and-failure-boundaries" title="Permanent link">&para;</a></h2>
-<p>The bundled Redis, Qdrant, and Loki configurations are development/reference footprints. Redis has no persistence in the bundled chart, Qdrant is a single instance, and the local observability stack is not an HA logging service. The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> describes the handoff path.</p>
+<p>The bundled Redis, PostgreSQL, Qdrant, and Loki configurations are development/reference footprints. Redis uses AOF and a PVC for run budgets; Temporal has dedicated PostgreSQL storage. Both are single instances. Qdrant is a single instance, and the local observability stack is not an HA logging service. The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> describes the handoff path.</p>
+<p>Workflow state lives in Temporal, not in the gateway. The SDK schedules model/tool activities
+on the existing governed gateway path; Redis holds accounting only. See <a href="../workflows/">workflows</a>
+for replay, ambiguous in-flight calls, idempotent tools, and approval trust boundaries.</p>
 <p>The gateway audit chain is per process/replica. Export records and store chain-head anchors outside the gateway if the log is intended as tamper or rollback evidence.</p>
 
 

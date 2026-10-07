@@ -415,6 +415,8 @@
       
         
       
+        
+      
     
     
     
@@ -475,6 +477,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -1759,9 +1789,9 @@ dev/reference default, not a production topology:</p>
 <tbody>
 <tr>
 <td>Budget / response-cache Redis</td>
-<td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis"><code>deploy/charts/budget-redis</code></a>, 1 replica, no persistence, <code>podDisruptionBudget.minAvailable: 0</code></td>
+<td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis"><code>deploy/charts/budget-redis</code></a>, 1 replica, AOF and PVC persistence, <code>podDisruptionBudget.minAvailable: 0</code></td>
 <td>Shared per-sandbox budget counters and the optional exact-match response cache</td>
-<td>Yes; a restart drops counters, an outage fails budgets closed (503)</td>
+<td>Yes; no replication or automatic failover, an outage fails budgets closed (503)</td>
 </tr>
 <tr>
 <td>Qdrant vector store</td>

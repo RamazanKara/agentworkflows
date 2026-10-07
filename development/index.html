@@ -510,6 +510,8 @@
       
         
       
+        
+      
     
     
     
@@ -570,6 +572,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -1734,9 +1764,10 @@
 OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini. Route calls through one
 gateway, bind credentials to teams, enforce model policies and budgets, and inspect receipts.
 Ollama and vLLM are optional self-hosted model backends.</p>
-<p><strong>v0.1.0 delivers Milestone 1: governed cloud providers.</strong> Durable agent workflows, human
-approvals, and broader team administration are planned. The current Batch and Responses
-APIs do not constitute a durable workflow engine. This repository is not yet a hosted service.</p>
+<p><strong>This checkout extends v0.1.0 with Milestone 2: durable workflows on Temporal.</strong> Model and tool activities
+share gateway governance, run budgets, and receipts; human approval signals and worker
+recovery are included. Start with the <a href="workflows/">workflow walkthrough</a>. This repository
+is not yet a hosted service.</p>
 <h2 id="start-in-ten-minutes">Start in ten minutes<a class="headerlink" href="#start-in-ten-minutes" title="Permanent link">&para;</a></h2>
 <p>With Docker Compose, Git, Make, Bash, Python 3.12+, and curl installed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
@@ -1761,6 +1792,10 @@ real provider configuration, and actionable troubleshooting.</p>
 <tr>
 <td>Call cloud models and configure fallback</td>
 <td><a href="client-examples/">Client examples</a></td>
+</tr>
+<tr>
+<td>Run durable workflows with human approvals</td>
+<td><a href="workflows/">Workflow walkthrough</a></td>
 </tr>
 <tr>
 <td>Set team credentials, scopes, and budgets</td>

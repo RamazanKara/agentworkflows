@@ -421,6 +421,8 @@
       
         
       
+        
+      
     
     
     
@@ -481,6 +483,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -1852,7 +1882,7 @@
 <p>Then add payload, HNSW index, segment, compaction, snapshot, and growth headroom. Measure memory and query latency after loading representative data. The customer values currently request a 100 GiB PVC; that number alone says nothing about supported document count.</p>
 <p>Embedding dimensions in the RAG values must match the selected embedding model and collection. Changing them is a collection migration, not an in-place tuning change.</p>
 <h2 id="redis-object-storage-and-logs">Redis, object storage, and logs<a class="headerlink" href="#redis-object-storage-and-logs" title="Permanent link">&para;</a></h2>
-<p>The bundled budget Redis is a single, non-persistent development store. It is also used by optional gateway state. A restart can lose counters or cached/stateful data depending on the enabled features. Use the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> before relying on it for a multi-replica customer deployment.</p>
+<p>The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. Disk loss or deleting the PVC can still lose counters and optional state. Use the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> before relying on it for a multi-replica customer deployment.</p>
 <p>Files and asynchronous batches require an object store when enabled. Include upload limits, object retention, failed-batch output, and cleanup in the storage estimate.</p>
 <p>Prometheus, logs, and audit exports grow with traffic and retention. The customer profile expects the operator to supply those systems.</p>
 <h2 id="validation-loop">Validation loop<a class="headerlink" href="#validation-loop" title="Permanent link">&para;</a></h2>

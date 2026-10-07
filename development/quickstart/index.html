@@ -16,7 +16,7 @@
         <link rel="prev" href="..">
       
       
-        <link rel="next" href="../client-examples/">
+        <link rel="next" href="../workflows/">
       
       
         
@@ -423,6 +423,8 @@
       
         
       
+        
+      
     
     
     
@@ -668,6 +670,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1903,8 +1933,8 @@
 
 <h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
 <p>Try AgentWorkflows in ten minutes: discover models, send a governed call, inspect your
-team's usage, and verify a receipt. Version 0.1.0 implements governed cloud providers;
-durable workflows and human approvals are planned.</p>
+team's usage, run a durable workflow, and verify its receipts. This checkout adds Temporal
+execution and human approvals to the governed cloud gateway.</p>
 <h2 id="docker-compose">Docker Compose<a class="headerlink" href="#docker-compose" title="Permanent link">&para;</a></h2>
 <p>Install Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. Run from a Bash shell
 (Linux, macOS, or WSL). No GPU, model download, provider key, or paid inference is needed.</p>
@@ -1917,12 +1947,18 @@ durable workflows and human approvals are planned.</p>
 <code>127.0.0.1:8090</code>. The bundled <code>cloud-fake</code> service supplies synthetic responses and prices
 for all five provider protocols. This trial tests routing, streaming, budgets, secret
 blocking, confidential-data refusal, reported agent actions, and audit verification.
-It does not validate a live provider account or measure model quality.</p>
+It also kills and replaces a Temporal worker during a research workflow, then verifies
+approval, publication, and no repeated completed model calls. It does not validate a live
+provider account or measure model quality.</p>
 <p>The walkthrough ends with <code>All checks passed</code> after deliberately editing a receipt and
 checking that verification rejects it. The original log is <code>.out/compose/gateway-audit.jsonl</code>.
 Open <a href="http://127.0.0.1:8080/console">http://127.0.0.1:8080/console</a> and enter <code>local-development-only</code> to inspect health,
 models, usage, and budgets. This public demo key is bound to sandbox <code>demo</code>; do not reuse it
 outside the trial.</p>
+<p>Temporal history and approval signals are visible at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a>. Follow the
+<a href="../workflows/">workflow guide</a> to start a run, read its draft, approve or reject it, and
+inspect its token/cost budget. Temporal uses its own PostgreSQL; run budgets use persistent
+Redis. Both survive ordinary container restarts.</p>
 <h2 id="make-your-first-call">Make your first call<a class="headerlink" href="#make-your-first-call" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./sdk/python
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>local-development-only
@@ -2014,7 +2050,7 @@ agent workspaces are available through the Kubernetes lab below.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>compose-down
 </code></pre></div>
 <p>Compose does not install Kubernetes network policies, hardened workspaces, GitOps, or
-Redis-backed shared state. The local lab below is for evaluating those optional components.</p>
+production availability controls. The local lab below evaluates Kubernetes deployment.</p>
 <h2 id="local-kubernetes-lab">Local Kubernetes lab<a class="headerlink" href="#local-kubernetes-lab" title="Permanent link">&para;</a></h2>
 <p>The lab creates a single-node <code>kind</code> cluster, builds the two first-party images, deploys the
 platform through Argo CD, and runs gateway and RAG smoke tests against <code>qwen2.5:0.5b</code> on Ollama.
@@ -2164,13 +2200,13 @@ customer-deployment commands.</p>
         
         
           
-          <a href="../client-examples/" class="md-footer__link md-footer__link--next" aria-label="Next: Call the API">
+          <a href="../workflows/" class="md-footer__link md-footer__link--next" aria-label="Next: Durable workflows">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Call the API
+                Durable workflows
               </div>
             </div>
             <div class="md-footer__button md-icon">

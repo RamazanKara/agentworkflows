@@ -421,6 +421,8 @@
       
         
       
+        
+      
     
     
     
@@ -481,6 +483,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -1758,13 +1788,14 @@
 
 
 <h1 id="scope-and-non-goals">Scope and non-goals<a class="headerlink" href="#scope-and-non-goals" title="Permanent link">&para;</a></h1>
-<p>This page defines the boundary of release <code>v0.1.0</code>. For per-feature defaults, use the <a href="../feature-inventory/">feature inventory</a>.</p>
-<p>AgentWorkflows is cloud-first. Durable agent workflows and human approvals are planned;
-0.1.0 provides the governed gateway foundation and optional self-hosted components.</p>
+<p>This page defines the current checkout's boundary. For per-feature defaults, use the <a href="../feature-inventory/">feature inventory</a>.</p>
+<p>AgentWorkflows is cloud-first. Temporal provides durable execution and approval signals;
+the gateway governs model/tool activities and per-run budgets. Self-hosted models remain optional.</p>
 <h2 id="in-scope">In scope<a class="headerlink" href="#in-scope" title="Permanent link">&para;</a></h2>
 <p>The repository contains and tests:</p>
 <ul>
 <li>the inference gateway and RAG service under <code>src/</code>;</li>
+<li>the Temporal workflow SDK and example under <code>sdk/python/</code>, with Compose and Helm/GitOps deployment;</li>
 <li>Helm charts for those services, Ollama, vLLM, Redis, Qdrant, and agent workspaces;</li>
 <li>local and customer Argo CD application manifests;</li>
 <li>Kubernetes policy, tenant templates, model catalog records, eval definitions, and SLO inputs;</li>

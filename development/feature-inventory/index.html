@@ -421,6 +421,8 @@
       
         
       
+        
+      
     
     
     
@@ -481,6 +483,34 @@
     
   
     Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows
   
 
     
@@ -1603,11 +1633,11 @@
 
 
 <h1 id="feature-inventory">Feature inventory<a class="headerlink" href="#feature-inventory" title="Permanent link">&para;</a></h1>
-<p>This is the release-level source of truth for what <code>v0.1.0</code> implements, what is enabled by
+<p>This is the source of truth for what the current checkout implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.</p>
-<p>Durable workflow execution and human approvals are planned, not shipped in 0.1.0.</p>
+<p>Milestone 2 adds <a href="../workflows/">durable workflows and approval signals</a> through Temporal.</p>
 <table>
 <thead>
 <tr>
@@ -1618,6 +1648,30 @@ configured.</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>Durable workflows</td>
+<td>Shipped</td>
+<td>Compose on; Helm/GitOps chart</td>
+<td>Temporal with dedicated Postgres; worker-SIGKILL recovery smoke</td>
+</tr>
+<tr>
+<td>Governed tool execution</td>
+<td>Shipped</td>
+<td>Deny unless configured in team policy</td>
+<td>Fixed URLs, DLP, budget reservations, idempotency keys, run/step receipts</td>
+</tr>
+<tr>
+<td>Workflow token/cost budgets</td>
+<td>Shipped</td>
+<td>10,000 tokens / $5 per run in SDK</td>
+<td>Immutable team-scoped Redis counters; unknown attempts retain reservations</td>
+</tr>
+<tr>
+<td>Human approvals</td>
+<td>Shipped</td>
+<td>Signal + query in example</td>
+<td>Durable wait with expiry; verified approver identity and production Temporal authorization remain operator-owned</td>
+</tr>
 <tr>
 <td>OpenAI chat completions</td>
 <td>Shipped</td>
