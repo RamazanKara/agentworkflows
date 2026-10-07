@@ -1,0 +1,8 @@
+# Opt in explicitly; the default stack never reads a host cloud credential.
+services:
+  inference-gateway:
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in your shell before selecting the OpenAI quickstart}
+      ALLOWED_MODELS: demo-openai
+    volumes:
+      - ./openai-model-routing.yaml:/etc/agentworkflows/model-routing.yaml:ro

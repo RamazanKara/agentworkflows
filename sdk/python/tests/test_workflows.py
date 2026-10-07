@@ -5,18 +5,21 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 from agentworkflows.activities import GatewayActivities
+from agentworkflows.examples.code_review import CodeReviewWorkflow
 from agentworkflows.examples.research import ResearchWorkflow
+from agentworkflows.examples.support_triage import SupportTriageWorkflow
 from agentworkflows.workflows import Budget, Call, WorkflowGateway
 from temporalio.exceptions import ApplicationError
 from temporalio.testing import ActivityEnvironment
 from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
 
-def test_example_loads_in_temporal_sandbox():
+@pytest.mark.parametrize("workflow_class", [ResearchWorkflow, SupportTriageWorkflow, CodeReviewWorkflow])
+def test_example_loads_in_temporal_sandbox(workflow_class):
     from temporalio.workflow import _Definition
 
     async def validate():
-        SandboxedWorkflowRunner().prepare_workflow(_Definition.must_from_class(ResearchWorkflow))
+        SandboxedWorkflowRunner().prepare_workflow(_Definition.must_from_class(workflow_class))
 
     asyncio.run(validate())
 
@@ -86,3 +89,52 @@ def test_review_update_accepts_one_waiting_decision():
     assert workflow.review(False, "verified-reviewer") is True
     assert workflow.review(True, "another-reviewer") is False
     assert workflow.reviewer == "verified-reviewer" and workflow.decision is False
+
+
+def test_text_uses_governed_activity_and_gateway_default(monkeypatch):
+    execute = AsyncMock(return_value={"choices": [{"message": {"content": "answer"}}]})
+    monkeypatch.setattr("agentworkflows.workflows.workflow.execute_activity", execute)
+    assert asyncio.run(WorkflowGateway(Budget(300, 0.5)).text("hello")) == "answer"
+    call = execute.call_args.args[1]
+    assert call.kind == "model" and call.budget == Budget(300, 0.5)
+    assert call.payload == {"messages": [{"role": "user", "content": "hello"}], "max_tokens": 512}
+
+
+@pytest.mark.parametrize("approved", [True, False])
+def test_research_publishes_only_after_review(monkeypatch, approved):
+    from types import SimpleNamespace
+
+    from agentworkflows.examples.research import ResearchRequest
+
+    instance = ResearchWorkflow()
+    tool = AsyncMock(return_value="fixture")
+    monkeypatch.setattr(WorkflowGateway, "tool", tool)
+    monkeypatch.setattr(WorkflowGateway, "text", AsyncMock(return_value="draft"))
+    monkeypatch.setattr("agentworkflows.workflows.workflow.info", lambda: SimpleNamespace(run_id="run"))
+
+    async def review(condition, *, timeout):
+        assert instance.stage == "awaiting_approval" and instance.draft == "draft"
+        assert tool.await_count == 1
+        assert timeout.days == 7 and not condition()
+        assert instance.review(approved, "reviewer")
+        assert condition()
+
+    monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", review)
+    result = asyncio.run(instance.run(ResearchRequest("topic")))
+    assert result["status"] == ("published" if approved else "rejected")
+    assert tool.await_count == (2 if approved else 1)
+
+
+def test_approval_timeout_is_actionable_and_not_retryable(monkeypatch):
+    monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", AsyncMock(side_effect=TimeoutError))
+    with pytest.raises(ApplicationError, match="start a new review") as exc:
+        asyncio.run(ResearchWorkflow().approval("draft"))
+    assert exc.value.non_retryable
+
+
+def test_worker_requires_key_before_connecting(monkeypatch):
+    from agentworkflows.worker import run_worker
+
+    monkeypatch.delenv("AGENTWORKFLOWS_API_KEY", raising=False)
+    with pytest.raises(SystemExit, match="demo-worker"):
+        run_worker([ResearchWorkflow])

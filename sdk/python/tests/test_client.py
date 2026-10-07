@@ -27,6 +27,19 @@ def _record_sleeps(monkeypatch, client):
     return sleeps
 
 
+def test_validation_error_reports_fields_without_echoing_input():
+    request = httpx.Request("POST", "http://gateway/v1/workflow-runs")
+    response = httpx.Response(
+        422,
+        request=request,
+        json={"detail": [{"loc": ["body", "input"], "msg": "invalid", "input": "private-input"}]},
+    )
+    with pytest.raises(GatewayError) as error:
+        agentworkflows._raise_for_status(response)
+    assert "body.input" in str(error.value) and "--help" in str(error.value)
+    assert "private-input" not in str(error.value)
+
+
 def test_retry_honors_retry_after_header(monkeypatch):
     calls = []
 

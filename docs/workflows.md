@@ -7,49 +7,20 @@ the gateway; each worker uses one team's bound gateway key.
 
 ## Try research → draft → approval → publish
 
-From the checkout, with Docker Compose, Bash, Make, and Python 3.12+ installed:
+Follow the [Quickstart](quickstart.md) for a complete fake or real-cloud run with human
+approval and verified receipts. It includes Bash and Windows commands, SDK installation,
+scaffolding, and cleanup. Use [templates](templates.md) to edit research, support triage,
+or code review and run your own worker.
 
-```bash
-make compose-up
-python -m pip install ./sdk/python
-export AGENTWORKFLOWS_API_KEY=demo-builder
-agentworkflows team
-run=$(agentworkflows runs start --input '{"topic":"How should our team evaluate AI agents?"}')
-RUN_ID=$(echo "$run" | python -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')
-agentworkflows runs inspect "$RUN_ID"
-agentworkflows runs list
-```
-
-The included worker retrieves sources with the `research` tool, asks a cloud model to
-summarize them, drafts a briefing, and waits for approval. Repeat `inspect` until it shows
-`awaiting_approval`, then read the draft. Open <http://localhost:8233> to inspect Temporal
-history, activities, failures, and signals. Approve the exact run you reviewed:
-
-```bash
-AGENTWORKFLOWS_API_KEY=demo-approver agentworkflows runs approve "$RUN_ID"
-agentworkflows runs inspect "$RUN_ID"
-curl -s http://localhost:8080/v1/workflow-runs/$RUN_ID \
-  -H "Authorization: Bearer $AGENTWORKFLOWS_API_KEY"
-```
-
-Use `approve --reject` to finish without publishing. Approval expires after seven days.
+`approve --reject` finishes without publishing. Approval expires after seven days.
 The API records the authenticated key name or verified JWT subject; clients cannot supply
-a reviewer name. A Temporal update accepts only one decision for the waiting draft.
-Early or conflicting decisions return `409 approval_not_waiting`. Retrying the same identity's
+a reviewer name. A Temporal update accepts one decision for the waiting draft. Early or
+conflicting decisions return `409 approval_not_waiting`. Retrying the same identity's
 decision is idempotent, including after a lost response. Run IDs identify exact executions.
 
-The demo uses local cloud-protocol and tool fixtures. Its drafting request deliberately
-fails on OpenAI and falls back to Anthropic; the publication is synthetic. No real account,
-external publication, or paid model call is used. To use real cloud models, configure an
-[approved route and prices](model-selection.md#cloud-routes-milestone-1), replace the tool
-URLs below, and set `model` in the run's JSON input to your approved model ID.
-
-Run `make compose-smoke` for the automated end-to-end proof: it waits for the draft, kills
-the worker with SIGKILL while approval is waiting, starts a replacement, approves through
-the authenticated API, and verifies publication plus exactly two completed model-call receipts.
-It also checks roles, team isolation, timelines, shared spend, cancellation, and retry.
-Evidence is under `.out/compose/`. `make compose-down` stops the trial and deletes its data;
-use `docker compose -f deploy/compose/compose.yaml stop` to retain history and budgets.
+The fake research draft deliberately falls back from OpenAI to Anthropic. Both tools are
+local fixtures. `make compose-smoke` additionally kills and replaces the worker while
+approval waits, then verifies no repeated completed model calls. See [local evaluation](local-evaluation.md).
 
 ## Web console
 
@@ -193,7 +164,7 @@ The Python `GatewayClient` exposes `team`, `start_run`, `runs`, `run`, `cancel_r
 `retry_run`, and `approve_run` with the same semantics.
 Custom workflows expose a `status` query returning `stage` for progress and, when they
 support approvals, a `review(approved, reviewer)` update returning whether the waiting
-decision was accepted. The research example implements both.
+decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.
 
 ## Operate the service
 
@@ -243,42 +214,34 @@ from agentworkflows.workflows import Budget, WorkflowGateway
 @workflow.defn
 class Briefing:
     @workflow.run
-    async def run(self, topic: str) -> dict:
+    async def run(self, topic: str) -> str:
         gateway = WorkflowGateway(Budget(token_limit=4000, cost_limit_usd=2.0))
         sources = await gateway.tool("research", {"query": topic})
-        return await gateway.model(
-            [{"role": "user", "content": f"Summarize with citations: {sources}"}],
+        return await gateway.text(
+            f"Summarize with citations: {sources}",
             model="demo-openai",
             max_tokens=512,
         )
 ```
 
-Register the workflow and the provided activity on a native Temporal worker:
+Run it from a separate `worker.py` entry point (keep network I/O outside workflow modules):
 
 ```python
-import asyncio
-import os
-from temporalio.client import Client
-from temporalio.worker import Worker
-from agentworkflows.activities import GatewayActivities
+from agentworkflows.worker import run_worker
+from workflow import Briefing
 
-async def serve():
-    client = await Client.connect("localhost:7233", namespace="default")
-    activities = GatewayActivities("http://localhost:8080", os.environ["AGENTWORKFLOWS_API_KEY"])
-    async with Worker(client, task_queue="research-team-workflows", workflows=[Briefing],
-                      activities=[activities.call], max_concurrent_activities=2,
-                      max_concurrent_workflow_tasks=2):
-        await asyncio.Event().wait()
-
-asyncio.run(serve())
+if __name__ == "__main__":
+    run_worker([Briefing])
 ```
 
-Register `Briefing` in the team workflow policy, then start with
-`agentworkflows runs start Briefing --input '"your topic"' --project briefing`. The
-[complete research example](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/research.py)
-also demonstrates `@workflow.signal`, `@workflow.query`, `wait_condition`, and an execution
-timeout. Cancel runs with Temporal's client or UI; cancellation stops scheduling subsequent
-steps but cannot undo a tool action already sent.
+Set `AGENTWORKFLOWS_TEAM=research-team`, its worker gateway key, and the gateway/Temporal
+addresses. Register `Briefing` in the team workflow policy, then start with
+`agentworkflows runs start Briefing --input '"your topic"' --project briefing`.
+Use `ApprovalWorkflow` and `await self.approval(draft)` for the standard reviewed-draft
+flow. The [template guide](templates.md) shows the complete code and how to replace a worker.
+Native Temporal workers and `GatewayActivities.call` remain available for advanced agent
+registrations. Cancel through `agentworkflows runs cancel RUN_ID`; cancellation cannot
+undo a tool action already sent.
 
 Defaults are five activity attempts with exponential backoff (1 second initially, capped
 at 30 seconds), three minutes per attempt, and fifteen minutes including retries and queue

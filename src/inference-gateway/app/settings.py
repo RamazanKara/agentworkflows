@@ -495,7 +495,7 @@ class Settings:
         if self.allowed_models and model not in self.allowed_models:
             raise ModelPolicyError(
                 "model_not_allowed",
-                f"model '{model}' is not in ALLOWED_MODELS",
+                f"model '{model}' is not in ALLOWED_MODELS; choose an approved ID from agentworkflows models",
             )
         return model
 
@@ -709,7 +709,8 @@ class Settings:
             if pattern is not None:
                 raise AdmissionPolicyError(
                     "prompt_secret_detected",
-                    f"input appears to contain credential or PII material matched by {pattern}",
+                    f"input appears to contain credential or PII material matched by {pattern}; "
+                    "remove that material from the prompt or tool arguments and retry",
                 )
         term = self.matched_blocked_term(text)
         if term is not None:

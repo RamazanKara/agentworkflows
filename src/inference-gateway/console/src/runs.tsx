@@ -64,7 +64,7 @@ export function StartRun({ session }: { session: Session }) {
   const [project, setProject] = useState(session.team.projects[0] || '');
   const [topic, setTopic] = useState('How should our team evaluate AI agents?');
   const [model, setModel] = useState('');
-  const [input, setInput] = useState('{}');
+  const [input, setInput] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
@@ -72,6 +72,9 @@ export function StartRun({ session }: { session: Session }) {
   const selected = workflow || (names.includes('ResearchWorkflow') ? 'ResearchWorkflow' : names[0]);
   const policy = policies.data?.workflows[selected];
   const chosenModel = model || policy?.allowedModels[0] || '';
+  const suggestedInput = selected === 'SupportTriageWorkflow'
+    ? '{"ticket":"I cannot sign in after resetting my password."}'
+    : selected === 'CodeReviewWorkflow' ? JSON.stringify({ diff: '- return user.is_admin\n+ return True' }) : '{}';
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
     <ErrorMessage message={error || policies.error}/>
@@ -81,7 +84,7 @@ export function StartRun({ session }: { session: Session }) {
         try {
           let value: unknown;
           if (selected === 'ResearchWorkflow') value = { topic, ...(chosenModel ? { model: chosenModel } : {}) };
-          else { try { value = JSON.parse(input); } catch { throw new Error('Workflow input must be valid JSON. For example: {"topic":"Evaluate agents"}.'); } }
+          else { try { value = JSON.parse(input ?? suggestedInput); } catch { throw new Error(`Workflow input must be valid JSON. For example: ${suggestedInput}.`); } }
           const body = { workflow: selected, project, input: value };
           const fingerprint = JSON.stringify(body);
           if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
@@ -90,13 +93,13 @@ export function StartRun({ session }: { session: Session }) {
         } catch (error) { setError((error as Error).message); }
         finally { setBusy(false); }
       }}>
-        <label>Workflow<select value={selected} onChange={e => { setWorkflow(e.target.value); setModel(''); }}>{names.map(n => <option key={n}>{n}</option>)}</select></label>
+        <label>Workflow<select value={selected} onChange={e => { setWorkflow(e.target.value); setModel(''); setInput(null); }}>{names.map(n => <option key={n}>{n}</option>)}</select></label>
         <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
         {selected === 'ResearchWorkflow' ? <>
           <label>Research topic<textarea required value={topic} onChange={e => setTopic(e.target.value)} rows={3}/></label>
           {policy?.allowedModels.length ? <label>Model<select value={chosenModel} onChange={e => setModel(e.target.value)}>{policy.allowedModels.map(m => <option key={m}>{m}</option>)}</select></label> : <p>The example uses its worker’s default model.</p>}
           <p className="callout">Research → draft → approval → publish. An approver or admin reviews the draft before the publish tool runs.</p>
-        </> : <label>Workflow input (JSON)<textarea required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></label>}
+        </> : <label>Workflow input (JSON)<textarea required spellCheck={false} value={input ?? suggestedInput} onChange={e => setInput(e.target.value)} rows={6}/></label>}
         {policy && <p className="muted">Policy ceiling: {number(policy.tokenLimit)} tokens · {money(policy.costLimitUsd)} per run. The workflow can use a lower limit.</p>}
         <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to runs</a></div>
         {error && request.current && <p className="muted">Retry here with unchanged input to reuse request ID <code>{request.current.id}</code>.</p>}
@@ -186,6 +189,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
       {run.progress?.message && <p className="callout">{run.progress.message}</p>}
       {run.status === 'running' && <p className="muted">Updates every 5 seconds while this run is active.</p>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
+      {run.result !== undefined && <section className="panel"><h2>Result</h2><pre>{typeof run.result === 'string' ? run.result : JSON.stringify(run.result, null, 2)}</pre></section>}
       <section><div className="section-heading"><h2>Step timeline</h2><span className="muted">Provider, usage, and evidence</span></div>
         {!run.timeline?.length ? <Empty title="Waiting for the first step"><p>Refresh in a moment. If the run stays queued, check its team worker and Temporal task queue.</p></Empty> :
           <ol className="timeline">{run.timeline.map((step, i) => <li key={step.receipt_id}>

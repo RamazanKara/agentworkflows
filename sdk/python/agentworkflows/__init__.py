@@ -132,6 +132,13 @@ def _error_detail(response: httpx.Response) -> dict[str, Any]:
             return value
         if isinstance(value, str):
             return {"message": value}
+        if key == "detail" and isinstance(value, list):
+            fields = [".".join(str(part) for part in item.get("loc", [])) for item in value if isinstance(item, dict)]
+            return {
+                "reason": "invalid_request",
+                "message": f"Invalid request fields: {', '.join(fields)}. "
+                "Correct these fields using the command's --help or the API reference and retry.",
+            }
     return {}
 
 
