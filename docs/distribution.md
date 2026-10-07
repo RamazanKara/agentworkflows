@@ -1,7 +1,7 @@
 # Distribution and discovery
 
 Release CI is configured to publish one tested source revision through four channels.
-Version 0.2.0 starts this product; commands using release assets apply after its tag is published. Images are promoted
+Commands below target v0.3.0; release assets become available after publication. Images are promoted
 from the already-tested commit digest, Helm charts embed those immutable image digests, the
 Python client is built separately and attached to the GitHub release, and versioned
 documentation is retained by `mike`.
@@ -11,9 +11,9 @@ documentation is retained by `mike`.
 The umbrella chart is the recommended public entry point:
 
 ```bash
-helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.2.0
+helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.3.0
 helm install agentworkflows oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows \
-  --version 0.2.0 --namespace ai-platform --create-namespace
+  --version 0.3.0 --namespace ai-platform --create-namespace
 ```
 
 Release CI publishes `artifacthub-repo.yml` to the chart repository's special
@@ -25,7 +25,7 @@ release. This external registration cannot be completed from repository code.
 ## Python package
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.2.0/agentworkflows-0.2.0-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.3.0/agentworkflows-0.3.0-py3-none-any.whl
 ```
 
 The wheel, source archive, and `sdk-checksums.txt` are attached to each GitHub release.

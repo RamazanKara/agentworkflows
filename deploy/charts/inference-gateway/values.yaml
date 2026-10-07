@@ -8,7 +8,7 @@ workflows:
 image:
   repository: ghcr.io/ramazankara/agentworkflows/inference-gateway
   # First-party image: release CI pins the published digest (set image.digest) after build.
-  tag: "v0.2.0"
+  tag: "v0.3.0"
   pullPolicy: IfNotPresent
 
 runtime:

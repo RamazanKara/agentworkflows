@@ -2,8 +2,9 @@
 
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
-Version 0.2.0 is the first public release and includes milestones 1–5 plus the guided
-quickstart and project templates. Production hardening evidence is tracked below.
+Version 0.3.0 adds automatic starts, team notifications, and a five-template gallery with
+guided documentation. The v0.2.0 tag already includes milestones 1–7, including the
+quickstart and production hardening; milestones 8–9 are delivered in v0.3.0.
 
 ## Milestone 1: governed cloud providers — delivered in 0.2.0
 
@@ -50,10 +51,13 @@ and workers are trusted operator surfaces; end users use the authenticated gatew
 - Existing team auth, verified identity switching, filtered runs, receipt timelines, and approvals.
 - First-run walkthrough, admin provider/budget configuration guidance, and team/provider/workflow costs.
 - Responsive, keyboard-accessible pages and headless browser checks in the Compose walkthrough.
+
+## Milestone 6: guided onboarding — delivered in 0.2.0
+
 - Guided Bash and Windows PowerShell quickstart and editable research, support-triage,
   and code-review templates through `agentworkflows init`.
 
-## Milestone 6: production hardening and broader coverage
+## Milestone 7: production hardening — delivered in 0.2.0
 
 - Versioned gateway Redis state and Temporal SQL schemas; previous-release upgrade drills.
 - Quiesced backups of gateway state, Temporal history/visibility and receipts, with verified restore drills.
@@ -61,11 +65,8 @@ and workers are trusted operator surfaces; end users use the authenticated gatew
 - Explicitly opted-in, environment-keyed provider acceptance, disabled in CI; concurrent workflow accounting tests.
 
 See [production readiness](docs/production-readiness.md) for commands and evidence limits.
-Deployment-specific identity, networking, storage failover and retention remain operator
-validation work. Broader instrumented integrations and measurable receipt coverage remain
-ongoing: the audit chain cannot prove unreported tool activity or direct calls outside the gateway.
 
-## Milestone 7: automatic starts and team notifications
+## Milestone 8: automatic starts and team notifications — delivered in 0.3.0
 
 - Per-workflow UTC cron triggers backed by Temporal Schedules, and signed inbound
   JSON webhooks with replay protection and the existing team/project governance.
@@ -77,6 +78,23 @@ ongoing: the audit chain cannot prove unreported tool activity or direct calls o
 
 See [triggers and notifications](docs/workflows.md#triggers-and-notifications) for
 signing, delivery guarantees, configuration and the smoke proof.
+
+## Milestone 9: workflow templates and documentation — delivered in 0.3.0
+
+- Five editable team templates: PR review with human approval, support triage, weekly
+  reports, incident summaries, and document Q&A with citations.
+- Credential-free Compose walkthroughs with inputs, expected results, and adaptation guidance.
+- Docs landing page and a side-by-side comparison with LiteLLM plus Temporal.
+
+See the [template gallery](docs/templates.md) and [decision guide](docs/decision-guide.md).
+
+## Next: deployment validation and integration coverage
+
+Deployment-specific identity, networking, storage failover and retention remain operator
+validation work, together with live-provider acceptance and recovery evidence on real data.
+Broader instrumented integrations and measurable receipt coverage remain ongoing: the audit
+chain cannot prove unreported tool activity or direct calls outside the gateway. Fixture
+walkthroughs demonstrate governance and execution, not real-provider or model-quality acceptance.
 
 ## Usability and release standard
 
