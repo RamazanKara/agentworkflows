@@ -129,6 +129,9 @@ test('template inputs are ready to run and completed results are readable', asyn
     ...policies.workflows,
     SupportTriageWorkflow: policies.workflows.ResearchWorkflow,
     CodeReviewWorkflow: policies.workflows.ResearchWorkflow,
+    WeeklyReportWorkflow: policies.workflows.ResearchWorkflow,
+    IncidentSummaryWorkflow: policies.workflows.ResearchWorkflow,
+    DocumentQAWorkflow: policies.workflows.ResearchWorkflow,
   } } }));
   await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({
     status: 'completed', progress: undefined, result: 'Priority: high. Suggested owner: account support.',
@@ -136,8 +139,13 @@ test('template inputs are ready to run and completed results are readable', asyn
   await login(page);
   await expect(page).toHaveTitle(/AgentWorkflows/);
   await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption('CodeReviewWorkflow');
-  expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty('diff');
+  for (const [workflow, field] of [
+    ['CodeReviewWorkflow', 'diff'], ['WeeklyReportWorkflow', 'period'],
+    ['IncidentSummaryWorkflow', 'incident_id'], ['DocumentQAWorkflow', 'question'],
+  ]) {
+    await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption(workflow);
+    expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty(field);
+  }
   await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption('SupportTriageWorkflow');
   expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty('ticket');
   const request = page.waitForRequest(r => r.url().endsWith('/v1/workflow-runs') && r.method() === 'POST');

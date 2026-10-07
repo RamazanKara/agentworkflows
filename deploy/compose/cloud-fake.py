@@ -78,6 +78,61 @@ class Handler(BaseHTTPRequestHandler):
                 result = self.publications.setdefault(
                     key, {"url": f"https://example.org/briefings/{key}", "published": True}
                 )
+            elif tool == "report_source":
+                snapshots = {
+                    "changes": "Two changes shipped: session reset fix and audit export. Owner: engineering.",
+                    "support": (
+                        "12 tickets opened, 9 closed; 5 concern sign-in. Owner: support. Backlog baseline missing."
+                    ),
+                    "incidents": (
+                        "INC-1042: elevated sign-in errors for 15 minutes. Rollback mitigated it; cause unconfirmed."
+                    ),
+                }
+                source = body["source"]
+                result = {
+                    "id": source,
+                    "url": f"https://example.test/weekly/{source}",
+                    "period": body["period"],
+                    "text": "Synthetic snapshot: " + snapshots[source],
+                }
+            elif tool == "incident_logs":
+                result = {
+                    "incident_id": body["incident_id"],
+                    "source": "https://example.test/incidents/INC-1042/logs",
+                    "synthetic": True,
+                    "lines": [
+                        "L1 2026-10-01T09:00:00Z auth deployment v42 started",
+                        "L2 2026-10-01T09:05:00Z auth sign_in 503 rate=18%",
+                        "L3 2026-10-01T09:12:00Z auth rollback to v41 started",
+                        "L4 2026-10-01T09:20:00Z auth sign_in 503 rate=0.2% baseline restored",
+                    ],
+                }
+            elif tool == "search_documents":
+                query = body["query"].lower()
+                result = []
+                if "approv" in query:
+                    result.append(
+                        {
+                            "id": "S1",
+                            "title": "Approval handbook (fixture)",
+                            "url": "https://example.test/handbook/approvals",
+                            "text": (
+                                "Admins and approvers can decide a waiting draft. Approval expires after seven days."
+                            ),
+                        }
+                    )
+                if "receipt" in query:
+                    result.append(
+                        {
+                            "id": "S2",
+                            "title": "Receipt handbook (fixture)",
+                            "url": "https://example.test/handbook/receipts",
+                            "text": (
+                                "Receipts detect changes within retained hash chains. "
+                                "External anchors detect truncation."
+                            ),
+                        }
+                    )
             else:
                 self.send(404, b"{}")
                 return
@@ -96,6 +151,41 @@ class Handler(BaseHTTPRequestHandler):
             self.send(401, b'{"error":"fixture authentication failed"}')
             return
         text = f"Local fake for {provider}; no cloud request was made."
+        prompt = body.get("messages", [{}])[-1].get("content", "")
+        if isinstance(prompt, str):
+            if prompt.startswith("Review this PR diff"):
+                text = (
+                    "Synthetic PR review: HIGH auth.py:10 returns True for every user, bypassing the admin check. "
+                    "Restore user.is_admin and test admin/non-admin access. Confirm caller context before approval."
+                )
+            elif prompt.startswith("Triage this support ticket"):
+                text = (
+                    "Synthetic triage: category=access; priority=high; owner=identity-support. "
+                    "Draft reply: We are investigating sign-in after password resets. Please share the error "
+                    "message and time, without passwords or reset links. No customer reply has been sent."
+                )
+            elif prompt.startswith("Write a weekly team report from these source snapshots"):
+                text = (
+                    "Synthetic weekly report: session reset fix and audit export shipped [changes] "
+                    "(https://example.test/weekly/changes). Support opened 12 and closed 9 tickets, including "
+                    "5 sign-in reports [support] (https://example.test/weekly/support). INC-1042 was mitigated "
+                    "by rollback [incidents] (https://example.test/weekly/incidents). Engineering should verify "
+                    "the cause; support should establish the backlog baseline."
+                )
+            elif prompt.startswith("Summarize this incident log export"):
+                text = (
+                    "Synthetic incident summary: deployment at 09:00 UTC [L1]; 18% sign-in 503s at 09:05 [L2]; "
+                    "rollback at 09:12 [L3]; baseline restored at 09:20 [L4]. The deployment is a hypothesis, "
+                    "not a confirmed root cause. Follow up on affected-user count and the v42 failure mechanism."
+                )
+            elif prompt.startswith("Answer the question using only the supplied document excerpts"):
+                sources = json.loads(prompt.split("\n", 1)[1])["sources"]
+                text = json.dumps(
+                    {
+                        "answer": "Synthetic answer: " + " ".join(f"{s['text']} [{s['id']}]" for s in sources),
+                        "citation_ids": [s["id"] for s in sources],
+                    }
+                )
         streaming = body.get("stream") or self.path.endswith("converse-stream")
         usage = {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7}
         if provider == "anthropic":

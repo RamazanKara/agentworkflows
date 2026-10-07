@@ -1,12 +1,18 @@
 # Documentation
 
 Read the [published site](https://ramazankara.github.io/agentworkflows/) or follow the same
-four sections here. Existing guide and runbook URLs remain valid.
+navigation here. Existing guide and runbook URLs remain valid.
 
 ## Quickstart
 
 [Install, scaffold, approve, and verify your first workflow](quickstart.md), with the
 built-in fake or an explicit real OpenAI route. Includes Windows and Bash commands.
+
+## Templates
+
+[Workflow template gallery](templates.md): PR review with approval, support triage,
+weekly reports, incident summaries, and document Q&A with citations. Each has a text
+walkthrough that runs against the Compose fakes, plus instructions for adapting it.
 
 ## Concepts
 
@@ -16,7 +22,7 @@ built-in fake or an explicit real OpenAI route. Includes Windows and Bash comman
 
 ## Guides
 
-[Create and edit a project](templates.md), [workflows and team setup](workflows.md),
+[Workflows and team setup](workflows.md),
 [client examples](client-examples.md), [local evaluation and Kubernetes](local-evaluation.md),
 [operator tasks](getting-started.md), [customer handoff](customer-handoff-example.md),
 [developer workflow](development.md), and [runbooks](../runbooks/README.md).

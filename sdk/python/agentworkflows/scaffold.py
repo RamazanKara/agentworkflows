@@ -12,12 +12,22 @@ TEMPLATES = {
     "support-triage": (
         "support_triage",
         "SupportTriageWorkflow",
-        {"ticket": "I cannot sign in after resetting my password. Can you help?"},
+        {"ticket": "SUP-104: Three teammates cannot sign in after password resets. Started 09:10 UTC. Can you help?"},
     ),
     "code-review": (
         "code_review",
         "CodeReviewWorkflow",
-        {"diff": "- return user.is_admin\n+ return True"},
+        {
+            "diff": "diff --git a/auth.py b/auth.py\n--- a/auth.py\n+++ b/auth.py\n"
+            "@@ -10 +10 @@\n- return user.is_admin\n+ return True"
+        },
+    ),
+    "weekly-report": ("weekly_report", "WeeklyReportWorkflow", {"period": "2026-09-28/2026-10-04"}),
+    "incident-summary": ("incident_summary", "IncidentSummaryWorkflow", {"incident_id": "INC-1042"}),
+    "document-qa": (
+        "document_qa",
+        "DocumentQAWorkflow",
+        {"question": "Who can approve a workflow, and when does approval expire?"},
     ),
 }
 
@@ -62,10 +72,13 @@ agentworkflows runs list
 ```
 
 Set `AGENTWORKFLOWS_API_KEY=local-development-only` in your shell for the local demo.
-Use the printed run UUID with `agentworkflows runs inspect RUN_ID`. Research and code review
-wait at `awaiting_approval`: read the draft, then `agentworkflows runs approve RUN_ID`
-(or add `--reject`). Support triage completes with a suggested reply; it sends nothing.
-Inspect again for the result, budget, and timeline with receipt IDs.
+Use the printed run UUID with `agentworkflows runs inspect RUN_ID`; repeat while it is running.
+Research and code review wait at `awaiting_approval`: read `progress.draft`, then run
+`agentworkflows runs approve RUN_ID` (or add `--reject`). The other templates complete
+without approval. Inspect again for the result, budget, and timeline with receipt IDs.
+All model and tool outputs in the trial are synthetic; no PR, customer reply, or report is sent.
+Follow the [{template} walkthrough](https://ramazankara.github.io/agentworkflows/latest/templates/#{template})
+for expected output, input fields, and the steps to adapt this template to your team.
 
 ## Run your edited workflow
 

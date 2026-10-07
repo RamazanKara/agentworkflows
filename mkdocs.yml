@@ -92,6 +92,7 @@ validation:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - Templates: templates.md
   - Concepts:
       - Workflow essentials: concepts.md
       - Is it a fit?: decision-guide.md
@@ -105,7 +106,6 @@ nav:
       - Scope and non-goals: scope-and-non-goals.md
       - Architecture decisions: adr/README.md
   - Guides:
-      - Create a project: templates.md
       - Durable workflows and teams: workflows.md
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md

@@ -4,6 +4,7 @@ import agentworkflows
 import httpx
 import pytest
 from agentworkflows.cli import main
+from agentworkflows.scaffold import TEMPLATES
 
 
 def test_help_needs_no_credentials(monkeypatch, capsys):
@@ -169,11 +170,9 @@ def test_ambiguous_start_keeps_request_id_for_retry(monkeypatch, capsys):
     assert "--request-id" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("template", ["research", "support-triage", "code-review"])
+@pytest.mark.parametrize("template", TEMPLATES)
 def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, template):
     import ast
-
-    from agentworkflows.scaffold import TEMPLATES
 
     monkeypatch.delenv("AGENTWORKFLOWS_API_KEY", raising=False)
     target = tmp_path / "project with spaces"
@@ -184,6 +183,7 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     ast.parse((target / "worker.py").read_text())
     assert json.loads((target / "input.json").read_text()) == TEMPLATES[template][2]
     assert "worker.py" in (target / "README.md").read_text()
+    assert f"templates/#{template}" in (target / "README.md").read_text()
     assert "agentworkflows==" in (target / "requirements.txt").read_text()
     assert "--input '@input.json'" in capsys.readouterr().out
     before = {p.name: p.read_bytes() for p in target.iterdir()}

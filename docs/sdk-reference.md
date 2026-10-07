@@ -11,6 +11,9 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `init [DIRECTORY] --template research` | Scaffold a new or empty directory; defaults to current directory and research |
 | `init DIRECTORY --template support-triage` | Scaffold ticket classification and a suggested reply |
 | `init DIRECTORY --template code-review` | Scaffold diff review with human approval |
+| `init DIRECTORY --template weekly-report` | Combine changes, support and incident sources into a weekly report |
+| `init DIRECTORY --template incident-summary` | Summarize an incident log export with evidence references |
+| `init DIRECTORY --template document-qa` | Answer from retrieved excerpts with checked citation IDs |
 | `models` | Discover model IDs available to your credential |
 | `chat "PROMPT" --model MODEL` | Governed model call; omit model for the gateway default |
 | `team` | Your team, role, projects, and configured providers |
@@ -21,11 +24,16 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `runs approve RUN_ID` | Approve as your authenticated identity; `--reject` rejects instead |
 | `runs cancel RUN_ID` | Request cancellation; cannot undo already-sent tool actions |
 | `runs retry RUN_ID` | Start a new execution after failure/cancellation; steps may run again |
+| `triggers list` | Inspect configured schedules, webhook endpoints and pause state |
+| `triggers pause WORKFLOW NAME` / `triggers resume WORKFLOW NAME` | Pause or resume a configured trigger |
 
 `runs start` also accepts `--project` and `--request-id UUID`. If a start response is lost,
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
 Machine-readable command output stays on stdout; actionable errors go to stderr.
+
+The [template gallery](templates.md) includes input fields, expected results and adaptation
+steps for every starter. Install from this checkout to get its current template set.
 
 ## Environment
 

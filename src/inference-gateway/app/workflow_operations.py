@@ -167,9 +167,14 @@ async def start_run(request: Request, body: StartRun) -> dict[str, Any]:
             403,
             detail={"reason": "workflow_not_allowed", "message": "Choose a workflow from GET /v1/workflow-policies."},
         )
-    field = {"ResearchWorkflow": "topic", "SupportTriageWorkflow": "ticket", "CodeReviewWorkflow": "diff"}.get(
-        body.workflow
-    )
+    field = {
+        "ResearchWorkflow": "topic",
+        "SupportTriageWorkflow": "ticket",
+        "CodeReviewWorkflow": "diff",
+        "WeeklyReportWorkflow": "period",
+        "IncidentSummaryWorkflow": "incident_id",
+        "DocumentQAWorkflow": "question",
+    }.get(body.workflow)
     if field:
         value = body.input
         allowed = {field, "model"}

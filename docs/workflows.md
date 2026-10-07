@@ -9,8 +9,8 @@ the gateway; each worker uses one team's bound gateway key.
 
 Follow the [Quickstart](quickstart.md) for a complete fake or real-cloud run with human
 approval and verified receipts. It includes Bash and Windows commands, SDK installation,
-scaffolding, and cleanup. Use [templates](templates.md) to edit research, support triage,
-or code review and run your own worker.
+scaffolding, and cleanup. The [template gallery](templates.md) adds PR review, support triage,
+weekly reports, incident summaries and document Q&A, with instructions for running your edits.
 
 `approve --reject` finishes without publishing. Approval expires after seven days.
 The API records the authenticated key name or verified JWT subject; clients cannot supply

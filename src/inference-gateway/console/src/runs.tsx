@@ -74,7 +74,10 @@ export function StartRun({ session }: { session: Session }) {
   const chosenModel = model || policy?.allowedModels[0] || '';
   const suggestedInput = selected === 'SupportTriageWorkflow'
     ? '{"ticket":"I cannot sign in after resetting my password."}'
-    : selected === 'CodeReviewWorkflow' ? JSON.stringify({ diff: '- return user.is_admin\n+ return True' }) : '{}';
+    : selected === 'CodeReviewWorkflow' ? JSON.stringify({ diff: '- return user.is_admin\n+ return True' })
+    : selected === 'WeeklyReportWorkflow' ? '{"period":"2026-09-28/2026-10-04"}'
+    : selected === 'IncidentSummaryWorkflow' ? '{"incident_id":"INC-1042"}'
+    : selected === 'DocumentQAWorkflow' ? '{"question":"Who can approve a workflow, and when does approval expire?"}' : '{}';
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
     <ErrorMessage message={error || policies.error}/>

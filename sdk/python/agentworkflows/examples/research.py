@@ -51,8 +51,11 @@ async def main() -> None:
     from temporalio.common import WorkflowIDReusePolicy
 
     from agentworkflows.examples.code_review import CodeReviewWorkflow
+    from agentworkflows.examples.document_qa import DocumentQAWorkflow
     from agentworkflows.examples.frameworks import AGENTS, CodeWorkflow, FrameworkWorkflow
+    from agentworkflows.examples.incident_summary import IncidentSummaryWorkflow
     from agentworkflows.examples.support_triage import SupportTriageWorkflow
+    from agentworkflows.examples.weekly_report import WeeklyReportWorkflow
     from agentworkflows.worker import serve
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -76,6 +79,9 @@ async def main() -> None:
                 ResearchWorkflow,
                 SupportTriageWorkflow,
                 CodeReviewWorkflow,
+                WeeklyReportWorkflow,
+                IncidentSummaryWorkflow,
+                DocumentQAWorkflow,
                 FrameworkWorkflow,
                 CodeWorkflow,
                 DailyReportWorkflow,
