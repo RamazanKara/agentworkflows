@@ -1,5 +1,7 @@
 # Quickstart
 
+For Node.js workflows, use the [TypeScript quickstart](quickstart-typescript.md).
+
 Run research → draft → human approval → publication, then inspect its receipts in about
 five minutes. You need **Git, Python 3.12+, and Docker with Compose** already installed.
 Initial image/package downloads can take longer on a slow connection. No GPU, Kubernetes,

@@ -6,7 +6,7 @@
 
 **Run team AI workflows with human approval, budgets, and a traceable record of each step.**
 
-AgentWorkflows combines a Python workflow SDK, model gateway and team web console.
+AgentWorkflows combines Python and TypeScript workflow SDKs, a model gateway and team web console.
 Developers turn agent scripts into durable Temporal jobs; team leads review drafts and
 spend; platform engineers control shared model and tool access. Connect OpenAI, Anthropic,
 Azure OpenAI, AWS Bedrock and Vertex Gemini through one governed API. Self-hosted Ollama
@@ -23,6 +23,9 @@ Follow the [Quickstart](docs/quickstart.md): install the Python SDK, start the l
 stack, scaffold a project, review its draft, approve it, and verify its receipts. It includes
 copy-pasteable Bash and Windows PowerShell commands and an optional real OpenAI route.
 You need Git, Python 3.12+, and Docker Compose; the first image downloads may take longer.
+
+For Node.js, follow the [TypeScript quickstart](docs/quickstart-typescript.md) to run
+PR review with approval and support triage against the same local fakes.
 
 ```sh
 agentworkflows init my-review --template code-review

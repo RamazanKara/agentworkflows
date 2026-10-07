@@ -60,6 +60,7 @@ help:
 		'  make typecheck             Run mypy on both services' \
 		'  make test                  Run tooling, service, and first-party SDK tests' \
 		'  make test-console          Build the web console and run headless Chromium checks' \
+		'  make test-typescript       Install, build, lint, and test the TypeScript SDK (two workers)' \
 		'  make test-scripts          Run repository tooling tests (Python + Git only)' \
 		'  make coverage              Report test coverage with enforced floors' \
 		'  make fuzz                  Mutate security-critical parser inputs' \
@@ -386,6 +387,10 @@ validate-full: python-env
 	REQUIRE_FULL_TOOLCHAIN=1 ./scripts/validate.sh
 
 test: test-scripts test-gateway test-rag test-console
+
+.PHONY: test-typescript
+test-typescript:
+	cd sdk/typescript && npm ci --no-audit --no-fund --maxsockets=2 && npm run build && npm run lint && npm test
 
 .PHONY: console-build test-console
 console-build:

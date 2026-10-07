@@ -92,6 +92,7 @@ validation:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - TypeScript quickstart: quickstart-typescript.md
   - Templates: templates.md
   - Concepts:
       - Workflow essentials: concepts.md
