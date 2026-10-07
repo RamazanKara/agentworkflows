@@ -51,11 +51,56 @@ It also checks roles, team isolation, timelines, shared spend, cancellation, and
 Evidence is under `.out/compose/`. `make compose-down` stops the trial and deletes its data;
 use `docker compose -f deploy/compose/compose.yaml stop` to retain history and budgets.
 
+## Web console
+
+After `make compose-up`, open <http://127.0.0.1:8080/console>:
+
+1. Sign in with `local-development-only` (demo admin). Keep the local fake providers on
+   **Get started**; no cloud key or paid call is needed.
+2. Choose **Run workflow**, keep `ResearchWorkflow` and the suggested topic/model, and
+   select **Start run**. Its detail page refreshes while the workflow is active.
+3. Open **Approvals**, read the draft, then **Approve** or **Reject**. Approval allows
+   the configured publish tool to run; rejection finishes without publishing.
+4. Open the run from **Workflow runs**. Expand **Receipt** and **Step logs** in its timeline
+   to inspect provider/model, usage, cost, routing attempts, and the full redacted receipt.
+5. Open **Costs** for current-window team, provider, and workflow costs. **Providers & budgets**
+   shows admins key presence and limits, with a copyable fragment and links for configuring
+   real providers through the existing reviewed policy and gateway Secret deployment.
+
+Use project, workflow, and status filters to find runs. **Load more** advances through older
+index pages, including pages with no matches. The approvals inbox walks every page of every
+available project. Expired Temporal executions are omitted from lists; direct inspection
+reports that the run is unavailable.
+
+**Add team / identity** verifies another team key or signed JWT before adding it to the
+switcher. Each selection uses that credential's server-verified team, role, and project
+access; a browser header cannot grant membership. Credentials live only in memory and are
+cleared on reload/sign-out. There is no separate password store or membership editor.
+Use `demo-builder`, `demo-approver`, `demo-viewer`, or `demo-other-team` to explore roles.
+
+The gateway image includes the built console; no Node server or extra container runs in
+production. Compose enables it. For a standalone gateway Helm release, set
+`adminConsole.enabled=true`; the umbrella chart uses `inference-gateway.adminConsole.enabled=true`.
+Keep the existing team auth, Redis, workflow worker, TLS ingress, and Temporal settings.
+The same gateway host serves `/console/` and `/v1/`; no cross-origin API setting is needed.
+
+Run `make compose-smoke` for browser checks as well as gateway/worker recovery checks.
+It requires Node.js 24/npm and installs Chromium on first use. Linux hosts missing browser
+libraries can run `cd src/inference-gateway/console && npm ci && npx playwright install --with-deps chromium`.
+CI installs those libraries before validation. Keyboard users can use **Skip to content**,
+standard Tab/Enter navigation, and native disclosure controls. Tables scroll within their
+panels on small screens.
+
+Step logs here are gateway event/routing records, not worker stdout or full Temporal history.
+Receipt hashes must still be checked against the retained audit export and head anchors.
+Provider keys and budget edits remain reviewed deployment configuration; key presence does
+not prove live provider acceptance.
+
 ## Teams, projects, and roles
 
 A **team is the existing sandbox ID**. Projects group and restrict run access. Operators
 review the existing `API_KEY_RECORDS_PATH` and `SANDBOX_POLICY_PATH` files, then recreate
-the gateway. The read-only console shows models and budgets; the CLI controls runs.
+the gateway. The console and CLI use the same authenticated workflow API.
 Managed teams require authentication, `SANDBOX_BUDGET_ENABLED=true`,
 `SANDBOX_BUDGET_BACKEND=redis`, and `AUDIT_LOG_ENABLED=true`; Compose sets these already.
 
@@ -118,12 +163,12 @@ The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
 | `GET /v1/team` | Discover role, projects, providers, and spend limit |
 | `GET /v1/workflow-policies` | Discover approved workflow types and limits |
 | `POST /v1/workflow-runs` | Start with `workflow`, JSON `input`, optional `project` and UUID `request_id` |
-| `GET /v1/workflow-runs?project=briefing&offset=0&limit=20` | Page through project runs |
+| `GET /v1/workflow-runs?project=briefing&offset=0&limit=20&status=awaiting_approval` | Page through project runs; optional `status` and `workflow` filters |
 | `GET /v1/workflow-runs/{run_id}` | Status, draft, budget, step timeline with receipt IDs |
 | `POST /v1/workflow-runs/{run_id}/cancel` | Request cancellation of this exact execution |
 | `POST /v1/workflow-runs/{run_id}/retry` | Start a fresh execution after failure/cancellation |
 | `POST /v1/workflow-runs/{run_id}/approve` | Submit `{"approved":true}` or `false` |
-| `GET /v1/usage` | Current-window team/project usage and provider costs |
+| `GET /v1/usage` | Current-window team/project usage, provider costs, and `spend.workflows` costs |
 
 ```bash
 curl -s http://127.0.0.1:8080/v1/workflow-runs \
@@ -155,6 +200,9 @@ decision was accepted. The research example implements both.
 `agentworkflows usage` aggregates providers and tools for the bound team or project.
 `spend` shows the UTC-aligned cost window, limit, and reserved-plus-spent USD. Its length
 uses `SANDBOX_BUDGET_WINDOW_SECONDS` (default 86400); zero means lifetime accounting.
+Workflow cost rows accumulate from this version onward, in the same window as provider
+costs. They count governed model/tool calls, not run starts, and exclude standalone calls.
+Project-bound credentials see only their project's rows. Earlier windows are not backfilled.
 Token/request budgets retain their existing window semantics. Spend reservations are
 atomic in the existing Redis, covering eligible fallbacks before a call. Managed-team
 calls retry through the caller or Temporal so each attempt has a budget and receipt.

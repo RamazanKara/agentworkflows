@@ -11,6 +11,7 @@ Umbrella chart that installs the full AgentWorkflows stack (inference gateway, R
 | `budget-redis.fullnameOverride` | `budget-redis` |
 | `budget-redis.namespace.create` | `false` |
 | `budget-redis.networkPolicy.enabled` | `false` |
+| `inference-gateway.adminConsole.enabled` | `true` |
 | `inference-gateway.budget.backend` | `redis` |
 | `inference-gateway.budget.redisUrl` | `redis://budget-redis:6379/0` |
 | `inference-gateway.enabled` | `true` |

@@ -64,7 +64,9 @@ The project is not intended to become:
 - a general-purpose identity provider.
 
 Hosted delivery and team administration are product goals, not current capabilities.
-The read-only `/console` is an optional view over health, models, usage, and budget data. It is not a control plane.
+The optional `/console` uses the authenticated workflow API for team runs, approvals, receipts,
+and costs. Admins inspect provider/budget configuration there; membership, provider keys,
+and policy edits remain reviewed deployment configuration. See the [console guide](workflows.md#web-console).
 
 ## Security and compliance boundary
 

@@ -1,6 +1,8 @@
-"""Tests for the opt-in read-only admin console mount (ADR 0013)."""
+"""Tests for the opt-in bundled team console."""
 
 from __future__ import annotations
+
+import re
 
 from app.main import create_app
 from app.settings import Settings
@@ -23,8 +25,16 @@ def test_console_served_when_enabled():
     client = TestClient(create_app(_settings(admin_console_enabled=True)))
     resp = client.get("/console/")
     assert resp.status_code == 200
-    assert "Admin Console" in resp.text
+    assert "AgentWorkflows Console" in resp.text
     assert "text/html" in resp.headers["content-type"]
+    assert resp.headers["cache-control"] == "no-store"
+    assert "frame-ancestors 'none'" in resp.headers["content-security-policy"]
+    assets = re.findall(r'(?:src|href)="(/console/assets/[^"]+)"', resp.text)
+    assert assets
+    for path in assets:
+        asset = client.get(path)
+        assert asset.status_code == 200
+        assert asset.headers["x-content-type-options"] == "nosniff"
 
 
 def test_console_not_mounted_when_disabled():

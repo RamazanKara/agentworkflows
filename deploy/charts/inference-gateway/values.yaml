@@ -229,8 +229,8 @@ responses:
     keyPrefix: agentworkflows:responses
     retentionSeconds: 86400
 
-# Opt-in read-only admin console served by the gateway at /console (ADR 0013). Off by default.
-# It reuses the governed read-only endpoints (usage, budget, models, health).
+# Team console bundled in the gateway image at /console. Uses existing authenticated APIs.
+# Enable alongside managed team policies, Redis accounting, and Temporal workers.
 adminConsole:
   enabled: false
 

@@ -205,4 +205,13 @@ if python3 scripts/audit-verify.py "$OUT/gateway-audit-tampered.jsonl" >"$OUT/ta
 fi
 ok "edit detected: $(head -n1 "$OUT/tampered-verify.txt" | sed -E 's/^chain [^ ]+ //; s/; [0-9]+ record\(s\)$//')"
 
-printf '\n\033[1mAll checks passed.\033[0m Open the read-only console at %s/console\n' "$GATEWAY"
+step "11. Browser: sign in, run a workflow, approve it, and inspect receipts and costs"
+require_cmd npm "Node.js 24 and npm are required for the headless console walkthrough."
+(
+  cd src/inference-gateway/console
+  npm ci --no-audit --no-fund
+  npx playwright install chromium
+  AGENTWORKFLOWS_GATEWAY_URL="$GATEWAY" npm run smoke
+)
+
+printf '\n\033[1mAll checks passed.\033[0m Open the team console at %s/console\n' "$GATEWAY"

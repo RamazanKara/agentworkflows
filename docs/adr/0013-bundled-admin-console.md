@@ -4,6 +4,13 @@
 - Date: 2026-07-04
 - Deciders: Platform maintainer
 
+Milestone 5 update (2026-10-07): the team workflow console supersedes the single-file,
+read-only implementation below. It uses a locked React/Vite build bundled in the same
+gateway image and the same opt-in mount, with no CDN or separate frontend server. Existing
+authenticated APIs enforce roles for mutations. Credentials are now memory-only, cleared
+on reload/sign-out. See the [console guide](../workflows.md#web-console); the original
+decision remains below as historical context.
+
 ## Context
 
 `docs/scope-and-non-goals.md` listed "No admin/usage console UI": the platform shipped the data

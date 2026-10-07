@@ -57,6 +57,12 @@ jobs:
           scripts/install-validation-tools.sh --bin-dir "$HOME/.local/bin"
       - name: Add validation tools to PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6
+        with:
+          node-version: "24"
+      - name: Prepare console browser
+        working-directory: src/inference-gateway/console
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
       - name: Validate
         run: make validate-full
       - name: Quality eval gate (mock runtime)
@@ -577,6 +583,12 @@ jobs:
           scripts/install-validation-tools.sh --bin-dir "$HOME/.local/bin"
       - name: Add validation tools to PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6
+        with:
+          node-version: "24"
+      - name: Prepare console browser
+        working-directory: src/inference-gateway/console
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
       - name: Generate strict proof evidence
         run: |
           set -euo pipefail
@@ -621,6 +633,12 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6
+        with:
+          node-version: "24"
+      - name: Prepare console browser
+        working-directory: src/inference-gateway/console
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
       - name: Start the Compose stack
         run: make compose-up
       - name: Walk the governed request path and verify the audit chain
