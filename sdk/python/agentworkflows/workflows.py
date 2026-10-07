@@ -8,6 +8,7 @@ from typing import Any
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
+from temporalio.exceptions import ApplicationError
 
 
 @dataclass(frozen=True)
@@ -62,15 +63,22 @@ class WorkflowGateway:
             retry_policy=self.retry_policy,
         )
 
-    async def model(self, messages: list[dict[str, Any]], *, model: str, max_tokens: int = 512) -> dict[str, Any]:
+    async def model(
+        self, messages: list[dict[str, Any]], *, model: str | None = None, max_tokens: int = 512
+    ) -> dict[str, Any]:
         return await self._call(
             Call(
                 "model",
-                {"model": model, "messages": messages, "max_tokens": max_tokens},
+                {"messages": messages, "max_tokens": max_tokens, **({"model": model} if model else {})},
                 self.budget,
                 data_classification=self.data_classification,
             )
         )
+
+    async def text(self, prompt: str, *, model: str | None = None, max_tokens: int = 512) -> str:
+        """Return a text answer; omit model to use the gateway's configured default."""
+        reply = await self.model([{"role": "user", "content": prompt}], model=model, max_tokens=max_tokens)
+        return reply["choices"][0]["message"].get("content") or ""
 
     async def tool(self, name: str, arguments: dict[str, Any]) -> Any:
         result = await self._call(Call("tool", {"arguments": arguments}, self.budget, name, self.data_classification))
@@ -91,3 +99,52 @@ class WorkflowGateway:
             retry_policy=RetryPolicy(maximum_attempts=1),
         )
         return str(result["result"])
+
+
+class ApprovalWorkflow:
+    """Inherit in a Temporal workflow to expose a draft to the console and run API.
+
+    Call approval once per run. The gateway supplies the authenticated reviewer;
+    end users must not have direct Temporal access.
+    """
+
+    def __init__(self) -> None:
+        self.stage = "running"
+        self.draft = ""
+        self.decision: bool | None = None
+        self.reviewer = ""
+
+    async def approval(self, draft: str) -> bool:
+        self.draft = draft
+        self.stage = "awaiting_approval"
+        try:
+            await workflow.wait_condition(lambda: self.decision is not None, timeout=timedelta(days=7))
+        except TimeoutError:
+            raise ApplicationError(
+                "Approval expired after seven days; start a new review.", non_retryable=True
+            ) from None
+        self.stage = "approved" if self.decision else "rejected"
+        return bool(self.decision)
+
+    @workflow.signal
+    def approve(self, approved: bool, reviewer: str) -> None:
+        # Early, duplicate, or late decisions must not approve a different draft.
+        if (
+            self.stage == "awaiting_approval"
+            and self.decision is None
+            and isinstance(approved, bool)
+            and reviewer.strip()
+        ):
+            self.decision = approved
+            self.reviewer = reviewer.strip()
+
+    @workflow.query
+    def status(self) -> dict[str, Any]:
+        return {"stage": self.stage, "draft": self.draft, "reviewer": self.reviewer, "run_id": workflow.info().run_id}
+
+    @workflow.update
+    def review(self, approved: bool, reviewer: str) -> bool:
+        if self.stage != "awaiting_approval" or self.decision is not None:
+            return False
+        self.approve(approved, reviewer)
+        return self.decision is not None

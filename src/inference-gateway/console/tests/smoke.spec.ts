@@ -31,6 +31,8 @@ test('Compose first run, approval, receipts, provider budgets, costs and team is
     await page.getByRole('button', { name: 'Refresh', exact: true }).click();
     return page.locator('.run-meta .badge').textContent().catch(() => '');
   }, { timeout: 60000, intervals: [1000, 2000] }).toBe('Completed');
+  await expect(page.getByRole('heading', { name: 'Result', exact: true })).toBeVisible();
+  await expect(page.getByText('"status": "published"', { exact: false })).toBeVisible();
   await page.getByText('Receipt ·', { exact: false }).first().click();
   await expect(page.getByText('"record_hash"', { exact: false }).first()).toBeVisible();
   await page.getByText('Step logs', { exact: true }).first().click();

@@ -5,7 +5,7 @@ spec:
     - sandboxId: demo
       projects: [default, engineering]
       providerCredentials:
-        openai: COMPOSE_PROVIDER_KEY
+        openai: OPENAI_API_KEY
         anthropic: COMPOSE_PROVIDER_KEY
         azure-openai: COMPOSE_PROVIDER_KEY
         bedrock: COMPOSE_PROVIDER_KEY
@@ -30,6 +30,20 @@ spec:
           allowedProviders: [openai, anthropic]
           allowedModels: [demo-openai, demo-anthropic]
           allowedTools: [research, publish]
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
+          tokenLimit: 10000
+          costLimitUsd: 5
+        SupportTriageWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedTools: []
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
+          tokenLimit: 10000
+          costLimitUsd: 5
+        CodeReviewWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedTools: []
           allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
           tokenLimit: 10000
           costLimitUsd: 5

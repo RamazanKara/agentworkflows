@@ -17,73 +17,26 @@ verified approvals, provider keys and shared spend limits, step timelines, and t
 Temporal keeps agent workflows durable across worker failures. Start with the
 [workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
 
-## Try it in ten minutes
+## Your first approved workflow in five minutes
 
-You need Docker with Compose, Git, Make, Bash, Python 3.12+, and curl; browser smoke also
-uses Node.js 24/npm and downloads headless Chromium. The demo uses local
-cloud-protocol fixtures: no cloud account, paid API calls, model download, GPU, or Kubernetes.
+Follow the [Quickstart](docs/quickstart.md): install the Python SDK, start the local fake
+stack, scaffold a project, review its draft, approve it, and verify its receipts. It includes
+copy-pasteable Bash and Windows PowerShell commands and an optional real OpenAI route.
+You need Git, Python 3.12+, and Docker Compose; the first image downloads may take longer.
 
-```bash
-git clone https://github.com/RamazanKara/agentworkflows.git
-cd agentworkflows
-make compose-up
-make compose-smoke
+```sh
+agentworkflows init my-research
+agentworkflows init my-support --template support-triage
+agentworkflows init my-review --template code-review
 ```
 
-The walkthrough sends governed requests through all five cloud adapters, checks streaming
-and fallback, refuses confidential traffic to cloud routes, tests secret blocking, reads
-usage and cost, verifies the audit chain, and detects an edited receipt. Responses and prices
-are synthetic; this demonstrates gateway behavior, not live provider compatibility or model quality.
+The [template guide](docs/templates.md) shows how to run and edit each project. Workflows
+use concise SDK helpers for text calls, human approval, and worker startup. Inspect the
+same runs through the CLI or the bundled web console, with results, costs, and receipts.
 
-It also runs research → draft → approval → publish, kills the worker, and proves recovery
-without repeating completed model calls. Open Temporal at <http://localhost:8233> or
-[start and approve your own run](docs/workflows.md).
-
-The same walkthrough runs OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph agents,
-calls an approved MCP tool, and proves workflow allowlists and tool argument DLP.
-Try [your existing agent as a workflow step](docs/workflows.md#bring-your-agent) next.
-
-Open the team console at <http://127.0.0.1:8080/console>. Sign in with the public demo key
-`local-development-only`, keep the fake providers, and choose **Run workflow**. Review the
-draft in **Approvals**, then open its step receipts and **Costs**. This key is only for the
-local trial. See the [console walkthrough](docs/workflows.md#web-console).
-
-Send your first request:
-
-```bash
-curl http://127.0.0.1:8080/v1/chat/completions \
-  -H 'Authorization: Bearer local-development-only' \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"demo-openai","messages":[{"role":"user","content":"Hello, AgentWorkflows!"}]}'
-```
-
-Use the Python package and CLI from the same checkout:
-
-```bash
-python -m pip install ./sdk/python
-export AGENTWORKFLOWS_API_KEY=local-development-only
-agentworkflows models
-agentworkflows chat "Hello, AgentWorkflows!" --model demo-openai
-agentworkflows team
-agentworkflows runs start --input '{"topic":"How should our team evaluate AI agents?"}'
-agentworkflows runs list
-# Copy the run_id, inspect the draft and timeline, then approve:
-agentworkflows runs inspect RUN_ID
-AGENTWORKFLOWS_API_KEY=demo-approver agentworkflows runs approve RUN_ID
-agentworkflows usage
-```
-
-```python
-from agentworkflows import GatewayClient
-
-with GatewayClient("http://127.0.0.1:8080", api_key="local-development-only") as gateway:
-    reply = gateway.chat([{"role": "user", "content": "Hello!"}], model="demo-openai")
-    print(reply["choices"][0]["message"]["content"])
-```
-
-Stop the trial and remove its volumes with `make compose-down`. The
-[quickstart](docs/quickstart.md) covers real provider configuration, optional self-hosted
-models, troubleshooting, and the Kubernetes lab.
+Read the docs in order: [Quickstart](docs/quickstart.md), [Concepts](docs/concepts.md),
+[Guides](docs/templates.md), and [Reference](docs/sdk-reference.md).
+For the full recovery/security/browser proof, use the [Compose smoke walkthrough](docs/local-evaluation.md).
 
 ## What works today
 

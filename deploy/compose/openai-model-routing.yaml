@@ -1,0 +1,14 @@
+apiVersion: platform.ai/v1alpha1
+kind: ModelRoutingPolicy
+spec:
+  models:
+    - id: demo-openai
+      backend: openai
+      connection:
+        baseUrl: https://api.openai.com/v1
+        model: gpt-4.1-mini
+        credentialEnv: OPENAI_API_KEY
+      # USD per 1,000 tokens; review against your contract before team use.
+      pricing:
+        inputUsdPer1kTokens: 0.0004
+        outputUsdPer1kTokens: 0.0016

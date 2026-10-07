@@ -96,3 +96,45 @@ client runs retry "$cancel_id" >"$OUT/retry-run.json"
 retry_id="$(python3 -c "import json; print(json.load(open('$OUT/retry-run.json'))['run_id'])")"
 client runs cancel "$retry_id"
 echo "[workflow] roles, tenant isolation, timeline, spend, cancellation, and retry verified"
+
+client runs start SupportTriageWorkflow --input '{"ticket":"I cannot sign in after resetting my password."}' >"$OUT/support-run.json"
+support_id="$(python3 -c "import json; print(json.load(open('$OUT/support-run.json'))['run_id'])")"
+for _ in $(seq 1 30); do
+  client runs inspect "$support_id" >"$OUT/support-result.json"
+  status="$(python3 -c "import json; print(json.load(open('$OUT/support-result.json'))['status'])")"
+  [[ "$status" == "completed" ]] && break
+  sleep 1
+done
+[[ "$status" == "completed" ]] || { echo 'Support triage did not complete; inspect worker logs.' >&2; exit 1; }
+
+client runs start CodeReviewWorkflow --input '{"diff":"- return user.is_admin\n+ return True"}' >"$OUT/review-run.json"
+review_id="$(python3 -c "import json; print(json.load(open('$OUT/review-run.json'))['run_id'])")"
+for _ in $(seq 1 30); do
+  client runs inspect "$review_id" >"$OUT/review-result.json"
+  stage="$(python3 -c "import json; print(json.load(open('$OUT/review-result.json')).get('progress',{}).get('stage',''))")"
+  [[ "$stage" == "awaiting_approval" ]] && break
+  sleep 1
+done
+[[ "$stage" == "awaiting_approval" ]] || { echo 'Code review did not reach approval; inspect worker logs.' >&2; exit 1; }
+CLIENT_KEY=demo-approver client runs approve "$review_id" --reject
+for _ in $(seq 1 30); do
+  client runs inspect "$review_id" >"$OUT/review-result.json"
+  status="$(python3 -c "import json; print(json.load(open('$OUT/review-result.json'))['status'])")"
+  [[ "$status" == "completed" ]] && break
+  sleep 1
+done
+[[ "$status" == "completed" ]] || { echo 'Code review did not finish after rejection.' >&2; exit 1; }
+python3 - "$OUT" <<'PY'
+import json
+import pathlib
+import sys
+
+output = pathlib.Path(sys.argv[1])
+support = json.loads((output / "support-result.json").read_text())
+review = json.loads((output / "review-result.json").read_text())
+assert support["result"] and len(support["timeline"]) == 1, support
+assert review["result"]["approved"] is False and review["result"]["reviewer"] == "demo-approver", review
+assert {step["action"] for step in review["timeline"]} == {"model_call", "approval"}, review
+assert all(step["receipt_id"] for row in (support, review) for step in row["timeline"])
+print("[workflow] support triage result and rejected code review are receipted; no external actions")
+PY

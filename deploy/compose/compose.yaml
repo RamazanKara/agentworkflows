@@ -66,6 +66,7 @@ services:
       SANDBOX_POLICY_PATH: /etc/agentworkflows/sandbox-policy.yaml
       VLLM_BASE_URL: http://cloud-fake:8000/local-overload
       COMPOSE_PROVIDER_KEY: compose-fake-only
+      OPENAI_API_KEY: compose-fake-only
       DEFAULT_SANDBOX_ID: demo
       # Every request needs a key. The demo key "local-development-only" is a key record
       # bound to the `demo` sandbox with its own token budget; see key-records.yaml.

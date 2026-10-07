@@ -113,7 +113,12 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
         raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))
         if not raw:
             raise HTTPException(
-                404, detail={"reason": "workflow_run_missing", "message": "No budget exists for this run in your team."}
+                404,
+                detail={
+                    "reason": "workflow_run_missing",
+                    "message": "No run budget exists in your team. Use agentworkflows runs list to find a run; "
+                    "if it has just started, check the team's worker and inspect again.",
+                },
             )
         if team and team.projects:
             project_access(request, raw.get("project"))

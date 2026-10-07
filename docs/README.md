@@ -1,54 +1,34 @@
 # Documentation
 
-The published site is at [ramazankara.github.io/agentworkflows](https://ramazankara.github.io/agentworkflows/). This file is a smaller map for browsing the repository on GitHub.
+Read the [published site](https://ramazankara.github.io/agentworkflows/) or follow the same
+four sections here. Existing guide and runbook URLs remain valid.
 
-## Setup and deployment
+## Quickstart
 
-| Need | Document |
-| --- | --- |
-| Try it with Docker Compose, then the local Kubernetes lab | [Quickstart](quickstart.md) |
-| Write, approve, and resume durable agents | [Temporal workflows](workflows.md) |
-| Validation and common operator tasks | [Getting started](getting-started.md) |
-| Customer cluster template | [Customer deployment](../deploy/clusters/customer/README.md) |
-| Client and SDK examples | [Client examples](client-examples.md), [Python SDK](../sdk/python/README.md) |
-| Helm charts | [Chart index](../deploy/charts/README.md) |
+[Install, scaffold, approve, and verify your first workflow](quickstart.md), with the
+built-in fake or an explicit real OpenAI route. Includes Windows and Bash commands.
 
-## Development
+## Concepts
 
-| Need | Document |
-| --- | --- |
-| Set up a checkout and run focused tests | [Developer workflow](development.md) |
-| Find code, ownership boundaries, and generated files | [Repository map](repository-map.md) |
-| Understand the service modules | [Gateway code map](../src/inference-gateway/README.md), [RAG code map](../src/rag-service/README.md) |
-| Add or test automation | [Automation guide](../scripts/README.md) |
-| Prepare a contribution | [Contributing](../CONTRIBUTING.md) |
+[Workflow essentials](concepts.md), [architecture](architecture.md),
+[security](security-overview.md), [threat model](threat-model.md),
+[decision guide](decision-guide.md), [scope](scope-and-non-goals.md), and [FAQ](faq.md).
 
-## Design and scope
+## Guides
 
-| Need | Document |
-| --- | --- |
-| Components and request flow | [Architecture](architecture.md) |
-| Implemented features and defaults | [Feature inventory](feature-inventory.md) |
-| Project fit and alternatives | [Decision guide](decision-guide.md) |
-| Supported boundary | [Scope and non-goals](scope-and-non-goals.md) |
-| Design decisions | [Architecture decision records](adr/README.md) |
-| Versions tested and pinned | [Version matrix](version-matrix.md) |
-| Model defaults, candidates, and revision updates | [Model selection](model-selection.md) |
+[Create and edit a project](templates.md), [workflows and team setup](workflows.md),
+[client examples](client-examples.md), [local evaluation and Kubernetes](local-evaluation.md),
+[operator tasks](getting-started.md), [customer handoff](customer-handoff-example.md),
+[developer workflow](development.md), and [runbooks](../runbooks/README.md).
 
-## Production and security review
+## Reference
 
-| Need | Document |
-| --- | --- |
-| Control and validation matrix | [Production readiness](production-readiness.md) |
-| Security defaults and limitations | [Security overview](security-overview.md) |
-| Threats and residual risk | [Threat model](threat-model.md) |
-| OWASP LLM Top 10 for 2025 | [OWASP mapping](owasp-llm-top-10-mapping.md) |
-| Governance framework crosswalk | [AI governance crosswalk](ai-governance-crosswalk.md) |
-| Release artifacts | [Release verification](release-verification.md) |
-| Current versus sample evidence | [Evidence and validation](proof.md) |
+[CLI and Python SDK](sdk-reference.md), [model selection](model-selection.md),
+[feature inventory](feature-inventory.md), [repository map](repository-map.md),
+[Helm charts](../deploy/charts/README.md), [OpenAPI](../platform/api-contracts/inference-gateway.openapi.json),
+[production readiness](production-readiness.md), [evidence](proof.md),
+[version matrix](version-matrix.md), and [architecture decisions](adr/README.md).
 
-## Operations
-
-The [runbook index](../runbooks/README.md) covers API access, upgrades, incidents, budgets, RAG, GPU capacity, backups, data stores, and release gates. Runbooks stay at the repository root because alert annotations link to those paths; the docs build mirrors them into the site.
-
-Repository policies live in [Contributing](../CONTRIBUTING.md), [Security](../SECURITY.md), and [Governance](../GOVERNANCE.md).
+Runbooks stay at the repository root because alerts link to them; the docs build mirrors
+them into the site. Repository policies are in [Contributing](../CONTRIBUTING.md),
+[Security](../SECURITY.md), and [Governance](../GOVERNANCE.md).

@@ -397,7 +397,8 @@ def _auth_failure_response(request: Request, reason: str) -> JSONResponse:
         content=_error_envelope(
             401,
             {
-                "message": "authentication required",
+                "message": "Gateway authentication is missing or invalid. Set AGENTWORKFLOWS_API_KEY "
+                "or send Authorization: Bearer <gateway-key>; use local-development-only for Compose.",
                 "reason": reason,
                 "request_id": request.state.request_id,
                 "sandbox_id": request.state.sandbox_id,
