@@ -7,10 +7,11 @@ OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini. Route calls thr
 gateway, bind credentials to teams, enforce model policies and budgets, and inspect receipts.
 Ollama and vLLM are optional self-hosted model backends.
 
-**This checkout extends v0.1.0 with Milestone 2: durable workflows on Temporal.** Model and tool activities
-share gateway governance, run budgets, and receipts; human approval signals and worker
-recovery are included. Start with the [workflow walkthrough](workflows.md). This repository
-is not yet a hosted service.
+**Version 0.2.0 adds team operations to durable Temporal workflows.** Teams have projects,
+admin/builder/approver/viewer roles, provider keys, and shared cost limits. Start, inspect,
+cancel, retry, and approve runs through one authenticated API and CLI. A step timeline
+connects providers, tokens, costs, durations, and receipt IDs. This repository provides a
+self-managed service, not a hosted offering. Start with the [team walkthrough](workflows.md).
 
 ## Start in ten minutes
 
@@ -36,7 +37,7 @@ real provider configuration, and actionable troubleshooting.
 | --- | --- |
 | Call cloud models and configure fallback | [Client examples](client-examples.md) |
 | Run durable workflows with human approvals | [Workflow walkthrough](workflows.md) |
-| Set team credentials, scopes, and budgets | [API access](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md), [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md) |
+| Set team roles, projects, provider keys, and budgets | [Team setup](workflows.md#teams-projects-and-roles), [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md) |
 | Verify model and reported tool-action receipts | [Audit chain](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md) |
 | Add retrieval or hardened workspaces | [RAG](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/rag-service.md), [agent-sandbox](agent-sandbox-integration.md) |
 | Add self-hosted models | [Model selection](model-selection.md) |

@@ -482,3 +482,180 @@ metadata:
     grafana_dashboard: '1'
   name: grafana-dashboard-vllm-gpu-dashboard
   namespace: monitoring
+---
+apiVersion: v1
+data:
+  workflow-dashboard.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "panels": [
+        {
+          "id": 1,
+          "title": "Governed calls per second",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "targets": [
+            {
+              "expr": "sum by (sandbox, backend) (rate(inference_gateway_sandbox_requests_total[5m]))",
+              "refId": "A",
+              "legendFormat": "{{sandbox}} / {{backend}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 2,
+          "title": "Failed calls per second",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          },
+          "targets": [
+            {
+              "expr": "sum by (sandbox) (rate(inference_gateway_sandbox_requests_total{status=~\"4..|5..\"}[5m]))",
+              "refId": "A",
+              "legendFormat": "{{sandbox}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 3,
+          "title": "Run states",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          },
+          "targets": [
+            {
+              "expr": "max by (team, status) (inference_gateway_workflow_runs)",
+              "refId": "A",
+              "legendFormat": "{{team}} / {{status}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 4,
+          "title": "Approvals waiting",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 8
+          },
+          "targets": [
+            {
+              "expr": "max by (team) (inference_gateway_workflow_runs{status=\"awaiting_approval\"})",
+              "refId": "A",
+              "legendFormat": "{{team}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 5,
+          "title": "Team spend (including reservations)",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          },
+          "targets": [
+            {
+              "expr": "max by (team) (inference_gateway_team_spend_usd)",
+              "refId": "A",
+              "legendFormat": "{{team}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD"
+            },
+            "overrides": []
+          }
+        },
+        {
+          "id": 6,
+          "title": "Team spend limit",
+          "type": "timeseries",
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "targets": [
+            {
+              "expr": "max by (team) (inference_gateway_team_cost_limit_usd)",
+              "refId": "A",
+              "legendFormat": "{{team}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "currencyUSD"
+            },
+            "overrides": []
+          }
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": [
+        "agentworkflows"
+      ],
+      "title": "AgentWorkflows Team Operations",
+      "uid": "agentworkflows-teams",
+      "version": 1,
+      "description": "Governed call throughput, failures, durable run states, approvals waiting, and cross-provider team spend. State refreshes every 30 seconds; costs use configured prices and conservative reservations."
+    }
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: agentworkflows
+    grafana_dashboard: '1'
+  name: grafana-dashboard-workflow-dashboard
+  namespace: monitoring

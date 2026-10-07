@@ -8,6 +8,6 @@ ensure_service_venv "$ROOT/src/inference-gateway"
 cd "$ROOT/src/inference-gateway"
 PYTHONPATH="$PWD" .venv/bin/python -m pytest -q -s tests
 
-# The SDK's Temporal dependency is kept out of the gateway runtime image.
+# Framework examples add optional SDK test dependencies beyond the gateway runtime.
 .venv/bin/python -m pip install --quiet --require-hashes -r "$ROOT/requirements-sdk-test.lock"
 PYTHONPATH="$ROOT/sdk/python" .venv/bin/python -m pytest -q -s "$ROOT/sdk/python/tests"

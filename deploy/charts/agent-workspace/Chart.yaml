@@ -2,8 +2,8 @@ apiVersion: v2
 name: agent-workspace
 description: Isolated namespace template for coding agents that use the AgentWorkflows gateway and RAG service.
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.2.0"
 kubeVersion: ">=1.25.0"
 home: https://github.com/RamazanKara/agentworkflows
 sources:

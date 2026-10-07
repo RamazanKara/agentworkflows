@@ -320,6 +320,9 @@ class SandboxPolicy:
     data_classification: str = "internal"
     tools: dict[str, ToolRoute] = field(default_factory=dict)
     workflows: dict[str, WorkflowPolicy] = field(default_factory=dict)
+    projects: tuple[str, ...] = ()
+    provider_credentials: dict[str, str] = field(default_factory=dict)
+    cost_limit_usd: float | None = None
 
 
 @dataclass(frozen=True)
@@ -389,6 +392,24 @@ class SandboxPolicySet:
             if any(not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name) for name in tools):
                 raise ValueError("tool names must be 1-128 letters, digits, dots, underscores, or hyphens")
             workflow_policies = {name: WorkflowPolicy.model_validate(raw) for name, raw in workflows.items()}
+            projects = item.get("projects", [])
+            if not isinstance(projects, list) or any(not isinstance(p, str) for p in projects):
+                raise ValueError("projects must be a list of project IDs")
+            projects = tuple(validate_sandbox_id(p) for p in projects)
+            credentials = item.get("providerCredentials", {})
+            if not isinstance(credentials, dict) or any(
+                provider not in CLOUD_BACKENDS or not isinstance(env, str) or not re.fullmatch(r"[A-Z_][A-Z0-9_]*", env)
+                for provider, env in credentials.items()
+            ):
+                raise ValueError("providerCredentials must map cloud provider names to environment variable names")
+            cost_limit = budgets.get("costLimitUsd")
+            if cost_limit is not None and (
+                isinstance(cost_limit, bool)
+                or not isinstance(cost_limit, (int, float))
+                or not isfinite(cost_limit)
+                or cost_limit <= 0
+            ):
+                raise ValueError("budgets.costLimitUsd must be a finite positive USD amount")
             for name, workflow in workflow_policies.items():
                 if set(workflow.allowed_tools) - tools.keys():
                     raise ValueError(f"workflow {name} allowedTools must name registered team tools")
@@ -405,6 +426,9 @@ class SandboxPolicySet:
                 data_classification=classification,
                 tools=tools,
                 workflows=workflow_policies,
+                projects=projects,
+                provider_credentials=credentials,
+                cost_limit_usd=cost_limit,
             )
         return cls(policies)
 

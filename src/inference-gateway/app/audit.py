@@ -40,11 +40,14 @@ def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
         event["workflow_step_id"] = request.state.workflow_step_id
         event["workflow"] = getattr(request.state, "workflow_name", "")
         event["workflow_charge"] = getattr(request.state, "workflow_charge", None)
+    if getattr(request.state, "project_id", None):
+        event["project"] = request.state.project_id
     state = request.app.state
     previous = getattr(state, "audit_prev_hash", AUDIT_GENESIS)
     event["prev_hash"], event["record_hash"] = advance_chain(previous, event)
     state.audit_prev_hash = event["record_hash"]
     state.audit_chain_count = getattr(state, "audit_chain_count", 0) + 1
+    request.state.audit_event = event
 
 
 def advance_chain(previous: str, event: dict[str, Any]) -> tuple[str, str]:

@@ -12,10 +12,10 @@ AWS Bedrock, and Vertex Gemini behind one API. Bind credentials to teams, contro
 models they can call, account for usage, and inspect the audit trail. Self-hosted Ollama
 and vLLM models are optional add-ons.
 
-Version **0.1.0** delivered governed cloud providers. This checkout adds durable Temporal
-workflows and **Milestone 3: bring your agents** — framework adapters, centrally approved MCP
-tools, container steps, and workflow policies. See the [workflow guide](docs/workflows.md)
-and [roadmap](ROADMAP.md).
+Version **0.2.0** delivers team operations: projects and roles, authenticated run controls,
+verified approvals, provider keys and shared spend limits, step timelines, and team reports.
+Temporal keeps agent workflows durable across worker failures. Start with the
+[workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
 
 ## Try it in ten minutes
 
@@ -61,6 +61,12 @@ python -m pip install ./sdk/python
 export AGENTWORKFLOWS_API_KEY=local-development-only
 agentworkflows models
 agentworkflows chat "Hello, AgentWorkflows!" --model demo-openai
+agentworkflows team
+agentworkflows runs start --input '{"topic":"How should our team evaluate AI agents?"}'
+agentworkflows runs list
+# Copy the run_id, inspect the draft and timeline, then approve:
+agentworkflows runs inspect RUN_ID
+AGENTWORKFLOWS_API_KEY=demo-approver agentworkflows runs approve RUN_ID
 agentworkflows usage
 ```
 
@@ -84,7 +90,8 @@ models, troubleshooting, and the Kubernetes lab.
 | Durable agent workflows and human approvals | [Temporal workflow SDK and walkthrough](docs/workflows.md); retry, pause, and resume with per-run token/cost budgets |
 | Framework agents and MCP tools | [Bring your agent](docs/workflows.md#bring-your-agent); point clients at the gateway and register tools once per team |
 | Workflow policy and container steps | [Workflow policy](docs/workflows.md#workflow-policy) limits providers, models, tools, egress, and budget; [container agents](docs/agent-sandbox-integration.md#container-workflow-steps) use hardened workspaces |
-| Team usage and budgets | Bind a key to a sandbox/team; inspect `/v1/usage`, `/v1/sandbox/budget`, or the [console](runbooks/api-access.md) |
+| Team roles, projects, and spend | [Team setup](docs/workflows.md#teams-projects-and-roles); shared provider budgets, project-scoped run history, and `agentworkflows usage` |
+| Team operations dashboard and alerts | [Operations](docs/workflows.md#operate-the-service); throughput, failures, waiting approvals, and spend |
 | OpenAI and Anthropic API compatibility | [Client examples](docs/client-examples.md) for chat, streaming, embeddings, Messages, Files, Batch, and Responses; support varies by provider |
 | Model and tool-action receipts | Workflow tool execution is governed and receipted automatically; [other producers report actions](runbooks/audit-chain.md) with `POST /v1/receipts` |
 | Optional retrieval and agent workspaces | [RAG](runbooks/rag-service.md) and hardened [agent-sandbox workspaces](docs/agent-sandbox-integration.md) |
@@ -118,7 +125,7 @@ make customer-overlay CUSTOMER_REPO_URL=https://github.com/<you>/<fork>.git \
   CUSTOMER_REVISION=v0.1.0 CUSTOMER_GPU_PROFILE=nvidia
 ```
 
-The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.1.0
+The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.2.0
 is ready for evaluation; this repository does not yet provide a hosted service.
 
 | Task | Start here |

@@ -4,7 +4,8 @@ postgres:
   storage: 10Gi
 
 worker:
-  image: ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.1.0
+  team: demo
+  image: ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.2.0
   gatewayUrl: http://inference-gateway.inference.svc.cluster.local:8080
   existingSecret: workflow-gateway-key
   # Existing agent-workspace installations the worker may inspect and execute in.

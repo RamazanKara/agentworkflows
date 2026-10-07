@@ -2,7 +2,7 @@
 
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
-This is a product direction, not a claim that every capability is available in 0.1.0.
+Version 0.2.0 delivers milestones 1–4. The remaining milestones are planned.
 
 ## Milestone 1: governed cloud providers — delivered
 
@@ -30,15 +30,28 @@ The existing Batch API and stored Responses are not a durable workflow engine.
 Compose exercises framework and MCP flows with local fakes. Container execution requires
 the existing Kubernetes workspace runtime and an enforcing NetworkPolicy CNI.
 
-## Then: approvals and team operations
+## Milestone 4: operate as a team — delivered in 0.2.0
 
-- Connect approval decisions to verified team identities and a team-facing review experience.
-- Make team onboarding, budgets, and workflow history accessible to team leads.
-- Add instrumented tool producers so receipt coverage is explicit and measurable.
+- Projects and admin, builder, approver, and viewer roles on existing sandbox identities.
+- Per-team provider secrets, shared token and USD limits, and provider usage reports.
+- Authenticated start/list/inspect/cancel/retry/approve API and CLI; verified approval identities.
+- Run step timelines with provider, model, tokens, cost, duration, and receipt IDs.
+- Grafana team dashboard and alerts for throughput, failures, approvals waiting, and spend.
+- A cloud-first Compose workflow trial using local fakes; Ollama remains opt-in.
 
-Current receipts cover gateway calls and reported agent actions. They cannot prove
-unreported tool activity. Current team budgets use sandbox-bound credentials and token
-limits; provider cost accounting does not implement a billing service.
+Team onboarding uses the existing reviewed key and sandbox policy files. Cost reports use
+configured prices and conservative reservations, not provider invoices. Temporal access
+and workers are trusted operator surfaces; end users use the authenticated gateway.
+
+## Milestone 5: production hardening — planned
+
+Strengthen upgrade, backup, availability, and live-provider acceptance evidence. Validate
+team operations under deployment-specific identity, networking, and retention policies.
+
+## Milestone 6: broader workflow coverage — planned
+
+Expand instrumented model/tool integrations and measurable receipt coverage. The current
+audit chain cannot prove unreported tool activity or direct calls outside the gateway.
 
 ## Usability and release standard
 

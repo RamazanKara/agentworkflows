@@ -331,6 +331,7 @@ def resolve_single_route(request: Request, settings: Settings, payload_dict: dic
         raise AdmissionPolicyError("model_not_allowed", str(exc)) from exc
     payload_dict["model"] = model_route.model_id
     request.state.selected_route = model_route
+    request.state.cost_routes = [model_route]
     effective.validate_model(model_route.model_id)
     classification = request_classification(request, payload_dict)
     if classification in {"confidential", "restricted"} and model_route.backend not in LOCAL_BACKENDS:
@@ -424,6 +425,7 @@ def resolve_chat_routes(
         raise AdmissionPolicyError("data_classification_denied", "confidential data requires an eligible local model")
     payload["model"] = chain[0].model_id
     request.state.selected_route = chain[0]
+    request.state.cost_routes = chain
     if any(route.backend not in LOCAL_BACKENDS for route in chain) and not any(
         key in payload for key in ("max_tokens", "max_completion_tokens")
     ):
@@ -442,11 +444,18 @@ async def reserve_budget(request: Request, effective: Settings, budget_payload: 
     the Redis client is synchronous and a slow Redis must not stall the event loop.
     """
     tracker: SandboxBudgetTracker = request.app.state.budget_tracker
+    from app.team_budget import reserve_team_cost
+
     reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, budget_payload, effective)
     request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
     request.state.budget_reservation_object = reservation
     record_budget_reservation(reservation, effective)
     request.state.budget_headers = budget_headers(reservation, effective)
+    try:
+        await reserve_team_cost(request, budget_payload)
+    except AdmissionPolicyError:
+        await settle_budget(request, {"usage": {"total_tokens": 0}})
+        raise
 
 
 def effective_settings(request: Request, policy_set: SandboxPolicySet, settings: Settings) -> Settings:
@@ -455,12 +464,20 @@ def effective_settings(request: Request, policy_set: SandboxPolicySet, settings:
     Composes the two override sources onto the base settings for the (already bound)
     sandbox: the SandboxPolicySet's per-sandbox admission/budget overrides first, then
     any per-key budget overrides carried by a matched API-key record. The per-key budget
-    takes precedence for the three budget dimensions so a key's issued allowance is what
-    the request is metered against - and what /v1/usage and /v1/sandbox/budget report.
+    narrows the managed team's limits; legacy sandbox keys retain their override behavior.
     """
     effective = policy_set.effective_settings(settings, request.state.sandbox_id)
     key_updates = getattr(request.state, "key_budget_updates", None)
     if key_updates:
+        key_updates = dict(key_updates)
+        for field, limit in key_updates.items():
+            team_limit = getattr(effective, field)
+            if (
+                team_limit > 0
+                and policy_set.policies.get(request.state.sandbox_id)
+                and policy_set.policies[request.state.sandbox_id].projects
+            ):
+                key_updates[field] = min(limit or team_limit, team_limit)
         effective = replace(effective, **key_updates)
     return effective
 
@@ -488,6 +505,7 @@ def admission_status(reason: str, settings: Settings) -> tuple[int, dict[str, st
         "workflow_not_allowed",
         "workflow_egress_denied",
         "agent_not_allowed",
+        "team_cost_budget_exceeded",
     }:
         return 403, None
     if reason == "data_classification_denied":
@@ -662,6 +680,12 @@ async def settle_and_audit(
             await asyncio.to_thread(tracker.record_usage, request.state.sandbox_id, backend, usage, cost)
         except BudgetBackendError:
             request.state.usage_accounting = "backend_unavailable"
+    from app.team_budget import settle_team_cost
+
+    try:
+        await settle_team_cost(request, runtime_response)
+    except HTTPException:
+        request.state.usage_accounting = "backend_unavailable"
     write_audit_log(
         settings,
         request,
@@ -673,3 +697,6 @@ async def settle_and_audit(
         runtime_status_code=runtime_status_code,
         error=error,
     )
+    from app.workflow_operations import record_step
+
+    await record_step(request)

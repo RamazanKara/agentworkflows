@@ -27,6 +27,10 @@ spec:
         - name: worker
           image: {{ .Values.worker.image | quote }}
           env:
+            - name: TEMPORAL_TASK_QUEUE
+              value: {{ printf "%s-workflows" .Values.worker.team | quote }}
+            - name: AGENTWORKFLOWS_TEAM
+              value: {{ .Values.worker.team | quote }}
             - name: TEMPORAL_ADDRESS
               value: temporal-frontend:7233
             - name: AGENTWORKFLOWS_URL

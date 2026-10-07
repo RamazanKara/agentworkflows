@@ -38,6 +38,7 @@ class GatewayActivities:
                 initialized = await client.put(
                     f"/v1/workflow-runs/{info.workflow_run_id}",
                     json={**asdict(call.budget), "workflow": info.workflow_type},
+                    headers={"X-Workflow-ID": info.workflow_id or ""},
                 )
                 _raise_for_status(initialized)
                 headers = {

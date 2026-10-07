@@ -76,7 +76,7 @@ from app.tracing import configure_tracing, trace_request
 from app.workflow_api import bind_workflow, register_workflow_routes
 from app.workflow_credentials import bind_step_credential
 
-SERVICE_VERSION = "0.1.0"
+SERVICE_VERSION = "0.2.0"
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "
@@ -181,6 +181,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         else ModelRoutingPolicy.default(resolved)
     )
     app.state.sandbox_policy_set = SandboxPolicySet.from_path(resolved.sandbox_policy_path)
+    if any(policy.projects for policy in app.state.sandbox_policy_set.policies.values()) and not (
+        resolved.sandbox_budget_enabled
+        and resolved.sandbox_budget_backend == "redis"
+        and resolved.audit_log_enabled
+        and (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled)
+    ):
+        raise ValueError(
+            "Team projects require authentication, SANDBOX_BUDGET_ENABLED=true, "
+            "SANDBOX_BUDGET_BACKEND=redis, and AUDIT_LOG_ENABLED=true."
+        )
+    app.state.runtime_client.sandbox_policies = app.state.sandbox_policy_set
+    from app.teams import authorize_team_request, register_team_routes
+
+    register_team_routes(app)
     app.state.runtime_client.policy = app.state.model_routing_policy
     # Optional richer API-key records (scopes/expiry/sandbox binding/budget). Fails closed:
     # a malformed key store raises here and stops startup rather than silently disabling
@@ -307,6 +321,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                             return _sandbox_binding_response(request, "sandbox_identity_mismatch")
                         request.state.sandbox_id = bound
                         request.state.sandbox_bound = True
+
+            try:
+                authorize_team_request(request)
+            except StarletteHTTPException as exc:
+                if isinstance(exc.detail, dict):
+                    exc.detail["request_id"] = request.state.request_id
+                return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
 
             # Short-window per-sandbox throttle (distinct from the cumulative budget):
             # bounds burst abuse. Checked after sandbox binding so the limit applies to

@@ -31,6 +31,7 @@ def _schedule_shadow(client: RuntimeClient, shadow_route: Any, payload_dict: dic
         try:
             shadow_request = Request({**request.scope, "state": dict(request.scope["state"])})
             shadow_request.state.selected_route = shadow_route
+            shadow_request.state.cost_routes = [shadow_route]
             shadow_request.state.routing_role = "shadow"
             shadow_request.state.routing_attempts = []
             shadow_request.state.budget_settled = False

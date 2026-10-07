@@ -121,3 +121,12 @@ Confirm the shared backend is reachable:
 ## Response
 
 If the sandbox is intentionally load testing or running an approved evaluation, raise the budget in the environment values and redeploy. If the traffic is unexpected, keep the budget in place, identify the caller through request IDs and sandbox IDs, and review the model catalog and admission limits before allowing more traffic.
+
+## Shared team spend
+
+Teams are existing sandbox identities. Add `projects`, `providerCredentials`, and
+`budgets.costLimitUsd` to the SandboxPolicySet; role-bound keys cannot raise team limits.
+Redis atomically reserves cost across eligible providers and tools. `agentworkflows usage`
+reports current-window provider totals and conservative reservations. Configure prices
+for every route, including local models. See [team operations](https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service)
+for examples, window semantics, retained history, and accounting limits.

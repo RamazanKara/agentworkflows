@@ -47,6 +47,7 @@ def register_container_routes(app: FastAPI, settings: Settings) -> None:
             request_classification(request, payload)
             effective.validate_tool_admission(payload)
             request.state.prompt_guardrail_action = _apply_prompt_secret_mode(effective, payload, call.route)
+            request.state.tool_cost = target.cost_usd
             await reserve_budget(request, effective, payload)
             await reserve_run(request, 0, target.cost_usd)
             credential = await issue_step_credential(

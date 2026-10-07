@@ -125,6 +125,18 @@ ESTIMATED_COST = Counter(
 # Prometheus series. The cap comfortably exceeds a real tenant fleet; ids past it are
 # still served and audited under their real id but collapse into one overflow label.
 _MAX_SANDBOX_LABEL_VALUES = 2000
+WORKFLOW_RUNS = Gauge(
+    "inference_gateway_workflow_runs", "Retained workflow executions by team and state.", ["team", "status"]
+)
+WORKFLOW_STATUS_REFRESH = Gauge(
+    "inference_gateway_workflow_status_refresh_seconds", "Last successful workflow state refresh, Unix time."
+)
+TEAM_SPEND = Gauge(
+    "inference_gateway_team_spend_usd", "Reserved and spent USD in the team's current cost window.", ["team"]
+)
+TEAM_COST_LIMIT = Gauge(
+    "inference_gateway_team_cost_limit_usd", "Configured cross-provider team spend limit.", ["team"]
+)
 _SANDBOX_LABEL_VALUES: set[str] = set()
 _SANDBOX_LABEL_OVERFLOW = "__other__"
 

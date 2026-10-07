@@ -1,3 +1,5 @@
+import json
+
 import agentworkflows
 import httpx
 import pytest
@@ -89,3 +91,48 @@ def test_connection_failure_is_actionable(monkeypatch, capsys):
     monkeypatch.setattr(agentworkflows.GatewayClient, "models", unavailable)
     assert main(["models"]) == 1
     assert "Check AGENTWORKFLOWS_URL" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("operation", ["start", "list", "inspect", "cancel", "retry", "approve"])
+def test_run_commands_use_authenticated_gateway(monkeypatch, capsys, operation):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "role-key")
+    run_id = "14bf0bba-d747-4d2f-afab-2eb35663977b"
+    args = ["runs", operation]
+    if operation == "start":
+        args += ["--input", '{"topic":"test"}', "--project", "research"]
+    elif operation != "list":
+        args += [run_id]
+
+    def respond(request):
+        assert request.headers["Authorization"] == "Bearer role-key"
+        if operation in {"start", "list"}:
+            assert request.url.path == "/v1/workflow-runs"
+        else:
+            assert request.url.path == f"/v1/workflow-runs/{run_id}" + (
+                "" if operation == "inspect" else f"/{operation}"
+            )
+        if operation == "start":
+            body = json.loads(request.content)
+            assert body["workflow"] == "ResearchWorkflow" and body["project"] == "research"
+            assert body["input"]["topic"] == "test" and body["request_id"]
+        if operation == "approve":
+            assert json.loads(request.content) == {"approved": True}
+        return httpx.Response(200, json={"run_id": run_id})
+
+    real_client = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: real_client(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(args) == 0
+    assert run_id in capsys.readouterr().out
+
+
+def test_ambiguous_start_keeps_request_id_for_retry(monkeypatch, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "role-key")
+
+    def unavailable(*args, **kwargs):
+        raise httpx.ReadTimeout("response lost")
+
+    monkeypatch.setattr(agentworkflows.GatewayClient, "start_run", unavailable)
+    assert main(["runs", "start", "--input", "{}"]) == 1
+    assert "--request-id" in capsys.readouterr().err
