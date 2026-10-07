@@ -25,6 +25,16 @@ def test_current_release_documents_cloud_and_self_hosted_deployments():
     assert controls["API contract governance"].status == "pass"
 
 
+def test_supply_chain_evidence_uses_local_scan_tooling(monkeypatch):
+    controls = {item.area: item for item in evidence.static_controls()}
+    assert controls["Local supply-chain checks"].status == "pass"
+
+    original = evidence.read_text
+    monkeypatch.setattr(evidence, "read_text", lambda path: "" if path == "scripts/image-scan.sh" else original(path))
+    controls = {item.area: item for item in evidence.static_controls()}
+    assert controls["Local supply-chain checks"].status == "fail"
+
+
 @pytest.mark.parametrize("readme", ["cloud providers only", "self-hosted only", "local customer-owned clusters"])
 def test_deployment_guidance_requires_both_cloud_and_self_hosted(monkeypatch, readme):
     original = evidence.read_text

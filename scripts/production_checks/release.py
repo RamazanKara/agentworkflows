@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 
 import yaml
 
@@ -20,68 +19,6 @@ from .common import (
 def check_release_packaging(errors: list[str]) -> None:
     release_version = latest_changelog_version(errors)
     release_tag = f"v{release_version}" if release_version else ""
-    workflow_path = ROOT / ".github/workflows/ci.yml"
-    require(errors, workflow_path.exists(), "CI workflow must exist")
-    if workflow_path.exists():
-        workflow = workflow_path.read_text()
-        for token in (
-            "GATEWAY_TAGS",
-            "RAG_TAGS",
-            "GITHUB_REF_NAME",
-            "steps.build_gateway.outputs.digest",
-            "steps.build_rag.outputs.digest",
-            "cosign sign --yes",
-            "actions/attest-build-provenance@",
-            "actions/attest@",
-            "attestations: write",
-            "push-to-registry: true",
-            "supply-chain-checksums.txt",
-            "gh release create",
-            "gh release upload",
-            "--generate-notes",
-            "severity: HIGH,CRITICAL",
-            'exit-code: "1"',
-            "actions/upload-artifact",
-            "docker buildx imagetools create",
-            "scripts/package-release-charts.py",
-            "chart-release-manifest.json",
-            "oras push",
-            "artifacthub.io",
-            "sdk-compatibility",
-            "sdk-build",
-            "sdk-publish",
-            "packages-dir: sdk-dist",
-        ):
-            require(
-                errors,
-                token in workflow,
-                f"CI workflow must publish and sign release supply-chain evidence with {token}",
-            )
-        # The publish action must stay pinned to a full commit SHA, but not to one
-        # specific SHA: a hard-coded value turns every Dependabot bump into a red build.
-        require(
-            errors,
-            re.search(r"pypa/gh-action-pypi-publish@[0-9a-f]{40}\b", workflow) is not None,
-            "CI workflow must pin pypa/gh-action-pypi-publish to a full commit SHA",
-        )
-        require(
-            errors,
-            "awk '/^Digest:/ {print $2; exit}'" not in workflow,
-            "CI digest extraction must not early-exit and SIGPIPE buildx under pipefail",
-        )
-        # The tested Kubernetes version is pinned in two places: the CI kind node
-        # image and the Trivy chart-render version. Keep them moving together.
-        kind_match = re.search(r"kindest/node:v(\d+\.\d+\.\d+)", workflow)
-        scan_text = (ROOT / "scripts/repo-security-scan.sh").read_text()
-        scan_match = re.search(r"--helm-kube-version\s+(\d+\.\d+\.\d+)", scan_text)
-        require(errors, kind_match is not None, "CI local-e2e must pin a kindest/node version")
-        require(errors, scan_match is not None, "scripts/repo-security-scan.sh must pin --helm-kube-version")
-        if kind_match and scan_match:
-            require(
-                errors,
-                kind_match.group(1) == scan_match.group(1),
-                "scripts/repo-security-scan.sh --helm-kube-version must match the CI kindest/node version",
-            )
     release_script = ROOT / "scripts/package-release-charts.py"
     require(errors, release_script.exists(), "digest-bound Helm chart packaging script must exist")
     require(errors, os.access(release_script, os.X_OK), "digest-bound Helm chart packaging script must be executable")
@@ -98,22 +35,6 @@ def check_release_packaging(errors: list[str]) -> None:
         nested(platform_chart, "annotations", "artifacthub.io/category") == "ai-machine-learning",
         "platform chart must declare its Artifact Hub category",
     )
-    docs_workflow = (ROOT / ".github/workflows/docs.yml").read_text()
-    for token in ("mike deploy", "gh-pages", 'tags: ["v*"]', "versioned-site"):
-        require(errors, token in docs_workflow, f"versioned docs workflow missing {token}")
-    scorecard_path = ROOT / ".github/workflows/scorecard.yml"
-    require(errors, scorecard_path.exists(), "OpenSSF Scorecard workflow must exist")
-    if scorecard_path.exists():
-        scorecard = scorecard_path.read_text()
-        for token in (
-            "ossf/scorecard-action@",
-            "results_format: sarif",
-            "publish_results: true",
-            "github/codeql-action/upload-sarif",
-            "security-events: write",
-            "id-token: write",
-        ):
-            require(errors, token in scorecard, f"OpenSSF Scorecard workflow missing {token}")
     gateway_values = yaml.safe_load((ROOT / "deploy/charts/inference-gateway/values.yaml").read_text()) or {}
     rag_values = yaml.safe_load((ROOT / "deploy/charts/rag-service/values.yaml").read_text()) or {}
     gateway_chart = yaml.safe_load((ROOT / "deploy/charts/inference-gateway/Chart.yaml").read_text()) or {}
@@ -378,7 +299,6 @@ def check_oss_governance(errors: list[str]) -> None:
         ROOT / ".github/repository-settings.json",
         ROOT / "scripts/github-settings.py",
         ROOT / "runbooks/repository-settings.md",
-        ROOT / ".github/workflows/fuzz.yml",
         ROOT / "scripts/fuzz-security.py",
     ):
         require(errors, path.exists(), f"OSS governance contract missing {path.relative_to(ROOT)}")
@@ -395,8 +315,6 @@ def check_oss_governance(errors: list[str]) -> None:
         "secret_scanning_push_protection",
     ):
         require(errors, nested(config, "security", key) is True, f"repository security setting {key} must be enabled")
-    required_checks = set(nested(config, "branch_protection", "required_status_checks", default=[]))
-    require(errors, {"validate", "local-e2e", "security-fuzz"} <= required_checks, "main protection misses core checks")
 
 
 def check_release_gates(errors: list[str]) -> None:

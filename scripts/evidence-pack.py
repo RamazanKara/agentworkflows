@@ -172,7 +172,6 @@ def static_controls() -> list[Control]:
     vllm_nvidia = load_yaml("deploy/clusters/customer/values/vllm-nvidia.yaml")
     model_catalog = load_yaml("platform/model-catalog/models.yaml")
     model_provenance = load_yaml("platform/governance/model-provenance.yaml")
-    workflow = read_text(".github/workflows/ci.yml")
     readme = read_text("README.md")
     production_doc = read_text("docs/production-readiness.md")
     toolchain = load_yaml("platform/tools/validation-toolchain.yaml")
@@ -630,21 +629,14 @@ def static_controls() -> list[Control]:
             "Run policies in audit mode first, then enforce on agreed AI namespaces.",
         ),
         control(
-            "Supply-chain controls",
-            "anchore/sbom-action" in workflow
-            and "trivy-action" in workflow
-            and "actions/attest-build-provenance@" in workflow
-            and "actions/attest@" in workflow
-            and "steps.build_gateway.outputs.digest" in workflow
-            and "steps.build_rag.outputs.digest" in workflow
-            and 'exit-code: "1"' in workflow
-            and "image-scan:" in read_text("Makefile")
+            "Local supply-chain checks",
+            "image-scan:" in read_text("Makefile")
             and "spdx-json" in read_text("scripts/image-scan.sh")
             and "--format sarif" in read_text("scripts/image-scan.sh")
-            and "supply-chain-checksums.txt" in workflow,
-            "CI builds images, generates SBOMs, fails on high/critical image vulnerabilities, signs immutable image digests, publishes SLSA/SBOM attestations, and uploads supply-chain evidence.",
-            [".github/workflows/ci.yml", "scripts/image-scan.sh"],
-            "Promote only signed/scanned image digests with downloadable evidence into customer registries.",
+            and "supply-chain-checksums" in read_text("scripts/image-scan.sh"),
+            "Local image-scan tooling builds images, generates SBOMs, checks high/critical image vulnerabilities, and records supply-chain evidence; CI does not scan or publish images.",
+            ["Makefile", "scripts/image-scan.sh"],
+            "Run image scans locally and sign reviewed image digests before promoting them into customer registries.",
         ),
         control(
             "Restore-drill integration",

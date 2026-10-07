@@ -28,10 +28,40 @@ make repo-hygiene
 make docs-build
 ```
 
-Run `make validate` before submitting code or deployment changes. It requires
-Python and Helm; the [developer workflow](docs/development.md) explains the
-additional checks CI runs. Use the [quickstart](docs/quickstart.md) when your change
-needs a running cluster.
+CI runs one Ubuntu job on pushes to `main` or manual dispatch: Ruff lint, tooling,
+gateway, RAG and SDK unit tests, the console build, and an SDK import check. With
+Python 3.14 and Node.js 24, run the same checks locally:
+
+```bash
+RAYON_NUM_THREADS=2 make -j2 lint
+make -j2 test-scripts test-gateway test-rag
+PYTHONPATH=sdk/python src/inference-gateway/.venv/bin/python -c 'from agentworkflows import GatewayClient; print(GatewayClient.__name__)'
+```
+
+Full validation, browser/end-to-end tests, image builds, and security scans are
+local opt-in checks. `make validate-full` requires the strict toolchain described
+in the [developer workflow](docs/development.md). For a full check and the Docker
+Compose smoke test:
+
+```bash
+make -j2 validate-full
+make compose-up
+make compose-smoke
+make compose-down
+```
+
+`make compose-up` builds the gateway, RAG, and workflow-worker images sequentially
+before starting the stack. To build just the images without starting services:
+
+```bash
+docker compose -f deploy/compose/compose.yaml build inference-gateway
+docker compose -f deploy/compose/compose.yaml build rag-service
+docker compose -f deploy/compose/compose.yaml build workflow-worker
+```
+
+`make test-console`, `make fuzz`, `make image-scan`, and `make repo-security-scan`
+also remain available locally. Use the [quickstart](docs/quickstart.md) when your
+change needs a running cluster.
 
 Ruff and mypy use an isolated, hash-pinned `.venv-quality`; their configuration is
 in [pyproject.toml](pyproject.toml). `make format` formats service code and applies
