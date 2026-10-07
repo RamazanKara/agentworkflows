@@ -29,6 +29,11 @@ help:
 		'  make compose-up            Start gateway, Temporal, workflow worker, cloud fixtures, and RAG' \
 		'  make compose-smoke         Verify governance, worker recovery, receipts, and the web console' \
 		'  make compose-down          Stop the stack and delete its volumes' \
+		'  make workflow-upgrade-test Upgrade 0.2.0 Compose state in an isolated fixture stack' \
+		'  make workflow-helm-upgrade-test Upgrade 0.2.0 charts in disposable kind' \
+		'  make workflow-restore-drill Restore databases, budgets, runs and receipts' \
+		'  make workflow-loadtest     Check concurrent runs against the fake Compose stack' \
+		'  make test-live-providers   Explicit local opt-in only; requires provider keys' \
 		'' \
 		'Local platform:' \
 		'  make bootstrap             Install pinned CLIs and run the full guided local lab (Linux/WSL)' \
@@ -209,6 +214,23 @@ loadtest:
 
 loadtest-local:
 	./scripts/loadtest-local.sh
+
+.PHONY: workflow-upgrade-test workflow-restore-drill workflow-loadtest test-live-providers
+workflow-upgrade-test:
+	python3 scripts/workflow-recovery.py upgrade
+
+.PHONY: workflow-helm-upgrade-test
+workflow-helm-upgrade-test: python-env
+	$(PYTHON) scripts/helm-upgrade-test.py
+
+workflow-restore-drill:
+	python3 scripts/workflow-recovery.py drill
+
+workflow-loadtest:
+	python3 loadtest/workflow-runs.py
+
+test-live-providers: python-env
+	cd src/inference-gateway && PYTHONPATH=. .venv/bin/python -m pytest -q tests/live --show-capture=no
 
 benchmark-local:
 	./scripts/benchmark-ollama.sh

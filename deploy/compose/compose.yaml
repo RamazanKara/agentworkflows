@@ -87,11 +87,16 @@ services:
       # The team console is bundled in this image: http://127.0.0.1:8080/console
       ADMIN_CONSOLE_ENABLED: "true"
       AUDIT_LOG_ENABLED: "true"
+      AUDIT_CHAIN_STORE_BACKEND: redis
+      AUDIT_CHAIN_STORE_REDIS_URL: redis://budget-redis:6379/0
     depends_on:
       budget-redis:
         condition: service_healthy
       cloud-fake:
         condition: service_started
+      temporal:
+        condition: service_healthy
+    stop_grace_period: 210s
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3)"]
       interval: 5s
@@ -146,6 +151,10 @@ services:
     image: temporalio/auto-setup:1.29.1
     environment:
       DB: postgres12
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      ENABLE_ES: "false"
+      DEFAULT_NAMESPACE_RETENTION: 30d
       DB_PORT: "5432"
       POSTGRES_USER: temporal
       POSTGRES_PWD: temporal-development-only
@@ -193,6 +202,12 @@ services:
         condition: service_healthy
       inference-gateway:
         condition: service_healthy
+    stop_grace_period: 210s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/readyz', timeout=4)"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

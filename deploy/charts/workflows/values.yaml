@@ -4,6 +4,11 @@ postgres:
   storage: 10Gi
 
 worker:
+  replicaCount: 1
+  terminationGracePeriodSeconds: 210
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
   team: demo
   image: ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.2.0
   gatewayUrl: http://inference-gateway.inference.svc.cluster.local:8080
@@ -17,6 +22,8 @@ worker:
 temporal:
   fullnameOverride: temporal
   server:
+    image:
+      tag: "1.32.0"
     replicaCount: 1
     securityContext: &temporalPodSecurityContext
       runAsNonRoot: true
@@ -44,22 +51,30 @@ temporal:
       limits: {cpu: "1", memory: 1Gi}
     config:
       persistence:
+        defaultStore: default
+        visibilityStore: visibility
         numHistoryShards: 4
         datastores:
           default:
             sql:
+              createDatabase: true
+              manageSchema: true
               pluginName: postgres12
               databaseName: temporal
               connectAddr: temporal-postgres:5432
+              connectProtocol: tcp
               user: temporal
               existingSecret: temporal-postgres-auth
               maxConns: 5
               maxIdleConns: 5
           visibility:
             sql:
+              createDatabase: true
+              manageSchema: true
               pluginName: postgres12
               databaseName: temporal_visibility
               connectAddr: temporal-postgres:5432
+              connectProtocol: tcp
               user: temporal
               existingSecret: temporal-postgres-auth
               maxConns: 5
@@ -77,6 +92,8 @@ temporal:
     containerSecurityContext: *temporalContainerSecurityContext
   admintools:
     enabled: false
+    image:
+      tag: "1.32.0"
   web:
     securityContext: *temporalPodSecurityContext
     containerSecurityContext: *temporalContainerSecurityContext

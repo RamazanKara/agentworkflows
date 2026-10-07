@@ -3,7 +3,11 @@ kind: Deployment
 metadata:
   name: workflow-worker
 spec:
-  replicas: 1
+  replicas: {{ .Values.worker.replicaCount }}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: workflow-worker
@@ -12,6 +16,14 @@ spec:
       labels:
         app.kubernetes.io/name: workflow-worker
     spec:
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: workflow-worker
       {{- if .Values.worker.workspaces }}
       serviceAccountName: workflow-worker
       automountServiceAccountToken: true
@@ -26,6 +38,20 @@ spec:
       containers:
         - name: worker
           image: {{ .Values.worker.image | quote }}
+          ports:
+            - name: health
+              containerPort: 8081
+          readinessProbe:
+            httpGet: {path: /readyz, port: health}
+            timeoutSeconds: 4
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: health}
+            timeoutSeconds: 2
+          startupProbe:
+            httpGet: {path: /healthz, port: health}
+            failureThreshold: 60
+            periodSeconds: 5
           env:
             - name: TEMPORAL_TASK_QUEUE
               value: {{ printf "%s-workflows" .Values.worker.team | quote }}
@@ -47,3 +73,15 @@ spec:
               drop: [ALL]
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
+{{- if .Values.worker.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: workflow-worker
+spec:
+  minAvailable: {{ .Values.worker.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: workflow-worker
+{{- end }}
