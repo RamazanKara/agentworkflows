@@ -55,7 +55,7 @@ def init_project(destination: Path, template: str) -> None:
             f"    run_worker([{workflow}])\n"
         ),
         "input.json": json.dumps(example, indent=2) + "\n",
-        "requirements.txt": "agentworkflows==0.3.0\n",
+        "requirements.txt": "agentworkflows==0.4.0\n",
         ".gitignore": ".venv/\n.env\n__pycache__/\n",
         "README.md": f"""# {workflow}
 

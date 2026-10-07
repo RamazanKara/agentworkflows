@@ -5,10 +5,10 @@ Use this checklist before trusting a public release in a customer-owned cluster.
 Set the release and repository once:
 
 ```bash
-export RELEASE=v0.3.0
+export RELEASE=v0.4.0
 export REPOSITORY=RamazanKara/agentworkflows
 export IMAGE_REPO=ghcr.io/ramazankara/agentworkflows
-export RELEASE_IDENTITY="https://github.com/$REPOSITORY/.github/workflows/ci.yml@refs/tags/$RELEASE"
+export RELEASE_IDENTITY="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$RELEASE"
 ```
 
 ## Helm OCI Charts
@@ -64,60 +64,28 @@ cosign verify "$IMAGE_REPO/charts/agent-workspace:${RELEASE#v}" \
 
 Chart OCI tags drop the leading `v` (`${RELEASE#v}`) to match the chart `version`, while runtime image tags keep it.
 
-## Provenance And SBOM Attestations
+## Release Files
 
-The main-branch image build publishes SLSA provenance and SPDX SBOM attestations.
-The tag workflow promotes those same image digests and signs them for the release;
-it does not rebuild them. Verify build attestations against `refs/heads/main` and
-the release's exact source commit, using the authenticated GitHub CLI.
-
-Run from a checkout containing the release tag:
+Download the release files into a new directory and check them:
 
 ```bash
-SOURCE_REVISION="$(git rev-parse "${RELEASE}^{commit}")"
-for service in inference-gateway rag-service; do
-  gh attestation verify "oci://$IMAGE_REPO/$service:$RELEASE" \
-    --repo "$REPOSITORY" \
-    --signer-workflow "$REPOSITORY/.github/workflows/ci.yml" \
-    --source-ref refs/heads/main \
-    --source-digest "$SOURCE_REVISION"
-
-  gh attestation verify "oci://$IMAGE_REPO/$service:$RELEASE" \
-    --repo "$REPOSITORY" \
-    --signer-workflow "$REPOSITORY/.github/workflows/ci.yml" \
-    --source-ref refs/heads/main \
-    --source-digest "$SOURCE_REVISION" \
-    --predicate-type https://spdx.dev/Document/v2.3
-done
-```
-
-See [GitHub artifact attestation verification](https://cli.github.com/manual/gh_attestation_verify)
-for authentication and offline bundle options.
-
-## SBOM And Scan Checksums
-
-Download all release assets into a new directory. GitHub flattens asset paths, so
-restore the chart and SDK directories recorded in the checksum manifests:
-
-```bash
-mkdir -p "release-evidence/$RELEASE/chart-packages" "release-evidence/$RELEASE/sdk-dist"
-gh release download "$RELEASE" --repo "$REPOSITORY" --dir "release-evidence/$RELEASE"
+mkdir -p "release-files/$RELEASE"
+gh release download "$RELEASE" --repo "$REPOSITORY" --dir "release-files/$RELEASE"
 (
-  cd "release-evidence/$RELEASE"
-  mv ./*.tgz chart-release-manifest.json chart-release-manifest.sigstore.json chart-packages/
-  mv ./*.whl ./*.tar.gz sdk-dist/
-  cosign verify-blob supply-chain-checksums.txt \
-    --bundle supply-chain-checksums.sigstore.json \
+  cd "release-files/$RELEASE"
+  sha256sum --check sdk-checksums.txt
+  cosign verify-blob chart-release-manifest.json \
+    --bundle chart-release-manifest.sigstore.json \
     --certificate-identity "$RELEASE_IDENTITY" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com
-  sha256sum --check supply-chain-checksums.txt
-  sha256sum --check sdk-checksums.txt
 )
 ```
 
-Review the SBOMs and SARIF files before promotion. The Trivy release gate fails on
-HIGH or CRITICAL image vulnerabilities. The signed checksum manifest covers the
-chart packages and release image evidence; SDK checksums are published separately.
+`sdk-checksums.txt` covers the Python wheel, source archive and TypeScript package. The
+signed chart manifest records each chart package and the image digests it embeds.
+Images are built from the tagged commit on GitHub-hosted runners; the release workflow does
+not publish SBOM or provenance attestations. Run `make image-scan` locally if you need a
+vulnerability report before deploying.
 
 ## Strict Evidence
 

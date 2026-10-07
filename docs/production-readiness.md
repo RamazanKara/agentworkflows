@@ -51,7 +51,7 @@ AgentWorkflows is cloud-first. The local trial demonstrates its governed provide
 | Policy as code | Kyverno required labels, resources, pod hardening, read-only root filesystems, image signature audit | Enforce on AI namespaces and exclude platform operators | `make policy-test` when Kyverno CLI is installed |
 | Cost controls | Required owner/cost/environment/sandbox labels and OpenCost app | Map labels to chargeback/showback taxonomy | `make validate` YAML checks |
 | Secret handling | External Secrets examples and no committed runtime tokens | Replace local Kubernetes provider with enterprise backend | `deploy/clusters/customer/external-secrets.yaml` |
-| Supply chain | Pinned Alpine runtime images, hashed Python dependency locks, runtime-only Python dependencies, high/critical Trivy image and repo failure gates, local SBOM/SARIF/checksum evidence, Cosign digest signing, workflow artifacts, and release asset upload in CI | Promote only immutable signed/scanned image digests with downloadable evidence | `make dependency-lock-check`, `make repo-security-scan`, `make image-scan`, `make supply-chain-check`, GitHub Actions image job |
+| Supply chain | Pinned Alpine runtime images, hashed Python dependency locks, runtime-only Python dependencies, high/critical Trivy image and repo failure gates, local SBOM/SARIF/checksum evidence, Cosign digest signing and release asset upload in the tag-only release workflow | Deploy only immutable signed image digests that you have scanned | `make dependency-lock-check`, `make repo-security-scan`, `make image-scan`, `make supply-chain-check`, GitHub Actions release workflow |
 | Backup and restore | `restore-drill` application-data validation and Velero examples | Run scheduled restore evidence for each critical data store | `make restore-drill`, `make backup-drill` |
 | Disaster recovery | Single-cluster DR posture with named RPO/RTO and a whole-platform restore order | Provision an off-cluster backup target; design secondary-cluster/multi-region if required | [runbooks/disaster-recovery.md](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/disaster-recovery.md) |
 | Model cards | Each approved model ships a card/datasheet referenced from the catalog | Keep cards current with promotion; treat as a review artifact | `make model-check` |
@@ -79,7 +79,7 @@ never removed, so rolling back to the reference footprint for a demo is a one-li
 
 ## Workflow upgrades and recovery
 
-The 0.3.0 gateway uses **Redis**, not PostgreSQL, for run indexes, step timelines and
+The 0.4.0 gateway uses **Redis**, not PostgreSQL, for run indexes, step timelines and
 team/run budgets. Temporal owns workflow history in `temporal` and SQL visibility in
 `temporal_visibility`, both on the existing PostgreSQL service. Back up all three stores
 together with the complete receipt export. No gateway PostgreSQL database or new service

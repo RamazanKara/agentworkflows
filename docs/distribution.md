@@ -1,19 +1,18 @@
 # Distribution and discovery
 
-Release CI is configured to publish one tested source revision through four channels.
-Commands below target v0.3.0; release assets become available after publication. Images are promoted
-from the already-tested commit digest, Helm charts embed those immutable image digests, the
-Python client is built separately and attached to the GitHub release, and versioned
-documentation is retained by `mike`.
+The tag-only release workflow (`.github/workflows/release.yml`) publishes one tagged source
+revision through four channels. Commands below target v0.4.0. Images are built from the
+tagged commit and signed by digest, Helm charts embed those image digests, the Python and
+TypeScript SDKs are attached to the GitHub release, and versioned documentation is retained by `mike`.
 
 ## Helm OCI
 
 The umbrella chart is the recommended public entry point:
 
 ```bash
-helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.3.0
+helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.4.0
 helm install agentworkflows oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows \
-  --version 0.3.0 --namespace ai-platform --create-namespace
+  --version 0.4.0 --namespace ai-platform --create-namespace
 ```
 
 Release CI publishes `artifacthub-repo.yml` to the chart repository's special
@@ -25,10 +24,11 @@ release. This external registration cannot be completed from repository code.
 ## Python package
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.3.0/agentworkflows-0.3.0-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.4.0/agentworkflows-0.4.0-py3-none-any.whl
 ```
 
-The wheel, source archive, and `sdk-checksums.txt` are attached to each GitHub release.
+The wheel, source archive, TypeScript SDK package (`agentworkflows-sdk-*.tgz`) and
+`sdk-checksums.txt` are attached to each GitHub release.
 Follow [release verification](release-verification.md) to verify the files before installing.
 The default release channel is GitHub downloads; PyPI publishing requires the setup below.
 Until a release is available, install from the checkout with `python -m pip install ./sdk/python`.
@@ -39,7 +39,7 @@ PyPI is disabled unless the repository Actions variable `PYPI_PUBLISH_ENABLED` i
 `true`. GitHub downloads complete independently of this setting and PyPI environment approval.
 
 Before enabling it, register a pending PyPI Trusted Publisher with owner
-`RamazanKara`, repository `agentworkflows`, workflow `ci.yml`, environment `pypi`,
+`RamazanKara`, repository `agentworkflows`, workflow `release.yml`, environment `pypi`,
 and project `agentworkflows`. Protect the GitHub `pypi` environment with
 required reviewer approval and tag-only deployment rules. CI keeps package building in an
 unprivileged job; only the prebuilt artifact reaches the OIDC-enabled publish job. PyPI

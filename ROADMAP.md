@@ -2,9 +2,9 @@
 
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
-Version 0.3.0 adds automatic starts, team notifications, and a five-template gallery with
-guided documentation. The v0.2.0 tag already includes milestones 1–7, including the
-quickstart and production hardening; milestones 8–9 are delivered in v0.3.0.
+Version 0.4.0 adds the TypeScript SDK, a clearer console and published release artifacts.
+The v0.2.0 tag includes milestones 1–7, v0.3.0 delivers milestones 8–9, and v0.4.0
+delivers milestone 10.
 
 ## Milestone 1: governed cloud providers — delivered in 0.2.0
 
@@ -87,6 +87,12 @@ signing, delivery guarantees, configuration and the smoke proof.
 - Docs landing page and a side-by-side comparison with LiteLLM plus Temporal.
 
 See the [template gallery](docs/templates.md) and [decision guide](docs/decision-guide.md).
+
+## Milestone 10: TypeScript SDK and console polish — delivered in 0.4.0
+
+- TypeScript workflow SDK with governed activities, approvals and two runnable examples.
+- Readable run timelines, explained fallback costs, result summaries and phone layouts.
+- Tag-only release workflow publishing signed images and charts plus both SDKs.
 
 ## Next: deployment validation and integration coverage
 
