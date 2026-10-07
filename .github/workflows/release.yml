@@ -210,7 +210,7 @@ jobs:
       - name: Download the released Python files
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern 'agentworkflows-*' --dir sdk-dist
+        run: gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern '*.whl' --pattern 'agentworkflows-[0-9]*.tar.gz' --dir sdk-dist
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
         with:
           packages-dir: sdk-dist
