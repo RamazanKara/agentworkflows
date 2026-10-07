@@ -1,2 +1,4 @@
 -r requirements.txt
 pytest==9.1.1
+# Keep pytest's Windows-only dependency in locks generated on Linux.
+colorama==0.4.6 ; sys_platform == "win32"

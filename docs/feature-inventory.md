@@ -59,7 +59,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | End-user multi-user chat UI | Example only | Off | Open WebUI manifest/runbook; identity and storage are operator-owned |
 | Training, fine-tuning, audio, images | Out of scope | n/a | Use purpose-built systems; see [Scope and non-goals](scope-and-non-goals.md) |
 
-Milestone 1 (0.1.0): OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex Gemini
+Milestone 1 (0.2.0): OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex Gemini
 adapters share model policy, budgets, DLP, settlement, and provider/cost receipts. Cloud
 routes are opt-in; confidential/restricted tenants and requests remain local. Provider
 protocols and the extended Compose walkthrough are tested with local fakes. See

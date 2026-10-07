@@ -1,5 +1,7 @@
 # AgentWorkflows
 
+![Cloud-first Compose trial and team web console](docs/assets/compose-demo.gif)
+
 [![CI](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml/badge.svg)](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-AgentWorkflows-0b7285)](https://ramazankara.github.io/agentworkflows/)
 [![License](https://img.shields.io/github/license/RamazanKara/agentworkflows)](LICENSE)
@@ -12,10 +14,10 @@ AWS Bedrock, and Vertex Gemini behind one API. Bind credentials to teams, contro
 models they can call, account for usage, and inspect the audit trail. Self-hosted Ollama
 and vLLM models are optional add-ons.
 
-Version **0.2.0** delivers team operations: projects and roles, authenticated run controls,
-verified approvals, provider keys and shared spend limits, step timelines, and team reports.
-Temporal keeps agent workflows durable across worker failures. Start with the
-[workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
+Version **0.2.0**, the first public release, includes governed cloud providers, durable
+Temporal workflows, agent and tool integrations, team roles and budgets, and a web console.
+Scaffold research, support triage, or code review; inspect, approve, and verify each run.
+Start with the [workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
 
 ## Your first approved workflow in five minutes
 
@@ -69,7 +71,7 @@ require fresh evidence for AgentWorkflows. See [evidence and validation](docs/pr
 
 ## Deploy and operate
 
-Start with the [ten-minute quickstart](docs/quickstart.md). For Kubernetes, use the
+Start with the [five-minute quickstart](docs/quickstart.md). For Kubernetes, use the
 [customer deployment guide](deploy/clusters/customer/README.md) and review identity,
 secrets, ingress, storage, observability, and backups before production use. The umbrella
 chart is `deploy/charts/agentworkflows`; release CI is configured to publish it at
@@ -79,7 +81,7 @@ To generate a GitOps overlay for a release after it has been published:
 
 ```bash
 make customer-overlay CUSTOMER_REPO_URL=https://github.com/<you>/<fork>.git \
-  CUSTOMER_REVISION=v0.1.0 CUSTOMER_GPU_PROFILE=nvidia
+  CUSTOMER_REVISION=v0.2.0 CUSTOMER_GPU_PROFILE=nvidia
 ```
 
 The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.2.0
@@ -99,7 +101,7 @@ Documentation: <https://ramazankara.github.io/agentworkflows/>.
 Built on [private-ai-platform-kit](https://github.com/RamazanKara/private-ai-platform-kit)
 ([DOI: 10.5281/zenodo.21038652](https://doi.org/10.5281/zenodo.21038652)). The kit remains a
 separate self-hosted project with its own paper and DOI. AgentWorkflows retains its Git
-history and Apache-2.0 attribution, and starts its own product releases at 0.1.0.
+history and Apache-2.0 attribution, and starts its own product releases at 0.2.0.
 
 Issues and pull requests are welcome. Report vulnerabilities privately through
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
