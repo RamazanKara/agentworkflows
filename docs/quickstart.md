@@ -1,8 +1,8 @@
 # Quickstart
 
 Try AgentWorkflows in ten minutes: discover models, send a governed call, inspect your
-team's usage, run a durable workflow, and verify its receipts. This checkout adds Temporal
-execution and human approvals to the governed cloud gateway.
+team's usage, run a durable workflow, and verify its receipts. Version 0.2.0 adds projects,
+roles, verified approvals, and shared spend controls to the cloud gateway.
 
 ## Docker Compose
 
@@ -50,11 +50,10 @@ agentworkflows usage
 `from agentworkflows import GatewayClient`. Existing OpenAI and Anthropic clients can use
 the same gateway; follow the [client examples](client-examples.md).
 
-The console is read-only. Set team credentials and scopes in `deploy/compose/key-records.yaml`:
-each key stores a SHA-256 digest and binds to one sandbox, which is the current team budget
-boundary. Set `budget.estimatedTokenLimit` on that record and recreate the gateway to apply it.
-Usage and provider cost are estimates based on token counts and configured prices, not a bill.
-See [API access](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/api-access.md) and [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md).
+Follow [team setup](workflows.md#teams-projects-and-roles) to issue builder/approver/viewer
+credentials, add projects, map provider keys, and set shared token/USD limits.
+`agentworkflows team` discovers your access; `agentworkflows runs --help` lists run commands.
+The console is read-only. Usage uses configured prices and conservative reservations.
 
 ## Connect a real provider
 
@@ -64,7 +63,9 @@ provider and model. It includes the connection, pricing, and server-side credent
 1. Replace fixture routes with approved provider URLs, model IDs, and contracted token prices.
 2. Supply the named credential through the gateway's environment or Kubernetes Secret.
    Never put provider keys in client requests or tracked files.
-3. Bind each team's gateway key to its sandbox and budget. Review data classification:
+3. Set the team's `providerCredentials` mapping to those environment variable names and add
+   the provider origin to workflow `allowedEgress`. Bind gateway keys to roles/projects.
+   Review data classification:
    confidential requests cannot use a cloud route, even as a fallback.
 4. Restart the gateway, list models, and make one authorized call. Cloud readiness checks
    credential presence only; a successful real call is required to validate account access.
@@ -86,6 +87,9 @@ Append this item under `spec.models` in `deploy/compose/model-routing.yaml`:
 ```yaml
     - id: qwen2.5:0.5b
       backend: ollama
+      pricing:
+        inputUsdPer1kTokens: 0
+        outputUsdPer1kTokens: 0
 ```
 
 Then load the policy and call the model:

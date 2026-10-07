@@ -57,6 +57,7 @@ services:
       - ./sandbox-policy.yaml:/etc/agentworkflows/sandbox-policy.yaml:ro
     environment:
       # The legacy runtime backs demo-overload; the routing policy selects cloud adapters.
+      TEMPORAL_ADDRESS: temporal:7233
       RUNTIME_BACKEND: vllm
       OLLAMA_BASE_URL: http://ollama:11434
       MODEL_ID: ${AGENTWORKFLOWS_MODEL:-demo-openai}
@@ -182,7 +183,9 @@ services:
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       AGENTWORKFLOWS_URL: http://inference-gateway:8080
-      AGENTWORKFLOWS_API_KEY: local-development-only
+      AGENTWORKFLOWS_API_KEY: demo-worker
+      TEMPORAL_TASK_QUEUE: demo-workflows
+      AGENTWORKFLOWS_TEAM: demo
     depends_on:
       temporal:
         condition: service_healthy

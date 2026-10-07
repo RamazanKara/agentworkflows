@@ -87,6 +87,13 @@ class ResearchWorkflow:
     def status(self) -> dict[str, Any]:
         return {"stage": self.stage, "draft": self.draft, "reviewer": self.reviewer, "run_id": workflow.info().run_id}
 
+    @workflow.update
+    def review(self, approved: bool, reviewer: str) -> bool:
+        if self.stage != "awaiting_approval" or self.decision is not None:
+            return False
+        self.approve(approved, reviewer)
+        return self.decision is not None
+
 
 async def main() -> None:
     import argparse
@@ -123,7 +130,7 @@ async def main() -> None:
         activities = GatewayActivities(os.getenv("AGENTWORKFLOWS_URL", "http://localhost:8080"), key, agents=AGENTS)
         async with Worker(
             client,
-            task_queue="research",
+            task_queue=os.getenv("TEMPORAL_TASK_QUEUE", "research"),
             workflows=[ResearchWorkflow, FrameworkWorkflow, CodeWorkflow],
             activities=[activities.call],
             max_concurrent_activities=2,
@@ -134,8 +141,8 @@ async def main() -> None:
         handle = await client.start_workflow(
             ResearchWorkflow.run,
             ResearchRequest(args.topic, args.model),
-            id=f"research-{uuid4()}",
-            task_queue="research",
+            id=f"{os.getenv('AGENTWORKFLOWS_TEAM', 'demo')}/default/{uuid4()}",
+            task_queue=os.getenv("TEMPORAL_TASK_QUEUE", "research"),
             execution_timeout=timedelta(days=8),
             id_reuse_policy=WorkflowIDReusePolicy.REJECT_DUPLICATE,
         )

@@ -97,6 +97,8 @@ class KeyRecord:
     request_budget: int | None = None
     prompt_char_budget: int | None = None
     estimated_token_budget: int | None = None
+    role: str | None = None
+    project: str | None = None
 
     def is_expired(self, now: float) -> bool:
         """Return whether the key's expiry (if any) is at or before ``now`` (epoch seconds)."""
@@ -209,6 +211,14 @@ def _parse_record(item: Any, index: int) -> KeyRecord:
     scopes = tuple(str(scope).strip() for scope in raw_scopes if str(scope).strip())
 
     expires_at = _parse_expires_at(item.get("expires_at"), key_id)
+    role = item.get("role")
+    project = item.get("project")
+    if role is not None and (role not in {"admin", "builder", "approver", "viewer"} or sandbox is None):
+        raise KeyRecordError(f"key record '{key_id}' role requires a sandbox and admin, builder, approver, or viewer")
+    if project is not None:
+        if role is None:
+            raise KeyRecordError(f"key record '{key_id}' project requires a role")
+        project = validate_sandbox_id(project)
 
     raw_budget = item.get("budget", {})
     if raw_budget is None:
@@ -222,6 +232,8 @@ def _parse_record(item: Any, index: int) -> KeyRecord:
         sandbox=sandbox,
         scopes=scopes,
         expires_at=expires_at,
+        role=role,
+        project=project,
         request_budget=_optional_non_negative_int(raw_budget.get("requestLimit"), "requestLimit", key_id),
         prompt_char_budget=_optional_non_negative_int(raw_budget.get("promptCharLimit"), "promptCharLimit", key_id),
         estimated_token_budget=_optional_non_negative_int(

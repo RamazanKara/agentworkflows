@@ -77,3 +77,12 @@ def test_approval_only_applies_to_one_waiting_draft():
     workflow.approve(True, "late-reviewer")
     assert workflow.decision is False
     assert workflow.reviewer == "reviewer"
+
+
+def test_review_update_accepts_one_waiting_decision():
+    workflow = ResearchWorkflow()
+    assert workflow.review(True, "too-early") is False
+    workflow.stage = "awaiting_approval"
+    assert workflow.review(False, "verified-reviewer") is True
+    assert workflow.review(True, "another-reviewer") is False
+    assert workflow.reviewer == "verified-reviewer" and workflow.decision is False

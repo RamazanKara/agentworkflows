@@ -12,40 +12,176 @@ From the checkout, with Docker Compose, Bash, Make, and Python 3.12+ installed:
 ```bash
 make compose-up
 python -m pip install ./sdk/python
-export AGENTWORKFLOWS_API_KEY=local-development-only
-run=$(python -m agentworkflows.examples.research start "How should our team evaluate AI agents?")
-WORKFLOW_ID=$(echo "$run" | python -c 'import json,sys; print(json.load(sys.stdin)["workflow_id"])')
+export AGENTWORKFLOWS_API_KEY=demo-builder
+agentworkflows team
+run=$(agentworkflows runs start --input '{"topic":"How should our team evaluate AI agents?"}')
 RUN_ID=$(echo "$run" | python -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')
-python -m agentworkflows.examples.research status "$WORKFLOW_ID" "$RUN_ID"
+agentworkflows runs inspect "$RUN_ID"
+agentworkflows runs list
 ```
 
 The included worker retrieves sources with the `research` tool, asks a cloud model to
-summarize them, drafts a briefing, and waits for approval. Repeat `status` until it shows
+summarize them, drafts a briefing, and waits for approval. Repeat `inspect` until it shows
 `awaiting_approval`, then read the draft. Open <http://localhost:8233> to inspect Temporal
 history, activities, failures, and signals. Approve the exact run you reviewed:
 
 ```bash
-python -m agentworkflows.examples.research approve "$WORKFLOW_ID" "$RUN_ID" --reviewer team-lead
-python -m agentworkflows.examples.research result "$WORKFLOW_ID" "$RUN_ID"
+AGENTWORKFLOWS_API_KEY=demo-approver agentworkflows runs approve "$RUN_ID"
+agentworkflows runs inspect "$RUN_ID"
 curl -s http://localhost:8080/v1/workflow-runs/$RUN_ID \
   -H "Authorization: Bearer $AGENTWORKFLOWS_API_KEY"
 ```
 
-Use `reject` in place of `approve` to finish without publishing. Approval expires after
-seven days. A duplicate or early signal does not approve another draft. The CLI requires
-both IDs so a decision cannot accidentally target a later run with the same workflow ID.
+Use `approve --reject` to finish without publishing. Approval expires after seven days.
+The API records the authenticated key name or verified JWT subject; clients cannot supply
+a reviewer name. A Temporal update accepts only one decision for the waiting draft.
+Early or conflicting decisions return `409 approval_not_waiting`. Retrying the same identity's
+decision is idempotent, including after a lost response. Run IDs identify exact executions.
 
 The demo uses local cloud-protocol and tool fixtures. Its drafting request deliberately
 fails on OpenAI and falls back to Anthropic; the publication is synthetic. No real account,
 external publication, or paid model call is used. To use real cloud models, configure an
 [approved route and prices](model-selection.md#cloud-routes-milestone-1), replace the tool
-URLs below, and pass that route to `start --model your-approved-model`.
+URLs below, and set `model` in the run's JSON input to your approved model ID.
 
 Run `make compose-smoke` for the automated end-to-end proof: it waits for the draft, kills
-the worker with SIGKILL, submits an approval signal while the worker is offline, starts a
-replacement, and verifies publication plus exactly two completed model-call receipts.
+the worker with SIGKILL while approval is waiting, starts a replacement, approves through
+the authenticated API, and verifies publication plus exactly two completed model-call receipts.
+It also checks roles, team isolation, timelines, shared spend, cancellation, and retry.
 Evidence is under `.out/compose/`. `make compose-down` stops the trial and deletes its data;
 use `docker compose -f deploy/compose/compose.yaml stop` to retain history and budgets.
+
+## Teams, projects, and roles
+
+A **team is the existing sandbox ID**. Projects group and restrict run access. Operators
+review the existing `API_KEY_RECORDS_PATH` and `SANDBOX_POLICY_PATH` files, then recreate
+the gateway. The read-only console shows models and budgets; the CLI controls runs.
+Managed teams require authentication, `SANDBOX_BUDGET_ENABLED=true`,
+`SANDBOX_BUDGET_BACKEND=redis`, and `AUDIT_LOG_ENABLED=true`; Compose sets these already.
+
+| Role | Read runs/reports | Start, cancel, retry, call models | Approve/reject |
+| --- | --- | --- | --- |
+| admin | Yes | Yes | Yes |
+| builder | Yes | Yes | No |
+| approver | Yes | No | Yes |
+| viewer | Yes | No | No |
+
+The public Compose keys are `local-development-only` (admin), `demo-builder`,
+`demo-approver`, `demo-viewer`, and `demo-worker`. Use randomly generated keys outside
+the trial. Add a team policy and a key record for each member:
+
+```yaml
+# Entry under records in key-records.yaml; store only the random key's SHA-256 digest.
+- name: alice
+  sha256: REPLACE_WITH_SHA256_OF_RANDOM_KEY
+  sandbox: research-team
+  role: builder
+  project: briefing  # omit to grant this role across the team's projects
+```
+
+```yaml
+# Entry under spec.policies in the existing SandboxPolicySet.
+- sandboxId: research-team
+  projects: [briefing, engineering]
+  providerCredentials:
+    openai: RESEARCH_OPENAI_KEY
+    anthropic: RESEARCH_ANTHROPIC_KEY
+  budgets:
+    estimatedTokenLimit: 200000
+    costLimitUsd: 25
+  # Copy reviewed tools/workflows from deploy/compose/sandbox-policy.yaml,
+  # then replace model IDs and allowedEgress with approved destinations.
+```
+
+`providerCredentials` names gateway environment variables/Secret references, never keys.
+Each route, including fallback and streaming, selects the bound team's provider key;
+a missing provider mapping fails closed for managed teams. `agentworkflows team` shows
+available projects and provider names without exposing secrets. Project-bound credentials
+cannot read or control another project's runs. Identity comes from a verified sandbox
+binding, never a caller-supplied team/project header. Existing signed JWTs can supply `role`
+and optional `project` claims with a nonempty `sub`; configure `JWT_TENANT_CLAIM` and control claim issuance.
+Legacy unbound keys cannot use the team run API. Enabling projects requires roles on the
+team's existing credentials. Team onboarding remains declarative; there is no membership UI.
+
+Use one trusted worker per team with a bound builder key carrying `workflows:execute`.
+Set `TEMPORAL_TASK_QUEUE=research-team-workflows`; the API selects that queue from the
+verified team. Human credentials do not carry the worker scope. In Helm, set `worker.team`
+and `worker.existingSecret`. Workers and Temporal operators are trusted: end users must
+not receive direct Temporal access or worker keys.
+
+## Authenticated workflow API
+
+The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /v1/team` | Discover role, projects, providers, and spend limit |
+| `GET /v1/workflow-policies` | Discover approved workflow types and limits |
+| `POST /v1/workflow-runs` | Start with `workflow`, JSON `input`, optional `project` and UUID `request_id` |
+| `GET /v1/workflow-runs?project=briefing&offset=0&limit=20` | Page through project runs |
+| `GET /v1/workflow-runs/{run_id}` | Status, draft, budget, step timeline with receipt IDs |
+| `POST /v1/workflow-runs/{run_id}/cancel` | Request cancellation of this exact execution |
+| `POST /v1/workflow-runs/{run_id}/retry` | Start a fresh execution after failure/cancellation |
+| `POST /v1/workflow-runs/{run_id}/approve` | Submit `{"approved":true}` or `false` |
+| `GET /v1/usage` | Current-window team/project usage and provider costs |
+
+```bash
+curl -s http://127.0.0.1:8080/v1/workflow-runs \
+  -H 'Authorization: Bearer demo-builder' -H 'Content-Type: application/json' \
+  -d '{"workflow":"ResearchWorkflow","input":{"topic":"Evaluate team agents"},"project":"default"}'
+agentworkflows runs cancel RUN_ID
+agentworkflows runs retry FAILED_RUN_ID
+agentworkflows usage
+```
+
+Retry accepts failed, canceled, terminated, or timed-out runs. It starts a new execution
+and run budget; team spend is retained. Repeating retry on a failed run returns the same
+replacement. Review side effects first: tools may execute again. Cancellation cannot undo
+already-sent actions. `runs list` returns `next_offset`; pass it as `--offset` for the next page.
+`runs start` defaults to `ResearchWorkflow`; use `runs start YourWorkflow --input '<JSON>'
+--project engineering` for another registered workflow. Input is its single argument.
+
+Supply a stable UUID `request_id` when retrying an ambiguous start. The CLI prints a retry
+ID with start errors. Reusing that ID with different input returns a conflict.
+`PUT /v1/workflow-runs/{run_id}` remains the worker's immutable budget initialization.
+The Python `GatewayClient` exposes `team`, `start_run`, `runs`, `run`, `cancel_run`,
+`retry_run`, and `approve_run` with the same semantics.
+Custom workflows expose a `status` query returning `stage` for progress and, when they
+support approvals, a `review(approved, reviewer)` update returning whether the waiting
+decision was accepted. The research example implements both.
+
+## Operate the service
+
+`agentworkflows usage` aggregates providers and tools for the bound team or project.
+`spend` shows the UTC-aligned cost window, limit, and reserved-plus-spent USD. Its length
+uses `SANDBOX_BUDGET_WINDOW_SECONDS` (default 86400); zero means lifetime accounting.
+Token/request budgets retain their existing window semantics. Spend reservations are
+atomic in the existing Redis, covering eligible fallbacks before a call. Managed-team
+calls retry through the caller or Temporal so each attempt has a budget and receipt.
+Unused fallback capacity is refunded; measured usage replaces the successful
+attempt's reservation. Failed/unknown attempts remain conservatively charged. Configure
+prices for every route, including local models; tools charge per attempt. These are
+configured-price estimates, not provider invoices or billing guarantees.
+
+Persist Redis with AOF and no eviction. Run metadata, timeline indices, and cost windows
+survive gateway/worker restarts; back up Redis alongside Temporal PostgreSQL. Historical
+cost keys remain available for operator export under `...:<team>:cost:<window-start>`;
+the API reports the current window. Retain run metadata/timeline keys with Temporal history
+and audit evidence. Expired Temporal executions return 404; retained receipts remain in
+the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
+Temporal; restrict access and retention for both stores.
+
+The **AgentWorkflows Team Operations** Grafana dashboard sits beside existing dashboards
+in `deploy/observability/dashboards`: throughput, failures, run states, approvals waiting,
+and shared spend. State/spend gauges refresh every 30 seconds; queries use `max` across
+replicas to avoid double counting. Alerts cover stalled throughput, failed runs, approvals
+waiting 30 minutes, spend above 80%, and stale collection. The existing Kubernetes
+observability deployment loads them; Compose does not install Grafana.
+
+The timeline is a convenience index of gateway receipts; write failures are logged and
+may leave gaps. Verify the separately retained audit export and external head anchors.
+Hashes establish linkage within retained chains; they do not prove unreported tool activity,
+model correctness, or that a release was signed/published.
 
 ## Write your workflow
 
@@ -81,7 +217,7 @@ from agentworkflows.activities import GatewayActivities
 async def serve():
     client = await Client.connect("localhost:7233", namespace="default")
     activities = GatewayActivities("http://localhost:8080", os.environ["AGENTWORKFLOWS_API_KEY"])
-    async with Worker(client, task_queue="briefing", workflows=[Briefing],
+    async with Worker(client, task_queue="research-team-workflows", workflows=[Briefing],
                       activities=[activities.call], max_concurrent_activities=2,
                       max_concurrent_workflow_tasks=2):
         await asyncio.Event().wait()
@@ -89,8 +225,8 @@ async def serve():
 asyncio.run(serve())
 ```
 
-Start it with `client.start_workflow(Briefing.run, "your topic", id="briefing-001",
-task_queue="briefing")` from another process. The
+Register `Briefing` in the team workflow policy, then start with
+`agentworkflows runs start Briefing --input '"your topic"' --project briefing`. The
 [complete research example](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/research.py)
 also demonstrates `@workflow.signal`, `@workflow.query`, `wait_condition`, and an execution
 timeout. Cancel runs with Temporal's client or UI; cancellation stops scheduling subsequent
@@ -323,9 +459,9 @@ Temporal history contains workflow inputs and activity results. Gateway DLP prot
 provider/tool boundary and receipts, not already-written Temporal inputs. Restrict history
 access and retention; use Temporal payload encryption for sensitive history. Keep API keys
 in worker/gateway environments. Production Temporal and its UI require authentication,
-authorization, and TLS; the demo's reviewer string is an attribution label, not verified
-identity. Use a separate namespace and worker queue per trust boundary, and restrict who
-can submit workflows or approval signals.
+authorization, and TLS. The gateway verifies approval identities; direct Temporal clients
+can bypass that check and must be restricted to operators and workers. Use separate Temporal
+namespaces/deployments for stronger trust boundaries, and restrict signals and updates.
 
 | Symptom | Next action |
 | --- | --- |
@@ -338,4 +474,4 @@ can submit workflows or approval signals.
 | `workflow_egress_denied` | Add the reviewed tool server origin to that workflow's `allowedEgress` |
 | `mcp_protocol_unsupported` | Use Streamable HTTP with MCP 2025-03-26 tool support |
 | `workspace_busy` / `agent_failed` | Wait for the previous step to finish, or inspect the workspace before explicitly starting another run |
-| Approval cannot be submitted | Wait for `awaiting_approval` and use the exact workflow ID and run ID |
+| Approval cannot be submitted | Wait for `awaiting_approval`; use an approver/admin key and the exact run ID |

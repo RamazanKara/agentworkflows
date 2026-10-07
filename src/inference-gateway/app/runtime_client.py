@@ -3,14 +3,15 @@
 import random
 import socket
 from asyncio import sleep
+from dataclasses import replace
 from time import time
 from typing import Any
 
 import httpx
 
 from app.cloud_providers import cloud_request, cloud_response, cloud_stream, credential_headers
-from app.policy import CLOUD_BACKENDS, ModelRoute, ModelRoutingPolicy
-from app.settings import Settings
+from app.policy import CLOUD_BACKENDS, ModelRoute, ModelRoutingPolicy, SandboxPolicySet
+from app.settings import AdmissionPolicyError, Settings
 
 REDACTED_MESSAGE_FIELDS = {"reasoning", "reasoning_content", "thinking"}
 
@@ -78,6 +79,7 @@ class RuntimeClient:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.policy = ModelRoutingPolicy.default(settings)
+        self.sandbox_policies = SandboxPolicySet.empty()
         self._failures: dict[str, int] = {}
         self._opened_until: dict[str, float] = {}
         self._client: httpx.AsyncClient | None = None
@@ -104,6 +106,11 @@ class RuntimeClient:
         body["model"] = body.get("model") or self.settings.model_id
         return body
 
+    def _allow_retries(self, headers: dict[str, str] | None) -> bool:
+        team = self.sandbox_policies.policies.get((headers or {}).get("X-Sandbox-ID", ""))
+        # Managed calls retry through the caller/Temporal so each attempt has its own budget and receipt.
+        return not (team and (team.projects or team.cost_limit_usd is not None))
+
     def _request_parts(
         self, payload: dict[str, Any], backend: str, endpoint: str, headers: dict[str, str] | None
     ) -> tuple[str, dict[str, Any], dict[str, str] | None, ModelRoute | None]:
@@ -111,6 +118,14 @@ class RuntimeClient:
         if backend not in CLOUD_BACKENDS:
             return f"{self._base_url(backend)}/v1/{endpoint}", body, headers, None
         route = self.policy.resolve(body["model"], self.settings.model_id)
+        team = self.sandbox_policies.policies.get((headers or {}).get("X-Sandbox-ID", ""))
+        if team and (team.provider_credentials or team.projects):
+            credential = team.provider_credentials.get(backend)
+            if not credential:
+                raise AdmissionPolicyError(
+                    "provider_not_configured", "Ask your team administrator to configure this provider's key."
+                )
+            route = replace(route, credential_env=credential)
         if route.backend != backend:
             raise ValueError("provider route mismatch")
         if endpoint == "chat/completions" and not any(key in body for key in ("max_tokens", "max_completion_tokens")):
@@ -231,6 +246,7 @@ class RuntimeClient:
         retry: bool = True,
     ) -> dict[str, Any]:
         """Send a chat-completion request, retrying transient errors, and sanitize the result."""
+        retry = retry and self._allow_retries(headers)
         body = self._chat_completion_body(payload)
         resolved_backend = backend or self.settings.runtime_backend
         url, body, headers, route = self._request_parts(body, resolved_backend, "chat/completions", headers)
@@ -248,12 +264,13 @@ class RuntimeClient:
         backend: str | None = None,
     ) -> dict[str, Any]:
         """Send an embeddings request to the backend's OpenAI-compatible endpoint."""
+        retry = self._allow_retries(headers)
         body = dict(payload)
         body["model"] = body.get("model") or self.settings.model_id
         resolved_backend = backend or self.settings.runtime_backend
         url, body, headers, route = self._request_parts(body, resolved_backend, "embeddings", headers)
         data = await self._post_json_with_retry(
-            url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend
+            url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend, retry=retry
         )
         return cloud_response(data, route) if route else data
 
@@ -269,12 +286,13 @@ class RuntimeClient:
         model. Legacy completions carry no assistant ``message`` object, so the chat
         reasoning sanitizer does not apply.
         """
+        retry = self._allow_retries(headers)
         body = dict(payload)
         body["model"] = body.get("model") or self.settings.model_id
         resolved_backend = backend or self.settings.runtime_backend
         url, body, headers, route = self._request_parts(body, resolved_backend, "completions", headers)
         data = await self._post_json_with_retry(
-            url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend
+            url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend, retry=retry
         )
         return cloud_response(data, route) if route else data
 
@@ -291,11 +309,12 @@ class RuntimeClient:
         re-raised, never retried, because a retry would append a second, different
         completion to the partial one the client already received.
         """
+        retry = self._allow_retries(headers)
         body = self._chat_completion_body(payload)
         resolved_backend = backend or self.settings.runtime_backend
         url, body, headers, route = self._request_parts(body, resolved_backend, "chat/completions", headers)
         circuit = f"{resolved_backend}:{route.model_id}" if route else resolved_backend
-        attempts = self.settings.runtime_max_retries + 1
+        attempts = self.settings.runtime_max_retries + 1 if retry else 1
         client = self._client_instance()
         last_error: httpx.HTTPError | None = None
         for attempt in range(attempts):
@@ -340,7 +359,13 @@ class RuntimeClient:
         if resolved_backend in CLOUD_BACKENDS:
             for route in self.policy.routes:
                 if route.backend == resolved_backend:
-                    credential_headers(route)
+                    credentials = {
+                        team.provider_credentials[resolved_backend]
+                        for team in self.sandbox_policies.policies.values()
+                        if resolved_backend in team.provider_credentials
+                    }
+                    for credential in credentials or {route.credential_env}:
+                        credential_headers(replace(route, credential_env=credential))
             return {"status": "configured", "probe": "credentials_only"}
         # Short, fixed ceiling: this backs /readyz, whose kubelet probe times out after a
         # few seconds. A health endpoint that needs longer is itself the answer.

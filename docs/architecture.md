@@ -103,3 +103,12 @@ on the existing governed gateway path; Redis holds accounting only. See [workflo
 for replay, ambiguous in-flight calls, idempotent tools, and approval trust boundaries.
 
 The gateway audit chain is per process/replica. Export records and store chain-head anchors outside the gateway if the log is intended as tamper or rollback evidence.
+
+## Team operations
+
+Teams extend sandbox identity with projects and verified roles. The gateway API controls
+Temporal executions on each team's task queue; workers retain team-bound execution keys.
+Run metadata/timeline indices and atomic cross-provider spend reservations share the existing
+budget Redis. Provider secrets stay on the gateway and are selected by verified team identity.
+Temporal history remains the execution authority. The receipt index does not replace retained
+audit chains and external anchors. See [team operations](workflows.md#operate-the-service).

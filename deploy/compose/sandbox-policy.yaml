@@ -3,6 +3,16 @@ kind: SandboxPolicySet
 spec:
   policies:
     - sandboxId: demo
+      projects: [default, engineering]
+      providerCredentials:
+        openai: COMPOSE_PROVIDER_KEY
+        anthropic: COMPOSE_PROVIDER_KEY
+        azure-openai: COMPOSE_PROVIDER_KEY
+        bedrock: COMPOSE_PROVIDER_KEY
+        vertex: COMPOSE_PROVIDER_KEY
+      budgets:
+        estimatedTokenLimit: 200000
+        costLimitUsd: 50
       tools:
         research:
           url: http://cloud-fake:8000/tools/research
@@ -20,13 +30,18 @@ spec:
           allowedProviders: [openai, anthropic]
           allowedModels: [demo-openai, demo-anthropic]
           allowedTools: [research, publish]
-          allowedEgress: [http://cloud-fake:8000]
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
           tokenLimit: 10000
           costLimitUsd: 5
         FrameworkWorkflow:
           allowedProviders: [openai, anthropic]
           allowedModels: [demo-openai, demo-anthropic]
           allowedTools: [team.search]
-          allowedEgress: [http://cloud-fake:8000]
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
           tokenLimit: 4000
           costLimitUsd: 1
+    - sandboxId: other
+      projects: [default]
+      budgets:
+        estimatedTokenLimit: 1000
+        costLimitUsd: 1

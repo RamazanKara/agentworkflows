@@ -21,6 +21,7 @@ HTTP_METHODS = {"get", "post", "put", "patch", "delete", "options", "head"}
 class RouteContract:
     method: str
     request_schema: str | None = None
+    success_status: str = "200"
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,7 @@ CONTRACTS = {
     "inference-gateway": ServiceContract(
         service_dir=ROOT / "src/inference-gateway",
         title="AgentWorkflows Inference Gateway",
-        version="0.1.0",
+        version="0.2.0",
         snapshot=ROOT / "platform/api-contracts/inference-gateway.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -46,6 +47,11 @@ CONTRACTS = {
             "/metrics": RouteContract("get"),
             "/v1/sandbox/budget": RouteContract("get"),
             "/v1/usage": RouteContract("get"),
+            "/v1/team": RouteContract("get"),
+            "/v1/workflow-runs": RouteContract("post", request_schema="StartRun", success_status="201"),
+            "/v1/workflow-runs/{run_id}/cancel": RouteContract("post"),
+            "/v1/workflow-runs/{run_id}/retry": RouteContract("post", success_status="201"),
+            "/v1/workflow-runs/{run_id}/approve": RouteContract("post", request_schema="Approval"),
             "/v1/models": RouteContract("get"),
             "/v1/chat/completions": RouteContract(
                 "post",
@@ -107,6 +113,11 @@ CONTRACTS = {
                 "/v1/models",
                 "/v1/sandbox/budget",
                 "/v1/usage",
+                "/v1/team",
+                "/v1/workflow-runs",
+                "/v1/workflow-runs/{run_id}/cancel",
+                "/v1/workflow-runs/{run_id}/retry",
+                "/v1/workflow-runs/{run_id}/approve",
                 "/v1/chat/completions",
                 "/v1/completions",
                 "/v1/messages",
@@ -210,7 +221,7 @@ CONTRACTS = {
     "rag-service": ServiceContract(
         service_dir=ROOT / "src/rag-service",
         title="AgentWorkflows RAG Service",
-        version="0.1.0",
+        version="0.2.0",
         snapshot=ROOT / "platform/api-contracts/rag-service.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -419,8 +430,8 @@ def validate_schema(service: str, contract: ServiceContract, schema: dict[str, A
         require(errors, bool(operation.get("tags")), f"{service}: {route.method.upper()} {path} missing tags")
         require(
             errors,
-            "200" in operation.get("responses", {}),
-            f"{service}: {route.method.upper()} {path} missing 200 response",
+            route.success_status in operation.get("responses", {}),
+            f"{service}: {route.method.upper()} {path} missing {route.success_status} response",
         )
         if route.request_schema:
             require(

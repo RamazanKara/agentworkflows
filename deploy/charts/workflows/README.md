@@ -42,10 +42,11 @@ Temporal execution, dedicated PostgreSQL, and a governed Python workflow worker.
 | `temporal.web.resources.requests.memory` | `64Mi` |
 | `worker.existingSecret` | `workflow-gateway-key` |
 | `worker.gatewayUrl` | `http://inference-gateway.inference.svc.cluster.local:8080` |
-| `worker.image` | `ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.1.0` |
+| `worker.image` | `ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.2.0` |
 | `worker.resources.limits.cpu` | `1` |
 | `worker.resources.limits.memory` | `512Mi` |
 | `worker.resources.requests.cpu` | `100m` |
 | `worker.resources.requests.memory` | `128Mi` |
+| `worker.team` | `demo` |
 | `worker.workspaces` | `[]` |
 <!-- chart-docs:end -->

@@ -90,3 +90,9 @@ the same governance either way. See the
 [client examples](https://ramazankara.github.io/agentworkflows/latest/client-examples/).
 
 Licensed under Apache-2.0.
+
+Team operations use the authenticated gateway: `agentworkflows team`, `runs start`,
+`runs list`, `runs inspect RUN_ID`, `runs cancel RUN_ID`, `runs retry RUN_ID`, and
+`runs approve RUN_ID`. Use `agentworkflows runs start --help` for JSON input examples.
+Approvals use the credential's verified identity; `GatewayClient` exposes matching methods.
+See the [team walkthrough](../../docs/workflows.md) for roles, projects, budgets, and timelines.

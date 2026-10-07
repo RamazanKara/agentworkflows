@@ -9,6 +9,32 @@ records:
     # Bound: requests run as sandbox `demo` whatever X-Sandbox-ID says, and naming another
     # sandbox is rejected. Binding is also what unlocks the Responses store and Files API.
     sandbox: demo
+    role: admin
     scopes: [inference, receipts]
     budget:
       estimatedTokenLimit: 200000
+  - name: demo-builder
+    sha256: d501daf4337d11182e2a9bd63bb1c00ef0d4d8a59803cb53b8e3c4155f197ed7
+    sandbox: demo
+    role: builder
+    scopes: [inference, receipts]
+  - name: demo-approver
+    sha256: 62e09a13d5dff5e69890e2d16f3a5d6f2d113a7369d08a6e62eabde7cc26eda6
+    sandbox: demo
+    role: approver
+    scopes: [inference, receipts]
+  - name: demo-viewer
+    sha256: 2c409f0dcce66d0c980ae534d1ccdc0fc6738d7fc35d803949919f4dfa3f8834
+    sandbox: demo
+    role: viewer
+    scopes: [inference, receipts]
+  - name: demo-worker
+    sha256: d98451ef87c1e0d24105824b1c67ec975f9d91a2a219ec36218728f292f059c1
+    sandbox: demo
+    role: builder
+    scopes: [inference, receipts, workflows:execute]
+  - name: demo-other-team
+    sha256: be66ec7a0e973fce335f1b593779f19ba3bcab67780d6bc617849858b4c56b5f
+    sandbox: other
+    role: viewer
+    scopes: [inference, receipts]
