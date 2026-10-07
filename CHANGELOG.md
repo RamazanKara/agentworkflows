@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased — Milestone 2
+## Unreleased — Milestones 2–3
+
+- Framework adapters and runnable OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph examples
+  using the governed gateway within Temporal activities; optional framework dependencies.
+- Central team MCP Streamable HTTP registrations, workflow tool allowlists, argument/output DLP,
+  bounded responses, per-call costs, and correlated receipts on the existing governance path.
+- Workflow policies for providers, models, tools, egress origins, and immutable run budgets.
+- Container activities in existing agent-sandbox workspaces, with isolation checks, narrow worker
+  RBAC, exclusive execution, expiring scoped credentials, revocation, and result receipts.
+- Extended Compose smoke and workflow/workspace guides; regression tests use only local fakes.
 
 - Temporal-backed Python workflows with governed model/tool activities, retries, timeouts,
   per-run token/cost budgets, provider fallback, approval signals, and run-linked receipts.

@@ -124,6 +124,13 @@ class governed:
         self._request.state.routing_attempts = []
         self._request.state.output_guardrail_action = None
         self._request.state.prompt_guardrail_action = None
+        from app.workflow_budget import load_run_policy
+
+        try:
+            await load_run_policy(self._request)
+        except BaseException as exc:
+            await self.__aexit__(type(exc), exc, exc.__traceback__)
+            raise
         return self.call
 
     # Literal[False], not bool: the rail never suppresses an exception, and the narrower
@@ -356,9 +363,25 @@ def request_classification(request: Request, payload: dict[str, Any]) -> str:
 
 
 def route_permitted(request: Request, effective: Settings, route: ModelRoute) -> bool:
-    return (not effective.allowed_models or route.model_id in effective.allowed_models) and (
-        getattr(request.state, "data_classification", "internal") not in {"confidential", "restricted"}
-        or route.backend in LOCAL_BACKENDS
+    return (
+        workflow_route_permitted(request, effective, route)
+        and (not effective.allowed_models or route.model_id in effective.allowed_models)
+        and (
+            getattr(request.state, "data_classification", "internal") not in {"confidential", "restricted"}
+            or route.backend in LOCAL_BACKENDS
+        )
+    )
+
+
+def workflow_route_permitted(request: Request, settings: Settings, route: ModelRoute) -> bool:
+    policy = getattr(request.state, "workflow_policy", None)
+    if policy is None:
+        return True
+    url = route.base_url or (settings.ollama_base_url if route.backend == "ollama" else settings.vllm_base_url)
+    return (
+        route.model_id in policy.allowed_models
+        and route.backend in policy.allowed_providers
+        and policy.permits_egress(url)
     )
 
 
@@ -375,6 +398,11 @@ def resolve_chat_routes(
     request.state.selected_route = primary
     payload["model"] = primary.model_id
     effective.validate_model(primary.model_id)
+    if not workflow_route_permitted(request, effective, primary):
+        raise AdmissionPolicyError(
+            "workflow_model_denied",
+            "This workflow does not allow the model, provider, or destination; inspect GET /v1/workflow-policies.",
+        )
     request_classification(request, payload)
     shadow = policy.shadow_target(primary) if progressive and not payload.get("stream") else None
     if shadow is not None and not route_permitted(request, effective, shadow):
@@ -452,7 +480,15 @@ def route_settings(settings: Settings, model_route: Any) -> Settings:
 
 def admission_status(reason: str, settings: Settings) -> tuple[int, dict[str, str] | None]:
     """Map an admission-rejection reason to its HTTP status and retry headers."""
-    if reason in {"workflow_token_budget_exceeded", "workflow_cost_budget_exceeded", "tool_not_allowed"}:
+    if reason in {
+        "workflow_token_budget_exceeded",
+        "workflow_cost_budget_exceeded",
+        "tool_not_allowed",
+        "workflow_model_denied",
+        "workflow_not_allowed",
+        "workflow_egress_denied",
+        "agent_not_allowed",
+    }:
         return 403, None
     if reason == "data_classification_denied":
         return 403, None

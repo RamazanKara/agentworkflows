@@ -47,4 +47,5 @@ Temporal execution, dedicated PostgreSQL, and a governed Python workflow worker.
 | `worker.resources.limits.memory` | `512Mi` |
 | `worker.resources.requests.cpu` | `100m` |
 | `worker.resources.requests.memory` | `128Mi` |
+| `worker.workspaces` | `[]` |
 <!-- chart-docs:end -->

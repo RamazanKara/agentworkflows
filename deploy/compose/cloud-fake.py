@@ -39,6 +39,24 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         provider = self.path.split("/")[1]
         self.counts[provider] = self.counts.get(provider, 0) + 1
+        if provider == "mcp":
+            method = body.get("method")
+            if method == "notifications/initialized":
+                self.send(202, b"")
+                return
+            if method == "initialize":
+                result = {
+                    "protocolVersion": "2025-03-26",
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "team-fixture", "version": "1"},
+                }
+            elif method == "tools/call" and body["params"]["name"] == "search":
+                result = {"content": [{"type": "text", "text": "Synthetic MCP source: evaluate reliability and cost."}]}
+            else:
+                self.send(400, b"{}")
+                return
+            self.send(200, json.dumps({"jsonrpc": "2.0", "id": body["id"], "result": result}).encode())
+            return
         if provider == "tools":
             tool = self.path.split("/")[-1]
             if tool == "research":

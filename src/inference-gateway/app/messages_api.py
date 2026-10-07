@@ -28,7 +28,7 @@ from app.messages import (
 )
 from app.runtime_client import RuntimeClient
 from app.runtime_routing import _chat_with_fallback, _open_stream_with_fallback
-from app.settings import Settings
+from app.settings import AdmissionPolicyError, Settings
 
 
 def register_messages_routes(app: FastAPI, settings: Settings) -> None:
@@ -58,6 +58,10 @@ def register_messages_routes(app: FastAPI, settings: Settings) -> None:
         payload_dict = anthropic_to_chat_payload(payload)
         request_model = payload.model
         async with governed(request, settings, route="/v1/messages", payload=payload_dict) as call:
+            if getattr(request.state, "workflow_run_id", None) and payload.stream:
+                raise AdmissionPolicyError(
+                    "workflow_streaming_unsupported", "Workflow model activities return complete results; omit stream."
+                )
             effective, chain, _ = resolve_chat_routes(request, settings, payload_dict)
             call.backend = chain[0].backend
             if payload.stream:

@@ -12,7 +12,12 @@ spec:
       labels:
         app.kubernetes.io/name: workflow-worker
     spec:
+      {{- if .Values.worker.workspaces }}
+      serviceAccountName: workflow-worker
+      automountServiceAccountToken: true
+      {{- else }}
       automountServiceAccountToken: false
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
