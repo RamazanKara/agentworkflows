@@ -45,7 +45,7 @@ async def temporal_client(app: FastAPI) -> Any:
         try:
             app.state.temporal_client = await asyncio.wait_for(
                 Client.connect(
-                    os.getenv("TEMPORAL_ADDRESS", "temporal-frontend.workflows.svc.cluster.local:7233"),
+                    app.state.settings.temporal_address or "temporal-frontend.workflows.svc.cluster.local:7233",
                     namespace=os.getenv("TEMPORAL_NAMESPACE", "default"),
                 ),
                 timeout=10,

@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 from app.main import create_app
+from app.settings import Settings
+from app.workflow_operations import temporal_client
 from fastapi.testclient import TestClient
 
 from tests.gateway_support import FakeRuntimeClient, _tool_settings
@@ -12,9 +14,8 @@ from tests.test_cloud_providers import reply, streamed_reply
 
 
 @pytest.mark.parametrize("healthy", [True, False])
-def test_temporal_readiness_and_independent_liveness(monkeypatch, healthy):
-    monkeypatch.setenv("TEMPORAL_ADDRESS", "temporal:7233")
-    app = create_app(_tool_settings())
+def test_temporal_readiness_and_independent_liveness(healthy):
+    app = create_app(_tool_settings(temporal_address="temporal:7233"))
     app.state.runtime_client = FakeRuntimeClient()
     app.state.temporal_client = SimpleNamespace(
         service_client=SimpleNamespace(check_health=AsyncMock(return_value=healthy))
@@ -26,9 +27,8 @@ def test_temporal_readiness_and_independent_liveness(monkeypatch, healthy):
         assert client.get("/healthz").status_code == 200
 
 
-def test_temporal_readiness_is_bounded_and_redacts_failures(monkeypatch):
-    monkeypatch.setenv("TEMPORAL_ADDRESS", "temporal:7233")
-    app = create_app(_tool_settings())
+def test_temporal_readiness_is_bounded_and_redacts_failures():
+    app = create_app(_tool_settings(temporal_address="temporal:7233"))
     app.state.runtime_client = FakeRuntimeClient()
 
     async def hung():
@@ -38,6 +38,26 @@ def test_temporal_readiness_is_bounded_and_redacts_failures(monkeypatch):
     with TestClient(app) as client:
         response = client.get("/readyz")
         assert response.status_code == 503 and "temporal:7233" not in response.text
+
+
+@pytest.mark.parametrize("address", [None, "", "temporal:7233"])
+def test_temporal_address_settings_and_connection(monkeypatch, address):
+    monkeypatch.delenv("TEMPORAL_ADDRESS", raising=False)
+    monkeypatch.delenv("TEMPORAL_NAMESPACE", raising=False)
+    if address is not None:
+        monkeypatch.setenv("TEMPORAL_ADDRESS", address)
+    settings = Settings.from_env()
+    assert settings.temporal_address == (address or "")
+    app = create_app(settings)
+    monkeypatch.setenv("TEMPORAL_ADDRESS", "changed-after-startup:7233")
+    connect = AsyncMock()
+    monkeypatch.setattr("app.workflow_operations.Client.connect", connect)
+
+    asyncio.run(temporal_client(app))
+
+    connect.assert_awaited_once_with(
+        address or "temporal-frontend.workflows.svc.cluster.local:7233", namespace="default"
+    )
 
 
 @pytest.mark.parametrize("provider", ["openai", "anthropic", "azure-openai", "bedrock", "vertex"])

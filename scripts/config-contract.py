@@ -43,6 +43,7 @@ class ServiceContract:
 
 
 GATEWAY_VARS = (
+    ConfigVar("TEMPORAL_ADDRESS", "temporal_address", "string", "", "workflows.temporalAddress", "", "Temporal frontend host:port for workflow operations. When set, readiness also checks Temporal; empty uses the in-cluster workflow endpoint on demand."),
     ConfigVar("RUNTIME_BACKEND", "runtime_backend", "string", "ollama", "runtime.backend", "ollama", "Runtime adapter used by the gateway.", allowed_values=("ollama", "vllm")),
     ConfigVar("MODEL_ID", "model_id", "string", "qwen3.5:0.8b", "runtime.modelId", "qwen3.5:0.8b", "Default model used when requests omit a model."),
     ConfigVar("OLLAMA_BASE_URL", "ollama_base_url", "url", "http://ollama.ollama.svc.cluster.local:11434", "runtime.ollamaBaseUrl", "http://ollama.ollama.svc.cluster.local:11434", "Base URL for the Ollama runtime."),
