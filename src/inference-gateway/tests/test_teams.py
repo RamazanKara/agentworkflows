@@ -239,6 +239,26 @@ def test_completed_run_exposes_result_in_detail_not_listing(team_gateway):
     assert "result" not in listing["runs"][0]
 
 
+@pytest.mark.parametrize(
+    ("workflow", "field"),
+    [
+        ("WeeklyReportWorkflow", "period"),
+        ("IncidentSummaryWorkflow", "incident_id"),
+        ("DocumentQAWorkflow", "question"),
+    ],
+)
+def test_gallery_inputs_are_validated_before_temporal(team_gateway, workflow, field):
+    client, app = team_gateway
+    workflows = app.state.sandbox_policy_set.policies["team"].workflows
+    workflows[workflow] = workflows["ResearchWorkflow"]
+    for value in ({}, {field: " "}, {field: 12}, {field: "valid", "typo": True}):
+        response = start(client, workflow=workflow, input=value)
+        assert response.status_code == 422
+        assert response.json()["detail"]["reason"] == "workflow_input_invalid"
+        assert not app.state.temporal_client.executions
+    assert start(client, workflow=workflow, input={field: "valid"}).status_code == 201
+
+
 def test_start_idempotency_project_and_run_isolation(team_gateway):
     client, app = team_gateway
     request_id = str(uuid4())

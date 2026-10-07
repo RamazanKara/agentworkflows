@@ -1,23 +1,21 @@
 # AgentWorkflows
 
-![Cloud-first Compose trial and team web console](docs/assets/compose-demo.gif)
-
 [![CI](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml/badge.svg)](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-AgentWorkflows-0b7285)](https://ramazankara.github.io/agentworkflows/)
 [![License](https://img.shields.io/github/license/RamazanKara/agentworkflows)](LICENSE)
 
-**The agent workflow platform for teams: cloud AI through one governed gateway, with budgets and verifiable receipts.**
+**Run team AI workflows with human approval, budgets, and a traceable record of each step.**
 
-AgentWorkflows brings provider routing and workflow governance together for team leads,
-platform engineers, and developers shipping agents. Connect OpenAI, Anthropic, Azure OpenAI,
-AWS Bedrock, and Vertex Gemini behind one API. Bind credentials to teams, control which
-models they can call, account for usage, and inspect the audit trail. Self-hosted Ollama
-and vLLM models are optional add-ons.
+AgentWorkflows combines a Python workflow SDK, model gateway and team web console.
+Developers turn agent scripts into durable Temporal jobs; team leads review drafts and
+spend; platform engineers control shared model and tool access. Connect OpenAI, Anthropic,
+Azure OpenAI, AWS Bedrock and Vertex Gemini through one governed API. Self-hosted Ollama
+and vLLM models are optional add-ons. You operate the service and own your integrations.
 
 Version **0.2.0**, the first public release, includes governed cloud providers, durable
 Temporal workflows, agent and tool integrations, team roles and budgets, and a web console.
-Scaffold research, support triage, or code review; inspect, approve, and verify each run.
-Start with the [workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
+Triggers and notifications add scheduled runs, signed webhooks and approval/failure/budget
+alerts. Start with the [template gallery](docs/templates.md) and [workflow guide](docs/workflows.md).
 
 ## Your first approved workflow in five minutes
 
@@ -27,18 +25,35 @@ copy-pasteable Bash and Windows PowerShell commands and an optional real OpenAI 
 You need Git, Python 3.12+, and Docker Compose; the first image downloads may take longer.
 
 ```sh
-agentworkflows init my-research
-agentworkflows init my-support --template support-triage
 agentworkflows init my-review --template code-review
+agentworkflows init my-support --template support-triage
+agentworkflows init my-weekly --template weekly-report
+agentworkflows init my-incident --template incident-summary
+agentworkflows init my-docs --template document-qa
 ```
 
-The [template guide](docs/templates.md) shows how to run and edit each project. Workflows
-use concise SDK helpers for text calls, human approval, and worker startup. Inspect the
-same runs through the CLI or the bundled web console, with results, costs, and receipts.
+The [gallery](docs/templates.md) has a screenshot-free walkthrough for each: PR review with
+human approval, support triage, a weekly report from three sources, an incident summary from
+logs, and document Q&A with citations. Each runs unchanged against local fakes. The original
+`research` starter remains the default. Canned answers prove execution, not model quality.
 
-Read the docs in order: [Quickstart](docs/quickstart.md), [Concepts](docs/concepts.md),
-[Guides](docs/templates.md), and [Reference](docs/sdk-reference.md).
+Read the docs in order: [Quickstart](docs/quickstart.md), [Templates](docs/templates.md),
+[Concepts](docs/concepts.md), [Guides](docs/workflows.md), and [Reference](docs/sdk-reference.md).
 For the full recovery/security/browser proof, use the [Compose smoke walkthrough](docs/local-evaluation.md).
+
+## Why not LiteLLM plus Temporal?
+
+That can be the right choice. [LiteLLM](https://docs.litellm.ai/docs/simple_proxy) already
+offers broad model routing, budgets and spend tracking; Temporal provides the durable
+execution and [workflow messages](https://docs.temporal.io/develop/python/workflows/message-passing)
+used for approval flows. AgentWorkflows uses Temporal and packages the team-facing integration:
+governed activities, per-run budgets, an approval console, triggers, notifications and linked receipts.
+
+Use it when that integration matches your team. Assemble the components yourself when you
+need broader provider coverage, already run that stack, or need a different workflow UX.
+This is a young, self-managed project with a narrower API surface and operational work still
+required. The [decision guide](docs/decision-guide.md) compares both paths without claiming
+that a Compose trial establishes production readiness.
 
 ## What works today
 
@@ -59,8 +74,9 @@ For the full recovery/security/browser proof, use the [Compose smoke walkthrough
 
 ## What the evidence proves
 
-Receipts are redacted records on per-process SHA-256 hash chains. Prompts are fingerprinted,
-not stored in clear. The verifier detects edits, reordering, and gaps within a retained chain.
+Receipts are redacted records on per-process SHA-256 hash chains. They fingerprint prompts;
+workflow inputs and activity results remain in Temporal history. The verifier detects
+edits, reordering, and gaps within a retained chain.
 Persisted restart links and externally retained head anchors are needed to detect missing
 lifetimes, tail truncation, or a wholesale rewrite. A tool action that was never reported
 cannot be proven by the log. See the [audit runbook](runbooks/audit-chain.md).
@@ -96,13 +112,6 @@ is ready for evaluation; this repository does not yet provide a hosted service.
 | Contribute | [Developer workflow](docs/development.md), [repository map](docs/repository-map.md), [contributing](CONTRIBUTING.md) |
 
 Documentation: <https://ramazankara.github.io/agentworkflows/>.
-
-## Origins
-
-Built on [private-ai-platform-kit](https://github.com/RamazanKara/private-ai-platform-kit)
-([DOI: 10.5281/zenodo.21038652](https://doi.org/10.5281/zenodo.21038652)). The kit remains a
-separate self-hosted project with its own paper and DOI. AgentWorkflows retains its Git
-history and Apache-2.0 attribution, and starts its own product releases at 0.2.0.
 
 Issues and pull requests are welcome. Report vulnerabilities privately through
 [SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE).

@@ -8,8 +8,9 @@ The package uses `httpx` and the official `temporalio` SDK, with inline type ann
 
 Start with the [five-minute quickstart](https://ramazankara.github.io/agentworkflows/latest/quickstart/)
 to run, approve, and verify your first workflow. `agentworkflows init my-research` scaffolds
-an editable project; `--template support-triage` and `--template code-review` provide the
-other starter workflows. No server or key is needed to scaffold.
+an editable project. The [template gallery](https://ramazankara.github.io/agentworkflows/latest/templates/)
+also includes `code-review`, `support-triage`, `weekly-report`, `incident-summary`, and
+`document-qa`. Every template runs against local Compose fakes; no server or key is needed to scaffold.
 
 Inside Temporal workflows, `WorkflowGateway.text(prompt)` returns text from a governed
 model activity. Inherit `ApprovalWorkflow` and call `await self.approval(draft)` for the

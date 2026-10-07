@@ -65,4 +65,4 @@ authority:
 3. Register the AgentWorkflows OCI chart in Artifact Hub and record its assigned repository ID.
 4. Keep GHCR packages public so anonymous Helm pulls and Artifact Hub indexing work.
 5. Render `docs/assets/social-preview.svg` at 1280x640 and upload the resulting PNG under
-   **Settings > General > Social preview**. The upstream kit's old preview is not a product asset.
+   **Settings > General > Social preview**. Use the AgentWorkflows product asset.

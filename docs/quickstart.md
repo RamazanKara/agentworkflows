@@ -39,7 +39,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
     ```
 
 Images build one at a time. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
-health; the included worker runs all three templates. The public demo key is a local admin
+health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
 The default **fake** returns canned text and synthetic prices without contacting a cloud.
@@ -58,7 +58,8 @@ agentworkflows runs start --input '@input.json'
 ```
 
 You now have editable `workflow.py`, `worker.py`, and `input.json`, plus a README with
-worker instructions. `init --help` lists **research**, **support-triage**, and **code-review**.
+worker instructions. `init --help` lists **research**, **code-review**, **support-triage**,
+**weekly-report**, **incident-summary**, and **document-qa**.
 It never overwrites an existing project. The built-in worker runs the unchanged templates;
 follow [Edit your workflow](templates.md#run-your-edits) when you change the source.
 

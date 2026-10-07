@@ -1,33 +1,54 @@
 # AgentWorkflows
 
-**The agent workflow platform for teams: cloud AI through one governed gateway, with budgets and verifiable receipts.**
+**Run team AI workflows with human approval, budgets, and a traceable record of each step.**
 
-AgentWorkflows helps team leads, platform engineers, and developers govern agents using
-OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini. Route calls through one
-gateway, bind credentials to teams, enforce model policies and budgets, and inspect receipts.
-Ollama and vLLM are optional self-hosted model backends.
+AgentWorkflows is a self-managed Python workflow SDK, model gateway and team web console.
+Temporal keeps runs durable; the gateway controls model and tool access and records usage
+and receipts. Start, inspect, approve, cancel and retry runs through the console or CLI.
+Cron schedules and signed webhooks can start work, with notifications for waiting approvals,
+failures and budget thresholds.
 
-**AgentWorkflows v0.2.0 is the first public release.** It brings governed cloud providers, durable
-Temporal workflows, agent and tool integrations, team roles and budgets, and a web console.
-Scaffold research, support triage, or code review; start, inspect, cancel, retry, and approve
-runs through the console or CLI. Step timelines connect providers, tokens, costs, durations,
-and receipt IDs. This repository provides a
-self-managed service, not a hosted offering. Start with the [team walkthrough](workflows.md).
+It is for **developers** turning agent scripts into repeatable jobs, **team leads** reviewing
+drafts and spend, and **platform engineers** managing shared provider access. Built-in routes
+cover OpenAI, Anthropic, Azure OpenAI, AWS Bedrock and Vertex Gemini; Ollama and vLLM are optional.
+You still own the workflows, integrations and deployment. There is no hosted service here.
 
-## Your first hour
+## Five-minute quickstart
 
-1. **[Quickstart](quickstart.md)** — in about five minutes, install, scaffold research,
-   review and approve a draft, and verify receipts. Use the built-in fake or an explicit
-   real OpenAI route. Windows PowerShell and Bash commands are included.
-2. **[Concepts](concepts.md)** — understand teams, runs, activities, budgets, and approvals.
-3. **[Guides](templates.md)** — edit research, support triage, or code review, run your
-   worker, then connect [your team's agents and tools](workflows.md#bring-your-agent).
-4. **[Reference](sdk-reference.md)** — find CLI commands, SDK defaults, environment
-   variables, and remedies for errors.
+With Git, Python 3.12+ and Docker Compose installed, follow the **[Quickstart](quickstart.md)**:
+start the fake stack, run `agentworkflows init my-research`, start the workflow, review its
+draft, approve it and verify the receipts. Bash and Windows PowerShell commands are included.
+Initial image and package downloads may take longer than five minutes.
 
-The fake needs no cloud key, GPU, model download, or Kubernetes. Initial container/package
-downloads can extend the first run. The local stack is an evaluation environment;
-[team setup](workflows.md#teams-projects-and-roles) explains roles and deployment controls.
+The default trial makes no external model calls and needs no cloud credentials, GPU or
+Kubernetes. Its canned outputs demonstrate execution and governance, not model quality.
+The [template gallery](templates.md) makes the next afternoon concrete:
+
+| Start with | You get |
+| --- | --- |
+| [PR review](templates.md#code-review) | A diff review that waits for a human decision |
+| [Support triage](templates.md#support-triage) | Routing suggestions and a reply draft |
+| [Weekly report](templates.md#weekly-report) | One briefing from changes, support and incidents |
+| [Incident summary](templates.md#incident-summary) | A timeline grounded in log excerpts |
+| [Document Q&A](templates.md#document-qa) | An answer with source links and checked citation IDs |
+
+Each walkthrough includes the input, commands, expected result and the integration work
+needed for your team. Read [Concepts](concepts.md) for the model, [Guides](workflows.md) for
+team setup, and [Reference](sdk-reference.md) for exact commands and defaults.
+
+## Why use this instead of LiteLLM plus Temporal?
+
+That is a reasonable stack to build yourself. [LiteLLM](https://docs.litellm.ai/docs/simple_proxy)
+already provides broad model routing, budgets and spend tracking;
+[Temporal](https://docs.temporal.io/develop/python/workflows/message-passing) supplies workflow
+state and messages for review flows. AgentWorkflows itself uses Temporal.
+
+AgentWorkflows packages a particular integration: team roles, governed workflow activities,
+per-run budgets, an approval console, triggers, notifications and linked receipts. Choose it
+if that shared workflow fits your team and saves integration work. Choose your own assembly
+if you need broader provider support, already operate those systems, or want full control
+over the application UX. This young project has a narrower API surface and still needs
+production identity, backups and operations. See the [side-by-side decision guide](decision-guide.md).
 
 ## Find a capability
 
@@ -48,15 +69,12 @@ downloads can extend the first run. The local stack is an evaluation environment
 The gateway records redacted, hash-chained receipts. Verification detects edits and gaps
 within retained chains. Detecting truncation, missing lifetimes, or full rewrites requires
 persisted restart links and external head anchors. Tool actions need an instrumented producer;
-the log cannot prove actions nobody reported. Prompts are fingerprinted, not stored in clear.
+the log cannot prove actions nobody reported. Receipts fingerprint prompts; workflow inputs
+and activity results remain in Temporal history.
 
 Checked-in samples demonstrate report formats, not release readiness. CI supports signing
 and evidence generation; AgentWorkflows release claims require fresh artifacts.
 See [evidence and validation](proof.md) and [security boundaries](threat-model.md).
 
-## Origins
-
-Built on [private-ai-platform-kit](https://github.com/RamazanKara/private-ai-platform-kit)
-([DOI: 10.5281/zenodo.21038652](https://doi.org/10.5281/zenodo.21038652)). The kit stays a
-separate self-hosted project with its own paper and DOI. AgentWorkflows starts its product
-versions at 0.2.0 and preserves the upstream history and Apache-2.0 attribution.
+AgentWorkflows is Apache-2.0 licensed. See
+[NOTICE](https://github.com/RamazanKara/agentworkflows/blob/main/NOTICE) for attribution.

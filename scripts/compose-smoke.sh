@@ -166,6 +166,9 @@ KEY="$saved_key"
 step "7e. Temporal schedules, signed webhooks, and Slack/webhook/SMTP notification receipts"
 "${COMPOSE[@]}" exec -T workflow-worker python - < scripts/trigger-smoke.py
 
+step "7f. Scaffold and run all five gallery templates against fakes"
+"${COMPOSE[@]}" run --rm --no-deps -T --volume /tmp workflow-worker python - < scripts/template-smoke.py
+
 step "8. Usage and estimated cost for the sandbox"
 status="$(request GET /v1/usage)"
 [[ "$status" == "200" ]] || fail "usage returned $status"

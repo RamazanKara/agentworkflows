@@ -32,6 +32,15 @@ spec:
         publish:
           url: http://cloud-fake:8000/tools/publish
           costUsd: 0.02
+        report_source:
+          url: http://cloud-fake:8000/tools/report_source
+          costUsd: 0.01
+        incident_logs:
+          url: http://cloud-fake:8000/tools/incident_logs
+          costUsd: 0.01
+        search_documents:
+          url: http://cloud-fake:8000/tools/search_documents
+          costUsd: 0.01
       mcpServers:
         team:
           url: http://cloud-fake:8000/mcp
@@ -88,6 +97,27 @@ spec:
           allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
           tokenLimit: 4000
           costLimitUsd: 1
+        WeeklyReportWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedTools: [report_source]
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
+          tokenLimit: 10000
+          costLimitUsd: 5
+        IncidentSummaryWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedTools: [incident_logs]
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
+          tokenLimit: 10000
+          costLimitUsd: 5
+        DocumentQAWorkflow:
+          allowedProviders: [openai]
+          allowedModels: [demo-openai]
+          allowedTools: [search_documents]
+          allowedEgress: [http://cloud-fake:8000, https://api.openai.com]
+          tokenLimit: 10000
+          costLimitUsd: 5
     - sandboxId: other
       projects: [default]
       budgets:

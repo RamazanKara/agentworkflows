@@ -1,4 +1,5 @@
 import asyncio
+import json
 from dataclasses import replace
 from unittest.mock import AsyncMock
 
@@ -6,9 +7,12 @@ import httpx
 import pytest
 from agentworkflows.activities import GatewayActivities
 from agentworkflows.examples.code_review import CodeReviewWorkflow
+from agentworkflows.examples.document_qa import DocumentQARequest, DocumentQAWorkflow
+from agentworkflows.examples.incident_summary import IncidentSummaryRequest, IncidentSummaryWorkflow
 from agentworkflows.examples.research import ResearchWorkflow
 from agentworkflows.examples.support_triage import SupportTriageWorkflow
 from agentworkflows.examples.triggered import DailyReportWorkflow, GitHubIssueTriageWorkflow
+from agentworkflows.examples.weekly_report import WeeklyReportRequest, WeeklyReportWorkflow
 from agentworkflows.triggers import ScheduledTrigger
 from agentworkflows.workflows import Budget, Call, WorkflowGateway
 from temporalio.exceptions import ApplicationError
@@ -22,6 +26,9 @@ from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
         ResearchWorkflow,
         SupportTriageWorkflow,
         CodeReviewWorkflow,
+        WeeklyReportWorkflow,
+        IncidentSummaryWorkflow,
+        DocumentQAWorkflow,
         DailyReportWorkflow,
         GitHubIssueTriageWorkflow,
         ScheduledTrigger,
@@ -155,3 +162,74 @@ def test_worker_requires_key_before_connecting(monkeypatch):
     monkeypatch.delenv("AGENTWORKFLOWS_API_KEY", raising=False)
     with pytest.raises(SystemExit, match="demo-worker"):
         run_worker([ResearchWorkflow])
+
+
+def test_weekly_report_combines_three_governed_sources(monkeypatch):
+    sources = [{"id": name, "text": name + " snapshot"} for name in ("changes", "support", "incidents")]
+    tool = AsyncMock(side_effect=sources)
+    text = AsyncMock(return_value="weekly draft")
+    monkeypatch.setattr(WorkflowGateway, "tool", tool)
+    monkeypatch.setattr(WorkflowGateway, "text", text)
+    result = asyncio.run(WeeklyReportWorkflow().run(WeeklyReportRequest("last week")))
+    assert result == {"period": "last week", "report": "weekly draft", "sources": sources}
+    assert [call.args for call in tool.await_args_list] == [
+        ("report_source", {"source": source["id"], "period": "last week"}) for source in sources
+    ]
+    assert all(source["text"] in text.call_args.args[0] for source in sources)
+
+
+def test_incident_summary_keeps_the_log_evidence(monkeypatch):
+    logs = {"lines": ["L1 09:00 UTC errors increased", "L2 09:20 UTC baseline restored"]}
+    tool = AsyncMock(return_value=logs)
+    text = AsyncMock(return_value="summary [L1] [L2]")
+    monkeypatch.setattr(WorkflowGateway, "tool", tool)
+    monkeypatch.setattr(WorkflowGateway, "text", text)
+    result = asyncio.run(IncidentSummaryWorkflow().run(IncidentSummaryRequest("INC-1042")))
+    tool.assert_awaited_once_with("incident_logs", {"incident_id": "INC-1042"})
+    assert result["logs"] == logs and result["summary"] == "summary [L1] [L2]"
+    assert all(line in text.call_args.args[0] for line in logs["lines"])
+
+
+def test_document_answer_citations_preserve_retrieved_evidence(monkeypatch):
+    source = {"id": "S1", "url": "https://example.test/doc", "title": "Handbook", "text": "Seven days."}
+    tool = AsyncMock(return_value=[source, {**source, "id": "S2"}])
+    monkeypatch.setattr(WorkflowGateway, "tool", tool)
+    monkeypatch.setattr(
+        WorkflowGateway,
+        "text",
+        AsyncMock(return_value=json.dumps({"answer": "Seven days. [S1]", "citation_ids": ["S1"]})),
+    )
+    result = asyncio.run(DocumentQAWorkflow().run(DocumentQARequest("When does approval expire?")))
+    assert result == {"answer": "Seven days. [S1]", "citations": [source]}
+    tool.assert_awaited_once_with("search_documents", {"query": "When does approval expire?"})
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "not JSON",
+        "[]",
+        '{"answer": "", "citation_ids": []}',
+        '{"answer": "text", "citation_ids": "S1"}',
+        '{"answer": "text", "citation_ids": [1]}',
+        '{"answer": "text [S9]", "citation_ids": ["S9"]}',
+        '{"answer": "text [S9]", "citation_ids": ["S1"]}',
+        '{"answer": "text without citation", "citation_ids": ["S1"]}',
+    ],
+)
+def test_document_answer_rejects_invalid_or_fabricated_citations(monkeypatch, answer):
+    monkeypatch.setattr(WorkflowGateway, "tool", AsyncMock(return_value=[{"id": "S1", "text": "evidence"}]))
+    monkeypatch.setattr(WorkflowGateway, "text", AsyncMock(return_value=answer))
+    with pytest.raises(ApplicationError) as error:
+        asyncio.run(DocumentQAWorkflow().run(DocumentQARequest("question")))
+    assert error.value.non_retryable
+
+
+@pytest.mark.parametrize("sources", [[], [{"id": "S1", "text": "unrelated"}]])
+def test_document_answer_abstains_without_evidence(monkeypatch, sources):
+    monkeypatch.setattr(WorkflowGateway, "tool", AsyncMock(return_value=sources))
+    text = AsyncMock(return_value='{"answer": "Unsupported speculation", "citation_ids": []}')
+    monkeypatch.setattr(WorkflowGateway, "text", text)
+    result = asyncio.run(DocumentQAWorkflow().run(DocumentQARequest("unanswerable")))
+    assert result == {"answer": "I don't know from the supplied documents.", "citations": []}
+    assert text.await_count == (1 if sources else 0)
