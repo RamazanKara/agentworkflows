@@ -8,6 +8,9 @@ navigation here. Existing guide and runbook URLs remain valid.
 [Install, scaffold, approve, and verify your first workflow](quickstart.md), with the
 built-in fake or an explicit real OpenAI route. Includes Windows and Bash commands.
 
+[TypeScript quickstart](quickstart-typescript.md): PR review with approval and support
+triage on the official Temporal TypeScript SDK, using the same gateway and fakes.
+
 ## Templates
 
 [Workflow template gallery](templates.md): PR review with approval, support triage,

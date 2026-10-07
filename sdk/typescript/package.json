@@ -1,0 +1,45 @@
+{
+  "name": "@agentworkflows/sdk",
+  "version": "0.3.0",
+  "description": "Governed model calls and durable Temporal workflows for AgentWorkflows.",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./workflows": { "types": "./dist/workflows.d.ts", "default": "./dist/workflows.js" },
+    "./activities": { "types": "./dist/activities.d.ts", "default": "./dist/activities.js" },
+    "./worker": { "types": "./dist/worker.d.ts", "default": "./dist/worker.js" }
+  },
+  "files": ["dist"],
+  "engines": { "node": ">=22.12.0" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RamazanKara/agentworkflows.git",
+    "directory": "sdk/typescript"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "tsc --noEmit && eslint .",
+    "test": "vitest run --maxWorkers=2",
+    "worker": "node dist/examples/worker.js",
+    "smoke": "npm run build && node scripts/compose-smoke.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@temporalio/activity": "1.24.0",
+    "@temporalio/common": "1.24.0",
+    "@temporalio/worker": "1.24.0",
+    "@temporalio/workflow": "1.24.0"
+  },
+  "devDependencies": {
+    "@temporalio/client": "1.24.0",
+    "@temporalio/testing": "1.24.0",
+    "@types/node": "24.10.0",
+    "eslint": "10.12.0",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  }
+}
