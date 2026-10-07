@@ -1870,15 +1870,15 @@
 
 <h1 id="distribution-and-discovery">Distribution and discovery<a class="headerlink" href="#distribution-and-discovery" title="Permanent link">&para;</a></h1>
 <p>Release CI is configured to publish one tested source revision through four channels.
-Version 0.2.0 starts this product; commands using release assets apply after its tag is published. Images are promoted
+Commands below target v0.3.0; release assets become available after publication. Images are promoted
 from the already-tested commit digest, Helm charts embed those immutable image digests, the
 Python client is built separately and attached to the GitHub release, and versioned
 documentation is retained by <code>mike</code>.</p>
 <h2 id="helm-oci">Helm OCI<a class="headerlink" href="#helm-oci" title="Permanent link">&para;</a></h2>
 <p>The umbrella chart is the recommended public entry point:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>pull<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.2.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>pull<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.3.0
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>install<span class="w"> </span>agentworkflows<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--version<span class="w"> </span><span class="m">0</span>.2.0<span class="w"> </span>--namespace<span class="w"> </span>ai-platform<span class="w"> </span>--create-namespace
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--version<span class="w"> </span><span class="m">0</span>.3.0<span class="w"> </span>--namespace<span class="w"> </span>ai-platform<span class="w"> </span>--create-namespace
 </code></pre></div>
 <p>Release CI publishes <code>artifacthub-repo.yml</code> to the chart repository's special
 <code>artifacthub.io</code> OCI tag. To finish discoverability, a maintainer must register
@@ -1886,7 +1886,7 @@ documentation is retained by <code>mike</code>.</p>
 control panel, copy the assigned <code>repositoryID</code> into <code>artifacthub-repo.yml</code>, and cut the next
 release. This external registration cannot be completed from repository code.</p>
 <h2 id="python-package">Python package<a class="headerlink" href="#python-package" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>https://github.com/RamazanKara/agentworkflows/releases/download/v0.2.0/agentworkflows-0.2.0-py3-none-any.whl
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>https://github.com/RamazanKara/agentworkflows/releases/download/v0.3.0/agentworkflows-0.3.0-py3-none-any.whl
 </code></pre></div>
 <p>The wheel, source archive, and <code>sdk-checksums.txt</code> are attached to each GitHub release.
 Follow <a href="../release-verification/">release verification</a> to verify the files before installing.
