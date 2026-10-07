@@ -1,6 +1,6 @@
 # Governance
 
-Private AI Platform Kit is maintained as an operational platform project. The project is maintained by fluentorbit (https://fluentorbit.de) as its steward. Maintainers optimize for secure, reproducible customer-owned Kubernetes handoff.
+AgentWorkflows is maintained as an operational platform project. The project is maintained by fluentorbit (https://fluentorbit.de) as its steward. Maintainers prioritize usable, governed cloud AI and durable agent workflows for teams. AgentWorkflows has its own product roadmap and releases, separate from its upstream self-hosted kit.
 
 ## Maintainer Authority
 

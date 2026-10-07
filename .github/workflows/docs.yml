@@ -1,4 +1,4 @@
-name: Docs site
+name: AgentWorkflows Docs site
 
 # Builds the mkdocs-material site and deploys it to GitHub Pages.
 # Requires repo Settings -> Pages -> Source = "GitHub Actions".

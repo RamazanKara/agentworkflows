@@ -6,16 +6,16 @@ with a recorder, so the suite is deterministic and never sleeps for real.
 
 import json
 
-import ai_platform_client
+import agentworkflows
 import httpx
 import pytest
-from ai_platform_client import GatewayClient, GatewayError, GatewayRetryAfterError, GatewayStreamError
+from agentworkflows import GatewayClient, GatewayError, GatewayRetryAfterError, GatewayStreamError
 
 
 def _mock_transport(monkeypatch, handler):
     real_client = httpx.Client
     monkeypatch.setattr(
-        ai_platform_client.httpx,
+        agentworkflows.httpx,
         "Client",
         lambda *args, **kwargs: real_client(*args, transport=httpx.MockTransport(handler), **kwargs),
     )

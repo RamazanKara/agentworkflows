@@ -2,14 +2,16 @@
 
 The gateway implements a documented subset of the OpenAI API. Clients that use those
 routes can point their base URL at the gateway and send the platform headers. Check the
-[OpenAPI contract](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/api-contracts/inference-gateway.openapi.json)
+[OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json)
 and [scope](scope-and-non-goals.md) before assuming that an SDK feature is supported.
 These examples use `http://127.0.0.1:8080`, where the [Docker Compose stack](quickstart.md#docker-compose)
 serves the gateway with API key `local-development-only`. In the `kind` lab, port-forward the
 gateway service first; in a customer cluster, use your ingress host.
 
-The `model` id must be on the active profile's allowlist: the Compose stack and the local lab
-allow `qwen2.5:0.5b`, while the customer profiles default to `qwen3.5:0.8b` (Ollama) and
+The `model` id must be on the active profile's allowlist. Compose defaults to the synthetic
+`demo-openai` route; its fixtures demonstrate chat, not embeddings or model quality.
+Configure an approved provider for real inference using [model selection](model-selection.md#cloud-routes-milestone-1).
+The optional local lab allows `qwen2.5:0.5b`; customer self-hosted profiles use `qwen3.5:0.8b` (Ollama) and
 `Qwen/Qwen3-Coder-Next` (vLLM). Streaming is admitted by default in every shipped
 profile (`admission.allowStreaming: true`); a deployment that requires end-of-stream-only
 guardrail enforcement sets it `false`. Examples below that
@@ -35,7 +37,7 @@ frameworks parse to pace themselves:
 
 Each pair is present only when the corresponding limit is configured (greater than zero);
 cache hits (`X-Cache: HIT`) consume no budget and omit them. See the
-[budget controls runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/budget-controls.md) for sizing and triage.
+[budget controls runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md) for sizing and triage.
 
 ## curl
 
@@ -49,7 +51,7 @@ curl -fsS "$GATEWAY/v1/chat/completions" \
   -H 'Content-Type: application/json' \
   -d '{"messages":[{"role":"user","content":"hello"}]}'
 
-# Embeddings
+# Embeddings (requires a configured provider/model with embeddings support)
 curl -fsS "$GATEWAY/v1/embeddings" \
   -H "Authorization: Bearer $KEY" -H "X-Sandbox-ID: demo" \
   -H 'Content-Type: application/json' \
@@ -65,13 +67,13 @@ curl -fsS "$GATEWAY/v1/completions" \
 curl -fsS "$GATEWAY/v1/messages" \
   -H "Authorization: Bearer $KEY" -H "X-Sandbox-ID: demo" \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen2.5:0.5b","max_tokens":64,"messages":[{"role":"user","content":"hello"}]}'
+  -d '{"model":"demo-openai","max_tokens":64,"messages":[{"role":"user","content":"hello"}]}'
 
 # OpenAI Responses API (synchronous; optional tenant-scoped server-side state).
 curl -fsS "$GATEWAY/v1/responses" \
   -H "Authorization: Bearer $KEY" -H "X-Sandbox-ID: demo" \
   -H 'Content-Type: application/json' \
-  -d '{"model":"qwen2.5:0.5b","input":"hello","max_output_tokens":64}'
+  -d '{"model":"demo-openai","input":"hello","max_output_tokens":64}'
 
 # Moderations (content policy classification)
 curl -fsS "$GATEWAY/v1/moderations" \
@@ -144,7 +146,7 @@ import anthropic
 
 client = anthropic.Anthropic(base_url=GATEWAY, api_key=KEY)
 with client.messages.stream(
-    model="qwen2.5:0.5b",
+    model="demo-openai",
     max_tokens=128,
     messages=[{"role": "user", "content": "Give me one fact about the sea."}],
 ) as stream:
@@ -168,9 +170,9 @@ Reasoning and thinking deltas cannot leak through this path: the translator read
 `delta.content` and `delta.tool_calls`, so anything else a runtime streams has no route into
 the Anthropic events.
 
-`make sdk-conformance` drives the real `anthropic` and `openai` clients against the gateway
-and asserts the vendors' own parsers accept it, including the streamed tool-call
-reconstruction. That, rather than the OpenAPI snapshot, is the compatibility evidence.
+The service tests exercise translated payloads and streaming. The Compose walkthrough
+uses local protocol fixtures; live vendor compatibility must be verified with your provider
+and client versions.
 
 ## OpenAI Responses API (`/v1/responses`)
 
@@ -245,7 +247,7 @@ client = OpenAI(
 
 # Tool-calling (the flagship coding-agent path) is forwarded to the runtime.
 resp = client.chat.completions.create(
-    model="qwen2.5:0.5b",
+    model="demo-openai",
     messages=[{"role": "user", "content": "What is the weather in Berlin?"}],
     tools=[{
         "type": "function",
@@ -259,7 +261,7 @@ print(resp.choices[0].message)
 
 # Streaming (admitted by default in every shipped profile)
 for chunk in client.chat.completions.create(
-    model="qwen2.5:0.5b",
+    model="demo-openai",
     messages=[{"role": "user", "content": "stream a haiku"}],
     stream=True,
 ):
@@ -286,18 +288,18 @@ print(r.json()["choices"][0]["message"]["content"])
 
 ## Python (first-party client)
 
-The kit ships a minimal, retry-aware first-party client (`sdk/python`, packaged as
-`private-ai-platform-kit-client`) for scripts that do not want the full `openai` dependency:
+The platform ships a minimal, retry-aware first-party client (`sdk/python`, packaged as
+`agentworkflows`) for scripts that do not want the full `openai` dependency:
 
 ```bash
-python -m pip install https://github.com/RamazanKara/private-ai-platform-kit/releases/download/v0.29.0/private_ai_platform_kit_client-0.29.0-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.1.0/agentworkflows-0.1.0-py3-none-any.whl
 ```
 
-The wheel and checksums are attached to each [GitHub release](https://github.com/RamazanKara/private-ai-platform-kit/releases).
+The wheel and checksums are attached to each [GitHub release](https://github.com/RamazanKara/agentworkflows/releases).
 See [release verification](release-verification.md) before installing.
 
 ```python
-from ai_platform_client import GatewayClient
+from agentworkflows import GatewayClient
 
 with GatewayClient("http://127.0.0.1:8080", api_key="local-development-only") as gw:
     print(gw.chat([{"role": "user", "content": "hello"}])["choices"][0]["message"]["content"])
@@ -320,7 +322,7 @@ from langchain_openai import ChatOpenAI
 llm = ChatOpenAI(
     base_url="http://127.0.0.1:8080/v1",
     api_key="local-development-only",
-    model="qwen2.5:0.5b",
+    model="demo-openai",
     default_headers={"X-Sandbox-ID": "demo"},
 )
 print(llm.invoke("hello").content)
@@ -334,7 +336,7 @@ from llama_index.llms.openai_like import OpenAILike
 llm = OpenAILike(
     api_base="http://127.0.0.1:8080/v1",
     api_key="local-development-only",
-    model="qwen2.5:0.5b",
+    model="demo-openai",
     is_chat_model=True,
     default_headers={"X-Sandbox-ID": "demo"},
 )

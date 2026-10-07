@@ -1,57 +1,41 @@
-# Roadmap
+# AgentWorkflows roadmap
 
-This file lists unfinished project work. Released features belong in the [changelog](CHANGELOG.md), not in the roadmap. The order below is a priority order, not a release promise.
+AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
+agent workflows, human approvals, team budgets, and receipts for model and tool calls.
+This is a product direction, not a claim that every capability is available in 0.1.0.
 
-## 1. Keep the deployment paths reproducible
+## Milestone 1: governed cloud providers — delivered
 
-- Run the local end-to-end job against both the CI-pinned Kubernetes version and the default local node image.
-- Add a customer-overlay render/conformance job that does not require a customer cluster.
-- Test upgrades across the supported release boundary, including rollback of charts and configuration contracts.
-- Keep chart floors, tested Kubernetes versions, bootstrap tools, and the version matrix aligned.
+OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini share authentication,
+model policies, classification-aware fallback, token budgets, usage accounting, and audit
+receipts. Ollama and vLLM remain optional self-hosted backends. The local walkthrough
+uses provider protocol fixtures; live provider acceptance is deployment-specific.
 
-## 2. Close identity and tenant-boundary gaps
+## Next: durable agent workflows
 
-- Add tested configuration examples for common OIDC providers without shipping customer-specific credentials.
-- Exercise JWKS rotation and loss of the last-known-good cache in an end-to-end environment.
-- Make verified tenant binding the normal customer RAG path and document the header-trusted fallback as a single-tenant option.
-- Offer per-batch delegated credentials as an alternative to the `batch_replay` worker scope for deployments whose identity provider supports token exchange.
-- Add negative multi-tenant tests that cover gateway, RAG, object-store, response-store, and batch data together.
+- Persist workflow state and resume after worker restarts.
+- Define retry, idempotency, cancellation, and timeout behavior for model and tool steps.
+- Correlate model and tool receipts with a workflow run and its steps.
 
-## 3. Improve runtime compatibility testing
+The existing Batch API and stored Responses are not a durable workflow engine.
 
-- Expand streaming and cancellation tests against real Ollama and vLLM releases.
-- Add fault-injection coverage for timeout, retry, circuit-breaker, canary, shadow, and fallback behavior.
-- Decide whether Responses streaming belongs in scope. Anthropic streaming was decided in favor and shipped in v0.28.0, because the Anthropic SDKs stream by default and the endpoint could not otherwise serve an interactive agent. Responses has no equivalent forcing case yet, so it stays non-streaming until one exists.
-- Run `make sdk-conformance` on a schedule and track vendor SDK releases, so a client-side change that breaks compatibility is caught rather than reported by a user.
-- Keep multi-node serving as an integration example unless the project adopts and tests a specific operator.
+## Then: approvals and team operations
 
-## 4. Close the receipt-coverage gap
+- Pause and resume runs for human approval, with attributable decisions.
+- Make team onboarding, budgets, and workflow history accessible to team leads.
+- Add instrumented tool producers so receipt coverage is explicit and measurable.
 
-v0.28.0 made agent actions verifiable; it did not make them complete. Integrity is the
-project's to guarantee, coverage is the operator's, and the difference should be documented
-rather than blurred.
+Current receipts cover gateway calls and reported agent actions. They cannot prove
+unreported tool activity. Current team budgets use sandbox-bound credentials and token
+limits; provider cost accounting does not implement a billing service.
 
-- Ship a reference producer that turns Falco or Tetragon alerts and CNI denied-flow logs into `POST /v1/receipts` calls, so the demo's blocked exfiltration files its own receipt instead of only being logged.
-- Add a coverage report to the evidence pack that states which action types a deployment actually produces, so an evidence pack cannot imply coverage nobody wired up.
-- Decide whether the agent-sandbox demo should ship receipt-emitting tool hooks, or whether that belongs to the agent rather than the kit.
+## Usability and release standard
 
-## 5. Make stateful operations less manual
+Every capability needs sensible defaults, one obvious path, actionable errors, and
+copy-pasteable examples a team lead can follow in ten minutes. Prefer removing friction
+to adding options. Keep provider compatibility, upgrade checks, and current release
+evidence reproducible. Dates and future release numbers are not promised here.
 
-- Add a tested Qdrant collection migration dry run and rollback path.
-- Add end-to-end examples for external Redis and Qdrant without embedding a vendor-specific managed-service configuration.
-- Exercise backup and restore with data-bearing PVCs, not only metadata and report generation.
-- Document response-store and batch-object-store migration and retention behavior.
-
-## 6. Reduce maintenance cost
-
-- Remove duplicated narrative documentation when a contract, values file, or runbook already answers the question.
-- Generate version tables from pinned configuration where practical.
-- Ratchet type checking and coverage only when the checks stay useful and maintainable.
-- Keep sample evidence small and clearly separate from current release evidence.
-- Revisit a shared `src/common` package if the modules both services copy grow beyond the three ADR 0015 keeps identical.
-
-## Not planned
-
-The project does not plan to provision cloud infrastructure, operate customer clusters, become a hosted service, build a general training platform, or reproduce every OpenAI and Anthropic endpoint. Those are scope boundaries, not backlog items. See [Scope and non-goals](docs/scope-and-non-goals.md).
-
-Customer work such as choosing an IdP, sizing GPUs, setting retention, operating backups, and staffing on-call also does not belong on the project roadmap. The repository can provide integration points and checks, but the customer owns those decisions.
+AgentWorkflows is cloud-first. Its upstream kit continues separately as a self-hosted
+project with its own research publication. See [scope](docs/scope-and-non-goals.md)
+for current boundaries and [CHANGELOG.md](CHANGELOG.md) for product releases.

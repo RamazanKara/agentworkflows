@@ -67,7 +67,7 @@ def _chat_response():
 
 
 def _audit_lines(caplog):
-    return [record.message for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    return [record.message for record in caplog.records if record.name == "agentworkflows.audit"]
 
 
 # --- head stores -----------------------------------------------------------------------
@@ -179,7 +179,7 @@ def test_chain_start_event_names_its_predecessor():
 
 
 def test_open_audit_chain_emits_a_genesis_rooted_start_record(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_settings())
 
     event = open_audit_chain(app)
@@ -204,7 +204,7 @@ def test_open_audit_chain_covers_the_predecessor_claim_with_its_own_hash():
 
 
 def test_open_audit_chain_survives_an_unreadable_head_store(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_settings())
 
     class BrokenStore:
@@ -224,7 +224,7 @@ def test_open_audit_chain_survives_an_unreadable_head_store(caplog):
 
 
 def test_chain_start_is_suppressed_when_auditing_is_disabled(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_settings(audit_log_enabled=False))
 
     open_audit_chain(app)
@@ -247,7 +247,7 @@ def _run_gateway_lifetime(settings, caplog, requests=2):
 
 
 def test_a_restarted_gateway_links_its_chain_to_the_previous_one(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _settings(
         audit_chain_store_backend="file",
         audit_chain_store_path=str(tmp_path / "head.json"),
@@ -266,7 +266,7 @@ def test_a_restarted_gateway_links_its_chain_to_the_previous_one(tmp_path, caplo
 
 
 def test_the_chain_of_chains_verifies_end_to_end(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _settings(
         audit_chain_store_backend="file",
         audit_chain_store_path=str(tmp_path / "head.json"),
@@ -284,7 +284,7 @@ def test_the_chain_of_chains_verifies_end_to_end(tmp_path, caplog):
 
 
 def test_deleting_a_predecessors_records_is_detected(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _settings(
         audit_chain_store_backend="file",
         audit_chain_store_path=str(tmp_path / "head.json"),
@@ -304,7 +304,7 @@ def test_deleting_a_predecessors_records_is_detected(tmp_path, caplog):
 
 
 def test_a_missing_predecessor_is_a_note_by_default_and_a_failure_under_strict(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _settings(
         audit_chain_store_backend="file",
         audit_chain_store_path=str(tmp_path / "head.json"),
@@ -323,7 +323,7 @@ def test_a_missing_predecessor_is_a_note_by_default_and_a_failure_under_strict(t
 
 
 def test_memory_backend_keeps_the_pre_continuity_behavior(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _settings()
 
     first = _run_gateway_lifetime(settings, caplog)
@@ -336,7 +336,7 @@ def test_memory_backend_keeps_the_pre_continuity_behavior(caplog):
 
 
 def test_the_head_is_persisted_on_shutdown(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     path = tmp_path / "head.json"
     settings = _settings(audit_chain_store_backend="file", audit_chain_store_path=str(path))
 

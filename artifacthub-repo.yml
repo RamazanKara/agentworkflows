@@ -1,3 +1,4 @@
+# AgentWorkflows OCI chart repository metadata.
 # OCI repository metadata published at the special `artifacthub.io` tag by release CI.
 # Artifact Hub assigns repositoryID only after the chart repository is registered; add it
 # here after registration to enable the Verified Publisher badge.

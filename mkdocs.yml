@@ -1,8 +1,8 @@
-site_name: Private AI Platform Kit
-site_description: Self-hosted LLM gateway, retrieval, and coding-agent workspaces for Kubernetes, with a verifiable record of every model call and agent action.
-site_url: https://ramazankara.github.io/private-ai-platform-kit/
-repo_url: https://github.com/RamazanKara/private-ai-platform-kit
-repo_name: RamazanKara/private-ai-platform-kit
+site_name: AgentWorkflows
+site_description: The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.
+site_url: https://ramazankara.github.io/agentworkflows/
+repo_url: https://github.com/RamazanKara/agentworkflows
+repo_name: RamazanKara/agentworkflows
 edit_uri: edit/main/docs/
 copyright: Maintained by fluentorbit as project steward. Licensed under Apache-2.0.
 

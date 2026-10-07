@@ -1,6 +1,6 @@
 # Security Policy
 
-This repository is for private AI platform operations and should be treated as security-sensitive infrastructure code.
+AgentWorkflows governs cloud-provider access, team budgets, and agent receipts. Treat its gateway, credentials, and deployment configuration as security-sensitive infrastructure.
 
 ## Supported Surface
 
@@ -21,7 +21,7 @@ Security fixes should cover:
 
 Do not open public issues containing secrets, exploit details, customer data, or private prompt content. Report privately through one of these channels:
 
-- **Primary:** GitHub Private Vulnerability Reporting. Open the repository's **Security** tab and choose **"Report a vulnerability"**.
+- **Primary:** GitHub Private Vulnerability Reporting. Open [AgentWorkflows Security](https://github.com/RamazanKara/agentworkflows/security) tab and choose **"Report a vulnerability"**.
   <!-- Maintainer: if "Report a vulnerability" is not available, enable Private Vulnerability Reporting in repo Settings -> Security & analysis. -->
 - **Alternate:** email [security@fluentorbit.de](mailto:security@fluentorbit.de).
 

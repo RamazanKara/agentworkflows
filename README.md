@@ -1,189 +1,130 @@
-# Private AI Platform Kit
+# AgentWorkflows
 
-[![CI](https://github.com/RamazanKara/private-ai-platform-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/RamazanKara/private-ai-platform-kit/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/RamazanKara/private-ai-platform-kit)](https://github.com/RamazanKara/private-ai-platform-kit/releases)
-[![Docs](https://img.shields.io/badge/docs-latest-0b7285)](https://ramazankara.github.io/private-ai-platform-kit/)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/RamazanKara/private-ai-platform-kit/badge)](https://scorecard.dev/viewer/?uri=github.com/RamazanKara/private-ai-platform-kit)
-[![License](https://img.shields.io/github/license/RamazanKara/private-ai-platform-kit)](LICENSE)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21039342.svg)](https://doi.org/10.5281/zenodo.21039342)
+[![CI](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml/badge.svg)](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-AgentWorkflows-0b7285)](https://ramazankara.github.io/agentworkflows/)
+[![License](https://img.shields.io/github/license/RamazanKara/agentworkflows)](LICENSE)
 
-**Self-hosted LLM gateway, retrieval, and coding-agent workspaces for Kubernetes, with a
-verifiable record of every model call and agent action.**
+**The agent workflow platform for teams: cloud AI through one governed gateway, with budgets and verifiable receipts.**
 
-When a team asks to run coding agents, the security review asks three questions: where does
-the generated code run, what can it reach, and can you prove afterwards what it did? This kit
-answers them with running code on infrastructure you control. Models run on Ollama or vLLM
-inside your cluster, with optional governed cloud routes. Agents run in hardened workspaces behind default-deny egress. Every
-request passes one governance path in the gateway and leaves a hash-chained receipt that an
-auditor can verify offline.
+AgentWorkflows brings provider routing and workflow governance together for team leads,
+platform engineers, and developers shipping agents. Connect OpenAI, Anthropic, Azure OpenAI,
+AWS Bedrock, and Vertex Gemini behind one API. Bind credentials to teams, control which
+models they can call, account for usage, and inspect the audit trail. Self-hosted Ollama
+and vLLM models are optional add-ons.
 
-It is built for platform and security teams who need OpenAI- and Anthropic-compatible APIs on
-their own hardware, and who answer to an auditor, a works council, or a regulator for how
-those APIs are used.
+Version **0.1.0** starts with **Milestone 1: governed cloud providers**. Durable agent
+workflows, human approvals, and broader team administration are the product direction;
+they are not implemented yet. The existing asynchronous Batch API and stored Responses
+are building blocks, not a durable workflow engine. See the [roadmap](ROADMAP.md).
 
-<p align="center">
-  <img src="docs/assets/compose-demo.gif" alt="Recorded terminal run of make compose-smoke: a governed chat completion, streaming, a blocked credential, a refused model, a missing key, an agent receipt, tenant-scoped retrieval, usage and cost, the audit chain verified, and an edited receipt detected" width="100%">
-</p>
+## Try it in ten minutes
 
-## Try it in five minutes
-
-You need Docker with Compose. No Kubernetes, no GPU.
+You need Docker with Compose, Git, Make, Bash, Python 3.12+, and curl. The demo uses local
+cloud-protocol fixtures: no cloud account, paid API calls, model download, GPU, or Kubernetes.
 
 ```bash
-git clone https://github.com/RamazanKara/private-ai-platform-kit.git
-cd private-ai-platform-kit
-make compose-up      # gateway, Ollama with a 0.5B model, and the RAG service (about two minutes)
-make compose-smoke   # the walkthrough recorded above
+git clone https://github.com/RamazanKara/agentworkflows.git
+cd agentworkflows
+make compose-up
+make compose-smoke
 ```
 
-Nothing in the recording is staged. `compose-smoke` sends real requests and stops at the first
-one that does not behave: a credential in a prompt is blocked before the model sees it, a model
-outside the allowlist is refused, an agent's denied egress attempt lands on the same audit
-chain as the model calls, and an edited receipt fails verification.
+The walkthrough sends governed requests through all five cloud adapters, checks streaming
+and fallback, refuses confidential traffic to cloud routes, tests secret blocking, reads
+usage and cost, verifies the audit chain, and detects an edited receipt. Responses and prices
+are synthetic; this demonstrates gateway behavior, not live provider compatibility or model quality.
 
-Then point any OpenAI client at the gateway:
+Open the read-only console at <http://127.0.0.1:8080/console>. Use the public demo key
+`local-development-only` to inspect models, usage, and budgets. It is only for this local trial.
+
+Send your first request:
+
+```bash
+curl http://127.0.0.1:8080/v1/chat/completions \
+  -H 'Authorization: Bearer local-development-only' \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"demo-openai","messages":[{"role":"user","content":"Hello, AgentWorkflows!"}]}'
+```
+
+Use the Python package and CLI from the same checkout:
+
+```bash
+python -m pip install ./sdk/python
+export AGENTWORKFLOWS_API_KEY=local-development-only
+agentworkflows models
+agentworkflows chat "Hello, AgentWorkflows!" --model demo-openai
+agentworkflows usage
+```
 
 ```python
-from openai import OpenAI
+from agentworkflows import GatewayClient
 
-client = OpenAI(base_url="http://127.0.0.1:8080/v1", api_key="local-development-only")
-reply = client.chat.completions.create(
-    model="qwen2.5:0.5b",
-    messages=[{"role": "user", "content": "Write a haiku about audit logs."}],
-)
-print(reply.choices[0].message.content)
+with GatewayClient("http://127.0.0.1:8080", api_key="local-development-only") as gateway:
+    reply = gateway.chat([{"role": "user", "content": "Hello!"}], model="demo-openai")
+    print(reply["choices"][0]["message"]["content"])
 ```
 
-The Anthropic SDK works the same way against `http://127.0.0.1:8080`. For a chat UI, add
-`--profile ui` to the Compose command and open <http://127.0.0.1:3000>: Open WebUI runs offline
-and talks only to the governed gateway. `make compose-down` removes everything.
+Stop the trial and remove its volumes with `make compose-down`. The
+[quickstart](docs/quickstart.md) covers real provider configuration, optional self-hosted
+models, troubleshooting, and the Kubernetes lab.
 
-## What you get
+## What works today
 
-**One governance path for every API.** OpenAI chat, completions, embeddings, moderations,
-Files, Batch, and Responses, plus Anthropic Messages with streaming, all pass the same checks:
-API-key or JWT authentication bound to a sandbox, model allowlists, admission limits,
-per-sandbox budgets settled against measured token usage, rate limits, prompt-secret blocking
-or redaction, and an output guardrail. An agent cannot shop for the endpoint with weaker rules,
-because there isn't one.
-
-**Receipts an auditor can verify.** Each model call, retrieval, and
-reported agent action becomes a redacted record on a SHA-256 hash chain; prompts are
-fingerprinted, never stored in clear. `make audit-verify` detects edited, reordered, and
-deleted records. Chains link across restarts, so a missing process lifetime shows up as well,
-and head anchors catch truncation of the newest records.
-
-**Coding agents in a box they cannot leave.** Workspaces are hardened
-[kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox) pods: non-root,
-read-only root filesystem, no ambient credentials, and short-lived audience-bound tokens.
-Egress is denied by default, and every exception is a reviewed catalog entry with an expiry
-date. Kyverno policies reject a workspace that drops any of this.
-
-**Local and cloud models.** Ollama for laptops and CPU nodes, vLLM for NVIDIA and AMD GPUs,
-plus OpenAI, Anthropic, Azure OpenAI, AWS Bedrock, and Vertex Gemini through the same
-governance path. Catalog policies order fallbacks and keep confidential data local.
-Cloud credentials stay in server env/Secrets; provider usage and cost appear in receipts. The RAG service
-isolates tenants by default and runs on a local lexical index or on Qdrant.
-
-**Delivery an auditor can check.** Helm charts and Argo CD applications, cosign-signed images
-with SBOMs and build provenance, an OpenSSF Scorecard, and generated evidence packs for SLOs,
-quotas, retention, egress, and model provenance. Controls are mapped to the OWASP LLM Top 10,
-the NIST AI RMF, the EU AI Act, and ISO/IEC 42001.
-
-**Cheap enough to leave on.** In the [benchmark behind the accompanying paper](paper/PAPER.md),
-the full governance path added about 0.3 ms at the median compared with the same gateway with
-governance switched off.
-
-## How it compares
-
-This kit does not replace every gateway. Choose by the problem you have:
-
-| If you mainly need | Look at |
+| Capability | How to use it |
 | --- | --- |
-| One API in front of many hosted model providers, with spend tracking | LiteLLM, Portkey |
-| AI features for an API gateway you already operate | Kong AI Gateway, Envoy AI Gateway |
-| Model serving and autoscaling on Kubernetes | KServe, KubeAI, the vLLM production stack |
-| A chat interface for people | Open WebUI, which runs on top of this kit |
-| Self-hosted models **and** coding agents on your own cluster, with every call and agent action on a record you can verify | **this kit** |
+| Governed cloud providers and ordered fallback | [Provider configuration](docs/client-examples.md); provider credentials stay on the server |
+| Team usage and budgets | Bind a key to a sandbox/team; inspect `/v1/usage`, `/v1/sandbox/budget`, or the [console](runbooks/api-access.md) |
+| OpenAI and Anthropic API compatibility | [Client examples](docs/client-examples.md) for chat, streaming, embeddings, Messages, Files, Batch, and Responses; support varies by provider |
+| Model and reported tool-action receipts | [Audit verification](runbooks/audit-chain.md) and `POST /v1/receipts`; tools must report their actions |
+| Optional retrieval and agent workspaces | [RAG](runbooks/rag-service.md) and hardened [agent-sandbox workspaces](docs/agent-sandbox-integration.md) |
+| Deployment and operational checks | Helm, Argo CD, [release verification](docs/release-verification.md), and [production readiness](docs/production-readiness.md) |
 
-The [decision guide](docs/decision-guide.md) covers the tradeoffs, including when this kit is
-the wrong choice.
+## What the evidence proves
 
-## Run it on Kubernetes
+Receipts are redacted records on per-process SHA-256 hash chains. Prompts are fingerprinted,
+not stored in clear. The verifier detects edits, reordering, and gaps within a retained chain.
+Persisted restart links and externally retained head anchors are needed to detect missing
+lifetimes, tail truncation, or a wholesale rewrite. A tool action that was never reported
+cannot be proven by the log. See the [audit runbook](runbooks/audit-chain.md).
 
-**Local lab.** On Linux or WSL with Docker, Python 3.12+, and `curl`, one command installs
-pinned `kind`, `kubectl`, and Helm into `.tools/bin` and builds the full platform: Argo CD,
-Kyverno, the gateway, Ollama, RAG, and the agent workspaces.
+The repository contains validation and release-signing workflows. A passing local demo is
+not a production certification or proof that a release has been published and signed.
+Files named `sample-*` under `results/` demonstrate report formats; strict release gates
+require fresh evidence for AgentWorkflows. See [evidence and validation](docs/proof.md).
+
+## Deploy and operate
+
+Start with the [ten-minute quickstart](docs/quickstart.md). For Kubernetes, use the
+[customer deployment guide](deploy/clusters/customer/README.md) and review identity,
+secrets, ingress, storage, observability, and backups before production use. The umbrella
+chart is `deploy/charts/agentworkflows`; release CI is configured to publish it at
+`oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows`.
+
+To generate a GitOps overlay for a release after it has been published:
 
 ```bash
-make bootstrap          # or `make quickstart` if kind, kubectl, and Helm are installed
-make agent-sandbox-demo # a real coding agent in a hardened workspace, with receipts
-make local-down
-```
-
-**Customer-owned clusters.** Install the signed umbrella chart from GHCR, or render the Argo CD
-overlay for a GitOps deployment with GPU profiles:
-
-```bash
-helm install private-ai oci://ghcr.io/ramazankara/private-ai-platform-kit/charts/platform \
-  --version 0.29.0 --namespace ai-platform --create-namespace
-
 make customer-overlay CUSTOMER_REPO_URL=https://github.com/<you>/<fork>.git \
-  CUSTOMER_REVISION=v0.29.0 CUSTOMER_GPU_PROFILE=nvidia
+  CUSTOMER_REVISION=v0.1.0 CUSTOMER_GPU_PROFILE=nvidia
 ```
 
-The [quickstart](docs/quickstart.md) lists what each path installs and how long it takes, and
-the [customer deployment guide](deploy/clusters/customer/README.md) covers what your cluster
-must provide.
-
-## Status
-
-The current release is `v0.29.0`. It is ready for evaluation and platform engineering work and
-is tested on every pull request: unit and contract tests, chart rendering, policy tests, a
-`kind` cluster end to end, and the Compose walkthrough. It is not a managed service. A
-production deployment on customer-owned clusters still needs your identity provider, secret
-backend, ingress, storage, observability, backups, and capacity planning; the
-[production readiness matrix](docs/production-readiness.md) lists each item and who owns it.
-
-## Documentation
+The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.1.0
+is ready for evaluation; this repository does not yet provide a hosted service.
 
 | Task | Start here |
 | --- | --- |
-| Try it, then run the local lab | [Quickstart](docs/quickstart.md) |
-| Call it from OpenAI, Anthropic, or Python clients | [Client examples](docs/client-examples.md), [Python SDK](sdk/python/README.md) |
-| Decide whether it fits | [Decision guide](docs/decision-guide.md), [Feature inventory](docs/feature-inventory.md) |
-| Understand the components | [Architecture](docs/architecture.md) |
-| Review security | [Security overview](docs/security-overview.md), [Threat model](docs/threat-model.md) |
-| Deploy to your cluster | [Customer deployment](deploy/clusters/customer/README.md), [Model selection](docs/model-selection.md) |
-| Operate it | [Runbooks](runbooks/README.md) |
-| Verify a release | [Release verification](docs/release-verification.md) |
-| Change the code | [Developer workflow](docs/development.md), [Repository map](docs/repository-map.md), [Contributing](CONTRIBUTING.md) |
+| Explore capabilities and limits | [Feature inventory](docs/feature-inventory.md), [scope](docs/scope-and-non-goals.md) |
+| Understand the request path | [Architecture](docs/architecture.md), [security overview](docs/security-overview.md) |
+| Operate the platform | [Runbooks](runbooks/README.md) |
+| Contribute | [Developer workflow](docs/development.md), [repository map](docs/repository-map.md), [contributing](CONTRIBUTING.md) |
 
-The full documentation is published at <https://ramazankara.github.io/private-ai-platform-kit/>.
+Documentation: <https://ramazankara.github.io/agentworkflows/>.
 
-## Repository layout
+## Origins
 
-| Path | Contents |
-| --- | --- |
-| `src/` | [Inference gateway](src/inference-gateway/README.md) and [RAG service](src/rag-service/README.md) |
-| `sdk/` | [Python client](sdk/python/README.md) |
-| `deploy/` | Helm charts, cluster profiles, Argo CD, Kyverno policies, the Compose stack, and agent workspaces |
-| `platform/` | API and configuration contracts, model catalog, evals, and SLO inputs |
-| `tenants/` | Tenant onboarding specifications and examples |
-| `runbooks/` | Operational procedures |
-| `scripts/` | [Validation, setup, and evidence tooling](scripts/README.md) |
-| `docs/` | Documentation site and architecture decision records |
-| `paper/` | Research harness and recorded results |
-| `chaos/`, `loadtest/`, `results/` | Resilience drills, load scenarios, and sample report shapes |
+Built on [private-ai-platform-kit](https://github.com/RamazanKara/private-ai-platform-kit)
+([DOI: 10.5281/zenodo.21038652](https://doi.org/10.5281/zenodo.21038652)). The kit remains a
+separate self-hosted project with its own paper and DOI. AgentWorkflows retains its Git
+history and Apache-2.0 attribution, and starts its own product releases at 0.1.0.
 
-Files under `results/` named `sample-*` show report formats only; strict release checks require
-freshly generated evidence.
-
-## Contributing
-
-Issues and pull requests are welcome. `make test` and `make quality` run without a cluster;
-[CONTRIBUTING.md](CONTRIBUTING.md) covers the rest. Report vulnerabilities privately as
-described in [SECURITY.md](SECURITY.md).
-
-Licensed under Apache-2.0. Kubernetes is a registered trademark of The Linux Foundation; this
-project is not affiliated with or endorsed by The Linux Foundation.
+Issues and pull requests are welcome. Report vulnerabilities privately through
+[SECURITY.md](SECURITY.md). Licensed under Apache-2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE).

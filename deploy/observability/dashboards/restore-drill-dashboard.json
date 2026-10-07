@@ -32,8 +32,8 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["private-ai-platform-kit", "restore-drill"],
-  "title": "Private AI Platform Kit Restore Drill",
+  "tags": ["agentworkflows", "restore-drill"],
+  "title": "AgentWorkflows Restore Drill",
   "uid": "ai-platform-restore-drill",
   "version": 1
 }

@@ -1,7 +1,7 @@
 apiVersion: platform.ai/v1alpha1
 kind: DataRetentionPolicy
 metadata:
-  name: private-ai-platform-kit-retention
+  name: agentworkflows-retention
 spec:
   defaults:
     owner: platform-security

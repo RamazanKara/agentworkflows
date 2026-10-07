@@ -10,34 +10,34 @@ The NIST mapping is explicitly versioned to AI RMF 1.0. It should be reviewed ra
 forward unchanged when NIST publishes a later revision.
 
 The machine-readable companion is
-[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/governance/control-framework-map.yaml).
+[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/control-framework-map.yaml).
 That file carries the per-control framework citations and the risk-tier-to-control mapping; this
 document is the human-readable explanation.
 
 ## What this is and is not
 
-The kit ships mechanisms, not certifications. Each row below points at a control that exists in the
+The platform ships mechanisms, not certifications. Each row below points at a control that exists in the
 repo and the framework obligation it contributes evidence toward. A framework citation means "this
 control helps you meet that obligation," not "this deployment is conformant." Conformity is a
-property of your deployment, your use case, and your evidence, not of the kit alone. In particular,
+property of your deployment, your use case, and your evidence, not of the platform alone. In particular,
 whether your deployment is an EU AI Act high-risk system depends on your use case (Annex III), which
-the kit cannot determine for you. See [docs/threat-model.md](threat-model.md) for the residual risks
+the platform cannot determine for you. See [docs/threat-model.md](threat-model.md) for the residual risks
 that none of these controls remove and [docs/production-readiness.md](production-readiness.md) for the
 control matrix and validation commands.
 
-The kit also delegates several obligations to the operator. Where a framework expects something the
-kit does not implement (fundamental-rights impact assessment, conformity assessment, registration,
+The platform also delegates several obligations to the operator. Where a framework expects something the
+platform does not implement (fundamental-rights impact assessment, conformity assessment, registration,
 post-market incident reporting to authorities), that work is yours. Those gaps are called out in the
 [Operator responsibilities](#operator-responsibilities) section.
 
 ## Risk-tier semantics
 
 `riskTier` is an existing field on every model in
-[`platform/model-catalog/models.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/models.yaml) and every artifact in
-[`platform/governance/model-provenance.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/governance/model-provenance.yaml). The enum
+[`platform/model-catalog/models.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/models.yaml) and every artifact in
+[`platform/governance/model-provenance.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/model-provenance.yaml). The enum
 `low | medium | high` is validated by `VALID_RISK_TIERS` in
-[`scripts/model-catalog.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/model-catalog.py) and re-checked in
-[`scripts/model-provenance.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/model-provenance.py). Until now the field was validated but
+[`scripts/model-catalog.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py) and re-checked in
+[`scripts/model-provenance.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-provenance.py). Until now the field was validated but
 not defined. This section gives it meaning: what each tier represents and which controls it mandates.
 
 `riskTier` is the model artifact's inherent risk: its capability, autonomy, and blast radius if it
@@ -76,7 +76,7 @@ Mandated controls: everything in low, plus egress governance on the serving name
 prompt secret detection enabled (`C-SECRET`), and an eval suite that exercises the promoted model or
 a declared, justified proxy (`C-EVAL`). The customer also verifies downloaded weights against the
 pinned inventory or registry digest before production, and the coding-agent eval suite
-([`platform/evals/coding-agent-suite.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/evals/coding-agent-suite.yaml)) includes
+([`platform/evals/coding-agent-suite.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/evals/coding-agent-suite.yaml)) includes
 `forbiddenAny` secret-leak checks.
 
 ### high
@@ -92,7 +92,7 @@ human-oversight owner (`C-RBAC`). The hardened agent-sandbox workspace runtime (
 the standard at every tier (ADR 0010). High-tier promotion expects:
 
 - Two named approvers on the promotion request. Separation of duties (requester is not an approver)
-  is already enforced by [`scripts/model-catalog.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/model-catalog.py); high tier adds a
+  is already enforced by [`scripts/model-catalog.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py); high tier adds a
   documented human-oversight owner.
 - `dataClassification` reviewed and recorded; `restricted` data requires explicit sign-off in the
   customer handoff.
@@ -104,11 +104,11 @@ the standard at every tier (ADR 0010). High-tier promotion expects:
 
 ## Control crosswalk
 
-Each control below maps to the kit files that implement it, its validation command, and the framework
+Each control below maps to the platform files that implement it, its validation command, and the framework
 obligations it contributes evidence toward. Control IDs match
-[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/governance/control-framework-map.yaml).
+[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/control-framework-map.yaml).
 
-| Control | Kit implementation | Validation | NIST AI RMF | EU AI Act | ISO/IEC 42001 |
+| Control | Platform implementation | Validation | NIST AI RMF | EU AI Act | ISO/IEC 42001 |
 | --- | --- | --- | --- | --- | --- |
 | `C-PROV` Model artifact provenance | `platform/governance/model-provenance.yaml`, `scripts/model-provenance.py` | `make model-provenance-check` | Map, Manage | Art. 10, 11 | 8.3, data/resource mgmt |
 | `C-PROMO` Promotion with separation of duties | `platform/model-catalog/models.yaml`, `promotion-requests/`, `scripts/model-catalog.py` | `make model-check` | Govern, Manage | Art. 9, 17 | 6.1, 8.1 |
@@ -125,11 +125,11 @@ obligations it contributes evidence toward. Control IDs match
 | `C-SUPPLY` Supply-chain integrity | `.github/workflows/ci.yml`, `deploy/policies/kyverno/policies.yaml` | `make supply-chain-check`, `make image-scan` | Map, Manage | Art. 11, 15 | 8.1, supplier mgmt |
 
 For the exact category, article, and clause text behind each citation, see the `controls` list in
-[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/governance/control-framework-map.yaml).
+[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/control-framework-map.yaml).
 
 ## NIST AI RMF function coverage
 
-The four NIST AI RMF functions map to the kit as follows.
+The four NIST AI RMF functions map to the platform as follows.
 
 - **Govern.** Lifecycle policy and accountability: promotion with separation of duties (`C-PROMO`),
   retention and classification policy (`C-RETAIN`), and named-owner RBAC (`C-RBAC`).
@@ -143,7 +143,7 @@ The four NIST AI RMF functions map to the kit as follows.
 
 ## EU AI Act technical-obligation coverage
 
-For deployments the operator determines are high-risk, the kit contributes mechanisms toward the
+For deployments the operator determines are high-risk, the platform contributes mechanisms toward the
 Chapter III, Section 2 technical obligations:
 
 - **Article 9 (risk-management system).** Promotion review (`C-PROMO`) and approved-only serving
@@ -166,7 +166,7 @@ Chapter III, Section 2 technical obligations:
 
 ## ISO/IEC 42001 clause coverage
 
-The kit supports an AI management system rather than being one. It maps onto the standard at the
+The platform supports an AI management system rather than being one. It maps onto the standard at the
 operational-control and lifecycle clauses:
 
 - **Clause 5.3 / 6.1 (roles, risk treatment).** Named owners and quota plans (`C-RBAC`), promotion
@@ -181,7 +181,7 @@ operational-control and lifecycle clauses:
 
 ## Operator responsibilities
 
-The kit does not implement, and cannot substitute for, the following. These are the operator's
+The platform does not implement, and cannot substitute for, the following. These are the operator's
 obligations under one or more of the frameworks:
 
 - Determining whether a deployment is an EU AI Act high-risk system (Annex III) or a prohibited
@@ -201,6 +201,6 @@ obligations under one or more of the frameworks:
 ## Maintaining the crosswalk
 
 When you add or change a control, update both this document and
-[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/governance/control-framework-map.yaml)
+[`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/control-framework-map.yaml)
 so the implementation references stay accurate. The citations refer to the named framework
 versions; revisit them when a framework or relevant implementing guidance changes.

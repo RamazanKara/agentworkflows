@@ -225,7 +225,7 @@ class ModelRoutingPolicy:
             {
                 "id": route.model_id,
                 "object": "model",
-                "owned_by": "private-ai-platform-kit",
+                "owned_by": "agentworkflows",
                 "permission": [],
             }
             for route in self.routes

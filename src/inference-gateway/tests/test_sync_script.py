@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -11,7 +12,7 @@ SYNC = ROOT / "scripts" / "sync.sh"
 
 
 def _write_executable(path: Path, content: str) -> None:
-    path.write_text(content, encoding="utf-8")
+    path.write_text(content, encoding="utf-8", newline="\n")
     path.chmod(0o755)
 
 
@@ -26,7 +27,7 @@ def _fake_toolchain(tmp_path: Path) -> tuple[Path, Path]:
 set -euo pipefail
 printf 'kubectl %s\n' "$*" >>"$COMMAND_LOG"
 if [[ "$*" == "config current-context" ]]; then
-  printf '%s\n' "${FAKE_CONTEXT:-kind-private-ai-platform-kit}"
+  printf '%s\n' "${FAKE_CONTEXT:-kind-agentworkflows}"
 elif [[ "${1:-}" == "create" && "${2:-}" == "namespace" ]]; then
   printf 'apiVersion: v1\nkind: Namespace\nmetadata:\n  name: %s\n' "$3"
 elif [[ "$*" == "apply -f -" ]]; then
@@ -67,15 +68,15 @@ def _run_sync(tmp_path: Path, **overrides: str) -> tuple[subprocess.CompletedPro
     env = os.environ.copy()
     env.update(
         {
-            "TOOLCHAIN_BIN_DIR": str(tool_bin),
-            "COMMAND_LOG": str(command_log),
+            "TOOLCHAIN_BIN_DIR": Path(os.path.relpath(tool_bin, ROOT)).as_posix(),
+            "COMMAND_LOG": command_log.as_posix(),
             "ARGO_SYNC_TIMEOUT": "2",
             "ARGO_POLL_INTERVAL": "1",
         }
     )
     env.update(overrides)
     result = subprocess.run(
-        ["bash", str(SYNC)],
+        [shutil.which("bash") or "bash", SYNC.as_posix()],
         cwd=ROOT,
         env=env,
         text=True,
@@ -106,7 +107,7 @@ def test_customer_direct_apply_is_always_rejected(tmp_path: Path) -> None:
         tmp_path,
         ENVIRONMENT="customer",
         LOCAL_DIRECT_APPLY="1",
-        FAKE_CONTEXT="kind-private-ai-platform-kit",
+        FAKE_CONTEXT="kind-agentworkflows",
     )
 
     assert result.returncode != 0
@@ -134,7 +135,7 @@ def test_local_direct_apply_centrally_owns_namespaces(tmp_path: Path) -> None:
         tmp_path,
         ENVIRONMENT="local",
         LOCAL_DIRECT_APPLY="1",
-        FAKE_CONTEXT="kind-private-ai-platform-kit",
+        FAKE_CONTEXT="kind-agentworkflows",
     )
 
     assert result.returncode == 0, result.stderr
@@ -164,7 +165,7 @@ def test_customer_sync_waits_for_declared_applications(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert "all Argo CD applications are Synced and Healthy" in result.stdout
-    assert "get application private-ai-platform-kit-root" in commands
+    assert "get application agentworkflows-root" in commands
     assert "get application inference-gateway" in commands
     assert "get application rag-service" in commands
     assert "helm " not in commands

@@ -2,12 +2,12 @@ apiVersion: v2
 name: ollama
 description: Local-first private LLM runtime.
 type: application
-version: 0.29.0
+version: 0.1.0
 appVersion: "0.24.0"
 kubeVersion: ">=1.25.0"
-home: https://github.com/RamazanKara/private-ai-platform-kit
+home: https://github.com/RamazanKara/agentworkflows
 sources:
-  - https://github.com/RamazanKara/private-ai-platform-kit
+  - https://github.com/RamazanKara/agentworkflows
   - https://github.com/ollama/ollama
 maintainers:
   - name: Ramazan Kara

@@ -1,9 +1,11 @@
 # Feature inventory
 
-This is the release-level source of truth for what `v0.29.0` implements, what is enabled by
+This is the release-level source of truth for what `v0.1.0` implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.
+
+Durable workflow execution and human approvals are planned, not shipped in 0.1.0.
 
 | Capability | Status | Default | Verification / boundary |
 | --- | --- | --- | --- |
@@ -16,7 +18,7 @@ configured.
 | Responses server-side state | Shipped | Off | Tenant-scoped memory/Redis store with TTL and delete |
 | Synchronous batch fan-out | Shipped | On | Per-item admission/budget/guardrail tests |
 | Files + asynchronous Batch API | Shipped | Off | Bounded streaming upload, durable Redis queue with owner-token claims, object-store blobs, streamed and checkpointed processing, replay bound to the running batch and its submitter |
-| Python client SDK | Shipped (typed) | GitHub release downloads | Isolated build/test matrix, checksums, and release artifacts; PyPI Trusted Publishing is optional |
+| Python client SDK and CLI | Shipped (typed) | Install `./sdk/python`; command `agentworkflows` | Isolated build/test matrix, checksums, and release artifacts; PyPI Trusted Publishing is optional |
 | API-key authentication | Shipped | Local on; chart base off | Hashed keys or scoped/expiring key records |
 | JWT/JWKS authentication | Shipped | Customer template on | Issuer/audience/time/algorithm validation and tenant binding |
 | Model allowlist and routing | Shipped | On | Per-model primary/fallback/canary/shadow routes |
@@ -43,18 +45,17 @@ configured.
 | Network-policy enforcement | Shipped | Calico local default | Reachable-target deny smoke; customer CNI remains operator-owned |
 | GitOps delivery | Shipped | Argo CD | Immutable release revisions; every declared app is health-gated and customer sync fails closed |
 | Evidence and release gates | Shipped | CI/nightly | Conformance and model-quality evidence are labeled separately |
-| Client-SDK conformance | Shipped | On demand (`make sdk-conformance`) | Real `openai`/`anthropic` clients against a mock runtime; SDKs live in a throwaway venv |
 | Egress exception expiry | Shipped | Report-only | Rendered onto the NetworkPolicy; Kyverno denies expired, CronJob retires them when enforcement is on |
 | SBOM, provenance, signatures | Shipped | Release CI | Build once, promote digest, digest-bound charts, Sigstore bundles |
 | Multi-node model serving | Example/integration | Off | LeaderWorkerSet/Ray installation and topology are operator-owned |
 | End-user multi-user chat UI | Example only | Off | Open WebUI manifest/runbook; identity and storage are operator-owned |
 | Training, fine-tuning, audio, images | Out of scope | n/a | Use purpose-built systems; see [Scope and non-goals](scope-and-non-goals.md) |
 
-Unreleased cloud milestone: OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex Gemini
+Milestone 1 (0.1.0): OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex Gemini
 adapters share model policy, budgets, DLP, settlement, and provider/cost receipts. Cloud
 routes are opt-in; confidential/restricted tenants and requests remain local. Provider
 protocols and the extended Compose walkthrough are tested with local fakes. See
-[model selection](model-selection.md#cloud-routes-unreleased) for configuration and limits.
+[model selection](model-selection.md#cloud-routes-milestone-1) for configuration and limits.
 
 For operational acceptance criteria, use the [Production readiness matrix](production-readiness.md).
 For exact supported versions, use the [Version matrix](version-matrix.md).

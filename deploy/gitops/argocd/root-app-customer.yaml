@@ -1,16 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: private-ai-platform-kit-root
+  name: agentworkflows-root
   namespace: argocd
   labels:
-    app.kubernetes.io/name: private-ai-platform-kit-root
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/name: agentworkflows-root
+    app.kubernetes.io/part-of: agentworkflows
 spec:
   project: default
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/clusters/customer
     directory:
       include: '{apps.yaml,appprojects.yaml}'

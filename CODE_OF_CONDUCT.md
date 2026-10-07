@@ -1,6 +1,6 @@
 # Code Of Conduct
 
-Private AI Platform Kit follows a simple contributor standard: be respectful, direct, and focused on improving the project.
+AgentWorkflows follows a simple contributor standard: be respectful, direct, and focused on improving the project.
 
 ## Expected Behavior
 

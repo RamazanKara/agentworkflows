@@ -70,7 +70,7 @@ class ChainStore(Protocol):
 class MemoryChainStore:
     """Process-local head store: keeps the API uniform but provides no continuity.
 
-    The default, because continuity needs storage that outlives the pod and the kit does
+    The default, because continuity needs storage that outlives the pod and the platform does
     not get to assume the operator has provisioned any. A service running on this backend
     emits ``chain_start`` records with no predecessor, which is honest: there is nothing
     to link to.

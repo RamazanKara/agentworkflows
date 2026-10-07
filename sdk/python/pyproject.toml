@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "private-ai-platform-kit-client"
-version = "0.29.0"
-description = "Typed, dependency-light Python client for the Private AI Platform Kit inference gateway."
+name = "agentworkflows"
+version = "0.1.0"
+description = "Typed, dependency-light Python client for the AgentWorkflows inference gateway."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-authors = [{ name = "Private AI Platform Kit maintainers" }]
-keywords = ["llm", "gateway", "openai-compatible", "anthropic", "kubernetes", "private-ai", "audit"]
+authors = [{ name = "AgentWorkflows maintainers" }]
+keywords = ["llm", "gateway", "openai-compatible", "anthropic", "agents", "workflows", "audit"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -27,15 +27,18 @@ classifiers = [
 ]
 dependencies = ["httpx>=0.27"]
 
+[project.scripts]
+agentworkflows = "agentworkflows.cli:main"
+
 [project.urls]
-Homepage = "https://github.com/RamazanKara/private-ai-platform-kit"
-Documentation = "https://ramazankara.github.io/private-ai-platform-kit/"
-Source = "https://github.com/RamazanKara/private-ai-platform-kit"
-Changelog = "https://github.com/RamazanKara/private-ai-platform-kit/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/RamazanKara/agentworkflows"
+Documentation = "https://ramazankara.github.io/agentworkflows/"
+Source = "https://github.com/RamazanKara/agentworkflows"
+Changelog = "https://github.com/RamazanKara/agentworkflows/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 # One package; py.typed marks the inline annotations for type checkers (PEP 561).
-packages = ["ai_platform_client"]
+packages = ["agentworkflows"]
 
 [tool.hatch.build.targets.sdist]
-include = ["ai_platform_client", "tests", "README.md"]
+include = ["agentworkflows", "tests", "README.md"]

@@ -73,7 +73,7 @@ from app.settings import (
 )
 from app.tracing import configure_tracing, trace_request
 
-SERVICE_VERSION = "0.29.0"
+SERVICE_VERSION = "0.1.0"
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "
@@ -90,7 +90,7 @@ OPENAPI_TAGS = [
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved = settings or Settings.from_env()
     app = FastAPI(
-        title="Private AI Platform Kit Inference Gateway",
+        title="AgentWorkflows Inference Gateway",
         version=SERVICE_VERSION,
         description=OPENAPI_DESCRIPTION,
         openapi_tags=OPENAPI_TAGS,

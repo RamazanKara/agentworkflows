@@ -1,16 +1,16 @@
 # Self-hosted chat UI in front of the gateway (DOCUMENTED EXAMPLE, not rendered by validate).
 #
-# The kit is API-only. This example puts a self-hosted end-user chat UI (Open WebUI, the common
+# The platform is API-only. This example puts a self-hosted end-user chat UI (Open WebUI, the common
 # choice) in front of the inference gateway so a human can actually type into a chat box, while
 # every request still flows through the gateway's auth, model allowlist, admission, budget, and
 # audit controls. Open WebUI points its OpenAI-compatible base URL at the gateway; it is NOT a
 # shipped or supported component.
 #
 # WHY THIS IS AN EXAMPLE, NOT A SHIPPED/RENDERED MANIFEST:
-#   - A human-facing chat UI is a separate product surface. The kit's non-goal list is explicit:
-#     "No bundled end-user chat UI": this UI is operator-owned; the kit's read-only operator console
+#   - A human-facing chat UI is a separate product surface. AgentWorkflows' non-goal list is explicit:
+#     "No bundled end-user chat UI": this UI is operator-owned; AgentWorkflows' read-only operator console
 #     non-goal (see docs/scope-and-non-goals.md). Shipping and supporting a UI would cross the
-#     kit's "manifests, charts, service code, validation tooling, runbooks" boundary.
+#     platform's "manifests, charts, service code, validation tooling, runbooks" boundary.
 #   - The image tag, storage, ingress/TLS, and human SSO wiring are all environment-specific.
 #   Rendering one "correct" manifest through kubeconform/helm would bake in choices wrong for
 #   most clusters. So this ships under docs/examples/ (which scripts/validate.sh does not
@@ -29,7 +29,7 @@ kind: Namespace
 metadata:
   name: chat-ui
   labels:
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     # Match the platform PSA restricted floor used by the data-plane namespaces.
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/warn: restricted
@@ -44,7 +44,7 @@ metadata:
   namespace: chat-ui
   labels:
     app.kubernetes.io/name: open-webui
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 type: Opaque
 stringData:
   # A gateway API key (the plaintext key; its SHA-256 must be allow-listed on the gateway).
@@ -57,7 +57,7 @@ metadata:
   namespace: chat-ui
   labels:
     app.kubernetes.io/name: open-webui
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 data:
   # Point Open WebUI's OpenAI-compatible client at the gateway's /v1 base. In-cluster Service
   # DNS for the bundled chart is inference-gateway-inference-gateway.inference.svc.
@@ -84,7 +84,7 @@ metadata:
   labels:
     app.kubernetes.io/name: open-webui
     app.kubernetes.io/component: chat-ui
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     platform.ai/cost-center: platform
     platform.ai/owner: platform-team
     platform.ai/environment: customer
@@ -97,7 +97,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: open-webui
-        app.kubernetes.io/part-of: private-ai-platform-kit
+        app.kubernetes.io/part-of: agentworkflows
     spec:
       securityContext:
         runAsNonRoot: true
@@ -146,7 +146,7 @@ metadata:
   namespace: chat-ui
   labels:
     app.kubernetes.io/name: open-webui
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 spec:
   selector:
     app.kubernetes.io/name: open-webui
@@ -165,7 +165,7 @@ metadata:
   namespace: chat-ui
   labels:
     app.kubernetes.io/name: open-webui
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 spec:
   podSelector:
     matchLabels:

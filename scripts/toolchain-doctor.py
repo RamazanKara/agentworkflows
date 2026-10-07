@@ -246,7 +246,7 @@ def write_json(path: Path, generated_at: str, profile: str, results: list[ToolRe
     missing_required = [item.name for item in results if item.role == "required" and not item.found]
     missing_optional = [item.name for item in results if item.role == "optional" and not item.found]
     payload = {
-        "project": "Private AI Platform Kit",
+        "project": "AgentWorkflows",
         "generated_at": generated_at,
         "profile": profile,
         "manifest": rel(manifest_path),
@@ -262,7 +262,7 @@ def write_json(path: Path, generated_at: str, profile: str, results: list[ToolRe
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check the Private AI Platform Kit validation toolchain.")
+    parser = argparse.ArgumentParser(description="Check the AgentWorkflows validation toolchain.")
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST), help="ValidationToolchain manifest path.")
     parser.add_argument("--profile", default="validate", help="Tool profile to check: validate, local, or strict.")
     parser.add_argument("--check", action="store_true", help="Exit non-zero when required tools are missing.")

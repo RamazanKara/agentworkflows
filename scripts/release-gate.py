@@ -557,7 +557,7 @@ def write_json(
     max_evidence_age_hours: float | None,
 ) -> None:
     payload = {
-        "project": "Private AI Platform Kit",
+        "project": "AgentWorkflows",
         "generated_at": generated_at,
         "config": rel(config_path),
         "evidence_policy": {
@@ -576,7 +576,7 @@ def write_json(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Check Private AI Platform Kit release gates against operational evidence."
+        description="Check AgentWorkflows release gates against operational evidence."
     )
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--check", action="store_true", help="Validate and run gates without writing a report.")

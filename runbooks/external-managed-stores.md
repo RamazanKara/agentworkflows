@@ -6,15 +6,15 @@ production-style handoff.
 
 ## Why this exists
 
-The kit's stateful stores ship as **single-node, reference footprints** so a `kind` laptop
+AgentWorkflows' stateful stores ship as **single-node, reference footprints** so a `kind` laptop
 lab and a fresh cluster come up with zero external dependencies. Each is a deliberate
 dev/reference default, not a production topology:
 
 | Store | Bundled footprint | What it holds | SPOF? |
 | --- | --- | --- | --- |
-| Budget / response-cache Redis | [`deploy/charts/budget-redis`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/charts/budget-redis), 1 replica, no persistence, `podDisruptionBudget.minAvailable: 0` | Shared per-sandbox budget counters and the optional exact-match response cache | Yes; a restart drops counters, an outage fails budgets closed (503) |
-| Qdrant vector store | [`deploy/charts/qdrant-vector-store`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/charts/qdrant-vector-store), single-instance, **enforced** by [`values.schema.json`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/charts/qdrant-vector-store/values.schema.json) (`replicaCount` max 1) on one RWO PVC | RAG dense vectors / hybrid retrieval corpus | Yes; a node drain briefly evicts retrieval |
-| Loki logging | [`deploy/observability/applications.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/observability/applications.yaml), `deploymentMode: SingleBinary`, `replication_factor: 1`, filesystem storage, 31-day retention | Pod stdout including the redacted gateway/RAG audit JSON | Yes; filesystem-backed, not replicated |
+| Budget / response-cache Redis | [`deploy/charts/budget-redis`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis), 1 replica, no persistence, `podDisruptionBudget.minAvailable: 0` | Shared per-sandbox budget counters and the optional exact-match response cache | Yes; a restart drops counters, an outage fails budgets closed (503) |
+| Qdrant vector store | [`deploy/charts/qdrant-vector-store`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store), single-instance, **enforced** by [`values.schema.json`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store/values.schema.json) (`replicaCount` max 1) on one RWO PVC | RAG dense vectors / hybrid retrieval corpus | Yes; a node drain briefly evicts retrieval |
+| Loki logging | [`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml), `deploymentMode: SingleBinary`, `replication_factor: 1`, filesystem storage, 31-day retention | Pod stdout including the redacted gateway/RAG audit JSON | Yes; filesystem-backed, not replicated |
 
 None of these should be relied on as the durable system of record in a regulated or
 multi-tenant production environment. The sections below make each one a clean opt-in swap to
@@ -22,7 +22,7 @@ an external/HA service **without ripping out the bundled dev default**. You poin
 your managed endpoint and stop syncing the bundled Application.
 
 For the control-by-control map that references this runbook, see the
-[Production readiness matrix](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/production-readiness.md).
+[Production readiness matrix](https://github.com/RamazanKara/agentworkflows/blob/main/docs/production-readiness.md).
 
 ---
 
@@ -36,7 +36,7 @@ Azure Cache), a self-run **Redis Sentinel** failover pair, or a **Redis Cluster*
 ### What talks to Redis
 
 Two independent URLs, both in the gateway values
-([`deploy/charts/inference-gateway/values.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/charts/inference-gateway/values.yaml)):
+([`deploy/charts/inference-gateway/values.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/inference-gateway/values.yaml)):
 
 - `budget.redisUrl` (env `SANDBOX_BUDGET_REDIS_URL`): shared budget counters. Requires
   `budget.backend: redis`. This is the correctness-critical one under multi-replica scale-out.
@@ -56,10 +56,10 @@ They may point at the same server on different logical databases (the defaults u
 2. **Store the AUTH secret** through your secret manager, never in values. The bundled
    `budget-redis` chart has an optional `auth.existingSecret`; for an external Redis you supply
    the password in the URL, sourced from a Kubernetes Secret via External Secrets
-   ([`deploy/clusters/customer/external-secrets.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/external-secrets.yaml)).
+   ([`deploy/clusters/customer/external-secrets.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/external-secrets.yaml)).
 
 3. **Point the gateway at it.** In your customer gateway overlay
-   ([`deploy/clusters/customer/values/inference-gateway.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/values/inference-gateway.yaml)):
+   ([`deploy/clusters/customer/values/inference-gateway.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/values/inference-gateway.yaml)):
 
         budget:
           enabled: true
@@ -74,15 +74,15 @@ They may point at the same server on different logical databases (the defaults u
 
 4. **Stop deploying the bundled Redis.** Remove (or set to not-sync) the `budget-redis`
    Argo `Application` in
-   [`deploy/clusters/customer/apps.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/apps.yaml)
+   [`deploy/clusters/customer/apps.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/apps.yaml)
    so the reference Redis is not deployed alongside your managed one. The local lab
-   ([`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/local/apps.yaml))
+   ([`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local/apps.yaml))
    keeps the bundled chart, so the dev default is untouched.
 
 5. **Open egress.** The gateway namespace runs under a default-deny NetworkPolicy. Add an
    egress allowance to the managed Redis endpoint/port. If Redis is off-cluster, this is an
    external CIDR egress and must go through the reviewed egress catalog
-   ([`platform/network/egress-catalog.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/network/egress-catalog.yaml)).
+   ([`platform/network/egress-catalog.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/network/egress-catalog.yaml)).
 
 6. **Validate.** Render and smoke:
 
@@ -141,13 +141,13 @@ external managed Qdrant or a Qdrant cluster instead of raising the bundled repli
 1. **Provision** the managed/clustered Qdrant and get its endpoint and API key.
 
 2. **Point the RAG service at it** in your customer RAG overlay
-   ([`deploy/clusters/customer/values/rag-service.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/values/rag-service.yaml)):
+   ([`deploy/clusters/customer/values/rag-service.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/values/rag-service.yaml)):
 
         retrieval:
           backend: qdrant
           vectorStore:
             url: https://managed-qdrant.internal:6333
-            collection: private-ai-platform-kit
+            collection: agentworkflows
             dimensions: 384
 
    Supply the Qdrant API key from your secret manager, not in values.
@@ -161,7 +161,7 @@ external managed Qdrant or a Qdrant cluster instead of raising the bundled repli
 5. **Size and migrate.** Match `dimensions` to your embedding model, size storage/replication
    to your corpus, and follow [Qdrant migration](qdrant-migration.md) for the collection
    migration dry-run, source-metadata stamping, `collectionVersion` bump, and rollback. Keep
-   [per-tenant isolation](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/production-readiness.md)
+   [per-tenant isolation](https://github.com/RamazanKara/agentworkflows/blob/main/docs/production-readiness.md)
    (`retrieval.tenantIsolation`) enabled for multi-tenant corpora.
 
 6. **Validate** the render and a `make rag-smoke` against the external endpoint. See
@@ -179,7 +179,7 @@ object store for long-term hold (see [Audit chain & SIEM forwarding](audit-chain
 ### Production path
 
 1. **Move Loki to a scalable mode with object storage.** In the `loki` Argo `Application`
-   values ([`deploy/observability/applications.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/observability/applications.yaml)),
+   values ([`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml)),
    switch `deploymentMode` off `SingleBinary` (e.g. `SimpleScalable` or the distributed mode),
    set `replication_factor` above 1, and configure an object-storage backend (S3/GCS/Azure Blob)
    instead of `filesystem`. Size `retention_period` to your evidence-retention obligation.
@@ -194,8 +194,8 @@ object store for long-term hold (see [Audit chain & SIEM forwarding](audit-chain
    buffer, not the durable audit hold. The [Audit chain & SIEM forwarding](audit-chain.md)
    runbook covers exporting/anchoring the chain head and shipping receipts to a SIEM.
 
-Loki is an operator-owned platform service the kit does not run for you (see
-[Scope and non-goals](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/scope-and-non-goals.md));
+Loki is an operator-owned platform service the platform does not run for you (see
+[Scope and non-goals](https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md));
 the bundled footprint is a working reference, and the object-storage/replicated topology is
 yours to size and operate.
 

@@ -69,7 +69,7 @@ def values_table(chart_dir: Path) -> str:
 def default_readme(chart_dir: Path) -> str:
     chart = yaml.safe_load((chart_dir / "Chart.yaml").read_text(encoding="utf-8")) or {}
     name = str(chart.get("name") or chart_dir.name)
-    description = str(chart.get("description") or "Private AI Platform Kit Helm chart.")
+    description = str(chart.get("description") or "AgentWorkflows Helm chart.")
     title = " ".join(part.capitalize() for part in name.replace("-", " ").split())
     return f"# {title} Chart\n\n{description}\n\n"
 

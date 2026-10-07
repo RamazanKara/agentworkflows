@@ -54,7 +54,7 @@ def _chat_response(usage=None, content="hello"):
 
 
 def _receipts(caplog):
-    return [json.loads(record.message) for record in caplog.records if record.name == "ai_platform_ops_lab.audit"]
+    return [json.loads(record.message) for record in caplog.records if record.name == "agentworkflows.audit"]
 
 
 # --- arithmetic ------------------------------------------------------------------------
@@ -225,7 +225,7 @@ def _client(settings, response=None, stream_chunks=None):
 
 
 def test_chat_completion_settles_the_reservation_and_records_it_on_the_receipt(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings()
     client, app, _ = _client(
         settings,
@@ -282,7 +282,7 @@ def test_repeated_capped_requests_are_not_locked_out_by_their_own_reservations()
 
 
 def test_reservation_stands_when_the_runtime_reports_no_usage(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings()
     client, app, _ = _client(settings, response=_chat_response(usage=None))
 
@@ -298,7 +298,7 @@ def test_reservation_stands_when_the_runtime_reports_no_usage(caplog):
 
 
 def test_streaming_settles_once_at_end_of_stream(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings(allow_streaming=True)
     client, app, _ = _client(
         settings,
@@ -323,7 +323,7 @@ def test_streaming_settles_once_at_end_of_stream(caplog):
 
 
 def test_anthropic_streaming_settles_the_reservation(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings(allow_streaming=True)
     client, app, _ = _client(
         settings,
@@ -347,7 +347,7 @@ def test_anthropic_streaming_settles_the_reservation(caplog):
 
 
 def test_settlement_failure_does_not_fail_a_request_that_already_succeeded(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings()
     client, app, _ = _client(
         settings,
@@ -373,7 +373,7 @@ def test_settlement_failure_does_not_fail_a_request_that_already_succeeded(caplo
 
 
 def test_cache_hit_settles_nothing_because_it_reserved_nothing(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings(response_cache_enabled=True)
     client, app, fake = _client(
         settings,
@@ -453,7 +453,7 @@ def _routing_policy(tmp_path, chars_per_token):
 def test_a_models_calibrated_divisor_is_used_for_its_budget_estimate(tmp_path, caplog):
     # 400 prompt characters at 4 chars/token is 100 tokens; at 2 it is 200. The reserved
     # estimate must follow the model's own calibration, not the global default.
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings(
         model_routing_policy_path=_routing_policy(tmp_path, 2),
         budget_estimated_chars_per_token=4,
@@ -471,7 +471,7 @@ def test_a_models_calibrated_divisor_is_used_for_its_budget_estimate(tmp_path, c
 
 
 def test_the_gateway_default_applies_when_a_model_declares_no_calibration(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = _budget_settings(
         model_routing_policy_path=_routing_policy(tmp_path, 0),
         budget_estimated_chars_per_token=4,

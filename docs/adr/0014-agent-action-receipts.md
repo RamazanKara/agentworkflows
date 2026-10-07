@@ -6,7 +6,7 @@
 
 ## Context
 
-The kit's claim is that you can prove what a coding agent did. What the audit chain actually
+AgentWorkflows' claim is that you can prove what a coding agent did. What the audit chain actually
 proved was narrower: every record carried `action_type: "model_call"`, and that was the only
 value the gateway ever emitted. The chain is a complete, tamper-evident record of what an agent
 asked a model, and says nothing about what the agent then did with the answer.
@@ -49,7 +49,7 @@ different sandbox is rejected. A workspace can add to its own history and cannot
 tenant's.
 
 Producers are whatever the operator already runs. Falco and Tetragon alerts, CNI denied-flow
-logs, and an agent's own tool hooks are all just callers of this endpoint; the kit ships the
+logs, and an agent's own tool hooks are all just callers of this endpoint; the platform ships the
 intake, the taxonomy, the chaining, and the verification, not a collection agent.
 
 ## Consequences
@@ -57,9 +57,9 @@ intake, the taxonomy, the chaining, and the verification, not a collection agent
 - "Prove what it did" becomes checkable offline for more than model calls: `make audit-verify`
   verifies agent actions and model calls in one chain, and a deleted action receipt breaks the
   chain like any other record.
-- The chain's value now depends partly on producers the kit does not control. A receipt stream is
+- The chain's value now depends partly on producers the platform does not control. A receipt stream is
   only as complete as what the operator wired into it, and the docs say so rather than implying
-  full coverage. Completeness is an operator property; integrity is the kit's.
+  full coverage. Completeness is an operator property; integrity is AgentWorkflows'.
 - Receipts are self-reported by the sandbox, so they are evidence of claims, not proof of
   behavior. This is why the boundary above matters: an agent that never reports a `tool_exec`
   simply has no receipt for it, and only the out-of-band producers (Falco, CNI) close that. The
@@ -72,19 +72,19 @@ intake, the taxonomy, the chaining, and the verification, not a collection agent
 
 - **A separate receipts service.** Cleaner separation, but the chain is per-process and the
   operator verifier groups by `chain_id`; a second service means a second chain to anchor and
-  correlate for no gain in the single-cluster topology this kit targets. Rejected. (The RAG
+  correlate for no gain in the single-cluster topology AgentWorkflows targets. Rejected. (The RAG
   service does run its own chain, but it is an independently deployed service with its own
   lifecycle; a receipts sink would exist only to hold receipts.)
 - **Deriving receipts from Falco alerts inside the gateway.** Would make the gateway parse and
   poll another system's event format and turn a governance service into a log collector, coupling
-  the kit to a specific runtime-security stack it deliberately ships as optional. Rejected in
+  the platform to a specific runtime-security stack it deliberately ships as optional. Rejected in
   favor of an intake anything can post to.
 - **Free-form `action_type` strings.** Simpler to accept, but the crosswalk and evidence pack
   aggregate by action type; free text makes every report a best-effort string match and makes the
   taxonomy unreviewable. Rejected.
 - **Trusting a submitted `sandbox_id`.** Would let any workspace write into another tenant's
   history, which is precisely the property that makes the chain worth anything. Rejected.
-- **Leaving it as an operator concern (status quo).** The receipts already exist as logs; the kit
+- **Leaving it as an operator concern (status quo).** The receipts already exist as logs; the platform
   could keep documenting that operators forward them to a SIEM. Rejected because the differentiator
   is verifiable evidence, and a log an auditor cannot verify offline is the thing this project
   exists to improve on.

@@ -124,8 +124,8 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["private-ai-platform-kit", "vllm", "gpu"],
-  "title": "Private AI Platform Kit vLLM and GPU",
+  "tags": ["agentworkflows", "vllm", "gpu"],
+  "title": "AgentWorkflows vLLM and GPU",
   "uid": "ai-platform-vllm-gpu",
   "version": 1
 }

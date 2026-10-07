@@ -1,4 +1,4 @@
-# Tooling configuration for the Private AI Platform Kit Python services and scripts.
+# Tooling configuration for the AgentWorkflows Python services and scripts.
 #
 # Lint and format are handled by Ruff; static type checking by mypy. The tools run
 # from an isolated, hash-pinned environment (see requirements-quality.lock and

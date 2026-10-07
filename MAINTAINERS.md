@@ -1,11 +1,11 @@
-# Maintainers
+# AgentWorkflows maintainers
 
 Steward: fluentorbit (https://fluentorbit.de)
 
 | Area | Maintainer | Status |
 | --- | --- | --- |
 | Project owner | Ramazan Kara ([@RamazanKara](https://github.com/RamazanKara)) | Active |
-| Runtime services | Ramazan Kara ([@RamazanKara](https://github.com/RamazanKara)) | Active |
+| Cloud gateway and runtime services | Ramazan Kara ([@RamazanKara](https://github.com/RamazanKara)) | Active |
 | Helm, GitOps, and customer overlays | Ramazan Kara ([@RamazanKara](https://github.com/RamazanKara)) | Active |
 | Governance, evidence, and release gates | Ramazan Kara ([@RamazanKara](https://github.com/RamazanKara)) | Active |
 

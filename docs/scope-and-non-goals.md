@@ -1,6 +1,9 @@
 # Scope and non-goals
 
-This page defines the boundary of release `v0.29.0`. For per-feature defaults, use the [feature inventory](feature-inventory.md).
+This page defines the boundary of release `v0.1.0`. For per-feature defaults, use the [feature inventory](feature-inventory.md).
+
+AgentWorkflows is cloud-first. Durable agent workflows and human approvals are planned;
+0.1.0 provides the governed gateway foundation and optional self-hosted components.
 
 ## In scope
 
@@ -20,7 +23,7 @@ The gateway implements these protocol families:
 - the project-specific synchronous `/v1/batch-inference`, usage, and sandbox-budget endpoints;
 - an Anthropic Messages translation endpoint, with streaming.
 
-The generated [OpenAPI contract](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/api-contracts/inference-gateway.openapi.json) is the route-level reference.
+The generated [OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json) is the route-level reference.
 
 ## Protocol limits
 
@@ -51,14 +54,15 @@ The customer values are examples that must be reviewed. Their placeholders, larg
 
 The project is not intended to become:
 
-- a hosted AI gateway or managed Kubernetes service;
+- a managed Kubernetes operations service;
 - a desktop Ollama application;
 - a cloud-infrastructure provisioning framework;
 - a distributed training platform;
 - a general multi-node serving operator;
 - a full billing system;
-- a multi-tenant administration product with user management and write operations.
+- a general-purpose identity provider.
 
+Hosted delivery and team administration are product goals, not current capabilities.
 The read-only `/console` is an optional view over health, models, usage, and budget data. It is not a control plane.
 
 ## Security and compliance boundary

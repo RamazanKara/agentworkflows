@@ -1,6 +1,6 @@
 # Agent Workspace Chart
 
-Isolated namespace template for coding agents that use the Private AI Platform Kit gateway and RAG service.
+Isolated namespace template for coding agents that use the AgentWorkflows gateway and RAG service.
 
 <!-- chart-docs:start -->
 ## Values

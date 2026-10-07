@@ -20,7 +20,7 @@ command -v helm >/dev/null 2>&1 || {
   echo "helm is required to render the umbrella chart for repository scanning" >&2
   exit 1
 }
-helm dependency build deploy/charts/platform >/dev/null
+helm dependency build deploy/charts/agentworkflows >/dev/null
 
 exec trivy fs \
   --scanners secret,misconfig \

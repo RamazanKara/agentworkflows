@@ -10,7 +10,7 @@ image:
 # model dtype (Ampere has no FP8 KV cache). Validate quality with `make eval` before promoting.
 model:
   # Operator template: replace both fields with an approved AWQ checkpoint.
-  # No verified upstream AWQ checkpoint is selected by this kit.
+  # No verified upstream AWQ checkpoint is selected by AgentWorkflows.
   name: customer-model-store/qwen3-coder-next-awq
   revision: ""
   dtype: auto

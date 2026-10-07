@@ -34,7 +34,7 @@ The approved Ollama models use `model-artifact` digests: the model-weights layer
 checksum returned by the registry manifest. The approved Hugging Face models use
 `artifact-manifest` digests: the SHA-256 of a checked-in JSON inventory containing
 every safetensors filename, byte size, and upstream LFS SHA-256 at an immutable
-commit. See [the inventory format](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/platform/model-catalog/artifacts/README.md).
+commit. See [the inventory format](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/artifacts/README.md).
 
 The legacy `source-reference` scope identifies only a source pointer. It remains
 supported for externally maintained records, but no approved bundled model uses it.

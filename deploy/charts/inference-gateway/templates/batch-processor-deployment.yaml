@@ -16,7 +16,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
     app.kubernetes.io/component: batch-processor
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.batch.worker.replicaCount }}
@@ -31,7 +31,7 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
         app.kubernetes.io/component: batch-processor
-        app.kubernetes.io/part-of: private-ai-platform-kit
+        app.kubernetes.io/part-of: agentworkflows
         app.kubernetes.io/managed-by: {{ .Release.Service }}
         platform.ai/cost-center: {{ index .Values.podLabels "platform.ai/cost-center" | quote }}
         platform.ai/environment: {{ index .Values.podLabels "platform.ai/environment" | quote }}

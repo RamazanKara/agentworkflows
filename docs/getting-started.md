@@ -128,7 +128,7 @@ The customer path assumes an existing cluster and Argo CD installation. Work in 
 ```bash
 make customer-overlay \
   CUSTOMER_REPO_URL=https://github.com/<customer>/<repo>.git \
-  CUSTOMER_REVISION=v0.29.0 \
+  CUSTOMER_REVISION=v0.1.0 \
   CUSTOMER_GPU_PROFILE=nvidia
 ```
 
@@ -140,7 +140,7 @@ ENVIRONMENT=customer make bootstrap-argocd
 ENVIRONMENT=customer make sync
 ```
 
-The customer profile is a template. Before syncing, replace the identity and secret placeholders, select storage classes, review every image and model source, size GPU and stateful resources, and connect the cluster's ingress, metrics, logs, alerts, and backups. The detailed checklist is in [the customer deployment guide](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/README.md).
+The customer profile is a template. Before syncing, replace the identity and secret placeholders, select storage classes, review every image and model source, size GPU and stateful resources, and connect the cluster's ingress, metrics, logs, alerts, and backups. The detailed checklist is in [the customer deployment guide](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md).
 
 ## Cleanup
 

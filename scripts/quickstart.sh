@@ -14,7 +14,7 @@ usage() {
   cat <<'EOF'
 Usage: scripts/quickstart.sh [options]
 
-Runs the local Private AI Platform Kit lab from toolchain check through gateway
+Runs the local AgentWorkflows lab from toolchain check through gateway
 and RAG smoke tests.
 
 Options:

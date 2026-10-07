@@ -50,7 +50,7 @@
     }
   ],
   "profile": "local-customer-handoff",
-  "project": "Private AI Platform Kit",
+  "project": "AgentWorkflows",
   "summary": {
     "config_errors": 0,
     "failed": 0,

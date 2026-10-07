@@ -12,10 +12,9 @@ byte-identical copies of every record.
 This tool reads a gateway JSONL log (file argument or stdin), extracts the audit events,
 deduplicates the double-logged copies, groups records into their per-process chains, and
 **verifies the embedded chain**: it recomputes each ``record_hash`` and checks the
-``prev_hash`` linkage back to genesis. Unlike ``paper/evidence-model/audit_chain.py`` (which
-re-chains from genesis for the evidence demo), this verifier checks the hashes the gateway
-actually emitted, so any edit, insertion, deletion, or reordering of emitted records is
-reported and exits non-zero.
+``prev_hash`` linkage back to genesis. This verifier checks the hashes the gateway
+actually emitted; edits, insertions, interior deletions, and reordering break the chain.
+Detecting tail truncation or a full rewrite additionally requires an external anchor.
 
 Grouping:
   - Records carrying ``chain_id`` (gateway >= v0.20.0) group by that field; each chain

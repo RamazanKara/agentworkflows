@@ -37,8 +37,8 @@ class ServiceContract:
 CONTRACTS = {
     "inference-gateway": ServiceContract(
         service_dir=ROOT / "src/inference-gateway",
-        title="Private AI Platform Kit Inference Gateway",
-        version="0.29.0",
+        title="AgentWorkflows Inference Gateway",
+        version="0.1.0",
         snapshot=ROOT / "platform/api-contracts/inference-gateway.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -197,8 +197,8 @@ CONTRACTS = {
     ),
     "rag-service": ServiceContract(
         service_dir=ROOT / "src/rag-service",
-        title="Private AI Platform Kit RAG Service",
-        version="0.29.0",
+        title="AgentWorkflows RAG Service",
+        version="0.1.0",
         snapshot=ROOT / "platform/api-contracts/rag-service.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -474,7 +474,7 @@ def canonical_json(schema: dict[str, Any]) -> str:
 def validate_python_sdk() -> list[str]:
     """Keep the first-party client's method surface aligned with gateway paths."""
     errors: list[str] = []
-    sdk_path = ROOT / "sdk/python/ai_platform_client/__init__.py"
+    sdk_path = ROOT / "sdk/python/agentworkflows/__init__.py"
     tree = ast.parse(sdk_path.read_text(encoding="utf-8"), filename=str(sdk_path))
     gateway_class = next(
         (node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "GatewayClient"),

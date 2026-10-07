@@ -24,4 +24,4 @@ if [[ "${ENVIRONMENT:-local}" == "customer" ]]; then
 else
   kubectl apply -f deploy/gitops/argocd/root-app.yaml
 fi
-kubectl -n argocd get application private-ai-platform-kit-root
+kubectl -n argocd get application agentworkflows-root

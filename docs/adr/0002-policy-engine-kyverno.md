@@ -18,17 +18,17 @@ cluster, and approachable for a single maintainer to author and review.
 Use Kyverno as the admission policy engine.
 
 - Policies are plain Kubernetes `ClusterPolicy` resources in
-  [`deploy/policies/kyverno/policies.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/policies/kyverno/policies.yaml):
+  [`deploy/policies/kyverno/policies.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/policies/kyverno/policies.yaml):
   `ai-platform-required-labels`, `ai-platform-restricted-pods` (non-root, drop ALL capabilities,
   read-only root filesystem, disallow privileged), `ai-platform-image-and-resources` (block
   `:latest`, require requests and limits), `ai-platform-verify-project-images` (keyless `verifyImages`
-  of `ghcr.io/ramazankara/private-ai-platform-kit/*`), `ai-platform-restrict-egress-cidrs`, and
+  of `ghcr.io/ramazankara/agentworkflows/*`), `ai-platform-restrict-egress-cidrs`, and
   `ai-platform-pvc-encryption-at-rest`.
 - Kyverno is installed as a platform operator via its upstream Helm chart, pinned in
-  [`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/local/apps.yaml) (chart `kyverno`
+  [`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local/apps.yaml) (chart `kyverno`
   version `3.2.7`), and the policies ship as their own `security-policies` Argo CD application.
 - Policies are unit-tested with Kyverno's own test harness under
-  [`deploy/policies/kyverno/tests/`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/policies/kyverno/tests) (`kyverno-test.yaml` plus
+  [`deploy/policies/kyverno/tests/`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/policies/kyverno/tests) (`kyverno-test.yaml` plus
   good/bad resource fixtures such as `privileged-pod.yaml`, `latest-pod.yaml`, and
   `unencrypted-pvc.yaml`), so policy behavior is verified in CI without a cluster.
 - Failure actions are deliberate per policy: most are `Enforce`, the signed-image policy is
@@ -54,7 +54,7 @@ Use Kyverno as the admission policy engine.
 - **OPA Gatekeeper.** A mature CNCF policy controller with a large constraint-template ecosystem.
   Rejected as the default because authoring requires Rego, a separate language from the Kubernetes
   manifests it guards; Kyverno's Kubernetes-native YAML lowers the authoring and review cost for a
-  single maintainer, and its built-in `verifyImages` covers the Cosign keyless verification this kit
+  single maintainer, and its built-in `verifyImages` covers the Cosign keyless verification AgentWorkflows
   needs without a separate component.
 - **Plain Pod Security Admission (PSA).** Built in and zero-dependency, and it would cover the
   non-root/privileged/read-only baseline. Rejected as sufficient on its own because PSA cannot

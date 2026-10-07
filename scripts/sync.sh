@@ -6,8 +6,8 @@ source "$ROOT/scripts/common.sh"
 require_cmd kubectl "kubectl is required to sync or inspect Argo CD apps."
 
 ENVIRONMENT="${ENVIRONMENT:-local}"
-CLUSTER_NAME="${CLUSTER_NAME:-private-ai-platform-kit}"
-ROOT_APP="private-ai-platform-kit-root"
+CLUSTER_NAME="${CLUSTER_NAME:-agentworkflows}"
+ROOT_APP="agentworkflows-root"
 ARGO_SYNC_TIMEOUT="${ARGO_SYNC_TIMEOUT:-600}"
 ARGO_POLL_INTERVAL="${ARGO_POLL_INTERVAL:-5}"
 
@@ -47,7 +47,7 @@ ensure_platform_namespace() {
   local namespace="$1"
   kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
   kubectl label namespace "$namespace" \
-    app.kubernetes.io/part-of=private-ai-platform-kit \
+    app.kubernetes.io/part-of=agentworkflows \
     pod-security.kubernetes.io/enforce=restricted \
     pod-security.kubernetes.io/audit=restricted \
     pod-security.kubernetes.io/warn=restricted \

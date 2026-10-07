@@ -191,7 +191,7 @@ def write_markdown(path: Path, report: RetentionReport) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate Private AI Platform Kit data-retention and privacy governance."
+        description="Validate AgentWorkflows data-retention and privacy governance."
     )
     parser.add_argument("--policy", default=str(DEFAULT_POLICY))
     parser.add_argument("--check", action="store_true")

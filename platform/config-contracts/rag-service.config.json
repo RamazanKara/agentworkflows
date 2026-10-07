@@ -174,8 +174,8 @@
         "VECTOR_COLLECTION"
       ],
       "allowed_values": [],
-      "app_default": "private-ai-platform-kit",
-      "chart_default": "private-ai-platform-kit",
+      "app_default": "agentworkflows",
+      "chart_default": "agentworkflows",
       "chart_value": "retrieval.vectorStore.collection",
       "description": "Qdrant collection name.",
       "field": "vector_collection",

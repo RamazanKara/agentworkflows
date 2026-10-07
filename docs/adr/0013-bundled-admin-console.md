@@ -6,7 +6,7 @@
 
 ## Context
 
-`docs/scope-and-non-goals.md` listed "No admin/usage console UI": the kit shipped the data
+`docs/scope-and-non-goals.md` listed "No admin/usage console UI": the platform shipped the data
 layer a console would build on (`/v1/usage`, `/v1/sandbox/budget`, `/v1/models`, Prometheus
 metrics, the client SDK) but no UI. The requirement now is a lightweight read-only console so an
 operator can see a sandbox's usage, budget, and approved models without wiring Grafana or
@@ -37,7 +37,7 @@ HTML; the API calls the page makes carry the operator's key). No new dependency 
 - Operators get a zero-dependency read-only console by flipping one flag; when off, nothing is
   served and the surface is unchanged. The console is just another authenticated caller of the
   governed endpoints, so it can see no more than the supplied API key allows.
-- Bundling the UI into the API image slightly couples the two, accepted for a reference kit to
+- Bundling the UI into the API image slightly couples the two, accepted for a platform to
   avoid CORS and a second deployment. It stays read-only and tiny (one HTML file).
 - The API key is entered client-side and held only in the browser session (`sessionStorage`); no
   secret is baked into the console.

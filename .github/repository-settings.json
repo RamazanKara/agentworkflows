@@ -8,9 +8,9 @@
     "allow_rebase_merge": false
   },
   "metadata": {
-    "homepage": "https://ramazankara.github.io/private-ai-platform-kit/",
+    "homepage": "https://ramazankara.github.io/agentworkflows/",
     "topics": [
-      "private-ai",
+      "agent-workflows",
       "kubernetes",
       "llm",
       "rag",
@@ -24,7 +24,7 @@
       "ai-gateway",
       "openai-compatible",
       "anthropic",
-      "self-hosted",
+      "cloud-ai",
       "coding-agents",
       "audit-log",
       "ai-governance",

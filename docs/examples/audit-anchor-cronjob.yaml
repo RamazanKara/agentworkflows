@@ -21,7 +21,7 @@
 #   - Set the Loki URL, the LogQL selector, and the lookback (--since) to your gateway.
 #   - If Loki auth_enabled=true, add the X-Scope-OrgID header (see -H below) end to end.
 #   - Pin `image:` to an image that contains python3 + this repo's scripts/ (or bake a tiny
-#     sidecar image; the kit's scripts are stdlib-only, so any python:3-alpine works with the
+#     sidecar image; AgentWorkflows' scripts are stdlib-only, so any python:3-alpine works with the
 #     script mounted via ConfigMap).
 ---
 apiVersion: v1
@@ -32,7 +32,7 @@ metadata:
   labels:
     app.kubernetes.io/name: audit-anchor
     app.kubernetes.io/component: audit-integrity
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -41,7 +41,7 @@ metadata:
   namespace: monitoring
   labels:
     app.kubernetes.io/name: audit-anchor
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 rules:
   # Least privilege: only the single named anchor ConfigMap, only get/update/patch.
   - apiGroups: [""]
@@ -55,7 +55,7 @@ metadata:
   namespace: monitoring
   labels:
     app.kubernetes.io/name: audit-anchor
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -73,7 +73,7 @@ metadata:
   namespace: monitoring
   labels:
     app.kubernetes.io/name: audit-anchor
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
 data:
   head.json: "{}"
 ---
@@ -85,7 +85,7 @@ metadata:
   labels:
     app.kubernetes.io/name: audit-anchor
     app.kubernetes.io/component: audit-integrity
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     platform.ai/cost-center: platform
     platform.ai/owner: platform-team
 spec:
@@ -103,7 +103,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/name: audit-anchor
-            app.kubernetes.io/part-of: private-ai-platform-kit
+            app.kubernetes.io/part-of: agentworkflows
         spec:
           serviceAccountName: audit-anchor
           restartPolicy: Never
@@ -161,7 +161,7 @@ spec:
                 - name: tmp
                   mountPath: /tmp
           volumes:
-            # Mount the kit's stdlib-only verifier + anchor scripts. Create with, e.g.:
+            # Mount AgentWorkflows' stdlib-only verifier + anchor scripts. Create with, e.g.:
             #   kubectl -n monitoring create configmap audit-anchor-scripts \
             #     --from-file=scripts/audit-anchor.py --from-file=scripts/audit-verify.py
             - name: scripts

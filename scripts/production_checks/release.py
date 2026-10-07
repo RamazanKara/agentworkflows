@@ -92,7 +92,7 @@ def check_release_packaging(errors: list[str]) -> None:
         ROOT / "docs/distribution.md",
     ):
         require(errors, path.exists(), f"release distribution contract missing {path.relative_to(ROOT)}")
-    platform_chart = yaml.safe_load((ROOT / "deploy/charts/platform/Chart.yaml").read_text()) or {}
+    platform_chart = yaml.safe_load((ROOT / "deploy/charts/agentworkflows/Chart.yaml").read_text()) or {}
     require(
         errors,
         nested(platform_chart, "annotations", "artifacthub.io/category") == "ai-machine-learning",
@@ -182,7 +182,7 @@ def check_release_packaging(errors: list[str]) -> None:
                 f"platform dependency {dependency.get('name', '<unnamed>')} must pin release {release_version}",
             )
 
-    platform_lock_path = ROOT / "deploy/charts/platform/Chart.lock"
+    platform_lock_path = ROOT / "deploy/charts/agentworkflows/Chart.lock"
     require(errors, platform_lock_path.exists(), "platform dependency lock must be committed")
     if platform_lock_path.exists():
         platform_lock = yaml.safe_load(platform_lock_path.read_text()) or {}
@@ -213,13 +213,6 @@ def check_release_packaging(errors: list[str]) -> None:
         errors,
         f"CUSTOMER_REVISION ?= {release_tag}" in makefile_text,
         f"Makefile must default CUSTOMER_REVISION to {release_tag}",
-    )
-
-    citation_text = (ROOT / "CITATION.cff").read_text()
-    require(
-        errors,
-        f"version: {release_version}" in citation_text,
-        f"CITATION.cff version must match latest CHANGELOG version {release_version}",
     )
 
     index_text = (ROOT / "docs/index.md").read_text()

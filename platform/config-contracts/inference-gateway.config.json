@@ -228,8 +228,8 @@
     {
       "aliases": [],
       "allowed_values": [],
-      "app_default": "private-ai-platform-kit:batch",
-      "chart_default": "private-ai-platform-kit:batch",
+      "app_default": "agentworkflows:batch",
+      "chart_default": "agentworkflows:batch",
       "chart_value": "batch.store.keyPrefix",
       "description": "Redis key prefix for batch records, indexes, and the work queue.",
       "field": "batch_key_prefix",
@@ -953,8 +953,8 @@
     {
       "aliases": [],
       "allowed_values": [],
-      "app_default": "private-ai-platform-kit:responses",
-      "chart_default": "private-ai-platform-kit:responses",
+      "app_default": "agentworkflows:responses",
+      "chart_default": "agentworkflows:responses",
       "chart_value": "responses.store.keyPrefix",
       "description": "Redis key prefix for stored responses.",
       "field": "responses_key_prefix",
@@ -1055,8 +1055,8 @@
     {
       "aliases": [],
       "allowed_values": [],
-      "app_default": "private-ai-platform-kit:response-cache",
-      "chart_default": "private-ai-platform-kit:response-cache",
+      "app_default": "agentworkflows:response-cache",
+      "chart_default": "agentworkflows:response-cache",
       "chart_value": "responseCache.keyPrefix",
       "description": "Redis key prefix for shared response-cache entries.",
       "field": "response_cache_key_prefix",
@@ -1205,8 +1205,8 @@
     {
       "aliases": [],
       "allowed_values": [],
-      "app_default": "private-ai-platform-kit:sandbox-budget",
-      "chart_default": "private-ai-platform-kit:sandbox-budget",
+      "app_default": "agentworkflows:sandbox-budget",
+      "chart_default": "agentworkflows:sandbox-budget",
       "chart_value": "budget.keyPrefix",
       "description": "Redis key prefix for sandbox budget counters.",
       "field": "sandbox_budget_key_prefix",
