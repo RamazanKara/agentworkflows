@@ -2209,9 +2209,9 @@
 </tr>
 <tr>
 <td>Supply chain</td>
-<td>Pinned Alpine runtime images, hashed Python dependency locks, runtime-only Python dependencies, high/critical Trivy image and repo failure gates, local SBOM/SARIF/checksum evidence, Cosign digest signing, workflow artifacts, and release asset upload in CI</td>
-<td>Promote only immutable signed/scanned image digests with downloadable evidence</td>
-<td><code>make dependency-lock-check</code>, <code>make repo-security-scan</code>, <code>make image-scan</code>, <code>make supply-chain-check</code>, GitHub Actions image job</td>
+<td>Pinned Alpine runtime images, hashed Python dependency locks, runtime-only Python dependencies, high/critical Trivy image and repo failure gates, local SBOM/SARIF/checksum evidence, Cosign digest signing and release asset upload in the tag-only release workflow</td>
+<td>Deploy only immutable signed image digests that you have scanned</td>
+<td><code>make dependency-lock-check</code>, <code>make repo-security-scan</code>, <code>make image-scan</code>, <code>make supply-chain-check</code>, GitHub Actions release workflow</td>
 </tr>
 <tr>
 <td>Backup and restore</td>
@@ -2286,7 +2286,7 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 <a href="../scope-and-non-goals/">Scope and non-goals</a>; the bundled charts are working references and are
 never removed, so rolling back to the reference footprint for a demo is a one-line values change.</p>
 <h2 id="workflow-upgrades-and-recovery">Workflow upgrades and recovery<a class="headerlink" href="#workflow-upgrades-and-recovery" title="Permanent link">&para;</a></h2>
-<p>The 0.3.0 gateway uses <strong>Redis</strong>, not PostgreSQL, for run indexes, step timelines and
+<p>The 0.4.0 gateway uses <strong>Redis</strong>, not PostgreSQL, for run indexes, step timelines and
 team/run budgets. Temporal owns workflow history in <code>temporal</code> and SQL visibility in
 <code>temporal_visibility</code>, both on the existing PostgreSQL service. Back up all three stores
 together with the complete receipt export. No gateway PostgreSQL database or new service

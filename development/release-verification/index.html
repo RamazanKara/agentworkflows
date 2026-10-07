@@ -1675,21 +1675,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#provenance-and-sbom-attestations" class="md-nav__link">
+  <a href="#release-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Provenance And SBOM Attestations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sbom-and-scan-checksums" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SBOM And Scan Checksums
+        Release Files
       
     </span>
   </a>
@@ -1867,21 +1856,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#provenance-and-sbom-attestations" class="md-nav__link">
+  <a href="#release-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Provenance And SBOM Attestations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sbom-and-scan-checksums" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SBOM And Scan Checksums
+        Release Files
       
     </span>
   </a>
@@ -1927,10 +1905,10 @@
 <h1 id="release-verification">Release Verification<a class="headerlink" href="#release-verification" title="Permanent link">&para;</a></h1>
 <p>Use this checklist before trusting a public release in a customer-owned cluster.</p>
 <p>Set the release and repository once:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.3.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.4.0
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REPOSITORY</span><span class="o">=</span>RamazanKara/agentworkflows
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">IMAGE_REPO</span><span class="o">=</span>ghcr.io/ramazankara/agentworkflows
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE_IDENTITY</span><span class="o">=</span><span class="s2">"https://github.com/</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/ci.yml@refs/tags/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE_IDENTITY</span><span class="o">=</span><span class="s2">"https://github.com/</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/release.yml@refs/tags/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
 </code></pre></div>
 <h2 id="helm-oci-charts">Helm OCI Charts<a class="headerlink" href="#helm-oci-charts" title="Permanent link">&para;</a></h2>
 <p>Tag builds publish each chart to <code>oci://$IMAGE_REPO/charts</code>.</p>
@@ -1968,65 +1946,39 @@
 <a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
 </code></pre></div>
 <p>Chart OCI tags drop the leading <code>v</code> (<code>${RELEASE#v}</code>) to match the chart <code>version</code>, while runtime image tags keep it.</p>
-<h2 id="provenance-and-sbom-attestations">Provenance And SBOM Attestations<a class="headerlink" href="#provenance-and-sbom-attestations" title="Permanent link">&para;</a></h2>
-<p>The main-branch image build publishes SLSA provenance and SPDX SBOM attestations.
-The tag workflow promotes those same image digests and signs them for the release;
-it does not rebuild them. Verify build attestations against <code>refs/heads/main</code> and
-the release's exact source commit, using the authenticated GitHub CLI.</p>
-<p>Run from a checkout containing the release tag:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">SOURCE_REVISION</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>git<span class="w"> </span>rev-parse<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="si">}</span><span class="s2">^{commit}"</span><span class="k">)</span><span class="s2">"</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">for</span><span class="w"> </span>service<span class="w"> </span><span class="k">in</span><span class="w"> </span>inference-gateway<span class="w"> </span>rag-service<span class="p">;</span><span class="w"> </span><span class="k">do</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/</span><span class="nv">$service</span><span class="s2">:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span>--signer-workflow<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/ci.yml"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span>--source-ref<span class="w"> </span>refs/heads/main<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span>--source-digest<span class="w"> </span><span class="s2">"</span><span class="nv">$SOURCE_REVISION</span><span class="s2">"</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/</span><span class="nv">$service</span><span class="s2">:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span>--signer-workflow<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/ci.yml"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span>--source-ref<span class="w"> </span>refs/heads/main<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span>--source-digest<span class="w"> </span><span class="s2">"</span><span class="nv">$SOURCE_REVISION</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span>--predicate-type<span class="w"> </span>https://spdx.dev/Document/v2.3
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="k">done</span>
+<h2 id="release-files">Release Files<a class="headerlink" href="#release-files" title="Permanent link">&para;</a></h2>
+<p>Download the release files into a new directory and check them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span>--dir<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="o">(</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nb">cd</span><span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>sha256sum<span class="w"> </span>--check<span class="w"> </span>sdk-checksums.txt
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>cosign<span class="w"> </span>verify-blob<span class="w"> </span>chart-release-manifest.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span>--bundle<span class="w"> </span>chart-release-manifest.sigstore.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="o">)</span>
 </code></pre></div>
-<p>See <a href="https://cli.github.com/manual/gh_attestation_verify">GitHub artifact attestation verification</a>
-for authentication and offline bundle options.</p>
-<h2 id="sbom-and-scan-checksums">SBOM And Scan Checksums<a class="headerlink" href="#sbom-and-scan-checksums" title="Permanent link">&para;</a></h2>
-<p>Download all release assets into a new directory. GitHub flattens asset paths, so
-restore the chart and SDK directories recorded in the checksum manifests:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">"release-evidence/</span><span class="nv">$RELEASE</span><span class="s2">/chart-packages"</span><span class="w"> </span><span class="s2">"release-evidence/</span><span class="nv">$RELEASE</span><span class="s2">/sdk-dist"</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span>--dir<span class="w"> </span><span class="s2">"release-evidence/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="o">(</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nb">cd</span><span class="w"> </span><span class="s2">"release-evidence/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>mv<span class="w"> </span>./*.tgz<span class="w"> </span>chart-release-manifest.json<span class="w"> </span>chart-release-manifest.sigstore.json<span class="w"> </span>chart-packages/
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>mv<span class="w"> </span>./*.whl<span class="w"> </span>./*.tar.gz<span class="w"> </span>sdk-dist/
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>cosign<span class="w"> </span>verify-blob<span class="w"> </span>supply-chain-checksums.txt<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span>--bundle<span class="w"> </span>supply-chain-checksums.sigstore.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>sha256sum<span class="w"> </span>--check<span class="w"> </span>supply-chain-checksums.txt
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>sha256sum<span class="w"> </span>--check<span class="w"> </span>sdk-checksums.txt
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="o">)</span>
-</code></pre></div>
-<p>Review the SBOMs and SARIF files before promotion. The Trivy release gate fails on
-HIGH or CRITICAL image vulnerabilities. The signed checksum manifest covers the
-chart packages and release image evidence; SDK checksums are published separately.</p>
+<p><code>sdk-checksums.txt</code> covers the Python wheel, source archive and TypeScript package. The
+signed chart manifest records each chart package and the image digests it embeds.
+Images are built from the tagged commit on GitHub-hosted runners; the release workflow does
+not publish SBOM or provenance attestations. Run <code>make image-scan</code> locally if you need a
+vulnerability report before deploying.</p>
 <h2 id="strict-evidence">Strict Evidence<a class="headerlink" href="#strict-evidence" title="Permanent link">&para;</a></h2>
 <p>Strict release evidence must be generated from current artifacts, not sample evidence:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>validate-full
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>make<span class="w"> </span>image-scan
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>make<span class="w"> </span>supply-chain-check
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>make<span class="w"> </span>loadtest-local
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>make<span class="w"> </span>evidence
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>make<span class="w"> </span>release-gate-strict
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>make<span class="w"> </span>validate-full
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>make<span class="w"> </span>image-scan
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>make<span class="w"> </span>supply-chain-check
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>make<span class="w"> </span>loadtest-local
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>make<span class="w"> </span>evidence
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>make<span class="w"> </span>release-gate-strict
 </code></pre></div>
 <p>For a live customer-style validation path, run the local cluster checks and generate live evidence:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>make<span class="w"> </span>trace-smoke
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>make<span class="w"> </span>tenant-smoke
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>make<span class="w"> </span>agent-smoke
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>make<span class="w"> </span>trace-smoke
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>make<span class="w"> </span>tenant-smoke
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>make<span class="w"> </span>agent-smoke
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>Record the command output, generated evidence paths under <code>results/</code>, image digests, chart versions, and GitHub Actions run URL in the release notes.</p>
 

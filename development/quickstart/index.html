@@ -1967,7 +1967,7 @@ both modes: no external document is published.</p>
 <p>These commands work in either shell:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-research
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>my-research
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@input.json'</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>ResearchWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@input.json'</span>
 </code></pre></div>
 <p>You now have editable <code>workflow.py</code>, <code>worker.py</code>, and <code>input.json</code>, plus a README with
 worker instructions. <code>init --help</code> lists <strong>research</strong>, <strong>code-review</strong>, <strong>support-triage</strong>,
@@ -1998,8 +1998,9 @@ working, repeat <code>inspect</code> after a few seconds. A fixture draft is del
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>agentworkflows<span class="w"> </span>usage
 </code></pre></div>
 <p>Repeat <code>inspect</code> if the run is still finishing. Success is <strong><code>status: completed</code></strong>, a
-<strong><code>result.status: published</code></strong>, and a timeline containing two model calls, <code>research</code>,
-<code>publish</code>, and your approval, each with a <code>receipt_id</code>. The approval records the identity
+<strong><code>result.status: published</code></strong>, and a timeline with <code>research</code>, two model calls, your
+approval and <code>publish</code>, plus six notification receipts from the local Slack, webhook and
+email fakes. Every entry has a <code>receipt_id</code>. The draft call falls back from OpenAI to Anthropic on purpose. The approval records the identity
 of your gateway key. <code>approve --reject</code> instead finishes without publishing.</p>
 <p>Open <a href="http://127.0.0.1:8080/console/">http://127.0.0.1:8080/console/</a> and sign in with <code>local-development-only</code> to see the
 same run, draft, result, timeline, and costs. Temporal history is at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a>.</p>

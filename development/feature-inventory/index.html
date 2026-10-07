@@ -2101,10 +2101,10 @@ configured.</p>
 <td>Rendered onto the NetworkPolicy; Kyverno denies expired, CronJob retires them when enforcement is on</td>
 </tr>
 <tr>
-<td>SBOM, provenance, signatures</td>
+<td>Signed releases</td>
 <td>Shipped</td>
-<td>Release CI</td>
-<td>Build once, promote digest, digest-bound charts, Sigstore bundles</td>
+<td>Release workflow</td>
+<td>Tag-built multi-arch images and digest-bound charts signed with Cosign; SBOM and scans run locally (<code>make supply-chain-check</code>, <code>make image-scan</code>)</td>
 </tr>
 <tr>
 <td>Multi-node model serving</td>

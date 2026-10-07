@@ -1925,7 +1925,7 @@
 
 
 <h1 id="version-and-compatibility-matrix">Version and compatibility matrix<a class="headerlink" href="#version-and-compatibility-matrix" title="Permanent link">&para;</a></h1>
-<p>This page records the versions AgentWorkflows is <strong>pinned to</strong> for the <code>v0.3.0</code>
+<p>This page records the versions AgentWorkflows is <strong>pinned to</strong> for the <code>v0.4.0</code>
 source version. No tag or published release is implied. It is a compatibility reference,
 not a support SLA: the tables list what the platform ships
 and what CI exercises, so you can reproduce a known-good state and reason about drift. Newer or
@@ -1946,12 +1946,12 @@ Kubernetes distribution, ingress, storage, secrets, and GPU stack), that is call
 <tbody>
 <tr>
 <td>AgentWorkflows</td>
-<td><code>v0.3.0</code></td>
+<td><code>v0.4.0</code></td>
 <td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/README.md">README.md</a></td>
 </tr>
 <tr>
 <td>Helm chart version (all first-party charts)</td>
-<td><code>0.3.0</code></td>
+<td><code>0.4.0</code></td>
 <td><code>deploy/charts/*/Chart.yaml</code></td>
 </tr>
 <tr>
@@ -1982,16 +1982,16 @@ and an immutable manifest-list digest in <code>values.yaml</code>.</p>
 <tbody>
 <tr>
 <td>Inference gateway</td>
-<td><code>0.3.0</code></td>
+<td><code>0.4.0</code></td>
 <td><code>ghcr.io/ramazankara/agentworkflows/inference-gateway</code></td>
-<td><code>v0.3.0</code></td>
+<td><code>v0.4.0</code></td>
 <td>First-party; release CI pins the published digest.</td>
 </tr>
 <tr>
 <td>RAG service</td>
-<td><code>0.3.0</code></td>
+<td><code>0.4.0</code></td>
 <td><code>ghcr.io/ramazankara/agentworkflows/rag-service</code></td>
-<td><code>v0.3.0</code></td>
+<td><code>v0.4.0</code></td>
 <td>First-party; release CI pins the published digest.</td>
 </tr>
 <tr>
@@ -2024,14 +2024,14 @@ and an immutable manifest-list digest in <code>values.yaml</code>.</p>
 </tr>
 <tr>
 <td>Agent workspace</td>
-<td><code>0.3.0</code></td>
+<td><code>0.4.0</code></td>
 <td>(namespace/RBAC template, no image)</td>
 <td>n/a</td>
 <td>Tenant namespace scaffold; no workload image of its own.</td>
 </tr>
 <tr>
 <td>Platform (umbrella)</td>
-<td><code>0.3.0</code></td>
+<td><code>0.4.0</code></td>
 <td>(aggregates the charts above)</td>
 <td>n/a</td>
 <td>Single-command dev/demo bring-up; GitOps remains recommended for multi-namespace installs.</td>
