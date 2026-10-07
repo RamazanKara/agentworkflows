@@ -107,7 +107,23 @@ async def reserve_run(request: Request, tokens: int, cost: float) -> tuple[int, 
             f"Workflow {dimension} budget exhausted; inspect /v1/workflow-runs/{request.state.workflow_run_id}.",
         )
     request.state.workflow_charge = {"tokens": tokens, "cost_usd": cost}
+    await record_budget_threshold(request)
     return tokens, amount
+
+
+async def record_budget_threshold(request: Request) -> None:
+    team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    if not team or not team.notifications:
+        return
+    raw = await redis_call(request, "hgetall", run_key(request))
+    if any(
+        int(raw[limit]) and int(raw[used]) >= int(raw[limit]) * team.notifications.budget_threshold
+        for used, limit in (("tokens", "token_limit"), ("cost", "cost_limit"))
+    ):
+        from app.workflow_notifications import queue_event
+
+        # Reservations can settle below the threshold before the run monitor next polls.
+        await queue_event(request, request.state.workflow_run_id, "budget_threshold")
 
 
 async def load_run_policy(request: Request) -> None:
@@ -163,3 +179,4 @@ async def settle_run_model(
         request, "eval", SETTLE, 1, run_key(request), total - reservation[0], nanodollars(cost) - reservation[1]
     )
     request.state.workflow_charge = {"tokens": total, "cost_usd": cost}
+    await record_budget_threshold(request)

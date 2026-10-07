@@ -134,7 +134,7 @@ support = json.loads((output / "support-result.json").read_text())
 review = json.loads((output / "review-result.json").read_text())
 assert support["result"] and len(support["timeline"]) == 1, support
 assert review["result"]["approved"] is False and review["result"]["reviewer"] == "demo-approver", review
-assert {step["action"] for step in review["timeline"]} == {"model_call", "approval"}, review
+assert {step["action"] for step in review["timeline"] if step["action"] != "notification"} == {"model_call", "approval"}, review
 assert all(step["receipt_id"] for row in (support, review) for step in row["timeline"])
 print("[workflow] support triage result and rejected code review are receipted; no external actions")
 PY

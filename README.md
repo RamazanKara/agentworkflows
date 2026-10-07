@@ -47,6 +47,7 @@ For the full recovery/security/browser proof, use the [Compose smoke walkthrough
 | Team web console | [Console walkthrough](docs/workflows.md#web-console); sign in, switch identities, filter runs, approve work, and inspect receipts and costs |
 | Governed cloud providers and ordered fallback | [Provider configuration](docs/client-examples.md); provider credentials stay on the server |
 | Durable agent workflows and human approvals | [Temporal workflow SDK and walkthrough](docs/workflows.md); retry, pause, and resume with per-run token/cost budgets |
+| Automatic starts and team notifications | [Triggers and notifications](docs/workflows.md#triggers-and-notifications): Temporal schedules, signed webhooks, console/CLI pause controls, and Slack/webhook/SMTP alerts |
 | Framework agents and MCP tools | [Bring your agent](docs/workflows.md#bring-your-agent); point clients at the gateway and register tools once per team |
 | Workflow policy and container steps | [Workflow policy](docs/workflows.md#workflow-policy) limits providers, models, tools, egress, and budget; [container agents](docs/agent-sandbox-integration.md#container-workflow-steps) use hardened workspaces |
 | Team roles, projects, and spend | [Team setup](docs/workflows.md#teams-projects-and-roles); shared provider budgets, project-scoped run history, and `agentworkflows usage` |

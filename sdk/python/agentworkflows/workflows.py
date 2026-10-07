@@ -117,6 +117,8 @@ class ApprovalWorkflow:
     async def approval(self, draft: str) -> bool:
         self.draft = draft
         self.stage = "awaiting_approval"
+        if workflow.patched("approval-notification-v1"):
+            await WorkflowGateway()._call(Call("approval_waiting", {}))
         try:
             await workflow.wait_condition(lambda: self.decision is not None, timeout=timedelta(days=7))
         except TimeoutError:

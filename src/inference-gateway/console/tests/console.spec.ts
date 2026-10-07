@@ -40,6 +40,48 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test('triggers show schedules and signed endpoints; pause and resume are accessible', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  let paused = false;
+  await page.route('**/v1/workflow-triggers**', async route => {
+    if (route.request().method() === 'PATCH') {
+      paused = route.request().postDataJSON().paused;
+      return route.fulfill({ json: { paused } });
+    }
+    return route.fulfill({ json: { triggers: [
+      { workflow: 'DailyReportWorkflow', name: 'daily', project: 'default', kind: 'cron', cron: '0 9 * * *', paused, configuration_paused: false, next_fire_at: ['2026-10-08T09:00:00Z'] },
+      { workflow: 'GitHubIssueTriageWorkflow', name: 'github', project: 'engineering', kind: 'webhook', cron: '', paused: false, configuration_paused: false, secret_configured: true, url: '/v1/hooks/demo/GitHubIssueTriageWorkflow/github' },
+    ] } });
+  });
+  await login(page);
+  await page.getByRole('link', { name: 'Triggers', exact: true }).click();
+  await expect(page).toHaveURL(/#triggers$/);
+  await expect(page.getByRole('heading', { name: 'Triggers', exact: true })).toBeVisible();
+  await expect(page.getByText('0 9 * * *')).toBeVisible();
+  await expect(page.getByText('/v1/hooks/demo/GitHubIssueTriageWorkflow/github')).toBeVisible();
+  await page.getByRole('button', { name: 'Pause daily' }).click();
+  await expect(page.getByRole('button', { name: 'Resume daily' })).toBeEnabled();
+  await expect(page.getByRole('status')).toContainText('daily paused');
+  await page.getByRole('button', { name: 'Resume daily' }).click();
+  await expect(page.getByRole('button', { name: 'Pause daily' })).toBeEnabled();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('viewer cannot pause triggers and configuration errors are actionable', async ({ page }) => {
+  await page.route('**/v1/workflow-triggers', route => route.fulfill({ json: { triggers: [
+    { workflow: 'Report', name: 'daily', project: 'default', kind: 'cron', cron: '0 9 * * *', paused: false, configuration_paused: false, error: 'Schedule unavailable; check Temporal and the gateway configuration.' },
+  ] } }));
+  await login(page, 'viewer');
+  await page.getByRole('link', { name: 'Triggers', exact: true }).click();
+  await expect(page.getByText('Builder access required')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pause daily' })).toHaveCount(0);
+  await expect(page.getByText('Schedule unavailable;', { exact: false })).toBeVisible();
+});
+
 test('sign in, all main pages, receipts, costs and sign out without persisted credentials', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));

@@ -6,6 +6,7 @@ export type Team = {
   projects: string[];
   providers: string[];
   cost_limit_usd: number | null;
+  notifications?: { channels: string[]; budget_threshold: number };
   provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
 };
 export type Session = { token: string; team: Team; id: number };

@@ -937,6 +937,21 @@
         "title": "RunBudget",
         "type": "object"
       },
+      "ScheduleFiring": {
+        "additionalProperties": false,
+        "properties": {
+          "firing_id": {
+            "format": "uuid",
+            "title": "Firing Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "firing_id"
+        ],
+        "title": "ScheduleFiring",
+        "type": "object"
+      },
       "StartRun": {
         "additionalProperties": false,
         "properties": {
@@ -986,6 +1001,20 @@
           "arguments"
         ],
         "title": "ToolCall",
+        "type": "object"
+      },
+      "TriggerState": {
+        "additionalProperties": false,
+        "properties": {
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paused"
+        ],
+        "title": "TriggerState",
         "type": "object"
       },
       "ValidationError": {
@@ -1040,6 +1069,18 @@
         "description": "Bearer token accepted by gateway middleware when API key authentication is enabled.",
         "scheme": "bearer",
         "type": "http"
+      },
+      "GitHubSignature": {
+        "description": "GitHub HMAC-SHA256 of the raw body using the team's secret. Also send X-GitHub-Delivery. The signed body fingerprint protects against replay.",
+        "in": "header",
+        "name": "X-Hub-Signature-256",
+        "type": "apiKey"
+      },
+      "WebhookSignature": {
+        "description": "sha256=<HMAC-SHA256(team secret, timestamp.delivery.path.raw_body)>; also send X-AW-Timestamp (Unix seconds, within 5 minutes) and X-AW-Delivery (unique ID).",
+        "in": "header",
+        "name": "X-AW-Signature",
+        "type": "apiKey"
       }
     }
   },
@@ -1868,6 +1909,76 @@
         "summary": "Download file content",
         "tags": [
           "files"
+        ]
+      }
+    },
+    "/v1/hooks/{team}/{workflow}/{name}": {
+      "post": {
+        "operationId": "webhook_v1_hooks__team___workflow___name__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team",
+            "required": true,
+            "schema": {
+              "title": "Team",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Webhook V1 Hooks  Team   Workflow   Name  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "WebhookSignature": []
+          },
+          {
+            "GitHubSignature": []
+          }
+        ],
+        "summary": "Start a workflow from a signed JSON webhook",
+        "tags": [
+          "workflows"
         ]
       }
     },
@@ -2767,6 +2878,59 @@
         ]
       }
     },
+    "/v1/workflow-runs/{run_id}/approval-waiting": {
+      "post": {
+        "operationId": "waiting_v1_workflow_runs__run_id__approval_waiting_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Waiting V1 Workflow Runs  Run Id  Approval Waiting Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Worker-only durable approval notification event",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/v1/workflow-runs/{run_id}/approve": {
       "post": {
         "operationId": "approve_v1_workflow_runs__run_id__approve_post",
@@ -2931,6 +3095,179 @@
           }
         ],
         "summary": "Start a fresh execution of a failed or canceled run",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflow-triggers": {
+      "get": {
+        "operationId": "listing_v1_workflow_triggers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Listing V1 Workflow Triggers Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "List configured triggers, schedules and pause state",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflow-triggers/{workflow}/{name}": {
+      "patch": {
+        "operationId": "pause_v1_workflow_triggers__workflow___name__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriggerState"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Pause V1 Workflow Triggers  Workflow   Name  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Pause or resume a configured trigger",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflow-triggers/{workflow}/{name}/fire": {
+      "post": {
+        "operationId": "scheduled_v1_workflow_triggers__workflow___name__fire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleFiring"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Scheduled V1 Workflow Triggers  Workflow   Name  Fire Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Worker-only Temporal schedule delivery",
         "tags": [
           "workflows"
         ]

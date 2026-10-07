@@ -50,6 +50,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     commands.add_parser("usage", help="Show your team's token usage, estimated cost, and provider breakdown.")
     commands.add_parser("team", help="Show your team, role, projects, and configured providers.")
+    triggers = commands.add_parser("triggers", help="Inspect, pause or resume configured workflow triggers.")
+    trigger_operations = triggers.add_subparsers(dest="operation", required=True)
+    trigger_operations.add_parser("list", help="Show schedules (UTC), webhook endpoints and pause state.")
+    for operation in ("pause", "resume"):
+        sub = trigger_operations.add_parser(operation, help=f"{operation.title()} a configured workflow trigger.")
+        sub.add_argument("workflow")
+        sub.add_argument("name")
     runs = commands.add_parser("runs", help="Start, list, inspect, cancel, retry, or approve workflow runs.")
     operations = runs.add_subparsers(dest="operation", required=True)
     start = operations.add_parser("start", help="Start an approved workflow; defaults to ResearchWorkflow.")
@@ -112,6 +119,13 @@ def main(argv: list[str] | None = None) -> int:
                     print(model["id"])
             elif args.command == "team":
                 print(json.dumps(gateway.team(), indent=2))
+            elif args.command == "triggers":
+                result = (
+                    gateway.triggers()
+                    if args.operation == "list"
+                    else gateway.pause_trigger(args.workflow, args.name, paused=args.operation == "pause")
+                )
+                print(json.dumps(result, indent=2))
             elif args.command == "runs":
                 if args.operation == "start":
                     result = gateway.start_run(

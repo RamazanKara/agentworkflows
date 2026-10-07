@@ -65,6 +65,19 @@ Deployment-specific identity, networking, storage failover and retention remain 
 validation work. Broader instrumented integrations and measurable receipt coverage remain
 ongoing: the audit chain cannot prove unreported tool activity or direct calls outside the gateway.
 
+## Milestone 7: automatic starts and team notifications
+
+- Per-workflow UTC cron triggers backed by Temporal Schedules, and signed inbound
+  JSON webhooks with replay protection and the existing team/project governance.
+- Console and CLI trigger discovery and pause/resume; trigger and delivery receipts.
+- Slack incoming webhooks, outgoing webhooks and SMTP alerts for waiting approvals,
+  failed runs and configurable run budget thresholds, linking back to console review.
+- Daily report and GitHub issue payload triage examples in the Compose trial, with
+  a local notification sink and SMTP catcher. No real credentials or chat approvals.
+
+See [triggers and notifications](docs/workflows.md#triggers-and-notifications) for
+signing, delivery guarantees, configuration and the smoke proof.
+
 ## Usability and release standard
 
 Every capability needs sensible defaults, one obvious path, actionable errors, and

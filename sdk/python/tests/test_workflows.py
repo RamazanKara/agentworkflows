@@ -8,13 +8,25 @@ from agentworkflows.activities import GatewayActivities
 from agentworkflows.examples.code_review import CodeReviewWorkflow
 from agentworkflows.examples.research import ResearchWorkflow
 from agentworkflows.examples.support_triage import SupportTriageWorkflow
+from agentworkflows.examples.triggered import DailyReportWorkflow, GitHubIssueTriageWorkflow
+from agentworkflows.triggers import ScheduledTrigger
 from agentworkflows.workflows import Budget, Call, WorkflowGateway
 from temporalio.exceptions import ApplicationError
 from temporalio.testing import ActivityEnvironment
 from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
 
-@pytest.mark.parametrize("workflow_class", [ResearchWorkflow, SupportTriageWorkflow, CodeReviewWorkflow])
+@pytest.mark.parametrize(
+    "workflow_class",
+    [
+        ResearchWorkflow,
+        SupportTriageWorkflow,
+        CodeReviewWorkflow,
+        DailyReportWorkflow,
+        GitHubIssueTriageWorkflow,
+        ScheduledTrigger,
+    ],
+)
 def test_example_loads_in_temporal_sandbox(workflow_class):
     from temporalio.workflow import _Definition
 
@@ -110,6 +122,9 @@ def test_research_publishes_only_after_review(monkeypatch, approved):
     tool = AsyncMock(return_value="fixture")
     monkeypatch.setattr(WorkflowGateway, "tool", tool)
     monkeypatch.setattr(WorkflowGateway, "text", AsyncMock(return_value="draft"))
+    event = AsyncMock(return_value={"queued": True})
+    monkeypatch.setattr(WorkflowGateway, "_call", event)
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: True)
     monkeypatch.setattr("agentworkflows.workflows.workflow.info", lambda: SimpleNamespace(run_id="run"))
 
     async def review(condition, *, timeout):
@@ -122,10 +137,12 @@ def test_research_publishes_only_after_review(monkeypatch, approved):
     monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", review)
     result = asyncio.run(instance.run(ResearchRequest("topic")))
     assert result["status"] == ("published" if approved else "rejected")
+    assert event.call_args.args[0].kind == "approval_waiting"
     assert tool.await_count == (2 if approved else 1)
 
 
 def test_approval_timeout_is_actionable_and_not_retryable(monkeypatch):
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: False)
     monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", AsyncMock(side_effect=TimeoutError))
     with pytest.raises(ApplicationError, match="start a new review") as exc:
         asyncio.run(ResearchWorkflow().approval("draft"))

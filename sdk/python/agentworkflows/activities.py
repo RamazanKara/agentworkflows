@@ -29,12 +29,43 @@ class GatewayActivities:
         self.api_key = api_key
         self.agents = agents or {}
 
+    @activity.defn(name="agentworkflows.trigger")
+    async def trigger(self, request: dict[str, Any]) -> dict[str, Any]:
+        async with httpx.AsyncClient(
+            base_url=self.base_url, headers={"Authorization": f"Bearer {self.api_key}"}, timeout=30
+        ) as client:
+            if request.get("run_id"):
+                response = await client.get(f"/v1/workflow-runs/{request['run_id']}")
+            else:
+                response = await client.post(
+                    f"/v1/workflow-triggers/{quote(request['workflow'], safe='')}/"
+                    f"{quote(request['trigger'], safe='')}/fire",
+                    json={"firing_id": request["firing_id"]},
+                )
+            try:
+                _raise_for_status(response)
+            except GatewayError as exc:
+                if exc.reason == "trigger_paused":
+                    return {"paused": True}
+                raise ApplicationError(
+                    "Scheduled launch unavailable; inspect gateway trigger receipts.",
+                    non_retryable=exc.status_code < 500 and exc.status_code != 429,
+                ) from None
+            return response.json()
+
     @activity.defn(name="agentworkflows.call")
     async def call(self, call: Call) -> dict[str, Any]:
         info = activity.info()
         headers = {"Authorization": f"Bearer {self.api_key}"}
         try:
             async with httpx.AsyncClient(base_url=self.base_url, headers=headers, timeout=120) as client:
+                if call.kind == "approval_waiting":
+                    response = await client.post(f"/v1/workflow-runs/{info.workflow_run_id}/approval-waiting")
+                    # Legacy direct-Temporal runs are not indexed in the console.
+                    if response.status_code == 404:
+                        return {"queued": False}
+                    _raise_for_status(response)
+                    return response.json()
                 initialized = await client.put(
                     f"/v1/workflow-runs/{info.workflow_run_id}",
                     json={**asdict(call.budget), "workflow": info.workflow_type},

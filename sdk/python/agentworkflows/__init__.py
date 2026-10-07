@@ -495,6 +495,18 @@ class GatewayClient:
         """Discover the current credential's team, role, and projects."""
         return self._get("/v1/team")
 
+    def triggers(self) -> dict[str, Any]:
+        """List configured workflow triggers and their effective pause state."""
+        return self._get("/v1/workflow-triggers")
+
+    def pause_trigger(self, workflow: str, name: str, *, paused: bool = True) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        response = self._request(
+            "PATCH", f"/v1/workflow-triggers/{quote(workflow, safe='')}/{quote(name, safe='')}", json={"paused": paused}
+        )
+        return response.json()
+
     def start_run(
         self, workflow: str, input: Any, *, project: str | None = None, request_id: str | None = None
     ) -> dict[str, Any]:

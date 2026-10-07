@@ -6,11 +6,11 @@ import re
 from dataclasses import dataclass, field, replace
 from math import isfinite
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import yaml
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.settings import Settings, validate_sandbox_id
 
@@ -271,6 +271,64 @@ class WorkspaceAgent(BaseModel):
     cost_usd: float = Field(default=0, alias="costUsd", ge=0, allow_inf_nan=False)
 
 
+class WorkflowTrigger(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["cron", "webhook"]
+    project: str
+    cron: str = Field(default="", max_length=256)
+    input: Any = None
+    paused: bool = Field(default=False, strict=True)
+
+    @model_validator(mode="after")
+    def validate_trigger(self) -> WorkflowTrigger:
+        if self.kind == "cron" and not self.cron.strip():
+            raise ValueError("cron triggers require a Temporal cron expression (UTC)")
+        if self.kind == "webhook" and (self.cron or self.input is not None):
+            raise ValueError("webhook triggers take input from the signed request body")
+        return self
+
+
+class SMTPNotification(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    host: str = Field(min_length=1)
+    port: int = Field(default=587, ge=1, le=65535)
+    start_tls: bool = Field(default=True, alias="startTls", strict=True)
+    username_env: str = Field(default="", alias="usernameEnv", pattern=r"^([A-Z_][A-Z0-9_]*)?$")
+    password_env: str = Field(default="", alias="passwordEnv", pattern=r"^([A-Z_][A-Z0-9_]*)?$")
+    sender: str = Field(pattern=r"^[^\s@]+@[^\s@]+$")
+    recipients: list[str] = Field(min_length=1, max_length=50)
+
+    @field_validator("recipients")
+    @classmethod
+    def validate_recipients(cls, values: list[str]) -> list[str]:
+        if any(not re.fullmatch(r"[^\s@]+@[^\s@]+", value) for value in values):
+            raise ValueError("recipients must contain email addresses without whitespace")
+        return values
+
+    @model_validator(mode="after")
+    def validate_credentials(self) -> SMTPNotification:
+        if bool(self.username_env) != bool(self.password_env) or (self.username_env and not self.start_tls):
+            raise ValueError("SMTP authentication requires usernameEnv, passwordEnv and startTls")
+        return self
+
+
+class TeamNotifications(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    console_url: AnyHttpUrl = Field(alias="consoleUrl")
+    slack_webhook_env: str = Field(default="", alias="slackWebhookEnv", pattern=r"^([A-Z_][A-Z0-9_]*)?$")
+    webhook_env: str = Field(default="", alias="webhookEnv", pattern=r"^([A-Z_][A-Z0-9_]*)?$")
+    smtp: SMTPNotification | None = None
+    budget_threshold: float = Field(default=0.8, alias="budgetThreshold", gt=0, le=1, allow_inf_nan=False)
+
+    @field_validator("console_url")
+    @classmethod
+    def validate_console(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        return ToolRoute.validate_url(value)
+
+
 class WorkflowPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -281,6 +339,14 @@ class WorkflowPolicy(BaseModel):
     token_limit: int = Field(default=10000, alias="tokenLimit", gt=0, le=1_000_000_000, strict=True)
     cost_limit_usd: float = Field(default=5, alias="costLimitUsd", gt=0, le=1_000_000, allow_inf_nan=False)
     agents: dict[str, WorkspaceAgent] = Field(default_factory=dict)
+    triggers: dict[str, WorkflowTrigger] = Field(default_factory=dict)
+
+    @field_validator("triggers")
+    @classmethod
+    def validate_triggers(cls, values: dict[str, WorkflowTrigger]) -> dict[str, WorkflowTrigger]:
+        if any(not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", name) for name in values):
+            raise ValueError("trigger names must be 1-64 letters, digits, underscores or hyphens")
+        return values
 
     @field_validator("allowed_providers")
     @classmethod
@@ -323,6 +389,8 @@ class SandboxPolicy:
     projects: tuple[str, ...] = ()
     provider_credentials: dict[str, str] = field(default_factory=dict)
     cost_limit_usd: float | None = None
+    webhook_secret_env: str = ""
+    notifications: TeamNotifications | None = None
 
 
 @dataclass(frozen=True)
@@ -413,6 +481,19 @@ class SandboxPolicySet:
             for name, workflow in workflow_policies.items():
                 if set(workflow.allowed_tools) - tools.keys():
                     raise ValueError(f"workflow {name} allowedTools must name registered team tools")
+                if workflow.triggers and not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name):
+                    raise ValueError("triggered workflow names must be URL-safe identifiers")
+                if any(trigger.project not in projects for trigger in workflow.triggers.values()):
+                    raise ValueError(f"workflow {name} triggers must name a team project")
+            webhook_secret = item.get("webhookSecretEnv", "")
+            if not isinstance(webhook_secret, str) or not re.fullmatch(r"([A-Z_][A-Z0-9_]*)?", webhook_secret):
+                raise ValueError("webhookSecretEnv must name a gateway environment variable")
+            if not webhook_secret and any(
+                trigger.kind == "webhook"
+                for policy in workflow_policies.values()
+                for trigger in policy.triggers.values()
+            ):
+                raise ValueError("webhook triggers require a per-team webhookSecretEnv")
             policies[sandbox_id] = SandboxPolicy(
                 sandbox_id=sandbox_id,
                 allowed_models=tuple(str(model) for model in item.get("allowedModels", []) if str(model)),
@@ -429,6 +510,10 @@ class SandboxPolicySet:
                 projects=projects,
                 provider_credentials=credentials,
                 cost_limit_usd=cost_limit,
+                webhook_secret_env=webhook_secret,
+                notifications=TeamNotifications.model_validate(item["notifications"])
+                if item.get("notifications")
+                else None,
             )
         return cls(policies)
 

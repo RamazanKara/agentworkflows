@@ -409,6 +409,8 @@ def register_operation_routes(app: FastAPI) -> None:
     async def refresh_metrics() -> None:
         from app.metrics import TEAM_COST_LIMIT, TEAM_SPEND, WORKFLOW_RUNS, WORKFLOW_STATUS_REFRESH
         from app.team_budget import team_cost_report
+        from app.workflow_notifications import notify_run
+        from app.workflow_triggers import reconcile_schedules
 
         while True:
             try:
@@ -426,12 +428,25 @@ def register_operation_routes(app: FastAPI) -> None:
                             },
                         }
                     )
+                    try:
+                        await reconcile_schedules(request)
+                    except (HTTPException, RPCError, OSError):
+                        logging.getLogger("uvicorn.error").warning(
+                            "Schedule configuration unavailable; check Temporal and team cron expressions."
+                        )
                     for project in team.projects:
                         offset = 0
                         while True:
                             ids = await redis_call(request, "zrange", index_key(request, project), offset, offset + 99)
                             for run_id in ids:
-                                row = await describe_run(request, run_id, timeline=False)
+                                try:
+                                    row = await describe_run(request, run_id, timeline=False)
+                                    await notify_run(request, row)
+                                except (HTTPException, RPCError, OSError):
+                                    logging.getLogger("uvicorn.error").warning(
+                                        "Run refresh unavailable; check Temporal, Redis and notification receipts."
+                                    )
+                                    continue
                                 status = row["status"]
                                 if row.get("progress", {}).get("stage") == "awaiting_approval":
                                     status = "awaiting_approval"
