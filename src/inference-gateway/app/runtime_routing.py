@@ -13,6 +13,7 @@ from app.metrics import RUNTIME_FALLBACKS, SHADOW_REQUESTS
 from app.request_context import _runtime_headers
 from app.runtime_client import RuntimeClient
 from app.settings import AdmissionPolicyError
+from app.workflow_budget import model_charge, reserve_run, settle_run_model
 
 
 def _schedule_shadow(client: RuntimeClient, shadow_route: Any, payload_dict: dict[str, Any], request: Request) -> None:
@@ -84,11 +85,23 @@ async def _chat_with_fallback(
 ) -> dict[str, Any]:
     for index, candidate in enumerate(chain):
         attempt = _start_attempt(request, candidate, payload)
+        workflow_call = bool(getattr(request.state, "workflow_run_id", None))
+        reservation = None
+        if workflow_call:
+            effective = route_settings(
+                effective_settings(request, request.app.state.sandbox_policy_set, request.app.state.settings), candidate
+            )
+            reservation = await reserve_run(request, *model_charge(effective, candidate, payload))
+            attempt["reserved"] = request.state.workflow_charge
         try:
+            options = {"retry": False} if workflow_call else {}
             result = await client.chat_completions(
-                dict(payload), headers=_runtime_headers(request), backend=candidate.backend
+                dict(payload), headers=_runtime_headers(request), backend=candidate.backend, **options
             )
             attempt["status"] = "served"
+            await settle_run_model(request, reservation, candidate, result)
+            if workflow_call:
+                attempt["charged"] = request.state.workflow_charge
             return result
         except httpx.HTTPError as exc:
             attempt["status"] = "failed"

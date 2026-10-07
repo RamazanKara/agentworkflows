@@ -210,6 +210,7 @@ jobs:
           # signing/attestation is digest-based).
           gateway_tags="ghcr.io/${IMAGE_REPO}/inference-gateway:${GITHUB_SHA}"
           rag_tags="ghcr.io/${IMAGE_REPO}/rag-service:${GITHUB_SHA}"
+          worker_tags="ghcr.io/${IMAGE_REPO}/workflow-worker:${GITHUB_SHA}"
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             gateway_tags+=$'\n'"ghcr.io/${IMAGE_REPO}/inference-gateway:${GITHUB_REF_NAME}"
             rag_tags+=$'\n'"ghcr.io/${IMAGE_REPO}/rag-service:${GITHUB_REF_NAME}"
@@ -220,6 +221,9 @@ jobs:
             echo "EOF"
             echo "RAG_TAGS<<EOF"
             printf '%s\n' "$rag_tags"
+            echo "EOF"
+            echo "WORKER_TAGS<<EOF"
+            printf '%s\n' "$worker_tags"
             echo "EOF"
           } >> "$GITHUB_ENV"
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1  # v4.4.0
@@ -264,6 +268,18 @@ jobs:
           build-args: |
             VCS_REF=${{ github.sha }}
             IMAGE_SOURCE=https://github.com/${{ github.repository }}
+      - name: Build and push workflow worker image
+        id: build_worker
+        if: github.ref_type != 'tag'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
+        with:
+          context: .
+          file: sdk/python/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.WORKER_TAGS }}
+          cache-from: type=gha,scope=workflow-worker
+          cache-to: type=gha,mode=max,scope=workflow-worker
       - name: Promote previously built SHA images to release tags
         id: promote_images
         if: github.ref_type == 'tag'
@@ -273,23 +289,31 @@ jobs:
           rag_source="ghcr.io/${IMAGE_REPO}/rag-service:${GITHUB_SHA}"
           gateway_target="ghcr.io/${IMAGE_REPO}/inference-gateway:${GITHUB_REF_NAME}"
           rag_target="ghcr.io/${IMAGE_REPO}/rag-service:${GITHUB_REF_NAME}"
+          worker_source="ghcr.io/${IMAGE_REPO}/workflow-worker:${GITHUB_SHA}"
+          worker_target="ghcr.io/${IMAGE_REPO}/workflow-worker:${GITHUB_REF_NAME}"
           docker buildx imagetools inspect "${gateway_source}" >/dev/null
           docker buildx imagetools inspect "${rag_source}" >/dev/null
+          docker buildx imagetools inspect "${worker_source}" >/dev/null
           docker buildx imagetools create --tag "${gateway_target}" "${gateway_source}"
           docker buildx imagetools create --tag "${rag_target}" "${rag_source}"
+          docker buildx imagetools create --tag "${worker_target}" "${worker_source}"
           # Do not exit awk early: with pipefail that closes the pipe while
           # buildx is still writing, so a successful inspect reports SIGPIPE.
           gateway_digest="$(docker buildx imagetools inspect "${gateway_target}" | awk '/^Digest:/ {print $2}')"
           rag_digest="$(docker buildx imagetools inspect "${rag_target}" | awk '/^Digest:/ {print $2}')"
+          worker_digest="$(docker buildx imagetools inspect "${worker_target}" | awk '/^Digest:/ {print $2}')"
           [[ "${gateway_digest}" == sha256:* && "${rag_digest}" == sha256:* ]]
           echo "gateway_digest=${gateway_digest}" >> "$GITHUB_OUTPUT"
           echo "rag_digest=${rag_digest}" >> "$GITHUB_OUTPUT"
+          [[ "${worker_digest}" == sha256:* ]]
+          echo "worker_digest=${worker_digest}" >> "$GITHUB_OUTPUT"
       - name: Package and publish digest-bound Helm charts
         if: github.ref_type == 'tag'
         env:
           HELM_EXPERIMENTAL_OCI: "1"
           GATEWAY_DIGEST: ${{ steps.promote_images.outputs.gateway_digest }}
           RAG_DIGEST: ${{ steps.promote_images.outputs.rag_digest }}
+          WORKER_DIGEST: ${{ steps.promote_images.outputs.worker_digest }}
         run: |
           set -euo pipefail
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
@@ -299,6 +323,7 @@ jobs:
             --version "${GITHUB_REF_NAME#v}" \
             --gateway-digest "${GATEWAY_DIGEST}" \
             --rag-digest "${RAG_DIGEST}" \
+            --worker-digest "${WORKER_DIGEST}" \
             --source-revision "${GITHUB_SHA}" \
             --output-dir chart-packages
           : > chart-oci-refs.txt
@@ -390,10 +415,13 @@ jobs:
           GATEWAY_DIGEST: ${{ github.ref_type == 'tag' && steps.promote_images.outputs.gateway_digest || steps.build_gateway.outputs.digest }}
           RAG_IMAGE: ghcr.io/${{ env.IMAGE_REPO }}/rag-service
           RAG_DIGEST: ${{ github.ref_type == 'tag' && steps.promote_images.outputs.rag_digest || steps.build_rag.outputs.digest }}
+          WORKER_IMAGE: ghcr.io/${{ env.IMAGE_REPO }}/workflow-worker
+          WORKER_DIGEST: ${{ github.ref_type == 'tag' && steps.promote_images.outputs.worker_digest || steps.build_worker.outputs.digest }}
         run: |
           set -euo pipefail
           cosign sign --yes "${GATEWAY_IMAGE}@${GATEWAY_DIGEST}"
           cosign sign --yes "${RAG_IMAGE}@${RAG_DIGEST}"
+          cosign sign --yes "${WORKER_IMAGE}@${WORKER_DIGEST}"
       - name: Sign Helm chart OCI artifacts
         if: github.ref_type == 'tag'
         run: |

@@ -1,14 +1,18 @@
 # Feature inventory
 
-This is the release-level source of truth for what `v0.1.0` implements, what is enabled by
+This is the source of truth for what the current checkout implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
 configured.
 
-Durable workflow execution and human approvals are planned, not shipped in 0.1.0.
+Milestone 2 adds [durable workflows and approval signals](workflows.md) through Temporal.
 
 | Capability | Status | Default | Verification / boundary |
 | --- | --- | --- | --- |
+| Durable workflows | Shipped | Compose on; Helm/GitOps chart | Temporal with dedicated Postgres; worker-SIGKILL recovery smoke |
+| Governed tool execution | Shipped | Deny unless configured in team policy | Fixed URLs, DLP, budget reservations, idempotency keys, run/step receipts |
+| Workflow token/cost budgets | Shipped | 10,000 tokens / $5 per run in SDK | Immutable team-scoped Redis counters; unknown attempts retain reservations |
+| Human approvals | Shipped | Signal + query in example | Durable wait with expiry; verified approver identity and production Temporal authorization remain operator-owned |
 | OpenAI chat completions | Shipped | On | Gateway tests, OpenAPI contract, local smoke |
 | Legacy completions | Shipped | On, non-streaming | Gateway tests; streaming rejected explicitly |
 | Embeddings | Shipped | On | Gateway tests; same auth, budget, audit, and model policy |

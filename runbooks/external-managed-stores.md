@@ -12,7 +12,7 @@ dev/reference default, not a production topology:
 
 | Store | Bundled footprint | What it holds | SPOF? |
 | --- | --- | --- | --- |
-| Budget / response-cache Redis | [`deploy/charts/budget-redis`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis), 1 replica, no persistence, `podDisruptionBudget.minAvailable: 0` | Shared per-sandbox budget counters and the optional exact-match response cache | Yes; a restart drops counters, an outage fails budgets closed (503) |
+| Budget / response-cache Redis | [`deploy/charts/budget-redis`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis), 1 replica, AOF and PVC persistence, `podDisruptionBudget.minAvailable: 0` | Shared per-sandbox budget counters and the optional exact-match response cache | Yes; no replication or automatic failover, an outage fails budgets closed (503) |
 | Qdrant vector store | [`deploy/charts/qdrant-vector-store`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store), single-instance, **enforced** by [`values.schema.json`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store/values.schema.json) (`replicaCount` max 1) on one RWO PVC | RAG dense vectors / hybrid retrieval corpus | Yes; a node drain briefly evicts retrieval |
 | Loki logging | [`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml), `deploymentMode: SingleBinary`, `replication_factor: 1`, filesystem storage, 31-day retention | Pod stdout including the redacted gateway/RAG audit JSON | Yes; filesystem-backed, not replicated |
 

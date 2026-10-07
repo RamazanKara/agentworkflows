@@ -1,0 +1,12 @@
+apiVersion: platform.ai/v1alpha1
+kind: SandboxPolicySet
+spec:
+  policies:
+    - sandboxId: demo
+      tools:
+        research:
+          url: http://cloud-fake:8000/tools/research
+          costUsd: 0.01
+        publish:
+          url: http://cloud-fake:8000/tools/publish
+          costUsd: 0.02

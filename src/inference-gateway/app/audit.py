@@ -35,6 +35,10 @@ AUDIT_LOGGER = logging.getLogger("agentworkflows.audit")
 
 def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
     """Hash-link an audit event into the current gateway process chain."""
+    if getattr(request.state, "workflow_run_id", None):
+        event["workflow_run_id"] = request.state.workflow_run_id
+        event["workflow_step_id"] = request.state.workflow_step_id
+        event["workflow_charge"] = getattr(request.state, "workflow_charge", None)
     state = request.app.state
     previous = getattr(state, "audit_prev_hash", AUDIT_GENESIS)
     event["prev_hash"], event["record_hash"] = advance_chain(previous, event)
@@ -216,7 +220,7 @@ def write_audit_log(
         # Per-process chain identity (hash-covered): lets the verifier group records into
         # independent per-replica chains and anchor each head. Legacy upstream events lack it.
         "chain_id": getattr(request.app.state, "audit_chain_id", None),
-        "action_type": "model_call",
+        "action_type": getattr(request.state, "action_type", "model_call"),
         "decision": "allowed" if status_code < 400 else "denied",
         "guardrail_action": getattr(request.state, "output_guardrail_action", None),
         "prompt_guardrail_action": getattr(request.state, "prompt_guardrail_action", None),
@@ -250,6 +254,8 @@ def write_audit_log(
         "budget_settlement": getattr(request.state, "budget_settlement", None),
     }
     event.update(payload_fingerprint(payload))
+    if getattr(request.state, "tool", None):
+        event["tool"] = request.state.tool
     chain_audit_event(request, event)
     emit_audit_record(event)
 

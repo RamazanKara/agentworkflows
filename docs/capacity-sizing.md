@@ -66,7 +66,7 @@ Embedding dimensions in the RAG values must match the selected embedding model a
 
 ## Redis, object storage, and logs
 
-The bundled budget Redis is a single, non-persistent development store. It is also used by optional gateway state. A restart can lose counters or cached/stateful data depending on the enabled features. Use the [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) before relying on it for a multi-replica customer deployment.
+The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. Disk loss or deleting the PVC can still lose counters and optional state. Use the [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) before relying on it for a multi-replica customer deployment.
 
 Files and asynchronous batches require an object store when enabled. Include upload limits, object retention, failed-batch output, and cleanup in the storage estimate.
 

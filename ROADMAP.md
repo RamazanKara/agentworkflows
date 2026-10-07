@@ -11,17 +11,18 @@ model policies, classification-aware fallback, token budgets, usage accounting, 
 receipts. Ollama and vLLM remain optional self-hosted backends. The local walkthrough
 uses provider protocol fixtures; live provider acceptance is deployment-specific.
 
-## Next: durable agent workflows
+## Milestone 2: durable agent workflows — delivered in this checkout
 
-- Persist workflow state and resume after worker restarts.
-- Define retry, idempotency, cancellation, and timeout behavior for model and tool steps.
-- Correlate model and tool receipts with a workflow run and its steps.
+- Temporal with dedicated PostgreSQL, Compose, and an official-chart-based GitOps deployment.
+- Python workflow SDK: governed model/tool activities, backoff, timeouts, per-run budgets,
+  provider fallback, and human-approval signals.
+- Run/step receipt correlation and a worker-SIGKILL recovery test with cloud fixtures.
 
 The existing Batch API and stored Responses are not a durable workflow engine.
 
 ## Then: approvals and team operations
 
-- Pause and resume runs for human approval, with attributable decisions.
+- Connect approval decisions to verified team identities and a team-facing review experience.
 - Make team onboarding, budgets, and workflow history accessible to team leads.
 - Add instrumented tool producers so receipt coverage is explicit and measurable.
 

@@ -1,8 +1,8 @@
 # Quickstart
 
 Try AgentWorkflows in ten minutes: discover models, send a governed call, inspect your
-team's usage, and verify a receipt. Version 0.1.0 implements governed cloud providers;
-durable workflows and human approvals are planned.
+team's usage, run a durable workflow, and verify its receipts. This checkout adds Temporal
+execution and human approvals to the governed cloud gateway.
 
 ## Docker Compose
 
@@ -20,13 +20,20 @@ The images build one at a time. The gateway listens on `127.0.0.1:8080`, and ret
 `127.0.0.1:8090`. The bundled `cloud-fake` service supplies synthetic responses and prices
 for all five provider protocols. This trial tests routing, streaming, budgets, secret
 blocking, confidential-data refusal, reported agent actions, and audit verification.
-It does not validate a live provider account or measure model quality.
+It also kills and replaces a Temporal worker during a research workflow, then verifies
+approval, publication, and no repeated completed model calls. It does not validate a live
+provider account or measure model quality.
 
 The walkthrough ends with `All checks passed` after deliberately editing a receipt and
 checking that verification rejects it. The original log is `.out/compose/gateway-audit.jsonl`.
 Open <http://127.0.0.1:8080/console> and enter `local-development-only` to inspect health,
 models, usage, and budgets. This public demo key is bound to sandbox `demo`; do not reuse it
 outside the trial.
+
+Temporal history and approval signals are visible at <http://127.0.0.1:8233>. Follow the
+[workflow guide](workflows.md) to start a run, read its draft, approve or reject it, and
+inspect its token/cost budget. Temporal uses its own PostgreSQL; run budgets use persistent
+Redis. Both survive ordinary container restarts.
 
 ## Make your first call
 
@@ -114,7 +121,7 @@ make compose-down
 ```
 
 Compose does not install Kubernetes network policies, hardened workspaces, GitOps, or
-Redis-backed shared state. The local lab below is for evaluating those optional components.
+production availability controls. The local lab below evaluates Kubernetes deployment.
 
 ## Local Kubernetes lab
 

@@ -1,0 +1,57 @@
+postgres:
+  image: postgres:16-alpine
+  existingSecret: temporal-postgres-auth
+  storage: 10Gi
+
+worker:
+  image: ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.1.0
+  gatewayUrl: http://inference-gateway.inference.svc.cluster.local:8080
+  existingSecret: workflow-gateway-key
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: "1", memory: 512Mi}
+
+temporal:
+  fullnameOverride: temporal
+  server:
+    replicaCount: 1
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {cpu: "1", memory: 1Gi}
+    config:
+      persistence:
+        numHistoryShards: 4
+        datastores:
+          default:
+            sql:
+              pluginName: postgres12
+              databaseName: temporal
+              connectAddr: temporal-postgres:5432
+              user: temporal
+              existingSecret: temporal-postgres-auth
+              maxConns: 5
+              maxIdleConns: 5
+          visibility:
+            sql:
+              pluginName: postgres12
+              databaseName: temporal_visibility
+              connectAddr: temporal-postgres:5432
+              user: temporal
+              existingSecret: temporal-postgres-auth
+              maxConns: 5
+              maxIdleConns: 5
+      namespaces:
+        create: true
+        useHelmHooks: false
+        namespace:
+          - name: default
+            retention: 30d
+  schema:
+    # PostgreSQL is part of this release, so schema creation must not run as a pre-install hook.
+    useHelmHooks: false
+  admintools:
+    enabled: false
+  web:
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 500m, memory: 256Mi}

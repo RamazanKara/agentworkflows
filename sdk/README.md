@@ -12,8 +12,9 @@ python -m pip install ./sdk/python
 
 [`python/agentworkflows`](python/agentworkflows/__init__.py) provides `GatewayClient`, which
 covers the gateway's OpenAI-compatible and Anthropic endpoints, Files/Batch, Responses, and
-agent-action receipts with the platform headers (`X-Sandbox-ID`, bearer auth). Its only
-dependency is `httpx`, and it ships inline type annotations. The
+agent-action receipts with the platform headers (`X-Sandbox-ID`, bearer auth). The package
+also includes the Temporal workflow SDK; its dependencies are `httpx` and `temporalio`.
+It ships inline type annotations. The
 [package README](python/README.md) lists the full surface and its retry and error behavior.
 
 ```python

@@ -182,13 +182,14 @@ class RuntimeClient:
         body: dict[str, Any],
         headers: dict[str, str] | None,
         resolved_backend: str,
+        retry: bool = True,
     ) -> dict[str, Any]:
         """POST a JSON body with circuit, retry, and backoff; return the parsed object.
 
         Shared by the chat, embeddings, and any future non-streaming runtime calls so
         they get identical resilience behavior.
         """
-        attempts = self.settings.runtime_max_retries + 1
+        attempts = self.settings.runtime_max_retries + 1 if retry else 1
         last_error: httpx.HTTPError | None = None
         data: Any = None
         client = self._client_instance()
@@ -227,13 +228,14 @@ class RuntimeClient:
         payload: dict[str, Any],
         headers: dict[str, str] | None = None,
         backend: str | None = None,
+        retry: bool = True,
     ) -> dict[str, Any]:
         """Send a chat-completion request, retrying transient errors, and sanitize the result."""
         body = self._chat_completion_body(payload)
         resolved_backend = backend or self.settings.runtime_backend
         url, body, headers, route = self._request_parts(body, resolved_backend, "chat/completions", headers)
         data = await self._post_json_with_retry(
-            url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend
+            url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend, retry=retry
         )
         if route:
             data = cloud_response(data, route)

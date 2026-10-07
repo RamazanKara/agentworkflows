@@ -12,10 +12,9 @@ AWS Bedrock, and Vertex Gemini behind one API. Bind credentials to teams, contro
 models they can call, account for usage, and inspect the audit trail. Self-hosted Ollama
 and vLLM models are optional add-ons.
 
-Version **0.1.0** starts with **Milestone 1: governed cloud providers**. Durable agent
-workflows, human approvals, and broader team administration are the product direction;
-they are not implemented yet. The existing asynchronous Batch API and stored Responses
-are building blocks, not a durable workflow engine. See the [roadmap](ROADMAP.md).
+Version **0.1.0** delivered governed cloud providers. This checkout adds **Milestone 2:
+durable agent workflows** with Temporal, human approval signals, per-run budgets, and
+model/tool receipts. See the [workflow guide](docs/workflows.md) and [roadmap](ROADMAP.md).
 
 ## Try it in ten minutes
 
@@ -33,6 +32,10 @@ The walkthrough sends governed requests through all five cloud adapters, checks 
 and fallback, refuses confidential traffic to cloud routes, tests secret blocking, reads
 usage and cost, verifies the audit chain, and detects an edited receipt. Responses and prices
 are synthetic; this demonstrates gateway behavior, not live provider compatibility or model quality.
+
+It also runs research → draft → approval → publish, kills the worker, and proves recovery
+without repeating completed model calls. Open Temporal at <http://localhost:8233> or
+[start and approve your own run](docs/workflows.md).
 
 Open the read-only console at <http://127.0.0.1:8080/console>. Use the public demo key
 `local-development-only` to inspect models, usage, and budgets. It is only for this local trial.
@@ -73,9 +76,10 @@ models, troubleshooting, and the Kubernetes lab.
 | Capability | How to use it |
 | --- | --- |
 | Governed cloud providers and ordered fallback | [Provider configuration](docs/client-examples.md); provider credentials stay on the server |
+| Durable agent workflows and human approvals | [Temporal workflow SDK and walkthrough](docs/workflows.md); retry, pause, and resume with per-run token/cost budgets |
 | Team usage and budgets | Bind a key to a sandbox/team; inspect `/v1/usage`, `/v1/sandbox/budget`, or the [console](runbooks/api-access.md) |
 | OpenAI and Anthropic API compatibility | [Client examples](docs/client-examples.md) for chat, streaming, embeddings, Messages, Files, Batch, and Responses; support varies by provider |
-| Model and reported tool-action receipts | [Audit verification](runbooks/audit-chain.md) and `POST /v1/receipts`; tools must report their actions |
+| Model and tool-action receipts | Workflow tool execution is governed and receipted automatically; [other producers report actions](runbooks/audit-chain.md) with `POST /v1/receipts` |
 | Optional retrieval and agent workspaces | [RAG](runbooks/rag-service.md) and hardened [agent-sandbox workspaces](docs/agent-sandbox-integration.md) |
 | Deployment and operational checks | Helm, Argo CD, [release verification](docs/release-verification.md), and [production readiness](docs/production-readiness.md) |
 

@@ -11,12 +11,12 @@ workspaces are optional. Start with the [ten-minute trial](quickstart.md).
 | Govern OpenAI, Anthropic, Azure OpenAI, Bedrock, or Vertex Gemini | Milestone 1 supplies the adapters, model policies, and classification-aware fallback |
 | Attribute usage and enforce team token budgets | Bind gateway credentials to a sandbox/team; inspect usage and configured-price cost estimates |
 | Verify recorded model and tool actions | Hash-chained model receipts and reported tool actions; configure producers, retention, and external anchors |
-| Resume durable workflows or wait for human approval | Planned; not available in 0.1.0 |
+| Resume durable workflows or wait for human approval | [Temporal workflow SDK](workflows.md), approval signals, per-run budgets, and crash-recovery smoke |
 | Use private local models | Optional Ollama and vLLM backends |
 | Buy a managed service with billing and support | This repository does not yet provide one |
 
-The product direction combines cloud-provider routing with durable workflow execution.
-It does not claim LiteLLM's provider breadth or Temporal's workflow guarantees today.
+The platform combines cloud-provider routing with Temporal's durable workflow execution.
+It does not claim LiteLLM's provider breadth or exactly-once external side effects.
 Use the [feature inventory](feature-inventory.md) for implemented behavior and the
 [roadmap](https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md) for planned work.
 

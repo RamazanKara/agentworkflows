@@ -118,6 +118,9 @@ status="$(request POST /v1/chat/completions "{\"model\":\"demo-openai\",\"messag
 [[ "$status" == "400" ]] || fail "cloud credential blocking returned $status"
 ok "cloud requests share prompt credential blocking"
 
+step "7c. Durable research workflow: human approval, worker crash, and replay without repeated model calls"
+bash scripts/workflow-smoke.sh
+
 step "8. Usage and estimated cost for the sandbox"
 status="$(request GET /v1/usage)"
 [[ "$status" == "200" ]] || fail "usage returned $status"

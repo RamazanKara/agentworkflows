@@ -590,6 +590,16 @@ class Settings:
                 "streaming responses are disabled for this gateway",
             )
 
+    def validate_tool_admission(self, payload: dict) -> None:
+        """Apply input size and content policies to executed tool arguments."""
+        prompt_chars = message_prompt_chars(payload["messages"])
+        if prompt_chars > self.max_prompt_chars:
+            raise AdmissionPolicyError(
+                "prompt_too_large", f"tool input has {prompt_chars} characters; limit is {self.max_prompt_chars}"
+            )
+        for text in iter_payload_strings(payload):
+            self._enforce_content_policy(text)
+
     def validate_embedding_admission(self, payload: dict) -> None:
         """Enforce model, input-size, and secret rules for an embeddings request.
 

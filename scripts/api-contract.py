@@ -95,6 +95,9 @@ CONTRACTS = {
             # Agent-action receipt intake (ADR 0014): auth-required and tenant-scoped like
             # every other write surface; records claims, enforces nothing.
             "/v1/receipts": RouteContract("post", request_schema="ReceiptRequest"),
+            "/v1/workflow-runs/{run_id}": RouteContract("put", request_schema="RunBudget"),
+            "/v1/tools": RouteContract("get"),
+            "/v1/tools/{tool}/call": RouteContract("post", request_schema="ToolCall"),
         },
         protected_paths=frozenset(
             {
@@ -117,6 +120,9 @@ CONTRACTS = {
                 "/v1/responses/{response_id}",
                 "/v1/responses/{response_id}/input_items",
                 "/v1/receipts",
+                "/v1/workflow-runs/{run_id}",
+                "/v1/tools",
+                "/v1/tools/{tool}/call",
             }
         ),
         required_schemas={

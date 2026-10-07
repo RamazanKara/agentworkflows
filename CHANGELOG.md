@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Milestone 2
+
+- Temporal-backed Python workflows with governed model/tool activities, retries, timeouts,
+  per-run token/cost budgets, provider fallback, approval signals, and run-linked receipts.
+- Self-hosted Temporal, dedicated PostgreSQL, persistent budget Redis, and a worker in
+  Compose and Helm/GitOps using the official Temporal chart.
+- Research → draft → approval → publish example; Compose smoke kills its worker and verifies
+  recovery without repeating completed model calls. Added workflow SDK and gateway tests.
+- Ten-minute workflow guide covering tool policies, deployment, and recovery boundaries.
+
 ## v0.1.0 - 2026-10-07
 
 First AgentWorkflows product version, forked from private-ai-platform-kit with full Git history.

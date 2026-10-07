@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from math import isfinite
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 import yaml
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
 from app.settings import Settings, validate_sandbox_id
 
@@ -232,6 +233,17 @@ class ModelRoutingPolicy:
         ]
 
 
+class ToolRoute(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    url: AnyHttpUrl
+    cost_usd: float = Field(alias="costUsd", ge=0, allow_inf_nan=False)
+    credential_env: str = Field(default="", alias="credentialEnv", pattern=r"^([A-Z][A-Z0-9_]*)?$")
+    data_classification: str = Field(
+        default="internal", alias="dataClassification", pattern=r"^(public|internal|confidential|restricted)$"
+    )
+
+
 @dataclass(frozen=True)
 class SandboxPolicy:
     """Per-sandbox overrides for admission limits and budget allowances."""
@@ -246,6 +258,7 @@ class SandboxPolicy:
     prompt_char_budget: int | None = None
     estimated_token_budget: int | None = None
     data_classification: str = "internal"
+    tools: dict[str, ToolRoute] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -289,6 +302,9 @@ class SandboxPolicySet:
                 raise ValueError(
                     "SandboxPolicySet dataClassification must be public, internal, confidential, or restricted"
                 )
+            raw_tools = item.get("tools", {})
+            if not isinstance(raw_tools, dict):
+                raise ValueError("SandboxPolicySet tools must map approved tool names to URLs and costUsd")
             policies[sandbox_id] = SandboxPolicy(
                 sandbox_id=sandbox_id,
                 allowed_models=tuple(str(model) for model in item.get("allowedModels", []) if str(model)),
@@ -300,6 +316,7 @@ class SandboxPolicySet:
                 prompt_char_budget=_optional_non_negative_int(budgets, "promptCharLimit", sandbox_id),
                 estimated_token_budget=_optional_non_negative_int(budgets, "estimatedTokenLimit", sandbox_id),
                 data_classification=classification,
+                tools={name: ToolRoute.model_validate(target) for name, target in raw_tools.items()},
             )
         return cls(policies)
 

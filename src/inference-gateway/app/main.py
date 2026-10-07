@@ -72,6 +72,7 @@ from app.settings import (
     validate_sandbox_id,
 )
 from app.tracing import configure_tracing, trace_request
+from app.workflow_api import bind_workflow, register_workflow_routes
 
 SERVICE_VERSION = "0.1.0"
 OPENAPI_DESCRIPTION = (
@@ -217,6 +218,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 request.headers.get("x-sandbox-id", resolved.default_sandbox_id)
             )
             request.state.traceparent = _traceparent_from_header(request)
+            bind_workflow(request)
             request.state.principal = None
             # True only when the sandbox id comes from a verified binding (an API-key record
             # with a sandbox, or a JWT tenant claim) rather than the client-asserted header.
@@ -326,6 +328,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         return _rate_limited_response(request, retry_after)
 
             # Bounded concurrency is enforced by ConcurrencyLimitMiddleware inside this one.
+            if getattr(request.state, "workflow_run_id", None) and not (
+                request.url.path == "/v1/chat/completions"
+                or (request.url.path.startswith("/v1/tools/") and request.url.path.endswith("/call"))
+            ):
+                return JSONResponse(
+                    status_code=400, content={"detail": "Workflow activities support chat and tool calls only."}
+                )
             response = await call_next(request)
             response.headers["X-Request-ID"] = request.state.request_id
             response.headers["X-Sandbox-ID"] = request.state.sandbox_id
@@ -485,6 +494,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_inference_routes(app, resolved)
     register_messages_routes(app, resolved)
     register_responses_routes(app, resolved)
+    register_workflow_routes(app, resolved)
 
     _install_openapi_contract(app, resolved)
     return app

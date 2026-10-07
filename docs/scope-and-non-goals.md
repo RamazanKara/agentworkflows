@@ -1,15 +1,16 @@
 # Scope and non-goals
 
-This page defines the boundary of release `v0.1.0`. For per-feature defaults, use the [feature inventory](feature-inventory.md).
+This page defines the current checkout's boundary. For per-feature defaults, use the [feature inventory](feature-inventory.md).
 
-AgentWorkflows is cloud-first. Durable agent workflows and human approvals are planned;
-0.1.0 provides the governed gateway foundation and optional self-hosted components.
+AgentWorkflows is cloud-first. Temporal provides durable execution and approval signals;
+the gateway governs model/tool activities and per-run budgets. Self-hosted models remain optional.
 
 ## In scope
 
 The repository contains and tests:
 
 - the inference gateway and RAG service under `src/`;
+- the Temporal workflow SDK and example under `sdk/python/`, with Compose and Helm/GitOps deployment;
 - Helm charts for those services, Ollama, vLLM, Redis, Qdrant, and agent workspaces;
 - local and customer Argo CD application manifests;
 - Kubernetes policy, tenant templates, model catalog records, eval definitions, and SLO inputs;
