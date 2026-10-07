@@ -67,3 +67,12 @@ protocols and the extended Compose walkthrough are tested with local fakes. See
 
 For operational acceptance criteria, use the [Production readiness matrix](production-readiness.md).
 For exact supported versions, use the [Version matrix](version-matrix.md).
+
+## Team operations (0.2.0)
+
+Projects and admin/builder/approver/viewer roles extend existing sandbox identities.
+The authenticated API/CLI starts, lists, inspects, cancels, retries, and approves runs;
+timelines include provider, model, tokens, estimated cost, duration, and receipt IDs.
+Team provider-key mappings, shared token/USD budgets, reports, and Grafana dashboards/alerts
+are included. Onboarding is declarative; Temporal and workers remain trusted operator
+surfaces. Follow the [team walkthrough](workflows.md).

@@ -335,6 +335,9 @@ def _api_key_principal(request: Request, settings: Settings, record: KeyRecord |
             principal["scopes"] = sorted(record.scopes)
         if record.sandbox is not None:
             principal["bound_sandbox"] = record.sandbox
+        if record.role:
+            principal["role"] = record.role
+            principal["project"] = record.project
         return principal
     api_key = _api_key_from_request(request, settings) or ""
     # Non-reversible attribution identifier, not a security control and not password
@@ -359,6 +362,17 @@ def _jwt_principal(claims: dict[str, Any]) -> dict[str, Any]:
     scopes = JwtVerifier._claim_scopes(claims)
     if scopes:
         principal["scopes"] = sorted(scopes)
+    role = claims.get("role")
+    project = claims.get("project")
+    if (
+        isinstance(role, str)
+        and role in {"admin", "builder", "approver", "viewer"}
+        and isinstance(subject, str)
+        and subject
+        and (project is None or isinstance(project, str))
+    ):
+        principal["role"] = role
+        principal["project"] = project
     return principal
 
 

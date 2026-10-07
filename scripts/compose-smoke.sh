@@ -128,6 +128,8 @@ agent_run="$(python3 -c "import json; print(json.load(open('$OUT/frameworks.json
 status="$(request GET /v1/workflow-policies)"
 [[ "$status" == "200" ]] || fail "workflow policy discovery returned $status"
 [[ "$(json "d['workflows']['FrameworkWorkflow']['allowedTools']")" == "['team.search']" ]] || fail "MCP allowlist missing"
+saved_key="$KEY"
+KEY=demo-worker
 status="$(request POST /v1/tools/publish/call '{"arguments":{}}' \
   -H "X-Workflow-Run-ID: $agent_run" -H 'X-Workflow-Step-ID: smoke-denied')"
 [[ "$status" == "403" ]] || fail "workflow tool denial returned $status"
@@ -158,6 +160,8 @@ assert {e["status_code"] for e in events} >= {200, 400, 403}
 assert all(e["workflow"] == "FrameworkWorkflow" for e in events)
 print("[agents] four framework steps and MCP succeeded; tool/model denials and argument DLP receipted")
 PY
+
+KEY="$saved_key"
 
 step "8. Usage and estimated cost for the sandbox"
 status="$(request GET /v1/usage)"

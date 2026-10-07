@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased — Milestones 2–3
+## v0.2.0 - 2026-10-07
+
+- Projects and admin/builder/approver/viewer roles on existing sandbox credentials;
+  per-team provider secrets, shared USD limits, and cross-provider usage reports.
+- Authenticated workflow API and CLI: start, list, inspect, cancel, retry, and approve;
+  verified reviewer identities and step timelines with provider, cost, and receipt IDs.
+- Grafana team operations dashboard and alerts. Cloud-first Compose smoke checks roles,
+  isolation, timeline, spend, cancellation/retry, and worker recovery against local fakes.
+- Team-lead documentation and version metadata. The gateway adds the Temporal client
+  dependency to control the existing workflow service. No tag or publication is implied.
+
+### Durable workflows and agent integrations (milestones 2–3)
 
 - Framework adapters and runnable OpenAI, Anthropic, OpenAI Agents SDK, and LangGraph examples
   using the governed gateway within Temporal activities; optional framework dependencies.

@@ -110,8 +110,8 @@ async def main() -> None:
     result = await client.execute_workflow(
         FrameworkWorkflow.run,
         " ".join(sys.argv[1:]) or "Evaluate team agents",
-        id=f"frameworks-{uuid4()}",
-        task_queue="research",
+        id=f"{os.getenv('AGENTWORKFLOWS_TEAM', 'demo')}/default/{uuid4()}",
+        task_queue=os.getenv("TEMPORAL_TASK_QUEUE", "research"),
         execution_timeout=timedelta(minutes=5),
     )
     print(json.dumps(result))

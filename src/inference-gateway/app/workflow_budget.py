@@ -119,6 +119,12 @@ async def load_run_policy(request: Request) -> None:
     name = raw.get("workflow", "")
     request.state.workflow_name = name
     team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    if team and team.projects:
+        request.state.project_id = raw.get("project") or team.projects[0]
+        if (request.state.principal or {}).get("auth") != "workflow_step":
+            from app.teams import project_access
+
+            project_access(request, request.state.project_id)
     policy = team.workflows.get(name) if team else None
     if policy is None and (raw.get("policy_required") == "1" or (team and team.workflows)):
         raise AdmissionPolicyError("workflow_not_allowed", "Choose a workflow from GET /v1/workflow-policies.")

@@ -41,9 +41,27 @@ def bind_workflow(request: Request) -> None:
 
 
 def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
+    from app.workflow_operations import describe_run, register_operation_routes, save_metadata
+
+    register_operation_routes(app)
+
     @app.put("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Initialize an immutable per-run budget")
     async def initialize_run(request: Request, run_id: UUID, budget: RunBudget) -> dict[str, Any]:
         team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        project = None
+        if team and team.projects:
+            from app.teams import project_access
+
+            workflow_id = request.headers.get("x-workflow-id", "")
+            parts = workflow_id.split("/")
+            if len(parts) != 3 or parts[0] != request.state.sandbox_id:
+                raise HTTPException(
+                    403, detail="Worker workflow ID must be team/project/id; start runs through the workflow API."
+                )
+            project = project_access(request, parts[1])
+            intent = await redis_call(request, "get", f"{settings.sandbox_budget_key_prefix}:start:{workflow_id}")
+            if intent:
+                await save_metadata(request, str(run_id), json.loads(intent))
         policy = team.workflows.get(budget.workflow) if team else None
         if team and team.workflows and policy is None:
             raise HTTPException(
@@ -79,15 +97,26 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
                     "message": "A run's budget cannot be changed; use its original limits.",
                 },
             )
+        if project:
+            await redis_call(request, "hset", run_key(request, str(run_id)), "project", project)
         return {"run_id": str(run_id), **budget.model_dump()}
 
     @app.get("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Inspect this team's run budget")
     async def run_usage(request: Request, run_id: UUID) -> dict[str, Any]:
+        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        if team and team.projects:
+            from app.teams import project_access
+
+            metadata = await redis_call(request, "get", run_key(request, str(run_id)) + ":metadata")
+            if metadata:
+                return await describe_run(request, str(run_id))
         raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))
         if not raw:
             raise HTTPException(
                 404, detail={"reason": "workflow_run_missing", "message": "No budget exists for this run in your team."}
             )
+        if team and team.projects:
+            project_access(request, raw.get("project"))
         return {
             "run_id": str(run_id),
             "sandbox_id": request.state.sandbox_id,
@@ -171,6 +200,7 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
                         "tool_not_configured", "The administrator must configure this tool's server-side credential."
                     )
                 headers["Authorization"] = f"Bearer {credential}"
+            request.state.tool_cost = target.cost_usd
             await reserve_budget(request, effective, payload)
             await reserve_run(request, 0, target.cost_usd)
             request.state.workflow_charge = {"tokens": 0, "cost_usd": target.cost_usd}

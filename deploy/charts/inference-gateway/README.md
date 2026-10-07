@@ -111,7 +111,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `guardrails.promptSecretDetection.patterns` | `["private_key", "github_token", "slack_token", "aws_access_key_id", "google_api_key", "bearer_token", "generic_api_ke...` |
 | `image.pullPolicy` | `IfNotPresent` |
 | `image.repository` | `ghcr.io/ramazankara/agentworkflows/inference-gateway` |
-| `image.tag` | `v0.1.0` |
+| `image.tag` | `v0.2.0` |
 | `ingress.annotations` | `{}` |
 | `ingress.className` | `""` |
 | `ingress.enabled` | `false` |
@@ -134,7 +134,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `networkPolicy.allowedIngressNamespaces` | `["workflows", "ai-agents", "ai-sandbox", "monitoring"]` |
 | `networkPolicy.enabled` | `true` |
 | `networkPolicy.metricsIngressNamespaces` | `["monitoring"]` |
-| `networkPolicy.runtimeEgress` | `[{"namespace": "ollama", "port": 11434}, {"namespace": "vllm", "port": 8000}, {"namespace": "budget", "port": 6379}]` |
+| `networkPolicy.runtimeEgress` | `[{"namespace": "workflows", "port": 7233}, {"namespace": "ollama", "port": 11434}, {"namespace": "vllm", "port": 8000...` |
 | `observability.tracing.enabled` | `false` |
 | `observability.tracing.otlpEndpoint` | `""` |
 | `observability.tracing.serviceName` | `inference-gateway` |

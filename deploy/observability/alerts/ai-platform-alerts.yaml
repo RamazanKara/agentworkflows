@@ -294,3 +294,50 @@ spec:
           annotations:
             summary: Admission rejections are elevated; review for a prompt, policy, or model regression.
             runbook_url: runbooks/model-drift-monitoring.md
+    - name: workflows.rules
+      rules:
+        - alert: WorkflowThroughputStalled
+          expr: |
+            (max by (team) (inference_gateway_workflow_runs{status="running"}) > 0)
+            unless on (team)
+            (label_replace(sum by (sandbox) (increase(inference_gateway_sandbox_requests_total[15m])), "team", "$1", "sandbox", "(.*)") > 0)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Active team runs have made no governed calls; inspect the worker and task queue.
+            runbook_url: runbooks/incident-inference-runtime.md
+        - alert: WorkflowFailures
+          expr: max by (team) (delta(inference_gateway_workflow_runs{status="failed"}[15m])) > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: A team workflow failed; inspect its timeline before retrying side effects.
+            runbook_url: runbooks/incident-inference-runtime.md
+        - alert: WorkflowApprovalsWaiting
+          expr: max by (team) (inference_gateway_workflow_runs{status="awaiting_approval"}) > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Drafts are waiting for an authenticated team approver.
+            runbook_url: runbooks/incident-inference-runtime.md
+        - alert: TeamSpendNearLimit
+          expr: |
+            max by (team) (inference_gateway_team_spend_usd)
+            / on (team) (max by (team) (inference_gateway_team_cost_limit_usd) > 0) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Team spend and reservations exceed 80 percent of its configured limit.
+            runbook_url: runbooks/incident-inference-runtime.md
+        - alert: WorkflowStatusStale
+          expr: time() - inference_gateway_workflow_status_refresh_seconds > 120
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Workflow state metrics are stale; check Temporal, Redis, and worker health.
+            runbook_url: runbooks/incident-inference-runtime.md

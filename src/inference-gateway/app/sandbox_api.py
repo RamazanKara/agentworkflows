@@ -57,6 +57,29 @@ def register_sandbox_routes(app: FastAPI, settings: Settings) -> None:
         operation_id="getSandboxUsage",
     )
     async def sandbox_usage(request: Request) -> dict[str, Any]:
+        from app.team_budget import team_cost_report
+
+        report = await team_cost_report(request)
+        if report:
+            providers = {
+                name: {
+                    "requests": row.get("calls", 0),
+                    "total_tokens": row.get("tokens", 0),
+                    "estimated_cost": row.get("cost_usd", 0),
+                }
+                for name, row in report["providers"].items()
+            }
+            return {
+                "sandbox_id": request.state.sandbox_id,
+                "currency": "USD",
+                "providers": providers,
+                "estimated_cost": sum(row["estimated_cost"] for row in providers.values()),
+                "usage": {
+                    "requests": sum(row["requests"] for row in providers.values()),
+                    "estimated_tokens": sum(row["total_tokens"] for row in providers.values()),
+                },
+                "spend": report,
+            }
         # Per-sandbox usage plus an estimated monetary cost (the data layer an admin/usage
         # console renders). USD_PER_1K_TOKENS of 0 leaves the cost model off (cost = 0).
         # The token counts here are settled: each request's worst-case admission estimate

@@ -31,6 +31,7 @@ from collections.abc import Iterator, Mapping
 from importlib import metadata
 from types import TracebackType
 from typing import Any
+from uuid import UUID, uuid4
 
 from temporalio import workflow as _workflow
 
@@ -482,6 +483,34 @@ class GatewayClient:
     def usage(self) -> dict[str, Any]:
         """Return this sandbox's usage and estimated cost."""
         return self._get("/v1/usage")
+
+    def team(self) -> dict[str, Any]:
+        """Discover the current credential's team, role, and projects."""
+        return self._get("/v1/team")
+
+    def start_run(
+        self, workflow: str, input: Any, *, project: str | None = None, request_id: str | None = None
+    ) -> dict[str, Any]:
+        """Start once; reuse request_id after an ambiguous network failure."""
+        return self._post(
+            "/v1/workflow-runs",
+            {"workflow": workflow, "input": input, "project": project, "request_id": request_id or str(uuid4())},
+        )
+
+    def runs(self, *, project: str | None = None, offset: int = 0) -> dict[str, Any]:
+        return self._get("/v1/workflow-runs", params={"offset": offset, **({"project": project} if project else {})})
+
+    def run(self, run_id: str) -> dict[str, Any]:
+        return self._get(f"/v1/workflow-runs/{UUID(run_id)!s}")
+
+    def cancel_run(self, run_id: str) -> dict[str, Any]:
+        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/cancel", {})
+
+    def retry_run(self, run_id: str) -> dict[str, Any]:
+        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/retry", {})
+
+    def approve_run(self, run_id: str, *, approved: bool = True) -> dict[str, Any]:
+        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/approve", {"approved": approved}, creates_state=True)
 
     def sandbox_budget(self) -> dict[str, Any]:
         """Return this sandbox's budget usage, limits, and window TTL."""
