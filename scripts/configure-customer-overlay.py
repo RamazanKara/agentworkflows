@@ -101,15 +101,15 @@ def check_overlay() -> list[str]:
             project_docs = []
             errors.append(str(exc))
         platform_project = next(
-            (doc for doc in project_docs if nested(doc, "metadata", "name") == "private-ai-platform"),
+            (doc for doc in project_docs if nested(doc, "metadata", "name") == "agentworkflows"),
             None,
         )
-        require(errors, platform_project is not None, "appprojects.yaml must contain an AppProject named private-ai-platform")
+        require(errors, platform_project is not None, "appprojects.yaml must contain an AppProject named agentworkflows")
         if platform_project is not None:
             require(
                 errors,
                 nested(platform_project, "spec", "sourceRepos") == [root_repo],
-                "private-ai-platform AppProject sourceRepos must equal the customer root repoURL",
+                "agentworkflows AppProject sourceRepos must equal the customer root repoURL",
             )
 
     application_names: set[str] = set()
@@ -125,7 +125,7 @@ def check_overlay() -> list[str]:
         require(errors, isinstance(source, dict), f"{name}: spec.source must be set")
         require(errors, nested(application, "spec", "source", "repoURL") == root_repo, f"{name}: repoURL must match root-app-customer.yaml")
         require(errors, nested(application, "spec", "source", "targetRevision") == root_revision, f"{name}: targetRevision must match root-app-customer.yaml")
-        require(errors, nested(application, "spec", "project") == "private-ai-platform", f"{name}: must use the private-ai-platform AppProject, not project: default")
+        require(errors, nested(application, "spec", "project") == "agentworkflows", f"{name}: must use the agentworkflows AppProject, not project: default")
         source_path = nested(application, "spec", "source", "path")
         require(errors, isinstance(source_path, str) and (ROOT / source_path).exists(), f"{name}: source.path must exist")
         value_files = nested(application, "spec", "source", "helm", "valueFiles") or []
@@ -192,7 +192,7 @@ def configure_overlay(repo_url: str, target_revision: str, gpu_profile: str, dry
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Configure and validate the customer-owned Kubernetes GitOps overlay.")
-    parser.add_argument("--repo-url", default="https://github.com/RamazanKara/private-ai-platform-kit.git")
+    parser.add_argument("--repo-url", default="https://github.com/RamazanKara/agentworkflows.git")
     parser.add_argument("--target-revision", default=release_tag_default())
     parser.add_argument("--gpu-profile", choices=sorted(VLLM_VALUE_FILES), default="nvidia")
     parser.add_argument("--check", action="store_true", help="Validate the current overlay without modifying files.")

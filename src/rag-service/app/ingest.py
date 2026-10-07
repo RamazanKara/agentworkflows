@@ -324,7 +324,7 @@ def main() -> int:
     mode.add_argument("--delete", action="store_true", help="Delete all points for --source-id from Qdrant.")
     mode.add_argument("--purge", action="store_true", help="Delete points older than --older-than-days.")
     parser.add_argument("--qdrant-url", default="")
-    parser.add_argument("--collection", default="private-ai-platform-kit")
+    parser.add_argument("--collection", default="agentworkflows")
     parser.add_argument("--collection-version", default="v1")
     parser.add_argument("--dimensions", type=int, default=384)
     parser.add_argument("--timeout-seconds", type=float, default=5.0)

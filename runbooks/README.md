@@ -1,6 +1,6 @@
 # Runbooks
 
-Operational procedures, incident playbooks, and governance runbooks for Private AI Platform Kit. Start with the [incident-response index](incident-response.md) during an incident, or [upgrade](upgrade.md) for the most common day-2 change.
+Operational procedures, incident playbooks, and governance runbooks for AgentWorkflows. Start with the [incident-response index](incident-response.md) during an incident, or [upgrade](upgrade.md) for the most common day-2 change.
 
 ## Setup & day-2 operations
 
@@ -58,4 +58,4 @@ Operational procedures, incident playbooks, and governance runbooks for Private 
 | [Runtime threat detection](runtime-threat-detection.md) | Optional Falco/Tetragon detective layer for hijacked agents |
 | [OIDC / JWKS rotation](oidc-jwks-rotation.md) | Identity-provider key rotation |
 
-For the documentation map (setup, customer handoff, contracts), see [docs/README.md](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/README.md).
+For the documentation map (setup, customer handoff, contracts), see [docs/README.md](https://github.com/RamazanKara/agentworkflows/blob/main/docs/README.md).

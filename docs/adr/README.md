@@ -1,6 +1,11 @@
 # Architecture Decision Records
 
-This directory records the significant architecture decisions behind Private AI Platform Kit:
+These decisions were inherited from the self-hosted upstream kit. They describe the
+existing deployment components; local-first scope statements apply to those optional
+profiles. AgentWorkflows follows the cloud-first [product scope](../scope-and-non-goals.md)
+and [roadmap](https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md).
+
+This directory records the significant architecture decisions behind AgentWorkflows:
 why a particular tool, pattern, or boundary was chosen, what was rejected, and what the choice
 costs. Read an ADR when you want the reasoning behind a default in `deploy/`, `src/`, or
 `platform/`, not just the configuration itself.
@@ -51,7 +56,7 @@ immutable once `Accepted`, and grounded in real files in this repo.
    paths (charts, manifests, source modules) so a reviewer can check each claim.
 3. Add a row to the index table above (ADR pages are reached through this index; only
    the index itself is listed in the `mkdocs.yml` nav).
-4. Open it for review like any other change (see [CONTRIBUTING.md](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/CONTRIBUTING.md)). Once
+4. Open it for review like any other change (see [CONTRIBUTING.md](https://github.com/RamazanKara/agentworkflows/blob/main/CONTRIBUTING.md)). Once
    merged and `Accepted`, do not rewrite it; if the decision changes, write a new ADR and mark the
    old one `Superseded by NNNN`.
 

@@ -69,4 +69,4 @@ The local Argo CD profile installs OpenCost and applies owner/cost-center labels
 
 `make loadtest-local` uses a mock runtime and is useful for gateway/report behavior only. To measure a real runtime, point `make loadtest` at the deployed gateway and collect GPU, queue, latency, and error metrics at the same time.
 
-See the [GPU capacity runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/gpu-capacity.md), [budget controls](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/budget-controls.md), and [quota/chargeback runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/quota-chargeback.md).
+See the [GPU capacity runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/gpu-capacity.md), [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md), and [quota/chargeback runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/quota-chargeback.md).

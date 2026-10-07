@@ -11,7 +11,7 @@ observed behavior matches the designed degradation for the failing dependency.
 ## How to read this matrix
 
 - **Behavior today** is what the running code does, cited to the source file and line range so it can
-  be verified, not assumed. Where the kit delegates resilience to the operator (HA replicas, managed
+  be verified, not assumed. Where the platform delegates resilience to the operator (HA replicas, managed
   backing services, alert routing), the row says so explicitly.
 - **Status codes** are the gateway/RAG HTTP responses a caller sees. The gateway maps upstream runtime
   failures to `502`, capacity/availability conditions to `503`, and budget/admission rejections to
@@ -72,8 +72,8 @@ auth is enabled.
   (Promtail). Plan log retention accordingly; see [Data retention](data-retention.md).
 - **Operator-owned resilience.** HA replica counts, PodDisruptionBudgets, topology spread, a managed
   Redis-compatible service, a reachable JWKS issuer, and a wired Alertmanager receiver are operator
-  responsibilities; the kit ships sane defaults and examples but does not operate these for you. See
-  [Support Boundaries](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/README.md#support-boundaries).
+  responsibilities; the platform ships sane defaults and examples but does not operate these for you. See
+  [Support Boundaries](https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md).
 
 ## Validating these behaviors
 

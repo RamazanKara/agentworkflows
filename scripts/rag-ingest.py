@@ -331,7 +331,7 @@ def main() -> int:
     parser.add_argument("--older-than-days", type=int, default=0, help="Age threshold for --purge.")
     parser.add_argument("--qdrant-url", default=_env_first(("QDRANT_URL", "VECTOR_STORE_URL"), ""))
     parser.add_argument(
-        "--collection", default=_env_first(("QDRANT_COLLECTION", "VECTOR_COLLECTION"), "private-ai-platform-kit")
+        "--collection", default=_env_first(("QDRANT_COLLECTION", "VECTOR_COLLECTION"), "agentworkflows")
     )
     parser.add_argument(
         "--collection-version", default=_env_first(("QDRANT_COLLECTION_VERSION", "VECTOR_COLLECTION_VERSION"), "v1")

@@ -22,9 +22,9 @@ if kubectl -n argocd get applications.argoproj.io >/dev/null 2>&1; then
 fi
 
 log "platform workloads"
-kubectl get deployments,statefulsets -A -l app.kubernetes.io/part-of=private-ai-platform-kit
+kubectl get deployments,statefulsets -A -l app.kubernetes.io/part-of=agentworkflows
 
-not_ready="$(kubectl get pods -A -l app.kubernetes.io/part-of=private-ai-platform-kit \
+not_ready="$(kubectl get pods -A -l app.kubernetes.io/part-of=agentworkflows \
   -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,PHASE:.status.phase,READY:.status.containerStatuses[*].ready' \
   --no-headers 2>/dev/null | awk '$3 != "Succeeded" && ($3 != "Running" || $4 ~ /false/ || $4 == "<none>") {print $1 "/" $2}' || true)"
 if [[ -n "$not_ready" ]]; then

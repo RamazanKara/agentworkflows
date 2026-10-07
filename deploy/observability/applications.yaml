@@ -31,7 +31,7 @@ spec:
         # receiver; critical alerts route to the platform-oncall webhook receiver, which
         # ships as a working end-to-end example. Replace the placeholder webhook URL with a
         # real destination (Slack/PagerDuty/Opsgenie/webhook) per environment; the URL and
-        # any secret are a customer/IdP responsibility per the kit boundary.
+        # any secret are a customer/IdP responsibility per the platform boundary.
         alertmanager:
           config:
             route:

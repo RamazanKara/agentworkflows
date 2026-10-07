@@ -116,8 +116,8 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["private-ai-platform-kit"],
-  "title": "Private AI Platform Kit Inference",
+  "tags": ["agentworkflows"],
+  "title": "AgentWorkflows Inference",
   "uid": "ai-platform-inference",
   "version": 1
 }

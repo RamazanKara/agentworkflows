@@ -1,11 +1,11 @@
-# Private AI Platform Kit: single-host evaluation stack.
+# AgentWorkflows: single-host evaluation stack.
 #
-#   make compose-up      build the images, pull the model, start everything (first run ~5 min)
+#   make compose-up      build the images and start the cloud-provider trial
 #   make compose-smoke   send governed requests and verify the audit hash chain
 #   make compose-down    stop and delete the stack and its volumes
 #
 # The same service images and environment contract as the Helm charts, without Kubernetes:
-# an OpenAI- and Anthropic-compatible gateway in front of Ollama, with API-key auth bound to
+# an OpenAI- and Anthropic-compatible gateway in front of local cloud fixtures, with API-key auth bound to
 # a sandbox, budgets, prompt-secret blocking, output redaction, agent-action receipts, and a
 # hash-chained audit log; plus the RAG service over this repository's docs. Ports bind to
 # 127.0.0.1 only. This is an evaluation stack: the cluster profiles add network policy,
@@ -14,12 +14,13 @@
 # Optional chat UI:  docker compose -f deploy/compose/compose.yaml --profile ui up -d
 #                    then open http://127.0.0.1:3000
 
-name: private-ai-platform-kit
+name: agentworkflows
 
-x-gateway-image: &gateway-image private-ai-platform-kit/inference-gateway:compose
+x-gateway-image: &gateway-image agentworkflows/inference-gateway:compose
 
 services:
   ollama:
+    profiles: [self-hosted]
     image: ollama/ollama:0.24.0@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     volumes:
       - ollama-models:/root/.ollama
@@ -34,8 +35,9 @@ services:
 
   # One-shot: pull the model into the shared volume, then exit. Cached across restarts.
   model-pull:
+    profiles: [self-hosted]
     image: ollama/ollama:0.24.0@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
-    entrypoint: ["ollama", "pull", "${PAK_MODEL:-qwen2.5:0.5b}"]
+    entrypoint: ["ollama", "pull", "qwen2.5:0.5b"]
     environment:
       OLLAMA_HOST: http://ollama:11434
     depends_on:
@@ -48,30 +50,24 @@ services:
       context: ../../src/inference-gateway
     image: *gateway-image
     ports:
-      - "127.0.0.1:${PAK_GATEWAY_PORT:-8080}:8080"
+      - "127.0.0.1:${AGENTWORKFLOWS_GATEWAY_PORT:-8080}:8080"
     volumes:
-      - ./key-records.yaml:/etc/private-ai-platform-kit/key-records.yaml:ro
-      - ./model-routing.yaml:/etc/private-ai-platform-kit/model-routing.yaml:ro
-    # Render the local model override in tmpfs, keeping the image and template read-only.
-    command:
-      - /bin/sh
-      - -ec
-      - |
-        python -c 'import os,yaml; p=yaml.safe_load(open("/etc/private-ai-platform-kit/model-routing.yaml")); p["spec"]["models"][0]["id"]=os.environ["MODEL_ID"]; open("/tmp/model-routing.yaml","w").write(yaml.safe_dump(p))'
-        exec uvicorn app.main:app --host 0.0.0.0 --port 8080
+      - ./key-records.yaml:/etc/agentworkflows/key-records.yaml:ro
+      - ./model-routing.yaml:/etc/agentworkflows/model-routing.yaml:ro
     environment:
-      RUNTIME_BACKEND: ollama
+      # The legacy runtime backs demo-overload; the routing policy selects cloud adapters.
+      RUNTIME_BACKEND: vllm
       OLLAMA_BASE_URL: http://ollama:11434
-      MODEL_ID: ${PAK_MODEL:-qwen2.5:0.5b}
-      ALLOWED_MODELS: ${PAK_MODEL:-qwen2.5:0.5b},demo-openai,demo-anthropic,demo-azure-openai,demo-bedrock,demo-vertex,demo-overload
-      MODEL_ROUTING_POLICY_PATH: /tmp/model-routing.yaml
+      MODEL_ID: ${AGENTWORKFLOWS_MODEL:-demo-openai}
+      ALLOWED_MODELS: qwen2.5:0.5b,demo-openai,demo-anthropic,demo-azure-openai,demo-bedrock,demo-vertex,demo-overload
+      MODEL_ROUTING_POLICY_PATH: /etc/agentworkflows/model-routing.yaml
       VLLM_BASE_URL: http://cloud-fake:8000/local-overload
       COMPOSE_PROVIDER_KEY: compose-fake-only
       DEFAULT_SANDBOX_ID: demo
       # Every request needs a key. The demo key "local-development-only" is a key record
       # bound to the `demo` sandbox with its own token budget; see key-records.yaml.
       API_KEY_AUTH_ENABLED: "true"
-      API_KEY_RECORDS_PATH: /etc/private-ai-platform-kit/key-records.yaml
+      API_KEY_RECORDS_PATH: /etc/agentworkflows/key-records.yaml
       ALLOW_STREAMING: "true"
       MAX_COMPLETION_TOKENS: "512"
       SANDBOX_BUDGET_ENABLED: "true"
@@ -87,8 +83,6 @@ services:
     depends_on:
       cloud-fake:
         condition: service_started
-      model-pull:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3)"]
       interval: 5s
@@ -114,11 +108,11 @@ services:
   rag-service:
     build:
       context: ../../src/rag-service
-    image: private-ai-platform-kit/rag-service:compose
+    image: agentworkflows/rag-service:compose
     ports:
-      - "127.0.0.1:${PAK_RAG_PORT:-8090}:8080"
+      - "127.0.0.1:${AGENTWORKFLOWS_RAG_PORT:-8090}:8080"
     volumes:
-      # The kit's own documentation is the demo corpus: ask it about the platform.
+      # AgentWorkflows' own documentation is the demo corpus: ask it about the platform.
       - ../../docs:/knowledge:ro
     environment:
       RAG_DOCUMENT_DIR: /knowledge
@@ -142,7 +136,7 @@ services:
     profiles: [ui]
     image: ghcr.io/open-webui/open-webui:0.11.4@sha256:9591b13f13843c7721c2b8eaf7382846c81b3ffe126526d1888d1fed50c6a33f
     ports:
-      - "127.0.0.1:${PAK_UI_PORT:-3000}:8080"
+      - "127.0.0.1:${AGENTWORKFLOWS_UI_PORT:-3000}:8080"
     volumes:
       - open-webui-data:/app/backend/data
     environment:

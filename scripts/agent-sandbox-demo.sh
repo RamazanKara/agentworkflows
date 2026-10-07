@@ -29,7 +29,7 @@ VALUES_FILE="$ROOT/deploy/clusters/${ENVIRONMENT}/values/agent-workspace.yaml"
 # the GitOps-managed instance for ownership.
 kubectl create namespace "$AGENT_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 kubectl label namespace "$AGENT_NAMESPACE" \
-  app.kubernetes.io/part-of=private-ai-platform-kit \
+  app.kubernetes.io/part-of=agentworkflows \
   platform.ai/traceable-sandbox=true \
   platform.ai/workload-kind=coding-agent \
   pod-security.kubernetes.io/enforce=restricted \

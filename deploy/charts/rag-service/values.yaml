@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/ramazankara/private-ai-platform-kit/rag-service
+  repository: ghcr.io/ramazankara/agentworkflows/rag-service
   # First-party image: release CI pins the published digest (set image.digest) after build.
-  tag: "v0.29.0"
+  tag: "v0.1.0"
   pullPolicy: IfNotPresent
 
 service:
@@ -101,7 +101,7 @@ retrieval:
     timeoutSeconds: 2.0
   vectorStore:
     url: ""
-    collection: private-ai-platform-kit
+    collection: agentworkflows
     collectionVersion: v1
     timeoutSeconds: 1.0
     dimensions: 384
@@ -115,10 +115,11 @@ knowledge:
   mountPath: /knowledge
   documents:
     platform-overview.md: |
-      # Private AI Platform Kit
+      # AgentWorkflows
 
-      Private AI Platform Kit is a local-first, provider-neutral Kubernetes platform
-      for private LLM and coding-agent workloads. The local stack runs on kind.
+      AgentWorkflows is the cloud-first agent workflow platform for teams, with
+      governed providers, team budgets, and verifiable receipts. Self-hosted models
+      are optional; durable workflows and human approvals are planned. The local stack runs on kind.
       Customer clusters bring their own Kubernetes, ingress, storage, secrets,
       GPU nodes, and enterprise observability.
     coding-agents.md: |

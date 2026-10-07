@@ -198,7 +198,7 @@ if require_optional_or_full cosign "Cosign is needed for image signature validat
 fi
 
 if require_optional_or_full trivy "Trivy is needed for filesystem secret and config scanning."; then
-  trivy_output="/tmp/private-ai-platform-kit-trivy-fs.txt"
+  trivy_output="/tmp/agentworkflows-trivy-fs.txt"
   if ! ./scripts/repo-security-scan.sh >"$trivy_output"; then
     cat "$trivy_output"
     exit 1

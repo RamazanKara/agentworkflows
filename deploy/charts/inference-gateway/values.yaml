@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/ramazankara/private-ai-platform-kit/inference-gateway
+  repository: ghcr.io/ramazankara/agentworkflows/inference-gateway
   # First-party image: release CI pins the published digest (set image.digest) after build.
-  tag: "v0.29.0"
+  tag: "v0.1.0"
   pullPolicy: IfNotPresent
 
 runtime:
@@ -96,7 +96,7 @@ responseCache:
   backend: memory
   redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/1
   redisTimeoutSeconds: "0.5"
-  keyPrefix: private-ai-platform-kit:response-cache
+  keyPrefix: agentworkflows:response-cache
 
 # Token-to-cost model surfaced by GET /v1/usage. 0 disables the cost estimate.
 cost:
@@ -155,7 +155,7 @@ budget:
   windowSeconds: 86400
   redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/0
   redisTimeoutSeconds: "0.5"
-  keyPrefix: private-ai-platform-kit:sandbox-budget
+  keyPrefix: agentworkflows:sandbox-budget
 
 # Asynchronous OpenAI Files + Batch API (ADR 0011). Off by default: enabling it needs an object
 # store for the JSONL blobs and a Redis-backed store + queue for durable job state, plus the
@@ -180,7 +180,7 @@ batch:
     backend: memory
     redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/2
     redisTimeoutSeconds: "0.5"
-    keyPrefix: private-ai-platform-kit:batch
+    keyPrefix: agentworkflows:batch
   maxFileBytes: 104857600
   maxRequestsPerBatch: 50000
   completionWindow: "24h"
@@ -226,7 +226,7 @@ responses:
     backend: memory
     redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/3
     redisTimeoutSeconds: "0.5"
-    keyPrefix: private-ai-platform-kit:responses
+    keyPrefix: agentworkflows:responses
     retentionSeconds: 86400
 
 # Opt-in read-only admin console served by the gateway at /console (ADR 0013). Off by default.
@@ -274,7 +274,7 @@ auth:
       name: ""
       key: key-records.json
     # Directory the records Secret is mounted into; the file is <mountPath>/<existingSecret.key>.
-    mountPath: /etc/private-ai-platform-kit/auth
+    mountPath: /etc/agentworkflows/auth
   # Explicit path override for API_KEY_RECORDS_PATH when NOT using keyRecords.existingSecret
   # (e.g. a records file supplied by a sidecar or a different volume). Empty disables records.
   keyRecordsPath: ""

@@ -198,7 +198,7 @@ def static_controls() -> list[Control]:
             "local" in readme
             and "customer-owned clusters" in readme
             and exists("deploy/clusters/local/kind-config.yaml", "deploy/clusters/customer/README.md"),
-            "The README keeps the core product local-first and portable to customer-owned clusters.",
+            "The README describes governed cloud providers and optional self-hosted deployments.",
             ["README.md", "deploy/clusters/local/kind-config.yaml", "deploy/clusters/customer/README.md"],
             "Provide the customer's ingress, storage class, secret backend, GPU nodes, and observability integrations.",
         ),
@@ -812,7 +812,7 @@ def write_markdown(
     passes = sum(1 for item in controls if item.status == "pass")
     failures = sum(1 for item in controls if item.status == "fail")
     lines = [
-        "# Private AI Platform Kit Evidence Pack",
+        "# AgentWorkflows Evidence Pack",
         "",
         f"Generated: `{generated_at}`",
         f"Mode: `{'static-and-live' if live else 'static'}`",
@@ -884,7 +884,7 @@ def write_markdown(
 
 def write_json(path: Path, generated_at: str, controls: list[Control], artifacts: list[Artifact], live: bool) -> None:
     payload = {
-        "project": "Private AI Platform Kit",
+        "project": "AgentWorkflows",
         "generated_at": generated_at,
         "mode": "static-and-live" if live else "static",
         "summary": {
@@ -899,7 +899,7 @@ def write_json(path: Path, generated_at: str, controls: list[Control], artifacts
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate or validate a Private AI Platform Kit customer evidence pack."
+        description="Generate or validate a AgentWorkflows customer evidence pack."
     )
     parser.add_argument("--output-dir", default="results/evidence")
     parser.add_argument(

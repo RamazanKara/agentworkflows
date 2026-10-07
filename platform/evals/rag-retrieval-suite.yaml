@@ -47,7 +47,7 @@ spec:
         - accelerators
       answer: NVIDIA profiles request nvidia.com/gpu resources.
     - id: what-is-the-platform
-      query: What is the Private AI Platform Kit?
+      query: What is the AgentWorkflows?
       relevant:
         - platform-overview
-      answer: Private AI Platform Kit is a local-first provider-neutral Kubernetes platform for private LLM workloads.
+      answer: AgentWorkflows is a cloud-first agent workflow platform for teams, with governed providers, budgets, and verifiable receipts.

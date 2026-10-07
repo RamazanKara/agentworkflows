@@ -1,13 +1,13 @@
 apiVersion: v2
 name: qdrant-vector-store
-description: Optional local vector store profile for Private AI Platform Kit RAG.
+description: Optional local vector store profile for AgentWorkflows RAG.
 type: application
-version: 0.29.0
+version: 0.1.0
 appVersion: "1.18.1"
 kubeVersion: ">=1.25.0"
-home: https://github.com/RamazanKara/private-ai-platform-kit
+home: https://github.com/RamazanKara/agentworkflows
 sources:
-  - https://github.com/RamazanKara/private-ai-platform-kit
+  - https://github.com/RamazanKara/agentworkflows
   - https://github.com/qdrant/qdrant
 maintainers:
   - name: Ramazan Kara

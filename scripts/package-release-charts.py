@@ -45,7 +45,7 @@ def package_charts(args: argparse.Namespace) -> dict:
     for old in output.glob("*.tgz"):
         old.unlink()
 
-    with tempfile.TemporaryDirectory(prefix="private-ai-platform-kit-charts-") as temp:
+    with tempfile.TemporaryDirectory(prefix="agentworkflows-charts-") as temp:
         charts = Path(temp) / "charts"
         shutil.copytree(ROOT / "deploy/charts", charts, ignore=shutil.ignore_patterns("charts"))
 
@@ -58,10 +58,10 @@ def package_charts(args: argparse.Namespace) -> dict:
 
         # The umbrella must vendor the digest-bound component copies, not stale
         # ignored archives from a developer checkout.
-        subprocess.run(["helm", "dependency", "update", str(charts / "platform")], check=True)
+        subprocess.run(["helm", "dependency", "update", str(charts / "agentworkflows")], check=True)
 
         packages: list[dict[str, str]] = []
-        for chart in sorted(charts.iterdir(), key=lambda path: (path.name == "platform", path.name)):
+        for chart in sorted(charts.iterdir(), key=lambda path: (path.name == "agentworkflows", path.name)):
             chart_yaml = chart / "Chart.yaml"
             if not chart_yaml.exists():
                 continue

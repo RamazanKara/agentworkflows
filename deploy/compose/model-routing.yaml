@@ -2,8 +2,6 @@ apiVersion: platform.ai/v1alpha1
 kind: ModelRoutingPolicy
 spec:
   models:
-    - id: qwen2.5:0.5b
-      backend: ollama
     - id: demo-overload
       backend: vllm
       fallbacks: [demo-openai]

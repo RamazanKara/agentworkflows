@@ -20,13 +20,13 @@ repository, differing only in cluster directory, pinned revision, and the platfo
 customer already operates.
 
 - The local cluster is a single-node `kind` config,
-  [`deploy/clusters/local/kind-config.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/local/kind-config.yaml) (pinned
+  [`deploy/clusters/local/kind-config.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local/kind-config.yaml) (pinned
   `kindest/node` image, `ingress-ready` and `platform.ai/node-pool=local` node labels, host port
   mapping), brought up by `make local-up`.
 - Both environments use the same charts and the same Argo CD app-of-apps mechanism
   (see [0001](0001-gitops-with-argo-cd.md)); the only structural difference is the cluster directory
-  each root app points at ([`deploy/clusters/local`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/local) versus
-  [`deploy/clusters/customer`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer)) and a pinned `targetRevision` on the
+  each root app points at ([`deploy/clusters/local`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local) versus
+  [`deploy/clusters/customer`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer)) and a pinned `targetRevision` on the
   customer root.
 - The customer overlay assumes Kubernetes already exists and adds what a tenant cluster needs:
   `appprojects.yaml` for project tenancy, `external-secrets.yaml`, `gpu-scheduling.yaml`, and GPU
@@ -43,7 +43,7 @@ customer already operates.
   local validation is meaningful as handoff evidence.
 - Differences are isolated to a cluster directory and a few overlay manifests, which keeps the diff
   between "works on my laptop" and "works on the customer cluster" small and reviewable.
-- The kit deliberately does not provision the customer's cluster or replace its platform services;
+- The platform deliberately does not provision the customer's cluster or replace its platform services;
   ingress, storage classes, secrets, logging, observability, and GPU pools are the operator's to
   bring. Maturity is explicitly a "controlled handoff," not a turnkey production install.
 - Maintaining two cluster directories that must stay in lockstep is an ongoing cost; the shared
@@ -62,7 +62,7 @@ customer already operates.
 - **Cloud-specific Terraform / provider modules as the deployment unit.** Rejected as the default
   per the decision-guide's stated position: provider-neutral GitOps and Helm surfaces instead of
   cloud-specific Terraform. A customer is free to wrap the cluster provisioning in their own IaC; the
-  kit's deliverable starts at "Kubernetes already exists."
+  platform's deliverable starts at "Kubernetes already exists."
 - **One environment only (local-only, or customer-only).** Rejected because it defeats the goal: a
-  local-only kit would not be production evidence, and a customer-only kit would have no fast,
+  local-only platform would not be production evidence, and a customer-only platform would have no fast,
   GPU-free path for contributors and evaluators.

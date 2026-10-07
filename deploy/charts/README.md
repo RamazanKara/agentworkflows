@@ -4,7 +4,7 @@ The charts are designed to be rendered by the local and customer GitOps overlays
 
 ```bash
 helm lint deploy/charts/inference-gateway
-helm template private-ai deploy/charts/inference-gateway --values deploy/clusters/local/values/inference-gateway.yaml
+helm template agentworkflows deploy/charts/inference-gateway --values deploy/clusters/local/values/inference-gateway.yaml
 ```
 
 ## Profiles

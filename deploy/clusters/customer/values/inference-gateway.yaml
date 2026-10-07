@@ -59,7 +59,7 @@ budget:
   windowSeconds: 86400
   redisUrl: redis://budget-redis.budget.svc.cluster.local:6379/0
   redisTimeoutSeconds: "0.5"
-  keyPrefix: private-ai-platform-kit:customer:sandbox-budget
+  keyPrefix: agentworkflows:customer:sandbox-budget
 networkPolicy:
   runtimeEgress:
     - namespace: ollama
@@ -97,7 +97,7 @@ auth:
     # `make validate` stay green; the gateway only fetches it once a JWT is presented.
     jwksUrl: "https://idp.example.com/.well-known/jwks.json"
     issuer: "https://idp.example.com/"
-    audience: "private-ai-platform-kit"
+    audience: "agentworkflows"
     requiredScopes: []
     cacheSeconds: 300
     tenantClaim: "sandbox_id"

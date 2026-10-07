@@ -27,7 +27,7 @@ not rebuild images -- you point GitOps at the tag whose images already exist.
 The customer overlay deploys from an immutable Git tag, not a branch. The root
 Application `deploy/gitops/argocd/root-app-customer.yaml` is pinned to an immutable
 release tag (see the file for the current value) and every child Application in `deploy/clusters/customer/apps.yaml`
-runs under the `private-ai-platform` AppProject (`deploy/clusters/customer/appprojects.yaml`),
+runs under the `agentworkflows` AppProject (`deploy/clusters/customer/appprojects.yaml`),
 which locks `sourceRepos` to the approved repo. **Moving `CUSTOMER_REVISION` to a
 new tag is the canonical promotion.** `make customer-overlay-check` rejects
 `HEAD` or a branch, so every deployed state is reproducible and revertible.
@@ -87,7 +87,7 @@ promote a tag whose evidence passes.
 
     kubectl -n argocd get applications
     argocd app list
-    argocd app get private-ai-platform-kit-root
+    argocd app get agentworkflows-root
 
 Healthy + Synced across all applications means the new tag is live. If an
 Application is Degraded or OutOfSync, follow the symptom-specific runbook:
@@ -118,8 +118,8 @@ trail in Git, and keeps automation in charge.
 For an urgent single-application revert to a previously synced revision without a
 Git change yet, use Argo CD's deployment history:
 
-    argocd app history private-ai-platform-kit-root
-    argocd app rollback private-ai-platform-kit-root <history-id>
+    argocd app history agentworkflows-root
+    argocd app rollback agentworkflows-root <history-id>
 
 This is a stopgap. The Git revision still points at the bad tag, so reconcile Git
 (revert `CUSTOMER_REVISION`) afterward or selfHeal/the next sync will roll forward

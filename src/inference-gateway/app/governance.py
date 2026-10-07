@@ -3,7 +3,7 @@
 Every inference endpoint does the same four things around its own logic: resolve the
 model route, reserve sandbox budget, map one failure taxonomy onto the OpenAI-shaped
 error envelope, and record exactly one receipt (metrics, settlement, audit) per request.
-Until v0.28.x each handler carried a private copy of that tail - five near-identical
+In the upstream kit before v0.28.x each handler carried a private copy of that tail - five near-identical
 blocks of exception mapping and end-of-request recording that had to be edited in five
 places to stay identical. This module is that tail, written once.
 

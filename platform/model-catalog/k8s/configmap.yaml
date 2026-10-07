@@ -5,7 +5,7 @@ metadata:
   namespace: inference
   labels:
     app.kubernetes.io/name: ai-model-catalog
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/part-of: agentworkflows
     platform.ai/cost-center: platform
     platform.ai/environment: local
     platform.ai/owner: platform-team
@@ -15,7 +15,7 @@ data:
     apiVersion: platform.ai/v1alpha1
     kind: ModelCatalog
     metadata:
-      name: private-ai-platform-kit-models
+      name: agentworkflows-models
     spec:
       models:
         - id: Qwen/Qwen3-Coder-Next
@@ -142,7 +142,7 @@ data:
             modelCard: https://huggingface.co/Qwen/Qwen3.8-27B/blob/1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0/README.md
             revision: 1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0
             reviewedAt: '2026-09-23'
-          notes: Current dense Qwen candidate for text and coding evaluation. Upstream supports vision; the kit
+          notes: Current dense Qwen candidate for text and coding evaluation. Upstream supports vision; the platform
             does not claim that modality or real-model evaluation.
         - id: Qwen/Qwen3.8-Flash-Next
           runtime: vllm
@@ -206,7 +206,7 @@ data:
             revision: dba1be0a40aa45a94ad051997016db3960a90277
             reviewedAt: '2026-09-23'
           notes: Current DeepSeek Flash candidate with a 552B backbone and specialized serving requirements. Context
-            records upstream configuration, not validated capacity in this kit.
+            records upstream configuration, not validated capacity in AgentWorkflows.
         # Operator templates only: no cloud model is approved or enabled by default.
         - id: cloud-openai
           runtime: openai

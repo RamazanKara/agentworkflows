@@ -1,5 +1,5 @@
 image:
-  repository: private-ai-platform-kit/rag-service
+  repository: agentworkflows/rag-service
   tag: "local"
   pullPolicy: IfNotPresent
 
@@ -19,7 +19,7 @@ retrieval:
   backend: lexical
   vectorStore:
     url: ""
-    collection: private-ai-platform-kit-local
+    collection: agentworkflows-local
     collectionVersion: v1
     timeoutSeconds: 1.0
     dimensions: 384

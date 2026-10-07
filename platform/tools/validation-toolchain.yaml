@@ -1,7 +1,7 @@
 apiVersion: platform.ai/v1alpha1
 kind: ValidationToolchain
 metadata:
-  name: private-ai-platform-kit-validation-toolchain
+  name: agentworkflows-validation-toolchain
 spec:
   profiles:
     validate:

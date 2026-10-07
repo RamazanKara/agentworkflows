@@ -2,12 +2,12 @@ apiVersion: v2
 name: vllm
 description: GPU-backed OpenAI-compatible LLM runtime.
 type: application
-version: 0.29.0
+version: 0.1.0
 appVersion: "0.22.0"
 kubeVersion: ">=1.25.0"
-home: https://github.com/RamazanKara/private-ai-platform-kit
+home: https://github.com/RamazanKara/agentworkflows
 sources:
-  - https://github.com/RamazanKara/private-ai-platform-kit
+  - https://github.com/RamazanKara/agentworkflows
   - https://github.com/vllm-project/vllm
 maintainers:
   - name: Ramazan Kara

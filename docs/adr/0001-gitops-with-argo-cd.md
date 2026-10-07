@@ -6,7 +6,7 @@
 
 ## Context
 
-The kit must deliver the same platform (gateway, runtimes, RAG, vector store, budget Redis, agent
+The platform must deliver the same platform (gateway, runtimes, RAG, vector store, budget Redis, agent
 workspaces, policies, observability, backup) onto a local `kind` cluster and onto customer-owned
 clusters, with no manual `kubectl apply` drift between them. Delivery has to be declarative so the
 desired state is reviewable in Git, auditable for customer handoff, and reproducible by an operator
@@ -22,11 +22,11 @@ repository.
 Use Argo CD with an app-of-apps layout.
 
 - A single root `Application` per environment points at a cluster directory and includes only its
-  app list: [`deploy/gitops/argocd/root-app.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/gitops/argocd/root-app.yaml)
+  app list: [`deploy/gitops/argocd/root-app.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/gitops/argocd/root-app.yaml)
   targets `deploy/clusters/local` and includes `apps.yaml`;
-  [`deploy/gitops/argocd/root-app-customer.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/gitops/argocd/root-app-customer.yaml)
+  [`deploy/gitops/argocd/root-app-customer.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/gitops/argocd/root-app-customer.yaml)
   targets `deploy/clusters/customer` and includes `{apps.yaml,appprojects.yaml}`.
-- [`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/local/apps.yaml) declares the child
+- [`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local/apps.yaml) declares the child
   `Application`s: model-catalog, traceable-sandbox, platform-operators (Kyverno, KEDA,
   External Secrets via their upstream Helm charts), observability, security-policies, the Ollama and
   vLLM runtimes, budget-redis, inference-gateway, qdrant-vector-store, rag-service, agent-workspace,
@@ -57,7 +57,7 @@ Use Argo CD with an app-of-apps layout.
   chosen for its app-of-apps ergonomics, its first-class `AppProject` tenancy boundary (used in the
   customer overlay's `appprojects.yaml`), and a UI that helps during customer handoff and demos.
   Either tool could reconcile these manifests; the decision is not a claim that Flux cannot.
-- **Direct `helm`/`kubectl` apply, scripted in CI or Make.** Simplest to start, and the kit keeps
+- **Direct `helm`/`kubectl` apply, scripted in CI or Make.** Simplest to start, and the platform keeps
   this path for the `QUICKSTART_DIRECT_APPLY=1` workstation check. Rejected as the primary model
   because it does not continuously reconcile, prune removed resources, or self-heal manual drift,
   all of which the customer-handoff evidence story relies on.

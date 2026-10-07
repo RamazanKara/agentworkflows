@@ -57,7 +57,7 @@ from app.batchstore import (
 from app.objectstore import ObjectNotFound, ObjectStore, build_object_store
 from app.settings import Settings
 
-_LOGGER = logging.getLogger("ai_platform_ops_lab.batch_worker")
+_LOGGER = logging.getLogger("agentworkflows.batch_worker")
 _TERMINAL = frozenset({BATCH_COMPLETED, BATCH_FAILED, BATCH_EXPIRED, BATCH_CANCELLED})
 
 

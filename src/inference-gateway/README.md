@@ -3,7 +3,7 @@
 This FastAPI service exposes the governed inference APIs. It authenticates callers,
 applies sandbox and model policy, reserves and settles budgets, routes requests to
 Ollama, vLLM, or approved cloud providers, and emits metrics and redacted audit receipts.
-See [model selection](../../docs/model-selection.md#cloud-routes-unreleased) for provider
+See [model selection](../../docs/model-selection.md#cloud-routes-milestone-1) for provider
 connections, prices, ordered fallback, and tenant/request classification rules.
 
 Use the [developer workflow](../../docs/development.md) for environment setup and

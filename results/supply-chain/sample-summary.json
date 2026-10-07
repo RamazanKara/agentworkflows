@@ -4,18 +4,18 @@
   "generated_at": "20260531T000000Z",
   "images": [
     {
-      "image": "private-ai-platform-kit/inference-gateway:local-scan",
+      "image": "agentworkflows/inference-gateway:local-scan",
       "name": "inference-gateway",
       "sbom": "results/supply-chain/inference-gateway-20260531T000000Z.spdx.json",
       "trivy_sarif": "results/supply-chain/trivy-inference-gateway-20260531T000000Z.sarif"
     },
     {
-      "image": "private-ai-platform-kit/rag-service:local-scan",
+      "image": "agentworkflows/rag-service:local-scan",
       "name": "rag-service",
       "sbom": "results/supply-chain/rag-service-20260531T000000Z.spdx.json",
       "trivy_sarif": "results/supply-chain/trivy-rag-service-20260531T000000Z.sarif"
     }
   ],
-  "project": "Private AI Platform Kit",
+  "project": "AgentWorkflows",
   "status": "pass"
 }

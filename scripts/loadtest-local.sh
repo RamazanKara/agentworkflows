@@ -46,7 +46,7 @@ LOADTEST_DURATION="${LOADTEST_DURATION:-15s}"
 LOADTEST_VUS="${LOADTEST_VUS:-2}"
 PLATFORM_API_KEY="${PLATFORM_API_KEY:-local-development-only}"
 LOCAL_API_KEY_SHA256="ed20191044553dac8f9c45e62062dd18e7dc1f898a897240b4179fb84fea3db4"
-LOG_DIR="${LOG_DIR:-/tmp/private-ai-platform-kit-loadtest}"
+LOG_DIR="${LOG_DIR:-/tmp/agentworkflows-loadtest}"
 mkdir -p "$LOG_DIR" results/loadtest
 
 cleanup() {

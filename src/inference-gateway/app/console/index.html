@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Private AI Platform Kit: Admin Console</title>
+    <title>AgentWorkflows: Admin Console</title>
     <style>
       :root {
         --bg: #0f1420; --panel: #171e2e; --panel2: #1e2740; --line: #2a3550;
@@ -59,14 +59,14 @@
   </head>
   <body>
     <header>
-      <h1>Private AI Platform Kit: Admin Console</h1>
+      <h1>AgentWorkflows: Admin Console</h1>
       <p>Read-only view of a sandbox's usage, budget, and approved models. No data leaves your browser but the calls you make to the gateway.</p>
     </header>
     <main>
       <div class="conn">
         <div><label for="base">Gateway base URL</label><input id="base" placeholder="(same origin)" /></div>
         <div><label for="key">API key</label><input id="key" type="password" placeholder="X-API-Key / bearer token" /></div>
-        <div><label for="sandbox">Sandbox ID</label><input id="sandbox" value="default" /></div>
+        <div><label for="sandbox">Sandbox ID (optional)</label><input id="sandbox" placeholder="Bound to your key" /></div>
         <button id="connect">Connect</button>
         <label class="auto"><input id="auto" type="checkbox" /> auto-refresh</label>
       </div>
@@ -91,19 +91,20 @@
       function pill(ok, text) { return '<span class="pill ' + (ok ? "ok" : "bad") + '">' + esc(text) + "</span>"; }
 
       function settings() {
-        return { base: $("base").value.trim().replace(/\/$/, ""), key: $("key").value, sandbox: $("sandbox").value.trim() || "default" };
+        return { base: $("base").value.trim().replace(/\/$/, ""), key: $("key").value, sandbox: $("sandbox").value.trim() };
       }
-      function save(s) { try { sessionStorage.setItem("pak-console", JSON.stringify({ base: s.base, sandbox: s.sandbox })); } catch (e) {} }
+      function save(s) { try { sessionStorage.setItem("agentworkflows-console", JSON.stringify({ base: s.base, sandbox: s.sandbox })); } catch (e) {} }
       function restore() {
         try {
-          var s = JSON.parse(sessionStorage.getItem("pak-console") || "{}");
+          var s = JSON.parse(sessionStorage.getItem("agentworkflows-console") || "{}");
           if (s.base) $("base").value = s.base;
           if (s.sandbox) $("sandbox").value = s.sandbox;
         } catch (e) {}
       }
 
       async function api(path, s) {
-        var headers = { "X-Sandbox-ID": s.sandbox };
+        var headers = {};
+        if (s.sandbox) headers["X-Sandbox-ID"] = s.sandbox;
         if (s.key) headers["X-API-Key"] = s.key;
         var res = await fetch(s.base + path, { headers: headers });
         var text = await res.text();
@@ -114,7 +115,7 @@
       }
 
       function fail(cardId, err) {
-        var msg = err && err.status === 401 ? "401: check the API key" : err && err.status ? "HTTP " + err.status : "request failed";
+        var msg = err && err.status === 401 ? "401: check the API key" : err && err.status === 403 ? "403: leave Sandbox ID blank for a key-bound team, or ask your administrator to check access" : err && err.status ? "HTTP " + err.status : "Cannot reach the gateway: check the base URL and connection";
         body(cardId).innerHTML = '<div class="err">' + esc(msg) + "</div>";
       }
 
@@ -190,7 +191,7 @@
           try { j[1](await api(j[0], s)); ok++; } catch (e) { fail(j[2], e); }
         }));
         var now = new Date().toLocaleTimeString();
-        $("status").textContent = "Updated " + now + ", sandbox " + s.sandbox + ", " + ok + "/" + jobs.length + " panels loaded.";
+        $("status").textContent = "Updated " + now + ", sandbox " + (s.sandbox || "bound to your key") + ", " + ok + "/" + jobs.length + " panels loaded.";
       }
 
       function setAuto(on) {

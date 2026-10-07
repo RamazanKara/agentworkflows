@@ -3,7 +3,6 @@
 * text=auto eol=lf
 
 # Recorded evidence is kept byte-for-byte as generated so recorded checksums stay valid.
-paper/**/results/** -text
 results/**/sample-* -text
 
 *.gif binary

@@ -1,11 +1,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: private-ai-platform
+  name: agentworkflows
   namespace: argocd
   labels:
-    app.kubernetes.io/name: private-ai-platform
-    app.kubernetes.io/part-of: private-ai-platform-kit
+    app.kubernetes.io/name: agentworkflows
+    app.kubernetes.io/part-of: agentworkflows
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
@@ -15,7 +15,7 @@ spec:
     sourceRepos and the in-cluster API server; namespace scoping can be tightened
     per workload by narrowing destinations and the resource whitelists.
   sourceRepos:
-    - https://github.com/RamazanKara/private-ai-platform-kit.git
+    - https://github.com/RamazanKara/agentworkflows.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"

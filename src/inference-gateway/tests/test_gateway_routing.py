@@ -433,7 +433,7 @@ def test_streaming_chat_completion_is_passed_through_when_enabled():
 
 
 def test_streaming_chat_completion_records_usage_latency_and_audit(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = Settings(
         runtime_backend="ollama",
         ollama_base_url="http://ollama:11434",
@@ -477,7 +477,7 @@ def test_streaming_chat_completion_records_usage_latency_and_audit(caplog):
     audit_event = next(
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "ai_platform_ops_lab.audit" and '"stream-audit-1"' in record.getMessage()
+        if record.name == "agentworkflows.audit" and '"stream-audit-1"' in record.getMessage()
     )
     # The bug recorded status 200, ~0 latency, and no usage before bytes flowed; assert the fix.
     assert audit_event["status_code"] == 200
@@ -488,7 +488,7 @@ def test_streaming_chat_completion_records_usage_latency_and_audit(caplog):
 
 
 def test_streaming_mid_stream_upstream_error_emits_terminal_event_and_records_502(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
 
     class MidStreamFailingClient(FakeRuntimeClient):
         async def stream_chat_completions(self, payload, headers=None, backend=None):

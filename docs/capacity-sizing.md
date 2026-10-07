@@ -66,7 +66,7 @@ Embedding dimensions in the RAG values must match the selected embedding model a
 
 ## Redis, object storage, and logs
 
-The bundled budget Redis is a single, non-persistent development store. It is also used by optional gateway state. A restart can lose counters or cached/stateful data depending on the enabled features. Use the [external stores runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/external-managed-stores.md) before relying on it for a multi-replica customer deployment.
+The bundled budget Redis is a single, non-persistent development store. It is also used by optional gateway state. A restart can lose counters or cached/stateful data depending on the enabled features. Use the [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) before relying on it for a multi-replica customer deployment.
 
 Files and asynchronous batches require an object store when enabled. Include upload limits, object retention, failed-batch output, and cleanup in the storage estimate.
 
@@ -82,4 +82,4 @@ Prometheus, logs, and audit exports grow with traffic and retention. The custome
 6. Set replica floors from the accepted baseline and ceilings from both capacity and cost limits.
 7. Repeat after model, runtime, context, quantization, or hardware changes.
 
-The [GPU capacity runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/gpu-capacity.md) has scheduling diagnostics. The [SLO runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/slo-error-budget.md) covers acceptance thresholds.
+The [GPU capacity runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/gpu-capacity.md) has scheduling diagnostics. The [SLO runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/slo-error-budget.md) covers acceptance thresholds.

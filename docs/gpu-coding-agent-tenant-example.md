@@ -2,8 +2,8 @@
 
 This walkthrough onboards a coding-agent tenant for a GPU-backed team that calls a vLLM runtime and
 needs approved external egress (Git, artifact, and model mirrors). It renders from the reviewed spec
-[tenants/onboarding/gpu-coding-agents.yaml](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/tenants/onboarding/gpu-coding-agents.yaml) and pairs
-with the [GPU capacity](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/gpu-capacity.md) and [Agent workspaces](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/agent-workspaces.md) runbooks.
+[tenants/onboarding/gpu-coding-agents.yaml](https://github.com/RamazanKara/agentworkflows/blob/main/tenants/onboarding/gpu-coding-agents.yaml) and pairs
+with the [GPU capacity](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/gpu-capacity.md) and [Agent workspaces](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/agent-workspaces.md) runbooks.
 
 ## What This Profile Provides
 
@@ -24,14 +24,14 @@ in-cluster gateway and RAG service.
 ## Prerequisite: GPU Runtime
 
 This tenant assumes a vLLM runtime is already serving on GPU nodes. Label GPU nodes and deploy the
-vLLM chart per the [Customer cluster README](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/README.md):
+vLLM chart per the [Customer cluster README](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md):
 
 ```bash
 kubectl label node <gpu-node> platform.ai/node-pool=gpu platform.ai/gpu-vendor=nvidia
 # vLLM customer profile: deploy/clusters/customer/values/vllm-nvidia.yaml (or vllm-amd.yaml)
 ```
 
-See [GPU capacity](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/gpu-capacity.md) for sizing tensor parallelism, context length, and
+See [GPU capacity](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/gpu-capacity.md) for sizing tensor parallelism, context length, and
 GPU requests.
 
 ## Render The Tenant Artifacts

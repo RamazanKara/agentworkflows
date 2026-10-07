@@ -18,7 +18,7 @@ must not weaken the existing redaction guarantees.
 Link each audit event into a per-process tamper-evident SHA-256 hash chain.
 
 - Construction, in
-  [`src/inference-gateway/app/main.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/src/inference-gateway/app/main.py): `h_0 =
+  [`src/inference-gateway/app/main.py`](https://github.com/RamazanKara/agentworkflows/blob/main/src/inference-gateway/app/main.py): `h_0 =
   SHA-256("genesis")`; for each record `h_i = SHA-256(h_{i-1} || canonical(record_i))`, where
   `canonical` is `json.dumps(..., sort_keys=True, separators=(",", ":"))`. The function
   `_chain_audit_event` computes the record hash over the event before adding the chain fields, then
@@ -40,10 +40,8 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
   v0.20.0 lack the field; the verifier falls back to genesis-restart segmentation for them.
   Per-process chains (a new one per replica and per restart) are expected, and verification is
   per chain.
-- The live construction matches the auditor/verifier reference in
-  [`paper/evidence-model/audit_chain.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/paper/evidence-model/audit_chain.py) byte for byte
-  (same genesis, same canonical form, same `SHA-256(prev || canonical(record))`), so the same tooling
-  that an auditor runs verifies the live log.
+- The operator verifier in `scripts/audit-verify.py` checks the live record hashes using
+  the same genesis, canonical form, and `SHA-256(prev || canonical(record))`.
 
 ## Consequences
 
@@ -55,13 +53,12 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
   re-chaining is caught by the internal consistency check, while a full re-chain is caught only by an
   anchor mismatch against an externally committed head.
 - As of v0.20.0 the operator tooling for both checks ships in-tree:
-  [`scripts/audit-verify.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/audit-verify.py)
+  [`scripts/audit-verify.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/audit-verify.py)
   (`make audit-verify`) reads a gateway JSONL log, deduplicates the double-logged copies, groups by
-  `chain_id`, and **verifies the gateway's embedded `prev_hash`/`record_hash`** (unlike the
-  `paper/evidence-model` reference, which re-chains from genesis for its evidence demo); it is
+  `chain_id`, and **verifies the gateway's embedded `prev_hash`/`record_hash`**; it is
   stdlib-only so an auditor runs it offline, has a `--selftest` wired into `make validate`, and
   exits non-zero on any break.
-  [`scripts/audit-anchor.py`](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/audit-anchor.py)
+  [`scripts/audit-anchor.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/audit-anchor.py)
   (`make audit-anchor`) emits the per-chain head (`{chain_id, count, last record_hash}`); a later
   `audit-verify --anchor <file>` flags a shrunk chain (rollback), a changed head (re-chain), or a
   missing chain. A CronJob example that anchors the head into a ConfigMap and the SIEM-forwarding
@@ -71,7 +68,7 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
   replicas there are multiple chains, and a process restart starts a new chain from genesis.
   Verification therefore operates per-chain, and cross-replica/long-horizon integrity depends on the
   log shipping and anchoring the operator puts around it.
-- Keeping the gateway implementation and the paper/evidence verifier in lockstep is a maintenance
+- Keeping the gateway implementation and the operator verifier in lockstep is a maintenance
   obligation: the canonical form and genesis must not drift, or the auditor tooling stops matching.
 
 ## Alternatives considered
@@ -81,7 +78,7 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
 - **External managed audit log / SIEM with immutability guarantees.** Strong for retention and
   cross-service correlation, and operators are encouraged to ship these events into one. Rejected as
   the in-service mechanism because it adds an infrastructure dependency to get a property a few lines
-  of SHA-256 provide locally, and it does not let the bundled `paper/evidence-model` tooling verify
+  of SHA-256 provide locally, and it does not let the bundled operator tooling verify
   integrity offline.
 - **Merkle tree per batch.** Gives efficient inclusion proofs at scale. Rejected as over-engineered
   for a per-request, per-process event stream; a linear hash chain (Crosby & Wallach style, as the

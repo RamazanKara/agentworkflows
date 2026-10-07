@@ -2,7 +2,7 @@
 
 Use this runbook before a customer demo, release review, restore-drill review, or production-readiness handoff.
 
-For the difference between sample and current evidence, see [Evidence and validation](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/docs/proof.md).
+For the difference between sample and current evidence, see [Evidence and validation](https://github.com/RamazanKara/agentworkflows/blob/main/docs/proof.md).
 
 ## Gate Definition
 

@@ -516,7 +516,7 @@ def test_embeddings_rejects_secret_input():
 
 
 def test_embeddings_records_input_audit_fingerprint(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_tool_settings(allowed_models=("default-model",)))
     app.state.runtime_client = FakeRuntimeClient(
         response={"object": "list", "data": [{"embedding": [0.0]}], "usage": {"prompt_tokens": 2}}
@@ -623,7 +623,7 @@ def test_response_cache_disabled_by_default():
 
 
 def test_audit_events_form_tamper_evident_chain(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(_tool_settings())
     app.state.runtime_client = FakeRuntimeClient(response={"id": "x", "object": "chat.completion", "choices": []})
     client = TestClient(app)

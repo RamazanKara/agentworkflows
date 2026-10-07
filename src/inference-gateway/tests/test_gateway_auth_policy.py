@@ -140,7 +140,7 @@ def test_jwt_bearer_token_is_accepted_when_enabled(monkeypatch):
         jwt_auth_enabled=True,
         jwt_jwks_url="https://issuer.example/.well-known/jwks.json",
         jwt_issuer="https://issuer.example",
-        jwt_audience="private-ai-platform-kit",
+        jwt_audience="agentworkflows",
         jwt_required_scopes=("chat:write",),
     )
     app = create_app(settings)
@@ -157,7 +157,7 @@ def test_jwt_bearer_token_is_accepted_when_enabled(monkeypatch):
         secret,
         {
             "iss": "https://issuer.example",
-            "aud": "private-ai-platform-kit",
+            "aud": "agentworkflows",
             "scope": "chat:write tenant:read",
             "exp": int(time.time()) + 300,
         },
@@ -194,7 +194,7 @@ def _hs256_jwt_settings(secret, **overrides):
 
 
 def test_jwt_principal_is_recorded_in_audit(monkeypatch, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     secret = b"jwt-test-secret"
 
     async def fake_keys(self):
@@ -329,7 +329,7 @@ def test_jwt_tenant_binding_scopes_usage_and_budget_reads(monkeypatch):
 
 
 def test_api_key_principal_is_recorded_in_audit(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     api_key = "secret-key-value"
     # Precomputed sha256(api_key) hex; the gateway verifies api_key_sha256s by the same
     # digest. Hardcoded so the test does not hash a credential-named value.
@@ -393,7 +393,7 @@ def test_oidc_jwks_asymmetric_jwt_is_accepted(monkeypatch, algorithm, key_factor
         jwt_auth_enabled=True,
         jwt_jwks_url="https://issuer.example/.well-known/jwks.json",
         jwt_issuer="https://issuer.example",
-        jwt_audience="private-ai-platform-kit",
+        jwt_audience="agentworkflows",
         jwt_required_scopes=("chat:write",),
     )
     app = create_app(settings)
@@ -410,7 +410,7 @@ def test_oidc_jwks_asymmetric_jwt_is_accepted(monkeypatch, algorithm, key_factor
         private_key,
         {
             "iss": "https://issuer.example",
-            "aud": "private-ai-platform-kit",
+            "aud": "agentworkflows",
             "scp": ["chat:write"],
             "exp": int(time.time()) + 300,
         },

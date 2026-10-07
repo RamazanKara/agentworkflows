@@ -1,10 +1,10 @@
 # Disaster Recovery Runbook
 
-This runbook defines the single-cluster disaster-recovery (DR) posture for the kit: what the kit
+This runbook defines the single-cluster disaster-recovery (DR) posture for the platform: what the platform
 backs up, the recovery-point and recovery-time targets those backups imply, the order in which the
-platform is restored, and -- explicitly -- what the kit does *not* do and hands off to the operator.
+platform is restored, and -- explicitly -- what the platform does *not* do and hands off to the operator.
 
-Scope is one cluster. The kit is local-first and ships no secondary cluster, no multi-region
+Scope is one cluster. The deployment templates ship no secondary cluster, no multi-region
 topology, and no warm standby. Everything beyond a single-cluster rebuild is operator-owned and is
 listed under [Operator-Owned Scope](#operator-owned-scope).
 
@@ -13,7 +13,7 @@ For a confirmed data-loss or data-exposure event treat this as **SEV1** and star
 the SEV1 path routes into. For backup-tooling failures (a drill or backup that did not complete) use
 [restore-drill.md](restore-drill.md) instead -- a failed drill is not yet a disaster.
 
-## What The Kit Backs Up
+## What AgentWorkflows Backs Up
 
 Two complementary mechanisms ship in `deploy/backup`:
 
@@ -40,7 +40,7 @@ Two complementary mechanisms ship in `deploy/backup`:
   [restore-drill.md](restore-drill.md) before relying on either as evidence.
 
 The Velero `BackupStorageLocation` and `VolumeSnapshotLocation`, and the object-storage target
-behind them, are **not** shipped by the kit -- they are operator-owned (see
+behind them, are **not** shipped by the platform -- they are operator-owned (see
 [Operator-Owned Scope](#operator-owned-scope) and the customer handoff checklist in
 `deploy/clusters/customer/README.md`). A metadata-only backup restores empty data stores, so CSI
 volume snapshots or `defaultVolumesToFsBackup` must be in effect for the PVC-bearing namespaces.
@@ -48,7 +48,7 @@ volume snapshots or `defaultVolumesToFsBackup` must be in effect for the PVC-bea
 ## RPO And RTO Targets
 
 **RPO (recovery point objective)** is bounded by backup cadence. With the shipped Velero schedule at
-`0 2 * * *` and the kit's snapshot/AOF cadence, the worst-case data-loss window for the protected
+`0 2 * * *` and AgentWorkflows' snapshot/AOF cadence, the worst-case data-loss window for the protected
 data stores is **up to 24 hours** -- the time between the last completed daily backup and the
 failure. The realised loss is smaller for stores that also keep their own continuous journal (Redis
 AOF, where used) but you should plan against the 24-hour bound unless you raise the schedule
@@ -61,7 +61,7 @@ warm-up (image and model re-pull -- the model weights are the long pole, especia
 models). As a single-cluster planning target, aim for **bring-up within a few hours** for a
 moderate data footprint, with the caveat that very large model weights and large vector collections
 extend the runtime and vector-store steps. Measure your own RTO with a real restore drill rather
-than trusting this estimate; the kit gives you the drill to do exactly that.
+than trusting this estimate; the platform gives you the drill to do exactly that.
 
 > These are *targets for a single-cluster rebuild from good backups*. They assume the operator-owned
 > backup target and Velero locations exist and are healthy. With no off-cluster backup, the cluster
@@ -129,22 +129,22 @@ per [incident-response.md](incident-response.md).
 
 ## Operator-Owned Scope
 
-The kit's boundary is "manifests, charts, service code, validation tooling, and runbooks." The
+AgentWorkflows' boundary is "manifests, charts, service code, validation tooling, and runbooks." The
 following are deliberately *not* shipped and are the operator's responsibility for any real DR
 posture beyond a single-cluster rebuild:
 
 - **Off-cluster backup target.** Velero needs a `BackupStorageLocation` (object storage) and a
-  `VolumeSnapshotLocation` that the operator provisions and credentials. The kit ships the schedule
+  `VolumeSnapshotLocation` that the operator provisions and credentials. The platform ships the schedule
   template and the data-bearing namespace list; without a configured, off-cluster target the backups
   do not survive cluster loss and the restore drill validates nothing. See the handoff checklist in
   `deploy/clusters/customer/README.md`.
-- **Secondary cluster.** There is no standby cluster in the kit. Cross-cluster restore (Velero
+- **Secondary cluster.** There is no standby cluster in the platform. Cross-cluster restore (Velero
   restore into a fresh cluster) is operator-driven.
 - **Multi-region / warm standby.** Region failover, replication, and a warm-standby topology are out
-  of scope for this local-first kit and are handed off on the [roadmap](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/ROADMAP.md) under
+  of scope for the current deployment templates and are handed off on the [roadmap](https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md) under
   "Remaining External / Operator-Owned Work."
 - **Backup-target and snapshot scheduling decisions.** The Velero cadence and retention, CSI
-  snapshot intervals, and any tightening of RPO are per-environment operational decisions; the kit
+  snapshot intervals, and any tightening of RPO are per-environment operational decisions; the platform
   ships sane defaults the operator tunes.
 
 ## Related Runbooks

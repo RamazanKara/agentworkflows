@@ -8,10 +8,10 @@ metadata:
     # its CRDs must exist first (ADR 0010).
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/vendor/agent-sandbox/v0.5.0
   destination:
     server: https://kubernetes.default.svc
@@ -31,10 +31,10 @@ metadata:
   name: model-catalog
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: platform/model-catalog/k8s
   destination:
     server: https://kubernetes.default.svc
@@ -52,10 +52,10 @@ metadata:
   name: traceable-sandbox
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/sandbox/base
   destination:
     server: https://kubernetes.default.svc
@@ -73,10 +73,10 @@ metadata:
   name: runtime-ollama
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/ollama
     helm:
       releaseName: ollama
@@ -98,10 +98,10 @@ metadata:
   name: runtime-vllm
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/vllm
     helm:
       releaseName: vllm
@@ -125,10 +125,10 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/vllm
     helm:
       releaseName: vllm-embeddings
@@ -150,10 +150,10 @@ metadata:
   name: budget-redis
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/budget-redis
     helm:
       releaseName: budget-redis
@@ -179,10 +179,10 @@ metadata:
   name: inference-gateway
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/inference-gateway
     helm:
       releaseName: inference-gateway
@@ -204,10 +204,10 @@ metadata:
   name: qdrant-vector-store
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/qdrant-vector-store
     helm:
       releaseName: qdrant-vector-store
@@ -229,10 +229,10 @@ metadata:
   name: rag-service
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/rag-service
     helm:
       releaseName: rag-service
@@ -254,10 +254,10 @@ metadata:
   name: agent-workspace
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/charts/agent-workspace
     helm:
       releaseName: agent-workspace
@@ -279,10 +279,10 @@ metadata:
   name: security-policies
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/policies/kyverno
   destination:
     server: https://kubernetes.default.svc
@@ -298,10 +298,10 @@ metadata:
   name: restore-drill
   namespace: argocd
 spec:
-  project: private-ai-platform
+  project: agentworkflows
   source:
-    repoURL: https://github.com/RamazanKara/private-ai-platform-kit.git
-    targetRevision: v0.29.0
+    repoURL: https://github.com/RamazanKara/agentworkflows.git
+    targetRevision: v0.1.0
     path: deploy/backup/restore-drill/k8s
   destination:
     server: https://kubernetes.default.svc

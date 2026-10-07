@@ -36,7 +36,7 @@ upstream Helm chart. Managed offerings (GKE Agent Sandbox) and production
 users exist.
 
 Maintaining a bespoke isolation layer in parallel would duplicate an upstream
-primitive this kit does not differentiate on. The kit's differentiation is the
+primitive AgentWorkflows does not differentiate on. AgentWorkflows' differentiation is the
 governance envelope around agent execution: approved-egress catalog, per-sandbox
 budgets, the audit chain and evidence packs, and the control-framework map
 (`platform/governance/control-framework-map.yaml`).
@@ -56,7 +56,7 @@ runtime** underneath the existing governance envelope:
    cluster provides it, mirroring the optional `accelerator.runtimeClassName`
    pattern in the vLLM chart), disables service-account token automount,
    and stays compatible with the `restricted` Pod Security level.
-3. The kit's NetworkPolicies and `ApprovedEgressCatalog` remain the
+3. AgentWorkflows' NetworkPolicies and `ApprovedEgressCatalog` remain the
    **authoritative egress control**: on the direct-`Sandbox` path they are
    the *only* network control, since upstream creates no policy there. The
    catalog stays the only allow-path, `make egress-check` extends to
@@ -81,8 +81,8 @@ Positive:
 - Kernel-level isolation becomes available for untrusted agent code and is
   tied to governance risk tiers instead of being uniformly absent.
 - The isolation primitive is maintained by SIG Apps and its ecosystem
-  (SDKs, warm pools, managed equivalents), not by this kit.
-- The kit's story sharpens: governance, egress, budgets, and evidence over a
+  (SDKs, warm pools, managed equivalents), not by AgentWorkflows.
+- AgentWorkflows' story sharpens: governance, egress, budgets, and evidence over a
   standard primitive: the layer above agent-sandbox, not a competitor to it.
 - Warm pools give a path to low-latency workspace allocation without bespoke
   pooling code.
@@ -100,7 +100,7 @@ Negative / accepted costs:
 - Two runtime paths (namespace, agent-sandbox) must be rendered and tested in
   `make validate`, increasing the chart test matrix.
 - When the pooled path (SandboxTemplate/warm pools) is adopted, upstream's
-  template-scoped NetworkPolicy model must be reconciled with the kit's
+  template-scoped NetworkPolicy model must be reconciled with AgentWorkflows'
   default-deny policies so the egress catalog remains the single source of
   truth; this reconciliation is a design obligation, not an option.
 
@@ -110,9 +110,9 @@ Negative / accepted costs:
   state: it offers no syscall-level barrier for model-generated code, which is
   unacceptable at the `high` risk tier. Retained as the default and local-lab
   profile, since the envelope must keep working on any conformant cluster.
-- **Build a kit-owned sandbox CRD and controller.** Rejected: duplicates a
+- **Build a project-owned sandbox CRD and controller.** Rejected: duplicates a
   SIG Apps project with production adoption, adds permanent controller
-  maintenance to a solo-maintained kit, and weakens the "governance layer over
+  maintenance to a solo-maintained project, and weakens the "governance layer over
   standard primitives" positioning.
 - **Set `runtimeClassName` on plain workspace pods without agent-sandbox.**
   Considered as a minimal dependency-free hardening step. Loses lifecycle
@@ -120,5 +120,5 @@ Negative / accepted costs:
   compatibility. Kept as the documented fallback if upstream API churn ahead
   of GA proves too costly.
 - **Hosted sandbox services (E2B, Daytona, Modal and similar).** Rejected:
-  external SaaS execution of agent workloads contradicts the kit's
+  external SaaS execution of agent workloads contradicts AgentWorkflows'
   local-first, sovereign scope (`docs/scope-and-non-goals.md`).

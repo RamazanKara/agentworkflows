@@ -102,7 +102,7 @@ def validate_summary(path: Path, strict_current: bool = False) -> list[str]:
     if strict_current and sample:
         errors.append("latest supply-chain evidence is a checked-in sample; run make image-scan")
 
-    require(errors, payload.get("project") == "Private AI Platform Kit", f"{rel(path)} project must match")
+    require(errors, payload.get("project") == "AgentWorkflows", f"{rel(path)} project must match")
     require(errors, payload.get("status") == "pass", f"{rel(path)} status must be pass")
     require(errors, "HIGH and CRITICAL" in str(payload.get("gate", "")), f"{rel(path)} must document the HIGH/CRITICAL gate")
     images = payload.get("images", [])

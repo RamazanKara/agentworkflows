@@ -11,7 +11,7 @@ Use this runbook to enable JWT auth and to drill issuer key rotation.
 ## Enable JWT Validation
 
 Set the JWT block in the gateway chart values and apply through GitOps. Configuration maps to
-`auth.jwt.*` in [deploy/charts/inference-gateway/values.yaml](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/charts/inference-gateway/values.yaml).
+`auth.jwt.*` in [deploy/charts/inference-gateway/values.yaml](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/inference-gateway/values.yaml).
 
 ```yaml
 auth:
@@ -20,7 +20,7 @@ auth:
     enabled: true
     jwksUrl: "https://<issuer>/.well-known/jwks.json"
     issuer: "https://<issuer>/"
-    audience: "private-ai-platform-kit"
+    audience: "agentworkflows"
     requiredScopes:
       - inference.invoke
     cacheSeconds: 300

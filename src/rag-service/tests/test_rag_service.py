@@ -787,7 +787,7 @@ def test_rag_query_rejects_explicit_zero_limits(tmp_path):
 
 
 def test_rag_audit_log_redacts_query_content(tmp_path, caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     write_doc(tmp_path, "agents.md", "# Coding Agents\nUse the gateway.")
     client = TestClient(create_app(Settings(document_dir=tmp_path)))
 
@@ -1395,7 +1395,7 @@ def _qdrant_retriever(embedding, reranker=None):
 
 
 def test_embedding_outage_is_a_503_and_recorded_as_one(tmp_path, caplog):
-    caplog.set_level("INFO", logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level("INFO", logger="agentworkflows.rag.audit")
     write_doc(tmp_path, "a.md", "# A\ngateway")
     app = create_app(Settings(document_dir=tmp_path))
     app.state.retriever = _qdrant_retriever(_FailingEmbedding())
@@ -1403,13 +1403,13 @@ def test_embedding_outage_is_a_503_and_recorded_as_one(tmp_path, caplog):
     response = TestClient(app).post("/v1/rag/query", json={"query": "gateway"})
 
     assert response.status_code == 503
-    receipts = [json.loads(r.message) for r in caplog.records if r.name == "ai_platform_ops_lab.rag.audit"]
+    receipts = [json.loads(r.message) for r in caplog.records if r.name == "agentworkflows.rag.audit"]
     assert receipts[-1]["status_code"] == 503
     assert receipts[-1]["decision"] == "denied"
 
 
 def test_unexpected_failure_is_recorded_as_500_not_allowed(tmp_path, caplog):
-    caplog.set_level("INFO", logger="ai_platform_ops_lab.rag.audit")
+    caplog.set_level("INFO", logger="agentworkflows.rag.audit")
     write_doc(tmp_path, "a.md", "# A\ngateway")
     app = create_app(Settings(document_dir=tmp_path))
 
@@ -1423,7 +1423,7 @@ def test_unexpected_failure_is_recorded_as_500_not_allowed(tmp_path, caplog):
     response = TestClient(app, raise_server_exceptions=False).post("/v1/rag/query", json={"query": "gateway"})
 
     assert response.status_code == 500
-    receipts = [json.loads(r.message) for r in caplog.records if r.name == "ai_platform_ops_lab.rag.audit"]
+    receipts = [json.loads(r.message) for r in caplog.records if r.name == "agentworkflows.rag.audit"]
     assert receipts[-1]["status_code"] == 500
     assert receipts[-1]["decision"] == "denied"
 

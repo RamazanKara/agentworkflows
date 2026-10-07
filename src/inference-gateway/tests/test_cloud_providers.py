@@ -181,7 +181,7 @@ def receipts(caplog):
     return [
         json.loads(record.message)
         for record in caplog.records
-        if record.name == "ai_platform_ops_lab.audit" and record.message.startswith("{")
+        if record.name == "agentworkflows.audit" and record.message.startswith("{")
     ]
 
 

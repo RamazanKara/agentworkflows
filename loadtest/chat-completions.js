@@ -28,7 +28,7 @@ export default function () {
     messages: [
       {
         role: 'user',
-        content: 'Reply with a short greeting from Private AI Platform Kit.',
+        content: 'Reply with a short greeting from AgentWorkflows.',
       },
     ],
   });

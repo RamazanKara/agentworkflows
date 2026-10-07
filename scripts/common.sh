@@ -13,11 +13,11 @@ if [[ -d "$TOOLCHAIN_BIN_DIR" && ":$PATH:" != *":$TOOLCHAIN_BIN_DIR:"* ]]; then
 fi
 
 log() {
-  printf '[private-ai-platform-kit] %s\n' "$*"
+  printf '[agentworkflows] %s\n' "$*"
 }
 
 die() {
-  printf '[private-ai-platform-kit] ERROR: %s\n' "$*" >&2
+  printf '[agentworkflows] ERROR: %s\n' "$*" >&2
   exit 1
 }
 

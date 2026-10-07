@@ -1,4 +1,4 @@
-Private AI Platform Kit installed via the umbrella chart.
+AgentWorkflows installed via the umbrella chart.
 
 Enabled components (set <name>.enabled=false to omit):
 {{- range $name, $cfg := .Values }}
@@ -7,5 +7,5 @@ Enabled components (set <name>.enabled=false to omit):
 {{- end }}
 {{- end }}
 
-Run `helm dependency update deploy/charts/platform` before install to vendor the subcharts.
+Run `helm dependency update deploy/charts/agentworkflows` before install to vendor the subcharts.
 GitOps (Argo CD) remains the recommended path for production multi-namespace installs.

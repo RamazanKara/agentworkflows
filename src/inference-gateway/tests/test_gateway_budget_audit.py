@@ -195,7 +195,7 @@ def test_budget_counts_tool_call_arguments_as_prompt_context():
 
 
 def test_audit_log_redacts_prompt_content(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = Settings(
         runtime_backend="ollama",
         ollama_base_url="http://ollama:11434",
@@ -226,7 +226,7 @@ def test_audit_log_redacts_prompt_content(caplog):
 
 
 def test_audit_events_carry_agent_action_receipts(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     settings = Settings(
         runtime_backend="ollama",
         ollama_base_url="http://ollama:11434",
@@ -259,7 +259,7 @@ def test_audit_events_carry_agent_action_receipts(caplog):
     assert allowed.status_code == 200
     assert denied.status_code == 400
     events = [
-        json.loads(record.getMessage()) for record in caplog.records if record.name == "ai_platform_ops_lab.audit"
+        json.loads(record.getMessage()) for record in caplog.records if record.name == "agentworkflows.audit"
     ]
     receipts = {event["request_id"]: event for event in events if event.get("event") == "inference_request"}
     assert receipts["receipt-allowed"]["action_type"] == "model_call"

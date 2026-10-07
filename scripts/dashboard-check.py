@@ -92,7 +92,7 @@ def render_configmaps() -> str:
                 "namespace": DASHBOARD_NAMESPACE,
                 "labels": {
                     "grafana_dashboard": "1",
-                    "app.kubernetes.io/part-of": "private-ai-platform-kit",
+                    "app.kubernetes.io/part-of": "agentworkflows",
                 },
             },
             "data": {f"{name}.json": _LiteralStr(path.read_text(encoding="utf-8"))},

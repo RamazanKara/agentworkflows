@@ -88,7 +88,7 @@ def _chat_response(text="hello from claude", finish_reason="stop", usage=None):
 
 
 def test_messages_admitted_budgeted_audited_and_forwarded(caplog):
-    caplog.set_level(logging.INFO, logger="ai_platform_ops_lab.audit")
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
     app = create_app(
         _tool_settings(
             allowed_models=("default-model",),
@@ -137,7 +137,7 @@ def test_messages_admitted_budgeted_audited_and_forwarded(caplog):
     event = next(
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "ai_platform_ops_lab.audit" and '"inference_request"' in record.getMessage()
+        if record.name == "agentworkflows.audit" and '"inference_request"' in record.getMessage()
     )
     assert event["message_count"] == 2
     assert event["message_roles"] == ["system", "user"]

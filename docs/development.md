@@ -144,7 +144,7 @@ reference-style Markdown links, or heading anchors; preview the affected pages t
 | Tests import the wrong `app` module | Run the gateway and RAG suites in separate interpreter processes. |
 | `mkdocs not found` | Run `make docs-install`, then `make docs-build`. |
 | A generated contract check fails | Review the source change, run the corresponding update target, and inspect its diff. |
-| `make validate-full` reports missing tools | Run `make toolchain-doctor TOOLCHAIN_PROFILE=strict` and follow the [validation toolchain runbook](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/validation-toolchain.md). |
+| `make validate-full` reports missing tools | Run `make toolchain-doctor TOOLCHAIN_PROFILE=strict` and follow the [validation toolchain runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/validation-toolchain.md). |
 
 `make clean` removes generated reports, site output, caches, and service test
 environments. Save any evidence you need before using it. `make clean-all` also

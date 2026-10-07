@@ -40,6 +40,10 @@ Ruff's safe lint fixes across the repository. Optional
 
 ## Change standards
 
+User experience is part of every capability: use sensible defaults, one obvious path,
+actionable errors, and copy-pasteable examples a team lead can follow in ten minutes.
+Remove friction before adding options.
+
 - Keep runtime and test dependencies separate. Regenerate the associated hashed
   locks whenever requirement pins change, including tooling locks.
 - Keep Docker base images pinned by digest. Run `make image-scan` and

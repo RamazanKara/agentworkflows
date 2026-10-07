@@ -1,6 +1,6 @@
 # Model Cards
 
-Every model the Private AI Platform Kit catalog marks `status: approved` must have a model card
+Every model the AgentWorkflows catalog marks `status: approved` must have a model card
 in this directory. A model card is the human-readable companion to the machine-checked catalog
 entry and provenance record: it restates the governed facts in one place so an operator,
 reviewer, or customer can understand what a model is, how it is served, where it came from, and
@@ -57,7 +57,7 @@ governed YAML; do not leave placeholders or invent values.
 
 ## Intended use
 
-<What this model is approved for in the kit, and the environment(s) it is allowlisted in.>
+<What this model is approved for in the platform, and the environment(s) it is allowlisted in.>
 
 ## Out-of-scope / not approved for
 

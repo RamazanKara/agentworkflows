@@ -340,7 +340,7 @@ def write_json(path: Path, report: SloReport) -> None:
     passed = sum(1 for item in report.objectives if item.status == "pass")
     failed = sum(1 for item in report.objectives if item.status == "fail")
     payload = {
-        "project": "Private AI Platform Kit",
+        "project": "AgentWorkflows",
         "generated_at": report.generated_at,
         "config": report.config,
         "profile": report.profile,
@@ -370,7 +370,7 @@ def build_report(config_path: Path) -> SloReport:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check Private AI Platform Kit SLO objectives against current evidence.")
+    parser = argparse.ArgumentParser(description="Check AgentWorkflows SLO objectives against current evidence.")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--report", action="store_true")

@@ -48,7 +48,7 @@
 
   <!-- Cluster boundary -->
   <rect x="270" y="120" width="910" height="600" rx="16" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="3 6"/>
-  <text x="288" y="146" class="muted small">Customer-owned Kubernetes cluster (Argo CD project: private-ai-platform)</text>
+  <text x="288" y="146" class="muted small">Customer-owned Kubernetes cluster (Argo CD project: agentworkflows)</text>
 
   <!-- Ingress -->
   <rect x="290" y="200" width="150" height="90" rx="14" class="panel gold"/>

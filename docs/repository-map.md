@@ -8,17 +8,16 @@ its contracts and validation commands.
 
 | Directory | Responsibility | Start here |
 | --- | --- | --- |
-| `src/` | Independently packaged FastAPI services | [Gateway code map](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/src/inference-gateway/README.md), [RAG code map](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/src/rag-service/README.md) |
-| `sdk/` | First-party clients, package metadata, and client tests | [SDK guide](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/sdk/README.md) |
-| `deploy/` | Helm charts, cluster overlays, GitOps applications, policy, observability, and backup manifests, plus the Docker Compose evaluation stack in `deploy/compose/` | [Chart index](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/charts/README.md), [customer overlay](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/deploy/clusters/customer/README.md) |
+| `src/` | Independently packaged FastAPI services | [Gateway code map](https://github.com/RamazanKara/agentworkflows/blob/main/src/inference-gateway/README.md), [RAG code map](https://github.com/RamazanKara/agentworkflows/blob/main/src/rag-service/README.md) |
+| `sdk/` | First-party clients, package metadata, and client tests | [SDK guide](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/README.md) |
+| `deploy/` | Helm charts, cluster overlays, GitOps applications, policy, observability, and backup manifests, plus the Docker Compose evaluation stack in `deploy/compose/` | [Chart index](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/README.md), [customer overlay](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md) |
 | `platform/` | API/config contracts, governance inputs, model catalog, eval suites, SLOs, and toolchain definitions | [Feature inventory](feature-inventory.md), [production readiness](production-readiness.md) |
-| `tenants/` | Tenant onboarding specifications, sandbox policies, and deployment examples | [Tenant operations](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/tenant-labs.md) |
-| `scripts/` | Setup, validation, contract generation, and evidence commands | [Automation guide](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/scripts/README.md) |
-| `runbooks/` | Operator procedures linked from alerts and release gates | [Runbook index](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/README.md) |
+| `tenants/` | Tenant onboarding specifications, sandbox policies, and deployment examples | [Tenant operations](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/tenant-labs.md) |
+| `scripts/` | Setup, validation, contract generation, and evidence commands | [Automation guide](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/README.md) |
+| `runbooks/` | Operator procedures linked from alerts and release gates | [Runbook index](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/README.md) |
 | `docs/` | Tutorials, how-to guides, reference pages, explanations, and ADRs | [Documentation home](index.md) |
-| `chaos/` | Resilience drill definitions | [Chaos drills](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/runbooks/chaos-drills.md) |
+| `chaos/` | Resilience drill definitions | [Chaos drills](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/chaos-drills.md) |
 | `loadtest/` | k6 scenarios, a mock runtime, and report summarization | [Benchmarks and evals](benchmarks-and-evals.md) |
-| `paper/` | Research text, experiments, conformance drivers, and recorded research results | [Research guide](https://github.com/RamazanKara/private-ai-platform-kit/blob/main/paper/README.md) |
 | `results/` | Tracked sample evidence and ignored current reports | [Evidence and validation](proof.md) |
 
 The directory inventory is declared in `scripts/paths.py`. `make paths` prints it
@@ -67,8 +66,7 @@ and SDK test environments have separate requirement files. Keep the lock associa
 with each environment aligned with its input.
 
 Files named `sample-*` under `results/` describe report formats. They are not current
-validation evidence. Research results under `paper/` are a separate recorded dataset;
-follow the research guide when reproducing or updating them.
+validation evidence. AgentWorkflows releases require freshly generated reports.
 
 ## Where to put a change
 

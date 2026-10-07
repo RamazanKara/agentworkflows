@@ -93,7 +93,7 @@ def fetch_manifest(model_id: str, revision: str) -> bytes:
     validate_identity(model_id, revision)
     url = f"https://huggingface.co/api/models/{model_id}/revision/{revision}?blobs=true"
     request = urllib.request.Request(
-        url, headers={"Accept": "application/json", "User-Agent": "private-ai-platform-kit"}
+        url, headers={"Accept": "application/json", "User-Agent": "agentworkflows"}
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         metadata = json.load(response)
