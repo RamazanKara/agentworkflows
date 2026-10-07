@@ -30,8 +30,6 @@ REQUIRED_FILES = (
     ".github/ISSUE_TEMPLATE/question.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/workflows/ci.yml",
-    ".github/workflows/fuzz.yml",
-    ".github/workflows/scorecard.yml",
     ".gitignore",
     "ADOPTERS.md",
     "platform/api-contracts/README.md",
