@@ -22,6 +22,8 @@
 inference-gateway:
   enabled: true
   fullnameOverride: inference-gateway
+  adminConsole:
+    enabled: true
   namespace:
     create: false
   runtime:

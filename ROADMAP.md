@@ -2,7 +2,8 @@
 
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
-Version 0.2.0 delivers milestones 1–4. The remaining milestones are planned.
+Version 0.2.0 delivers milestones 1–4. Milestone 5 is delivered in this checkout;
+milestone 6 remains planned.
 
 ## Milestone 1: governed cloud providers — delivered
 
@@ -43,13 +44,17 @@ Team onboarding uses the existing reviewed key and sandbox policy files. Cost re
 configured prices and conservative reservations, not provider invoices. Temporal access
 and workers are trusted operator surfaces; end users use the authenticated gateway.
 
-## Milestone 5: production hardening — planned
+## Milestone 5: team web console — delivered in this checkout
+
+- Same-origin React console bundled with the gateway in Compose and Helm.
+- Existing team auth, verified identity switching, filtered runs, receipt timelines, and approvals.
+- First-run walkthrough, admin provider/budget configuration guidance, and team/provider/workflow costs.
+- Responsive, keyboard-accessible pages and headless browser checks in the Compose walkthrough.
+
+## Milestone 6: production hardening and broader coverage — planned
 
 Strengthen upgrade, backup, availability, and live-provider acceptance evidence. Validate
 team operations under deployment-specific identity, networking, and retention policies.
-
-## Milestone 6: broader workflow coverage — planned
-
 Expand instrumented model/tool integrations and measurable receipt coverage. The current
 audit chain cannot prove unreported tool activity or direct calls outside the gateway.
 

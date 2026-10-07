@@ -83,6 +83,7 @@ services:
       OUTPUT_GUARDRAIL_MODE: redact
       AGENT_RECEIPTS_ENABLED: "true"
       RESPONSES_STORE_ENABLED: "true"
+      # The team console is bundled in this image: http://127.0.0.1:8080/console
       ADMIN_CONSOLE_ENABLED: "true"
       AUDIT_LOG_ENABLED: "true"
     depends_on:

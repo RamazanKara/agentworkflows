@@ -9,7 +9,7 @@ import logging
 import os
 from datetime import timedelta
 from time import time
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4, uuid5
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -150,6 +150,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
                     "chain_id": event["chain_id"],
                     "attempts": event.get("routing_attempts", []),
                     "principal": event.get("principal"),
+                    "receipt": event,
                 }
             )
     return result
@@ -251,12 +252,35 @@ def register_operation_routes(app: FastAPI) -> None:
 
     @app.get("/v1/workflow-runs", tags=["workflows"], summary="List your project's runs, newest first")
     async def runs(
-        request: Request, project: str | None = None, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)
+        request: Request,
+        project: str | None = None,
+        offset: int = Query(0, ge=0),
+        limit: int = Query(20, ge=1, le=100),
+        workflow: str | None = Query(None, max_length=128),
+        status: Literal["running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out"]
+        | None = None,
     ) -> dict[str, Any]:
         selected = project_access(request, project)
+        # Page the underlying index before filtering, keeping Temporal fan-out bounded.
+        # next_offset advances even when this page has no matching runs.
         ids = await redis_call(request, "zrevrange", index_key(request, selected), offset, offset + limit)
+        rows = []
+        for run_id in ids[:limit]:
+            if workflow and (await run_metadata(request, run_id))["workflow"] != workflow:
+                continue
+            try:
+                row = await describe_run(request, run_id, timeline=False)
+            except RPCError as exc:
+                if exc.status != RPCStatusCode.NOT_FOUND:
+                    raise
+                # Retained Redis metadata may outlive Temporal retention.
+                continue
+            waiting = row.get("progress", {}).get("stage") == "awaiting_approval"
+            if status and ("awaiting_approval" if waiting else row["status"]) != status:
+                continue
+            rows.append(row)
         return {
-            "runs": [await describe_run(request, run_id, timeline=False) for run_id in ids[:limit]],
+            "runs": rows,
             "next_offset": offset + limit if len(ids) > limit else None,
         }
 

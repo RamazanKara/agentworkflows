@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — team console (milestone 5)
+
+- Bundled React/Vite console at `/console`: existing team-key/JWT sign-in, in-memory identity
+  switching, first-run guidance, filtered runs, start/cancel/retry, receipt and gateway-log
+  timelines, and verified approve/reject actions across available projects.
+- Admin provider key-presence checks and reviewed configuration guidance; shared budgets
+  and current-window costs by team, provider, and workflow. No secret values leave the gateway.
+- Same gateway image and Helm switch; Compose walkthrough now checks the main pages in
+  headless Chromium. Added browser and API regressions, responsive layout, keyboard navigation,
+  no-store responses, and a same-origin console content security policy.
+- React/ReactDOM are the only UI runtime dependencies; Vite, TypeScript, and Playwright provide
+  builds and browser verification. Node.js 24 is build/test-only, absent from the runtime image.
+
 ## v0.2.0 - 2026-10-07
 
 - Projects and admin/builder/approver/viewer roles on existing sandbox credentials;

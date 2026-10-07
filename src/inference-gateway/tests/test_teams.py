@@ -238,6 +238,8 @@ def test_approval_identity_duplicates_and_cancel_retry(team_gateway, caplog):
     timeline = client.get(path, headers=auth("viewer")).json()["timeline"]
     assert timeline[0]["action"] == "approval" and timeline[0]["principal"]["key_id"] == "approver"
     assert len(timeline[0]["receipt_id"]) == 64
+    assert timeline[0]["receipt"]["record_hash"] == timeline[0]["receipt_id"]
+    assert timeline[0]["receipt"]["approved"] is True
     assert len(app.state.temporal_client.executions) == 2
     verifier = _load_verifier()
     events = verifier.deduplicate(verifier.extract_audit_events(_double_logged_lines(caplog)))
@@ -256,6 +258,39 @@ def test_jwt_team_roles_require_a_subject_and_well_formed_claims():
         {"sub": "alice", "role": "admin", "project": ["private"]},
     ):
         assert "role" not in _jwt_principal(claims)
+
+
+def test_run_filters_advance_past_empty_pages_and_respect_project(team_gateway):
+    client, app = team_gateway
+    first = start(client).json()
+    second = start(client).json()
+    app.state.temporal_client.executions[second["workflow_id"]].stage = "draft"
+    page = client.get("/v1/workflow-runs?status=awaiting_approval&limit=1", headers=auth("viewer")).json()
+    assert page == {"runs": [], "next_offset": 1}
+    page = client.get("/v1/workflow-runs?status=awaiting_approval&limit=1&offset=1", headers=auth("viewer")).json()
+    assert page["runs"][0]["run_id"] == first["run_id"]
+    assert page["next_offset"] is None
+    assert client.get("/v1/workflow-runs?workflow=OtherWorkflow", headers=auth("viewer")).json()["runs"] == []
+    assert client.get("/v1/workflow-runs?status=unknown", headers=auth("viewer")).status_code == 422
+    assert client.get("/v1/workflow-runs?project=private", headers=auth("viewer")).json()["runs"] == []
+    assert client.get("/v1/workflow-runs?project=default", headers=auth("project")).status_code == 404
+
+
+def test_provider_setup_exposes_references_only_to_admin(team_gateway, monkeypatch):
+    client, app = team_gateway
+    monkeypatch.setenv("TEAM_TEST_KEY", "fake-secret-never-returned")
+    app.state.sandbox_policy_set.policies["team"] = replace(
+        app.state.sandbox_policy_set.policies["team"],
+        provider_credentials={"openai": "TEAM_TEST_KEY", "anthropic": "TEAM_MISSING_KEY"},
+    )
+    admin = client.get("/v1/team", headers=auth("admin"))
+    assert admin.json()["provider_configuration"] == {
+        "openai": {"environment_variable": "TEAM_TEST_KEY", "configured": True},
+        "anthropic": {"environment_variable": "TEAM_MISSING_KEY", "configured": False},
+    }
+    assert "fake-secret-never-returned" not in admin.text
+    for role in ("builder", "approver", "viewer", "other"):
+        assert "provider_configuration" not in client.get("/v1/team", headers=auth(role)).json()
 
 
 def test_worker_scope_timeline_and_shared_provider_budget(team_gateway):
@@ -277,7 +312,9 @@ def test_worker_scope_timeline_and_shared_provider_budget(team_gateway):
     report = client.get("/v1/usage", headers=auth("viewer")).json()
     assert report["spend"]["reserved_and_spent_usd"] == 0.01
     assert set(report["providers"]) == {"openai", "anthropic"}
+    assert report["spend"]["workflows"]["ResearchWorkflow"] == {"calls": 2, "tokens": 10, "cost_usd": 0.01}
     assert client.get("/v1/usage", headers=auth("project")).json()["providers"] == {}
+    assert client.get("/v1/usage", headers=auth("project")).json()["spend"]["workflows"] == {}
     rows = client.get(path, headers=auth("viewer")).json()["timeline"]
     assert len(rows) == 2
     assert {r["provider"] for r in rows} == {"openai", "anthropic"}

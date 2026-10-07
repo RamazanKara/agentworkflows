@@ -1,5 +1,6 @@
 """Team roles layer onto verified sandbox identities; headers never grant membership."""
 
+import os
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -77,4 +78,14 @@ def register_team_routes(app: FastAPI) -> None:
             "projects": projects,
             "providers": sorted(team.provider_credentials) if team else [],
             "cost_limit_usd": team.cost_limit_usd if team else None,
+            **(
+                {
+                    "provider_configuration": {
+                        provider: {"environment_variable": variable, "configured": bool(os.getenv(variable))}
+                        for provider, variable in team.provider_credentials.items()
+                    }
+                }
+                if team and principal["role"] == "admin"
+                else {}
+            ),
         }

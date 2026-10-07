@@ -1,0 +1,24 @@
+{
+  "name": "agentworkflows-console",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "lint": "tsc --noEmit",
+    "dev": "vite --host 127.0.0.1",
+    "test": "playwright test --workers=2",
+    "smoke": "playwright test --config playwright.smoke.config.ts --workers=1"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.2",
+    "vite": "8.3.3"
+  }
+}

@@ -199,7 +199,7 @@ class Settings:
     responses_redis_timeout_seconds: float = 0.5
     responses_key_prefix: str = "agentworkflows:responses"
     responses_retention_seconds: int = 86400
-    # Opt-in read-only admin console served at /console (ADR 0013). Off by default.
+    # Opt-in team console served at /console. Off by default for API-only deployments.
     admin_console_enabled: bool = False
 
     def __post_init__(self) -> None:

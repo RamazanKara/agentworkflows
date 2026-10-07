@@ -27,7 +27,7 @@ help:
 		'' \
 		'Try it without Kubernetes (Docker Compose):' \
 		'  make compose-up            Start gateway, Temporal, workflow worker, cloud fixtures, and RAG' \
-		'  make compose-smoke         Verify governance, worker crash recovery, and receipts' \
+		'  make compose-smoke         Verify governance, worker recovery, receipts, and the web console' \
 		'  make compose-down          Stop the stack and delete its volumes' \
 		'' \
 		'Local platform:' \
@@ -54,6 +54,7 @@ help:
 		'  make format                Apply Ruff format and autofixes' \
 		'  make typecheck             Run mypy on both services' \
 		'  make test                  Run tooling, service, and first-party SDK tests' \
+		'  make test-console          Build the web console and run headless Chromium checks' \
 		'  make test-scripts          Run repository tooling tests (Python + Git only)' \
 		'  make coverage              Report test coverage with enforced floors' \
 		'  make fuzz                  Mutate security-critical parser inputs' \
@@ -362,7 +363,14 @@ validate-full: python-env
 	$(PYTHON) scripts/toolchain-doctor.py --profile strict --check
 	REQUIRE_FULL_TOOLCHAIN=1 ./scripts/validate.sh
 
-test: test-scripts test-gateway test-rag
+test: test-scripts test-gateway test-rag test-console
+
+.PHONY: console-build test-console
+console-build:
+	./scripts/build-console.sh
+
+test-console:
+	./scripts/test-console.sh
 
 test-scripts:
 	python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
