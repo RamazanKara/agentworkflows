@@ -2517,6 +2517,9 @@ token and JWKS endpoints in your existing network policy.</p>
 to the browser, and a nonce. ID tokens must pass signature, issuer, audience, expiry,
 issued-at, subject, nonce, and authorized-party checks. Tokens and the client secret are
 never sent to browser storage. Keep all replicas on the same Redis and auth configuration.</p>
+<p>Sessions and approval receipts record a display name: the managed key's name, or the ID
+token's <code>name</code> (else <code>email</code>) claim. The console shows it in the account card and on each
+Approval step.</p>
 <p><code>GET /v1/auth/config</code> publicly describes available sign-in methods without secrets.
 <code>GET /v1/auth/login</code> starts OIDC; <code>GET /v1/auth/callback</code> completes it.
 <code>POST /v1/auth/session</code> with <code>{"key":"..."}</code> creates the same session from an API key
