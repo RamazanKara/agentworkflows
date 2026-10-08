@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## v0.5.0 - 2026-10-08
 
 - Make the umbrella Helm chart cloud-first: include Temporal/PostgreSQL and the worker,
