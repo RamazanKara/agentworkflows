@@ -106,6 +106,8 @@ async def _chat_with_fallback(
             return result
         except httpx.HTTPError as exc:
             attempt["status"] = "failed"
+            if isinstance(exc, httpx.HTTPStatusError):
+                attempt["status_code"] = exc.response.status_code
             if _is_failover_worthy(exc) and index + 1 < len(chain):
                 RUNTIME_FALLBACKS.labels(candidate.backend, chain[index + 1].backend).inc()
                 continue
@@ -150,6 +152,8 @@ async def _open_stream_with_fallback(
             return candidate_stream, candidate.backend, candidate.model_id, None
         except httpx.HTTPError as exc:
             receipt["status"] = "failed"
+            if isinstance(exc, httpx.HTTPStatusError):
+                receipt["status_code"] = exc.response.status_code
             await candidate_stream.aclose()
             last_exc = exc
             if _is_failover_worthy(exc) and index + 1 < len(chain):

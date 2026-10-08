@@ -2,6 +2,7 @@ import json
 import logging
 
 import httpx
+import pytest
 from app import inference_api, streaming
 from app.main import create_app
 from app.policy import ModelRoute, ModelRoutingPolicy
@@ -244,6 +245,38 @@ def test_models_list_only_what_the_caller_may_call():
     listed = TestClient(app).get("/v1/models").json()["data"]
 
     assert [entry["id"] for entry in listed] == ["primary-model"]
+
+
+def test_models_name_their_provider_and_flag_simulated_routes(tmp_path):
+    manifest = tmp_path / "routing.yaml"
+    manifest.write_text(
+        """
+apiVersion: platform.ai/v1alpha1
+kind: ModelRoutingPolicy
+spec:
+  models:
+    - id: real-model
+      backend: openai
+      connection: {baseUrl: https://api.openai.com/v1, model: gpt-4.1-mini, credentialEnv: OPENAI_API_KEY}
+      pricing: {inputUsdPer1kTokens: 0.0004, outputUsdPer1kTokens: 0.0016}
+    - id: demo-model
+      backend: anthropic
+      simulated: true
+      connection: {baseUrl: http://cloud-fake:8000/anthropic/v1, model: fixture, credentialEnv: FAKE_KEY}
+      pricing: {inputUsdPer1kTokens: 1, outputUsdPer1kTokens: 3}
+""",
+        encoding="utf-8",
+    )
+    policy = ModelRoutingPolicy.from_path(manifest, _tool_settings())
+
+    assert policy.openai_models() == [
+        {"id": "real-model", "object": "model", "owned_by": "openai", "permission": []},
+        {"id": "demo-model", "object": "model", "owned_by": "anthropic", "permission": [], "simulated": True},
+    ]
+    text = manifest.read_text(encoding="utf-8")
+    manifest.write_text(text.replace("simulated: true", 'simulated: "yes"'), encoding="utf-8")
+    with pytest.raises(ValueError, match="simulated must be true or false"):
+        ModelRoutingPolicy.from_path(manifest, _tool_settings())
 
 
 def test_shadow_request_is_scheduled(monkeypatch):

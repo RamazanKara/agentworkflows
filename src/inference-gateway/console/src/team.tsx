@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { date, isDemo, money, number, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type Usage } from './api';
-import { Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
+const routes = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1';
 
 export function GetStarted({ session }: { session: Session }) {
   const models = useData<Models>(session.csrfToken, '/v1/models');
@@ -26,7 +27,7 @@ export function GetStarted({ session }: { session: Session }) {
         {last ? <a href={`#run/${last.run_id}`}>Open the latest run</a> : <a href="#runs">Explore workflow runs</a>}
       </div></li>
     </ol>
-    <p className="muted">Bringing your own models? <a href={`${guide}#try-research--draft--approval--publish`}>Follow the team workflow guide</a>.</p>
+    <p className="muted">Writing your own workflow? <a href={`${guide}#try-research--draft--approval--publish`}>Follow the team workflow guide</a>.</p>
   </>;
 }
 
@@ -76,7 +77,7 @@ export function Costs({ session }: { session: Session }) {
       {spend.project && <p className="callout">This sign-in is limited to one project. Team-wide spend is hidden; the tables cover your project only.</p>}
       <CostTable title="By provider" rows={spend.providers}/>
       <CostTable title="By workflow" rows={spend.workflows || {}}/>
-      <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes amounts held for failed attempts that reported no usage. Calls made outside a workflow appear only under By provider.</p>
+      <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes budget reserved for failed calls the provider didn’t report. Calls made outside a workflow appear only under By provider.</p>
     </>}
   </>;
 }
@@ -101,6 +102,10 @@ function ProviderSettings({ session }: { session: Session }) {
   // Point the setup steps at the first provider still missing its key; otherwise show how to add one.
   const missing = providers.find(([, configuration]) => !configuration.configured);
   const [target, variable] = missing ? [missing[0], missing[1].environment_variable] : ['openai', 'OPENAI_API_KEY'];
+  const others = providers.filter(([name, configuration]) => !configuration.configured && name !== target).map(([name]) => name);
+  // The Helm chart wires OpenAI and Anthropic keys from a Secret; a listed model means the route exists.
+  const helmSecret = ['openai', 'anthropic'].includes(target) && variable === `${target.toUpperCase()}_API_KEY` ? `${target}-api-key` : '';
+  const routed = Boolean(models.data?.data.some(model => model.owned_by === target));
   const snippet = `# Merge into your team's policy entry.\nsandboxId: ${JSON.stringify(session.team.team_id)}\nproviderCredentials:\n${[...providers.map(([name, c]) => [name, c.environment_variable]), ...(missing || providers.some(([name]) => name === target) ? [] : [[target, variable]])].map(([name, env]) => `  ${name}: ${env}`).join('\n')}\nbudgets:\n  estimatedTokenLimit: ${budget.data?.limits.estimated_tokens || 200000}\n  costLimitUsd: ${settings?.cost_limit_usd || 25}`;
   return <><PageHeader title="Providers & budgets" subtitle="Your team’s provider keys and spending limits."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={team.error || budget.error || usage.error || policies.error} retry={() => setRevision(v => v + 1)}/>
@@ -114,22 +119,22 @@ function ProviderSettings({ session }: { session: Session }) {
           : <><span className="badge awaiting_approval">Key missing</span>{usedBy(provider).length > 0 && <small>Needed by {usedBy(provider).join(', ')}</small>}</>}</td></tr>)}
       </tbody></table></div> : <Empty title="Connect your first provider"><p>Choose a cloud provider and follow the steps below.</p></Empty>}
     </div><p className="muted">Key presence is a configuration check, not a live provider test. Secret values never appear here.</p>
-    {['openai', 'anthropic'].filter(provider => {
-      const configuration = settings?.provider_configuration?.[provider];
-      return configuration?.configured === false && configuration.environment_variable === `${provider.toUpperCase()}_API_KEY`;
-    }).map(provider =>
-      <p className="callout" key={provider}>For a Helm installation, create a <code>{provider}-api-key</code> Secret in the release namespace with an <code>api-key</code> entry, then upgrade with <code>--set providers.{provider}.existingSecret={provider}-api-key</code>. <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Provider setup commands</a></p>
-    )}
-    <section className="setup panel"><h2>{missing ? `Connect ${providerName(target)}` : 'Add a provider or change a budget'}</h2>
-      <ol><li>Store the {providerName(target)} key in the gateway’s <code>{variable}</code> environment variable or Kubernetes Secret.</li>
-        <li>Merge the fragment below into your team’s entry in the policy (<code>sandboxId: {session.team.team_id}</code>). Keep your existing providers, projects, tools and workflows.</li>
+    {missing ? <section className="setup panel"><h2>Connect {providerName(target)}</h2>
+      <ol><li>Add the {providerName(target)} API key to the gateway as <code>{variable}</code>.{helmSecret && <> Installed with Helm? Store it in a <code>{helmSecret}</code> Secret with an <code>api-key</code> entry, then upgrade with <code>--set providers.{target}.existingSecret={helmSecret}</code>.</>}</li>
+        {!routed && <li>Add a reviewed {providerName(target)} model route with prices to your gateway configuration.</li>}
+        <li>Restart the gateway{helmSecret ? ' (a Helm upgrade does this for you)' : ''}, then refresh this page.</li></ol>
+      {others.length > 0 && <p className="muted">Then repeat these steps for {others.map(providerName).join(' and ')}.</p>}
+      <p className="setup-links">{helmSecret && <><a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Helm commands</a> · </>}<a href={`${guide}#teams-projects-and-roles`}>Secret instructions</a>{!routed && <> · <a href={routes}>Cloud routes and prices</a></>}</p>
+    </section> : <section className="setup panel"><h2>Add a provider or change a budget</h2>
+      <ol><li>Store the provider key in the gateway’s environment or a Kubernetes Secret.</li>
+        <li>Merge the fragment below into your team’s entry in the policy (team ID <code>{session.team.team_id}</code>). Keep your existing providers, projects, tools and workflows.</li>
         <li>Approve the provider’s models, prices and network access in your gateway configuration. Restart the gateway, then refresh this page.</li></ol>
       <pre className="json">{snippet}</pre><div className="actions"><button className="secondary" onClick={async () => {
         try { await navigator.clipboard.writeText(snippet); setCopied('Configuration copied.'); }
         catch { setCopied('Clipboard unavailable. Select and copy the configuration above.'); }
-      }}>Copy policy fragment</button><span role="status">{copied}</span></div>
-      <p className="setup-links"><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1">Cloud routes and prices</a></p>
-    </section>
+      }}><Icon name="copy"/>Copy policy fragment</button><span role="status">{copied}</span></div>
+      <p className="setup-links"><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href={routes}>Cloud routes and prices</a></p>
+    </section>}
     <section><h2>Workflow budgets</h2><div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow budgets table"><table className="stack numeric"><thead><tr><th>Workflow</th><th>Providers</th><th className="num">Token limit</th><th className="num">Cost limit</th></tr></thead><tbody>{workflows.map(([name, policy]) => <tr key={name}><th scope="row">{workflowName(name)}</th><td data-label="Providers">{policy.allowedProviders.map(providerName).join(', ') || 'Team policy'}</td><td data-label="Token limit">{number(policy.tokenLimit)}</td><td data-label="Cost limit">{money(policy.costLimitUsd)}</td></tr>)}</tbody></table></div></div><p className="muted">Budget changes apply to new runs. Runs in progress keep their budget.</p></section>
   </>;
 }

@@ -53,6 +53,9 @@ class ModelRoute:
     credential_env: str = ""
     input_usd_per_1k_tokens: float | None = None
     output_usd_per_1k_tokens: float | None = None
+    # Marks a route served by a local fake (the Compose demo) so clients can say no
+    # provider is billed. Routes are real unless the reviewed policy says otherwise.
+    simulated: bool = False
 
 
 @dataclass(frozen=True)
@@ -140,6 +143,9 @@ class ModelRoutingPolicy:
                 raise ValueError(
                     f"ModelRoutingPolicy model {model_id} estimatedCharsPerToken must be a non-negative integer"
                 )
+            simulated = item.get("simulated", False)
+            if not isinstance(simulated, bool):
+                raise ValueError(f"ModelRoutingPolicy model {model_id} simulated must be true or false")
             for name in (model_id, *aliases):
                 if name in seen:
                     raise ValueError(f"ModelRoutingPolicy duplicate model or alias: {name}")
@@ -159,6 +165,7 @@ class ModelRoutingPolicy:
                     credential_env=credential_env,
                     input_usd_per_1k_tokens=input_price,
                     output_usd_per_1k_tokens=output_price,
+                    simulated=simulated,
                 )
             )
         return cls(tuple(routes))
@@ -222,13 +229,17 @@ class ModelRoutingPolicy:
         return self._route_for(route.shadow_model_id)
 
     def openai_models(self) -> list[dict[str, Any]]:
-        """Return the routes formatted as OpenAI ``/v1/models`` list entries."""
+        """Return the routes formatted as OpenAI ``/v1/models`` list entries.
+
+        ``owned_by`` names the provider backend; simulated routes say so.
+        """
         return [
             {
                 "id": route.model_id,
                 "object": "model",
-                "owned_by": "agentworkflows",
+                "owned_by": route.backend,
                 "permission": [],
+                **({"simulated": True} if route.simulated else {}),
             }
             for route in self.routes
         ]
