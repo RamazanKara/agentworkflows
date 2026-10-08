@@ -800,6 +800,8 @@
       
         
       
+        
+      
     
     
     
@@ -888,6 +890,34 @@
     
   
     Team settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../audit-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit log
   
 
     
@@ -1870,6 +1900,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#verify-from-the-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify from the console
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#what-the-audit-events-are" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1992,6 +2033,29 @@
 <p>Use this runbook to verify the gateway's tamper-evident audit hash chain, to anchor its head so
 a wholesale rewrite is detectable, and to forward the audit stream to a SIEM for long-term,
 independent retention.</p>
+<h2 id="verify-from-the-console">Verify from the console<a class="headerlink" href="#verify-from-the-console" title="Permanent link">&para;</a></h2>
+<p>An unrestricted team admin can use <strong>Audit log</strong> to filter receipts, inspect event
+JSON, verify the selected time range and export matching events as JSON Lines.
+See the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/audit-log.md">audit log guide</a>
+for the APIs and interpretation of verification results.</p>
+<p>The view appends already chained events to
+<code>&lt;SANDBOX_BUDGET_KEY_PREFIX&gt;:audit:&lt;team&gt;</code> Redis streams. It uses the existing
+budget Redis and is off when that backend is not Redis or audit logging is disabled.
+Keep Redis persistence enabled. <code>AUDIT_VIEW_RETENTION_SECONDS</code> defaults to 90 days;
+exact stream trimming also limits each team to 100,000 events. Writes and reads
+trim old entries and inactive streams expire. No existing logs are imported.</p>
+<p>The process log format stays unchanged. A separate per-team, per-process envelope
+chain covers each event and its process/team sequence, so another team's intervening
+events need not be disclosed to verify this projection. Verification recomputes both
+hashes and checks adjacent links. Retained prefixes are reported as range boundaries,
+not breaks. This cannot prove absent tails, missing lifetimes or a wholesale rewrite;
+continue anchoring the full process logs as described below.</p>
+<p>Redis write failures log <code>audit view event could not be stored</code> without interrupting
+the original audit log. A subsequent successful append exposes an internal gap to
+the view verifier. Check gateway logs and Redis health, then use full-log evidence
+to investigate missing view events. Read failures return 503; they never count as a
+successful verification. Console exports contain original events, but a team/time
+subset may lack the other process events needed by the standalone log verifier.</p>
 <h2 id="what-the-audit-events-are">What the audit events are<a class="headerlink" href="#what-the-audit-events-are" title="Permanent link">&para;</a></h2>
 <p>Team setting saves and resets emit <code>team_settings_changed</code> on the gateway's
 existing chain. Each event names the authenticated actor, revision and touched

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/security-overview/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/audit-log/">
       
       
-        <link rel="prev" href="../architecture/">
+        <link rel="prev" href="../team-settings/">
       
       
-        <link rel="next" href="../scope-and-non-goals/">
+        <link rel="next" href="../client-examples/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Security overview - AgentWorkflows</title>
+        <title>Audit log - AgentWorkflows</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#security-overview" class="md-skip">
+        <a href="#audit-log" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Security overview
+              Audit log
             
           </span>
         </div>
@@ -303,12 +303,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../concepts/" class="md-tabs__link">
           
   
@@ -327,10 +325,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../workflows/" class="md-tabs__link">
           
   
@@ -546,10 +546,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -569,22 +567,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -602,7 +597,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -729,37 +724,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Security overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../security-overview/" class="md-nav__link">
         
   
   
@@ -775,114 +743,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#defaults-that-matter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Defaults that matter
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gateway-controls" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gateway controls
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tenant-and-rag-identity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tenant and RAG identity
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#workspace-isolation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Workspace isolation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#audit-records" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Audit records
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supply-chain" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supply chain
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#production-work-left-to-the-operator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production work left to the operator
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related-documents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related documents
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -927,8 +787,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -952,19 +814,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -982,7 +847,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1053,10 +918,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../audit-log/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit log
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1072,6 +964,59 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#enable-and-retain-the-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable and retain the view
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-verification-proves" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What verification proves
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2046,10 +1991,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#defaults-that-matter" class="md-nav__link">
+  <a href="#enable-and-retain-the-view" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Defaults that matter
+        Enable and retain the view
       
     </span>
   </a>
@@ -2057,10 +2002,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#gateway-controls" class="md-nav__link">
+  <a href="#api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Gateway controls
+        API
       
     </span>
   </a>
@@ -2068,65 +2013,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tenant-and-rag-identity" class="md-nav__link">
+  <a href="#what-verification-proves" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tenant and RAG identity
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#workspace-isolation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Workspace isolation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#audit-records" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Audit records
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supply-chain" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supply chain
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#production-work-left-to-the-operator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production work left to the operator
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related-documents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related documents
+        What verification proves
       
     </span>
   </a>
@@ -2150,7 +2040,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/security-overview.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/audit-log.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2158,74 +2048,62 @@
   
 
 
-<h1 id="security-overview">Security overview<a class="headerlink" href="#security-overview" title="Permanent link">&para;</a></h1>
-<p>This page summarizes the security-relevant defaults in release <code>v0.5.1</code>. The <a href="../threat-model/">threat model</a> has the detailed trust boundaries and residual risks. The <a href="../production-readiness/">production readiness matrix</a> lists validation commands.</p>
-<h2 id="defaults-that-matter">Defaults that matter<a class="headerlink" href="#defaults-that-matter" title="Permanent link">&para;</a></h2>
-<ul>
-<li>The local profile uses the public key <code>local-development-only</code>. It is for the local lab only.</li>
-<li>In-cluster application traffic is plaintext HTTP. NetworkPolicy controls reachability, not encryption.</li>
-<li>The output guardrail and stored Responses state are off in the base chart.</li>
-<li>The local RAG profile disables tenant isolation because it uses one shared demo corpus.</li>
-<li>Without a tenant-bound key record or verified JWT claim, <code>X-Sandbox-ID</code> is caller-supplied.</li>
-<li>The agent-sandbox pod template is restricted, but a separate kernel boundary exists only when the cluster supplies and the values select an isolation <code>RuntimeClass</code> such as gVisor or Kata.</li>
-<li>The bundled Redis, Qdrant, and Loki footprints are single-node reference services.</li>
-<li>Sample reports under <code>results/</code> are not current security evidence.</li>
-</ul>
-<p>Do not deploy the customer values unchanged.</p>
-<h2 id="gateway-controls">Gateway controls<a class="headerlink" href="#gateway-controls" title="Permanent link">&para;</a></h2>
-<p>The gateway supports API-key hashes and JWT/JWKS verification. Key records can add scopes, expiry, sandbox binding, and budget overrides. JWT configuration can bind a verified tenant claim to the sandbox. A contradictory <code>X-Sandbox-ID</code> is rejected when a binding exists.</p>
-<p>Before forwarding an inference request, the gateway can enforce:</p>
-<ul>
-<li>allowed model IDs and routing policy;</li>
-<li>tenant/request classification: confidential and restricted data stay on local routes;</li>
-<li>message, prompt, tool, completion, and batch size limits;</li>
-<li>per-sandbox rate and estimated-token budgets;</li>
-<li>input credential-pattern detection;</li>
-<li>a per-process concurrency limit and load shedding.</li>
-</ul>
-<p>The optional output guardrail can flag, redact, or block configured credential, PII, and denied-content patterns. Redact and block behavior require a non-streaming response. Streaming can only be flagged after the stream has already been emitted.</p>
-<p>These are deterministic application checks. They do not make model output trustworthy or prevent prompt injection.</p>
-<h2 id="tenant-and-rag-identity">Tenant and RAG identity<a class="headerlink" href="#tenant-and-rag-identity" title="Permanent link">&para;</a></h2>
-<p>The customer RAG values enable owner-based tenant filtering. That filtering is only a security boundary when the tenant identity is trustworthy.</p>
-<p>The RAG service can verify its own JWT and derive the tenant from a claim. When JWT verification is off, it trusts <code>X-Sandbox-ID</code>; a caller with the shared key can assert another sandbox ID. Put direct RAG access behind a trusted identity-stamping path or enable RAG-side JWT verification for multi-tenant use.</p>
-<p>Tenant NetworkPolicies default to deny and add explicit DNS, gateway, RAG, and reviewed external CIDR rules. Enforcement depends on the cluster CNI. The local cluster uses Calico by default because kindnet does not enforce NetworkPolicy.</p>
-<h2 id="workspace-isolation">Workspace isolation<a class="headerlink" href="#workspace-isolation" title="Permanent link">&para;</a></h2>
-<p>Agent workspaces use the vendored <code>kubernetes-sigs/agent-sandbox</code> controller and a restricted pod template: non-root user, read-only root filesystem, dropped capabilities, no ambient service-account token, resource limits, namespace RBAC, and default-deny egress.</p>
-<p>The projected platform token is short-lived and audience-bound, but it is still a credential. The workspace can also exfiltrate through any approved destination. Keep the egress catalog narrow and treat files, retrieved text, model output, and tool arguments as untrusted.</p>
-<h2 id="audit-records">Audit records<a class="headerlink" href="#audit-records" title="Permanent link">&para;</a></h2>
-<p>The gateway audit event stores request metadata and hashes rather than raw prompt or completion text. Records are linked into a per-process hash chain.</p>
-<p>Cloud calls use the same controls and record the selected provider, routing attempts,
-classification, usage, and estimated cost on that chain. Classification refusals are
-explicit 403 receipts. Provider credentials come only from server environment variables
-or Kubernetes Secret references, never caller headers or bodies. See
-<a href="../model-selection/#cloud-routes-milestone-1">cloud route configuration</a> for egress,
-credential rotation, and protocol boundaries.</p>
-<p>The chain detects edits and reordering in an exported sequence. It does not by itself prevent deletion, survive a lost log stream, join replicas into one chain, or prove that the first and last records are complete. Export logs, retain the <code>chain_id</code>, and commit chain-head anchors to a separate trusted system. Use <code>make audit-verify</code> and follow the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">audit-chain runbook</a>.</p>
-<p>Also review runtime, ingress, proxy, RAG, object-store, and application logs. Gateway redaction does not control what another component logs.</p>
-<h2 id="supply-chain">Supply chain<a class="headerlink" href="#supply-chain" title="Permanent link">&para;</a></h2>
-<p>The tag-only release workflow builds the first-party images, signs image and chart digests with Cosign, and attaches SDK checksums. SBOM and vulnerability scans run locally with <code>make supply-chain-check</code> and <code>make image-scan</code>. GitHub Actions are pinned by commit.</p>
-<p>That boundary does not cover the integrity or license of customer model weights, customer base images, external Helm charts, private mirrors, or the target cluster. Verify those separately. Forks that publish their own images must update the Kyverno image reference and signing identity or admission will reject them.</p>
-<h2 id="production-work-left-to-the-operator">Production work left to the operator<a class="headerlink" href="#production-work-left-to-the-operator" title="Permanent link">&para;</a></h2>
-<p>At minimum:</p>
-<ul>
-<li>connect gateway and RAG auth to the customer identity boundary;</li>
-<li>source secrets from the customer secret system;</li>
-<li>enable transport encryption where required;</li>
-<li>select and test a kernel-isolation runtime for higher-risk agent workspaces;</li>
-<li>replace bundled stateful services with an appropriate availability and backup design;</li>
-<li>configure log export, retention, chain-head anchoring, alerts, and incident response;</li>
-<li>validate model artifacts, RAG ingestion, tenant binding, and egress rules;</li>
-<li>generate current eval, load, restore, policy, and supply-chain evidence.</li>
-</ul>
-<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../threat-model/">Threat model</a></li>
-<li><a href="../owasp-llm-top-10-mapping/">OWASP Top 10 for LLM Applications 2025 mapping</a></li>
-<li><a href="../ai-governance-crosswalk/">AI governance crosswalk</a></li>
-<li><a href="https://github.com/RamazanKara/agentworkflows/blob/main/SECURITY.md">Security policy</a></li>
-<li><a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">External stores</a></li>
-<li><a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/guardrails.md">Guardrails</a></li>
-</ul>
+<h1 id="audit-log">Audit log<a class="headerlink" href="#audit-log" title="Permanent link">&para;</a></h1>
+<p>Team admins can open <strong>Audit log</strong> in the console to read retained gateway receipts
+without access to gateway logs. Other roles cannot open the view or its APIs.
+Use an admin credential without a project restriction: this view covers the whole team.</p>
+<p>Filter by time, actor, event type, project or run ID, then choose <strong>Apply filters</strong>.
+Times in the form use your local timezone. Events appear newest first; <strong>Older
+events</strong> pages through the results. Run links open the existing run detail page.
+<strong>Show JSON</strong> expands the original, already redacted event as plain text.</p>
+<p><strong>Verify chain</strong> checks every team event in the selected time range, including
+events hidden by actor, event, project or run filters. The result shows how many
+events were checked and, on failure, the first break's process chain, sequence
+and reason. A range boundary means earlier events are outside the retained or
+selected range; it is not a chain break. An empty range checks zero events.</p>
+<p><strong>Export JSON Lines</strong> downloads all pages of the applied filters as
+<code>audit-log.jsonl</code>, newest first, one original event per line. The page captures
+an upper time bound when opened or when filters are applied so newer events do
+not enter an ongoing export. Retention continues during paging and export;
+export promptly when collecting evidence.</p>
+<h2 id="enable-and-retain-the-view">Enable and retain the view<a class="headerlink" href="#enable-and-retain-the-view" title="Permanent link">&para;</a></h2>
+<p>The view uses the existing budget Redis: set <code>SANDBOX_BUDGET_BACKEND=redis</code>,
+configure <code>SANDBOX_BUDGET_REDIS_URL</code> and enable Redis persistence. Keep
+<code>AUDIT_LOG_ENABLED=true</code>. Existing Redis-backed teams need no additional service.
+Without that configuration the page says <strong>Audit view is off</strong> and shows how to
+enable it. Redis read failures return 503 instead of an empty or verified trail.</p>
+<p><code>AUDIT_VIEW_RETENTION_SECONDS</code> defaults to <strong>7776000</strong> (90 days). In Helm, use
+<code>inference-gateway.traceability.auditViewRetentionSeconds</code> in the umbrella chart,
+or <code>traceability.auditViewRetentionSeconds</code> in the gateway chart. Each team is
+also limited to <strong>100,000 events</strong>. The earlier limit wins. Writes and reads trim
+old entries; an inactive team's stream expires after the retention interval.
+Only events written after this feature is enabled are available; logs are not backfilled.</p>
+<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
+<p><code>GET /v1/team/audit</code> accepts inclusive <code>from</code> and <code>to</code> Unix timestamps in seconds,
+exact-match <code>event_type</code>, <code>actor</code>, <code>project</code>, <code>run_id</code>, and an opaque <code>cursor</code> from
+the previous response's <code>next_cursor</code>. <code>limit</code> defaults to 50 and is capped at 200.
+The response contains <code>enabled</code>, <code>events</code>, <code>next_cursor</code>, and an optional <code>message</code>.
+An event entry contains the unmodified <code>event</code>, stream <code>id</code>, process <code>chain_id</code>,
+process <code>sequence</code>, original <code>record_hash</code>, and team projection chain metadata.
+Actor matches the event's actor, or the principal's subject/key ID.</p>
+<p><code>GET /v1/team/audit/verify?from=...&amp;to=...</code> returns <code>enabled</code>, <code>ok</code>, <code>checked</code>,
+<code>first_break</code> (null or <code>{chain_id, sequence, reason}</code>), and <code>boundaries</code>.
+When the view is off, <code>ok</code> is null. Both APIs require a team admin and return
+403 with <code>detail.reason: team_role_required</code> otherwise. Responses are not cached.</p>
+<h2 id="what-verification-proves">What verification proves<a class="headerlink" href="#what-verification-proves" title="Permanent link">&para;</a></h2>
+<p>The original process-wide log and its hashes are unchanged. The view recomputes
+each original event hash. Because a process chain interleaves different teams,
+the view also links its stored envelopes per team and process with SHA-256,
+covering the original event, process sequence and team sequence. This detects
+edits, internal deletions and reordering without disclosing another team's events.
+Direct original links are checked when process sequences are consecutive.</p>
+<p>Checks cover the available range. A removed prefix is a range boundary;
+missing tails, whole process chains, or a wholesale rewrite cannot be proved
+from this view alone. Cross-process continuity and independently anchored evidence
+still use the complete operator logs and the existing verifier. A team-filtered
+export is not a complete process log for <code>scripts/audit-verify.py</code>.
+See the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">audit chain runbook</a>
+for full-log verification, anchoring and SIEM retention.</p>
 
 
 
@@ -2263,7 +2141,7 @@ credential rotation, and protocol boundaries.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../architecture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Architecture">
+          <a href="../team-settings/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Team settings">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2273,20 +2151,20 @@ credential rotation, and protocol boundaries.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Architecture
+                Team settings
               </div>
             </div>
           </a>
         
         
           
-          <a href="../scope-and-non-goals/" class="md-footer__link md-footer__link--next" aria-label="Next: Scope and non-goals">
+          <a href="../client-examples/" class="md-footer__link md-footer__link--next" aria-label="Next: Call the API">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Scope and non-goals
+                Call the API
               </div>
             </div>
             <div class="md-footer__button md-icon">
