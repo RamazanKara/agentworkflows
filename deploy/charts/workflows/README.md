@@ -88,7 +88,7 @@ Temporal execution, dedicated PostgreSQL, and a governed Python workflow worker.
 | `temporal.web.securityContext.seccompProfile.type` | `RuntimeDefault` |
 | `worker.existingSecret` | `workflow-gateway-key` |
 | `worker.gatewayUrl` | `http://inference-gateway.inference.svc.cluster.local:8080` |
-| `worker.image` | `ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.5.0` |
+| `worker.image` | `ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.5.1` |
 | `worker.podDisruptionBudget.enabled` | `false` |
 | `worker.podDisruptionBudget.minAvailable` | `1` |
 | `worker.replicaCount` | `1` |

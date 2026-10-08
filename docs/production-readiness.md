@@ -79,7 +79,7 @@ never removed, so rolling back to the reference footprint for a demo is a one-li
 
 ## Workflow upgrades and recovery
 
-The 0.5.0 gateway uses **Redis**, not PostgreSQL, for run indexes, step timelines and
+The 0.5.1 gateway uses **Redis**, not PostgreSQL, for run indexes, step timelines and
 team/run budgets. Temporal owns workflow history in `temporal` and SQL visibility in
 `temporal_visibility`, both on the existing PostgreSQL service. Back up all three stores
 together with the complete receipt export. No gateway PostgreSQL database or new service

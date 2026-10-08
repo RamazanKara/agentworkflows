@@ -2,7 +2,7 @@ apiVersion: v2
 name: qdrant-vector-store
 description: Optional local vector store profile for AgentWorkflows RAG.
 type: application
-version: 0.5.0
+version: 0.5.1
 appVersion: "1.18.1"
 kubeVersion: ">=1.25.0"
 home: https://github.com/RamazanKara/agentworkflows

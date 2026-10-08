@@ -15,7 +15,7 @@ and synthetic prices from the existing Compose fakes.
 Clone the release, then install and build the SDK and its examples:
 
 ```sh
-git clone --branch v0.5.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
 cd agentworkflows/sdk/typescript
 npm ci --no-audit --no-fund --maxsockets=2
 npm run build
@@ -115,7 +115,7 @@ Change the prompt and rebuild with `npm run build` before restarting the worker.
 Install the SDK in your own Node project from the GitHub release (it is not on npm yet):
 
 ```sh
-npm install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.0/agentworkflows-sdk-0.5.0.tgz
+npm install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-sdk-0.5.1.tgz
 ```
 
 Import workflow code from the dedicated sandbox-safe subpath:

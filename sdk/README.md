@@ -7,7 +7,7 @@ First-party, dependency-light clients for the AgentWorkflows inference gateway.
 Install the released client:
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.0/agentworkflows-0.5.0-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-0.5.1-py3-none-any.whl
 ```
 
 From a checkout (repository root), `python -m pip install ./sdk/python` installs the current source.

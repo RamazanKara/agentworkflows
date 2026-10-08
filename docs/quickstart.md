@@ -15,7 +15,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 === "Bash (Linux/macOS)"
 
     ```bash
-    git clone --branch v0.5.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python3 -m venv .venv
     source .venv/bin/activate
@@ -27,7 +27,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    git clone --branch v0.5.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python -m venv .venv
     $env:Path = "$PWD\.venv\Scripts;$env:Path"
@@ -36,7 +36,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
     $env:AGENTWORKFLOWS_API_KEY = 'local-development-only'
     ```
 
-Compose pulls the signed v0.5.0 release images; nothing is built locally. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
+Compose pulls the signed v0.5.1 release images; nothing is built locally. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
