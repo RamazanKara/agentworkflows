@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { api, label, type AuthConfig, type BrowserSession, type Session, type Team } from './api';
+import { api, label, type AuthConfig, type BrowserSession, type RunPage, type Session, type Team } from './api';
 import { ErrorMessage, Icon, Loading } from './ui';
 import { Approvals, RunDetail, Runs, StartRun } from './runs';
 import { Costs, GetStarted, Providers } from './team';
@@ -66,6 +66,23 @@ function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
   </main></div>;
 }
 
+// Opening the console without a page lands on pending approvals, then runs, and on Get started for a new team.
+function Landing({ session }: { session: Session }) {
+  useEffect(() => {
+    const controller = new AbortController();
+    const first = (project: string, status?: string) => api<RunPage>(session.csrfToken, `/v1/workflow-runs?${new URLSearchParams({ project, limit: '1', ...(status ? { status } : {}) })}`, { signal: controller.signal })
+      .then(page => page.runs.length > 0, () => false);
+    const any = (status?: string) => Promise.all(session.team.projects.map(project => first(project, status))).then(found => found.some(Boolean));
+    const reviewer = ['admin', 'approver'].includes(session.team.role);
+    (async () => {
+      const page = reviewer && await any('awaiting_approval') ? 'approvals' : await any() ? 'runs' : 'start';
+      if (!controller.signal.aborted) location.replace(`#${page}`);
+    })();
+    return () => controller.abort();
+  }, [session]);
+  return <Loading/>;
+}
+
 function App() {
   const [session, setSession] = useState<Session>();
   const [config, setConfig] = useState<AuthConfig>();
@@ -78,7 +95,7 @@ function App() {
     if (reason) history.replaceState(null, '', location.pathname + location.hash);
     return reason ? signinErrors[reason] ?? signinErrors.unavailable : undefined;
   });
-  const [route, setRoute] = useState(location.hash.slice(1) || 'start');
+  const [route, setRoute] = useState(location.hash.slice(1) || 'home');
   const [menu, setMenu] = useState(false);
   const sequence = useRef(0);
   const main = useRef<HTMLElement>(null);
@@ -94,7 +111,7 @@ function App() {
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    const change = () => { setRoute(location.hash.slice(1) || 'start'); setMenu(false); };
+    const change = () => { setRoute(location.hash.slice(1) || 'home'); setMenu(false); };
     const expire = () => { setSession(undefined); setAdding(false); setExpired(true); };
     window.addEventListener('hashchange', change);
     window.addEventListener('aw:expired', expire);
@@ -102,7 +119,7 @@ function App() {
   }, []);
   useEffect(() => {
     main.current?.focus();
-    const title = navigation.find(([id]) => id === route)?.[1] || (route === 'new' ? 'Run workflow' : 'Run detail');
+    const title = navigation.find(([id]) => id === route)?.[1] || (route === 'new' || route.startsWith('new/') ? 'Run workflow' : route === 'home' ? 'Workspace' : 'Run detail');
     document.title = `${session ? title : 'Sign in'} · AgentWorkflows Console`;
   }, [route, session]);
   if (loading) return <Loading/>;
@@ -113,7 +130,7 @@ function App() {
       setSession({ csrfToken, team, id: ++sequence.current, name: principal.name, keyId: principal.key_id });
       setAdding(false); setExpired(false); setError('');
     }}/>;
-  const active = route.startsWith('run/') || route === 'new' ? 'runs' : route;
+  const active = route.startsWith('run/') || route === 'new' || route.startsWith('new/') ? 'runs' : route;
   // Phones get a compact top bar; the menu button opens the same navigation as the desktop sidebar.
   return <div className={menu ? 'shell menu-open' : 'shell'} onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
     <a className="skip" href="#main" onClick={e => { e.preventDefault(); main.current?.focus(); }}>Skip to content</a>
@@ -137,8 +154,8 @@ function App() {
       </div>
     </aside>
     <main id="main" ref={main} tabIndex={-1} key={`${session.id}:${route}`}>
-      {route === 'start' ? <GetStarted session={session}/> : route === 'runs' ? <Runs session={session}/> :
-        route === 'new' ? <StartRun session={session}/> : route === 'approvals' ? <Approvals session={session}/> :
+      {route === 'home' ? <Landing session={session}/> : route === 'start' ? <GetStarted session={session}/> : route === 'runs' ? <Runs session={session}/> :
+        route === 'new' || route.startsWith('new/') ? <StartRun session={session} initial={decodeURIComponent(route.slice(4))}/> : route === 'approvals' ? <Approvals session={session}/> :
         route === 'keys' ? <Keys session={session}/> :
         route === 'triggers' ? <Triggers session={session}/> : route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> :
         /^run\/[a-f0-9-]{36}$/.test(route) ? <RunDetail session={session} runId={route.slice(4)}/> :

@@ -102,8 +102,8 @@ for (const mode of ['redacted', 'full', 'capture_off', 'expired']) {
   });
 }
 
-async function login(page: Page, token = 'admin') {
-  await page.goto('/console/');
+async function login(page: Page, token = 'admin', path = '/console/#start') {
+  await page.goto(path);
   await page.getByLabel('API key', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Signed in as' })).toBeVisible();
@@ -218,7 +218,7 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'Awaiting approval' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('failed');
-  await expect(page.getByRole('heading', { name: 'No matching runs on this page' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No matching runs' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('');
   await page.getByRole('link', { name: 'Research', exact: true }).click();
   await page.getByText('Receipt', { exact: true }).first().click();
@@ -249,10 +249,17 @@ test('a fresh Helm install says which provider Secret to add, without demo wordi
   await expect(page.locator('.note-warn')).toContainText('model calls in this run will fail');
   await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
   const setup = page.locator('section.setup');
-  await expect(setup.getByRole('heading', { name: 'Connect OpenAI' })).toBeVisible();
-  await expect(setup.locator('pre')).toContainText('kubectl create secret generic openai-api-key -n aw --from-file=api-key=/dev/stdin');
-  await expect(setup.locator('pre')).toContainText('--set providers.openai.existingSecret=openai-api-key');
-  await expect(setup).toContainText('Then repeat for Anthropic.');
+  await expect(setup.getByRole('heading', { name: 'Connect OpenAI and Anthropic' })).toBeVisible();
+  const commands = await setup.locator('pre').innerText();
+  for (const provider of ['openai', 'anthropic']) {
+    expect(commands).toContain(`secret generic ${provider}-api-key -n aw \\\n  --from-file=api-key=/dev/stdin`);
+    expect(commands).toContain(`--set providers.${provider}.existingSecret=${provider}-api-key`);
+  }
+  expect(commands.match(/helm upgrade/g)).toHaveLength(1);
+  // Lines stay short enough for a phone; only the --set lines run longer.
+  expect(commands.split('\n').filter(line => line.length > 42 && !line.includes('--set'))).toEqual([]);
+  await expect(setup).not.toContainText('Then repeat');
+  await expect(page.getByRole('columnheader', { name: 'Environment variable' })).toBeVisible();
   await expect(setup.getByRole('button', { name: 'Copy commands' })).toBeVisible();
   await expect(setup).not.toContainText('model route');
   await expect(setup.getByRole('button', { name: 'Copy policy fragment' })).toHaveCount(0);
@@ -529,7 +536,7 @@ test('revoking a key requires confirmation and updates its status', async ({ pag
   expect(deletes).toBe(0);
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Revoke Alice' }).click();
-  await expect(page.getByRole('cell', { name: 'Revoked', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /^Revoked/ })).toContainText(new Date(1791316800 * 1000).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }));
   await expect(page.getByRole('button', { name: 'Revoke Alice' })).toHaveCount(0);
   expect(deletes).toBe(1);
 });
@@ -558,4 +565,36 @@ test('company sign-in failures return as a readable message and a clean URL', as
   await expect(page.getByRole('alert')).toContainText('not linked to a team');
   await expect(page).toHaveURL(/\/console\/#runs$/);
   await expect(page.getByLabel('API key', { exact: true })).toBeVisible();
+});
+
+test('opening the console lands on approvals, runs or Get started', async ({ page }) => {
+  await login(page, 'admin', '/console/');
+  await expect(page).toHaveURL(/#approvals$/);
+  await expect(page.getByRole('heading', { name: 'Approvals', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await login(page, 'viewer', '/console/');
+  await expect(page).toHaveURL(/#runs$/);
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await login(page, 'other', '/console/');
+  await expect(page).toHaveURL(/#start$/);
+  await expect(page.getByRole('heading', { name: 'Your first governed workflow' })).toBeVisible();
+});
+
+test('a workflow that needs a provider without a key warns before it runs', async ({ page }) => {
+  await page.route('**/v1/team', route => route.fulfill({ json: { team_id: 'demo', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
+    provider_configuration: { openai: { configured: true, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: false, environment_variable: 'ANTHROPIC_API_KEY' } } } }));
+  await login(page);
+  await expect(page.locator('.onboarding .note-warn')).toHaveText('The example uses Anthropic, which has no key yet, so its calls there fail. Add the key first.');
+  await page.getByRole('link', { name: 'Run workflow', exact: true }).first().click();
+  await expect(page.locator('.note-warn')).toHaveText('Anthropic has no key yet, so this workflow’s calls there fail. Add the key first.');
+  await page.getByLabel('Workflow', { exact: true }).selectOption('CustomWorkflow');
+  await expect(page.locator('.note-warn')).toHaveCount(0);
+});
+
+test('approval cards use the draft heading as the title without repeating it', async ({ page }) => {
+  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [{ ...run(), progress: { stage: 'awaiting_approval', draft: '# Briefing: agent evaluation\n\nThe first paragraph.' } }], next_offset: null } }));
+  await login(page, 'approver');
+  await page.getByRole('link', { name: 'Approvals', exact: true }).click();
+  await expect(page.locator('.review h2').first()).toHaveText('Briefing: agent evaluation');
+  await expect(page.locator('.review pre.draft').first()).toHaveText('The first paragraph.');
 });

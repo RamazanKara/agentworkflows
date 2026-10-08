@@ -27,7 +27,7 @@ const state = (key: Key) => key.revoked_at != null ? 'revoked'
   : key.expires_at != null && key.expires_at <= Date.now() / 1000 ? 'expired' : 'active';
 
 export function Keys({ session }: { session: Session }) {
-  if (session.team.role !== 'admin') return <Empty title="Team admin access required"><p>Ask your team admin to manage membership and API keys.</p></Empty>;
+  if (session.team.role !== 'admin') return <div className="panel"><Empty title="Team admin access required"><p>Ask your team admin to manage membership and API keys.</p><a className="tap" href="#runs">View workflow runs</a></Empty></div>;
   return <KeyManagement session={session}/>;
 }
 
@@ -80,13 +80,13 @@ function KeyManagement({ session }: { session: Session }) {
     {!result.data && !result.error && <Loading/>}
     {result.data && (keys.length ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Team API keys"><table className="stack keys-table"><thead><tr><th>Name</th><th>Role</th><th>Project</th><th>Last used</th><th>Expires</th><th>Status</th><th><span className="visually-hidden">Action</span></th></tr></thead><tbody>{keys.map(key => {
       const current = state(key);
-      return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}</span></td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
+      return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}</span>{key.revoked_at != null && <small>{day(key.revoked_at)}</small>}</td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
         if (!window.confirm(`Revoke ${key.name}? It stops working immediately.`)) return;
         setBusy(true); setError(''); setCreated(undefined);
         try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); }
         catch (value) { setError((value as Error).message); }
         finally { setBusy(false); }
       }}>Revoke</button>}</td></tr>;
-    })}</tbody></table></div></div> : <Empty title="No keys yet"><p>Create the first key above. Keys from your gateway configuration keep working and are not listed here.</p></Empty>)}
+    })}</tbody></table></div></div> : <div className="panel"><Empty title="No keys yet"><p>Create the first key above. Keys from your gateway configuration keep working and are not listed here.</p></Empty></div>)}
   </>;
 }

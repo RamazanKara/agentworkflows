@@ -7,14 +7,14 @@
 body { margin: 0; font-size: 15px; line-height: 1.55; }
 button, input, select, textarea { font: inherit; }
 a { color: #006f65; text-underline-offset: 4px; }
-a:hover { color: #034b43; }
+@media (hover: hover) { a:hover { color: #034b43; } }
 button, .button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid var(--teal); background: var(--teal); color: white; padding: 10px 18px; min-height: 44px; border-radius: 4px; font-weight: 600; cursor: pointer; text-decoration: none; }
-button:hover, .button:hover { background: #005f56; color: white; }
+@media (hover: hover) { button:hover, .button:hover { background: #005f56; color: white; } }
 button:disabled { cursor: wait; opacity: .6; }
 button.secondary, .button.secondary { background: white; color: var(--teal); border-color: #8ba59d; }
-button.secondary:hover, .button.secondary:hover { background: #eaf4ef; }
+@media (hover: hover) { button.secondary:hover, .button.secondary:hover { background: #eaf4ef; } }
 button.danger { background: white; color: #9d3429; border-color: #bd5a4e; }
-button.danger:hover { background: #fff0eb; }
+@media (hover: hover) { button.danger:hover { background: #fff0eb; } }
 :focus-visible { outline: 2px solid #007c70; outline-offset: 3px; }
 .sidebar :focus-visible { outline-color: #9fe3d5; }
 input, select, textarea { border: 1px solid #7f948b; color: #172321; background: white; padding: 10px 12px; border-radius: 4px; width: 100%; min-height: 44px; }
@@ -35,12 +35,13 @@ svg { flex-shrink: 0; }
 .sidebar { background: var(--ink); color: #f5fffa; padding: 30px 18px 22px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 650; letter-spacing: -.4px; text-decoration: none; color: inherit; margin: 0 6px 34px; }
 .brand svg { width: 28px; height: 30px; }
-.sidebar .brand:hover { color: white; }
+@media (hover: hover) { .sidebar .brand:hover { color: white; } }
 .sidebar label { color: #bed3cb; margin: 0 9px 6px; font-weight: 400; }
 .sidebar select { background: #073a32; color: white; border-color: #688e82; font-size: 14px; }
 .sidebar nav { display: grid; gap: 5px; margin-top: 32px; }
 .sidebar nav a, .session-actions button { display: flex; align-items: center; gap: 14px; text-decoration: none; padding: 14px 12px; border-radius: 5px; color: #eef9f4; min-height: 48px; }
-.sidebar nav a:hover, .sidebar nav a[aria-current], .session-actions button:hover { background: #1b5147; }
+.sidebar nav a[aria-current] { background: #1b5147; }
+@media (hover: hover) { .sidebar nav a:hover, .session-actions button:hover { background: #1b5147; } }
 .session-actions { margin-top: auto; padding-top: 22px; border-top: 1px solid #39645a; }
 .session-actions button { width: 100%; border: 0; background: transparent; font-weight: 400; text-align: left; justify-content: flex-start; font-size: 14px; }
 .shell > main { padding: 48px 36px 56px; width: 100%; max-width: 1570px; outline: none; }
@@ -210,7 +211,7 @@ pre.step-content { white-space: pre-wrap; overflow-wrap: anywhere; }
 label.check { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0; }
 label.check input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--teal); }
 button.link { background: none; border: 0; color: #006f65; padding: 4px 0; min-height: 32px; font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; margin-top: 4px; }
-button.link:hover { background: none; color: #034b43; }
+@media (hover: hover) { button.link:hover { background: none; color: #034b43; } }
 .more-options { margin: 4px 0 20px; padding-top: 10px; }
 .more-options > div { padding-top: 10px; }
 .ceiling { font-size: 14px; margin: 4px 0 20px; }
@@ -256,7 +257,7 @@ pre.json { white-space: pre; overflow-x: auto; overflow-wrap: normal; }
 .keys-table tr.new { background: #f1faf5; box-shadow: inset 3px 0 0 var(--teal); }
 .run-id { display: inline-flex; align-items: center; gap: 6px; }
 button.icon { min-height: 32px; width: 32px; padding: 0; background: transparent; border: 0; color: #006f65; }
-button.icon:hover { background: #eaf4ef; color: #034b43; }
+@media (hover: hover) { button.icon:hover { background: #eaf4ef; color: #034b43; } }
 .review h2 { margin-bottom: 6px; }
 .review-meta { margin-bottom: 14px; }
 .review > .draft { margin-top: 14px; }
@@ -273,7 +274,7 @@ button.icon:hover { background: #eaf4ef; color: #034b43; }
   .identity .who + .team { font-weight: 600; color: inherit; }
   .identity .role { padding: 2px 8px; font-size: 11px; }
   .menu-button { display: inline-flex; width: 44px; min-height: 44px; padding: 0; background: transparent; border-color: #39645a; }
-  .menu-button:hover { background: #1b5147; }
+  @media (hover: hover) { .menu-button:hover { background: #1b5147; } }
   .app-menu { display: none; flex-basis: 100%; }
   .menu-open .app-menu { display: flex; padding: 8px 0 12px; max-height: calc(100vh - 56px); overflow-y: auto; }
   .sidebar nav { margin: 0; gap: 2px; }
@@ -316,7 +317,7 @@ button.icon:hover { background: #eaf4ef; color: #034b43; }
 .review-meta { display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; }
 .review-meta > * + *::before { content: '·'; display: inline-block; margin: 0 9px; color: #9aaba3; }
 button.copy-id { min-height: 32px; padding: 4px 8px; gap: 5px; background: transparent; border: 0; color: #006f65; font-size: 13px; font-weight: 600; }
-button.copy-id:hover { background: #eaf4ef; color: #034b43; }
+@media (hover: hover) { button.copy-id:hover { background: #eaf4ef; color: #034b43; } }
 button.copy-id svg { width: 15px; height: 15px; }
 .menu-who { display: none; }
 .badge.you { margin-left: 8px; color: #24577e; background: #e4f1fb; vertical-align: 1px; }
@@ -341,7 +342,8 @@ table.numeric th:first-child { width: 40%; }
   a.tap, button.link { display: inline-flex; align-items: center; min-height: 44px; }
   .review-meta { column-gap: 14px; }
   .review-meta > * + *::before { content: none; }
-  .step pre.json { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .step pre.json, .setup pre.json { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .setup pre.json { font-size: 12px; padding: 12px 14px; }
   .step-facts { grid-template-columns: repeat(2, minmax(0, auto)); justify-content: start; column-gap: 32px; }
   table.numeric th:first-child { width: auto; }
 }
@@ -358,3 +360,12 @@ table.numeric th:first-child { width: 40%; }
 }
 .setup .actions + p { margin-top: 18px; }
 .onboarding .button + p { margin-top: 10px; }
+
+/* v0.5.1 polish: key form spacing, warning width, nested setup headings, revoke dates. */
+.key-form .field { margin-bottom: 0; }
+.note-warn { max-width: 780px; }
+.setup h3 { margin: 22px 0 8px; font-size: 16px; }
+.keys-table td small { margin-top: 4px; }
+.panel > .empty { border-bottom: 0; }
+.model-list li { flex-wrap: wrap; row-gap: 6px; }
+.model-list code { white-space: nowrap; }
