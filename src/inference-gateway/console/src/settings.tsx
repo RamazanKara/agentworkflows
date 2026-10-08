@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { api, date, label as titleCase, money, number, providerName, useData, workflowName, type ApiError, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
+import { api, date, label as titleCase, money, number, providerName, useData, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
 import { ErrorMessage, Loading, PageHeader } from './ui';
 
 // Field keys: cost_limit_usd, project_budgets.<project>, workflows.<Workflow>.<field>, model_routes.<alias>.
@@ -59,6 +59,9 @@ export function SettingsPanel({ session, budgetsOnly = false, onSaved }: { sessi
 function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; budgetsOnly: boolean; onSaved?: () => void }) {
   const [revision, setRevision] = useState(0);
   const result = useData<TeamSettings>(session.csrfToken, '/v1/team/settings', revision);
+  // Route options name their provider, so "research" on a fresh install reads "research · OpenAI".
+  const models = useData<Models>(session.csrfToken, '/v1/models');
+  const owners = Object.fromEntries((models.data?.data || []).map(model => [model.id, providerName(model.owned_by)]));
   const [saved, setSaved] = useState<TeamSettings>();
   const settings = saved || result.data;
   // Edits and resets both wait for Save, so Discard undoes either.
@@ -131,7 +134,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
   const offered = (state: SettingField) => settings!.providers.filter(provider => session.team.providers.includes(provider)
     || [state.value, state.policy_default].some(value => Array.isArray(value) && value.includes(provider)));
   const field = (name: string) => <SettingControl key={name} field={name} state={settings!.fields[name]} value={current(name)}
-    pending={pending.includes(name)} resetting={resets.includes(name)} error={errors[name]} providers={offered(settings!.fields[name])}
+    pending={pending.includes(name)} resetting={resets.includes(name)} error={errors[name]} providers={offered(settings!.fields[name])} owners={owners}
     choices={name.startsWith('model_routes.') ? settings!.routes : name.endsWith('.approver_role') ? settings!.approver_roles : undefined}
     disabled={name.endsWith('.approval_threshold_usd') && current(name.replace(/threshold_usd$/, 'required')) === false}
     onChange={next => change(name, next)} onReset={() => reset(name)}/>;
@@ -166,10 +169,10 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
       <div className={docked ? 'save-bar docked' : 'save-bar'}>
         {error && <div className="save-error"><ErrorMessage message={error}/>{conflict && <button className="secondary" type="button" onClick={reload}>Reload settings</button>}</div>}
         <p role="status">{changes ? <button type="button" className="link" onClick={showFirstChange}>{changes} unsaved {changes === 1 ? 'change' : 'changes'}</button>
-          : justSaved ? 'Settings saved. They apply to the next request.'
+          : justSaved ? <span className="saved">Settings saved. They apply to the next request.</span>
           : settings.updated_at ? `Last changed by ${settings.updated_by} · ${date(settings.updated_at)}` : 'Using your team policy. Nothing changed here yet.'}</p>
         {changes > 0 && <button type="button" className="secondary" disabled={busy} onClick={discard}>Discard</button>}
-        <button type="submit" disabled={!changes || busy || conflict}>{busy ? 'Saving…' : 'Save settings'}</button>
+        {(changes > 0 || !justSaved) && <button type="submit" disabled={!changes || busy || conflict}>{busy ? 'Saving…' : 'Save settings'}</button>}
       </div>
     </form>}
   </section>;
@@ -196,12 +199,12 @@ function WorkflowCard({ workflow, summary: parts, custom, unsaved, open, childre
   // Each part keeps to one line; lines break only between parts.
   return <details className="workflow-card" open={open}><summary>
     <span className="workflow-card-title">{workflowName(workflow)}{unsaved ? <Unsaved/> : custom && <Custom/>}</span>
-    <small>{parts.map((part, index) => <span key={index}><span className="nowrap">{part}{index < parts.length - 1 && ' ·'}</span>{' '}</span>)}</small>
+    <small>{parts.map((part, index) => <span key={index}><span className="nowrap">{index > 0 && '· '}{part}</span>{' '}</span>)}</small>
   </summary>{children}</details>;
 }
 
-function SettingControl({ field, state, value, pending, resetting, error, providers, choices, disabled, onChange, onReset }: {
-  field: string; state: SettingField; value: SettingValue; pending: boolean; resetting: boolean; error?: string; providers: string[]; choices?: string[]; disabled: boolean;
+function SettingControl({ field, state, value, pending, resetting, error, providers, owners, choices, disabled, onChange, onReset }: {
+  field: string; state: SettingField; value: SettingValue; pending: boolean; resetting: boolean; error?: string; providers: string[]; owners: Record<string, string>; choices?: string[]; disabled: boolean;
   onChange: (value: SettingValue) => void; onReset: () => void;
 }) {
   const id = `setting-${field}`;
@@ -221,7 +224,7 @@ function SettingControl({ field, state, value, pending, resetting, error, provid
     <input type="checkbox" checked={Array.isArray(value) && value.includes(provider)} onChange={event => onChange(event.target.checked
       ? [...(Array.isArray(value) ? value : []), provider] : (Array.isArray(value) ? value : []).filter(item => item !== provider))}/>{providerName(provider)}</label>)}</fieldset>;
   else if (choices) control = <><label htmlFor={id}>{name}</label><select id={id} value={String(value)} onChange={event => onChange(event.target.value)}>
-    {choices.map(option => <option key={option} value={option}>{type === 'role' ? titleCase(option) : option}</option>)}</select></>;
+    {choices.map(option => <option key={option} value={option}>{type === 'role' ? titleCase(option) : owners[option] ? `${option} · ${owners[option]}` : option}</option>)}</select></>;
   else {
     const input = <input id={id} type="number" inputMode="decimal" min="0" max={type === 'tokens' ? 1000000000 : 1000000} step={type === 'tokens' ? 1 : 'any'} placeholder="No limit"
       value={value === null ? '' : String(value)} required={pending && !resetting} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}

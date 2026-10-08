@@ -91,8 +91,8 @@ export function Costs({ session }: { session: Session }) {
       {Object.keys(spend.providers).length || Object.keys(spend.workflows || {}).length ? <>
         <CostTable title="By provider" rows={spend.providers}/>
         <CostTable title="By workflow" rows={spend.workflows || {}}/>
-      </> : <div className="panel"><Empty title="No recorded spend yet"><p>Costs appear by provider and workflow as governed calls finish.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
-      <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes budget reserved for failed calls the provider didn’t report. Calls made outside a workflow appear only under By provider.</p>
+        <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes budget reserved for failed calls the provider didn’t report. Calls made outside a workflow appear only under By provider.</p>
+      </> : <div className="panel"><Empty title="No recorded spend yet"><p>Costs show up here by provider and workflow after your first run.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
     </>}
     <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
   </>;

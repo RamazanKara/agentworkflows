@@ -381,14 +381,14 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .settings-group { padding: 24px 28px 26px; overflow: visible; }
 .settings-group > h2, .settings-group > h3 { margin: 0 0 4px; }
 .settings-group > p.muted { margin: 0 0 20px; max-width: 680px; }
-.setting-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px 28px; align-items: start; }
+.setting-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 22px 28px; align-items: start; }
 .setting > label:not(.check) { display: block; margin-bottom: 7px; font-weight: 600; }
 .setting > label code { font-size: 14px; }
 .setting > small { margin-top: 6px; }
 .setting-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 6px 0 0; font-size: 13px; color: var(--muted); }
 .setting-meta button.link { margin: 0; min-height: 0; padding: 0; font-size: 13px; }
 .setting.pending input:not([type=checkbox]), .setting.pending select { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal); }
-.badge.custom { background: #edf1ef; color: #3f5049; border: 1px solid #d3dcd8; font-size: 12px; padding: 1px 8px; }
+.badge.custom { background: #edf1ef; color: #3f5049; border: 1px solid #d3dcd8; font-size: 12px; font-weight: 500; padding: 1px 8px; }
 .badge.unsaved { background: #def3ec; color: #0b5d50; border: 1px solid #9cc5bb; font-size: 12px; font-weight: 600; padding: 1px 8px; }
 code.alias { padding: 0; background: none; color: inherit; font-size: 14px; font-weight: 600; }
 fieldset.choices { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -415,6 +415,7 @@ fieldset.choices label.check { min-height: 38px; }
 /* While there is something to save, or just after saving, the bar stays in view. */
 .save-bar.docked { position: sticky; bottom: 12px; z-index: 5; background: white; border: 1px solid #9cc5bb; border-radius: 6px; padding: 12px 16px; box-shadow: 0 6px 24px rgb(7 58 50 / .14); }
 .save-bar.docked p { color: var(--ink); font-weight: 600; }
+.save-bar .saved::before { content: '✓'; display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%; background: var(--teal); color: white; font-size: 12px; }
 .save-error { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .save-error .error { flex: 1 1 260px; margin: 0; }
 .setting-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px 28px; margin: 0; }
@@ -425,7 +426,7 @@ fieldset.choices label.check { min-height: 38px; }
   .setting-grid { grid-template-columns: 1fr; gap: 20px; }
   .save-bar.docked { bottom: 0; margin: 0 -18px; border-width: 1px 0 0; border-radius: 0; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgb(7 58 50 / .12); }
   .save-bar.docked p { flex-basis: 100%; }
-  .save-bar.docked p button.link { min-height: 32px; }
+  .save-bar.docked p button.link { min-height: 44px; }
   .save-bar.docked > button { flex: 1; }
   .setting-meta button.link { min-height: 44px; padding: 0 8px; margin: -12px 0 -12px -8px; }
   fieldset.choices label.check { min-height: 44px; }
@@ -444,3 +445,37 @@ fieldset.choices label.check { min-height: 38px; }
 }
 /* Keep a focused field clear of the sticky save bar. */
 html { scroll-padding-bottom: 120px; }
+/* Audit log */
+.audit-filters .field label { margin-bottom: 7px; }
+.filter-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 12px; }
+.audit-table td small { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; }
+.audit-table td strong { font-weight: 600; }
+.audit-table .row-action { text-align: right; white-space: nowrap; }
+.audit-table .row-action button.link { margin: 0; }
+.audit-table tr.open td { border-bottom-color: transparent; }
+.audit-table .json-row pre { margin: 0; max-height: 420px; overflow: auto; }
+.verify-result { border-left: 4px solid var(--line); padding: 18px 22px; }
+.verify-result.ok { border-left-color: var(--teal); }
+.verify-result.broken { border-left-color: #b3261e; background: #fff7f6; }
+.verify-result h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; }
+.verify-result h2::before { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; color: white; font-size: 14px; font-weight: 700; }
+.verify-result.ok h2::before { content: '✓'; background: var(--teal); }
+.verify-result.broken h2::before { content: '!'; background: #b3261e; }
+.verify-result p { margin: 6px 0 0; }
+@media (max-width: 760px) {
+  .filter-actions button { flex: 1; }
+  .verify-result { padding: 16px 18px; }
+  /* Two header buttons get their own row under the title. */
+  .page-heading:has(.actions > button + button) .actions { grid-column: 1 / -1; grid-row: 3; margin-top: 8px; }
+  .page-heading:has(.actions > button + button) .actions > button { flex: 1; }
+  /* Each event reads as a compact card: name and Show JSON on top, time, then labeled details. */
+  .stack.audit-table tr:not(.json-row) { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .stack.audit-table td[data-label] { grid-column: 1 / -1; }
+  .stack.audit-table td:first-child { grid-row: 1; grid-column: 1; }
+  .stack.audit-table td.row-action { grid-row: 1; grid-column: 2; text-align: right; }
+  .stack.audit-table td.row-action button.link { margin: -10px -8px -10px 0; padding: 0 8px; }
+  .stack.audit-table td[data-label="Time"] { padding-left: 0; color: var(--muted); font-size: 13px; }
+  .stack.audit-table td[data-label="Time"]::before { content: none; }
+  .stack.audit-table td[data-label="Actor"] small { display: inline; margin-left: 6px; }
+  .stack.audit-table tr.json-row { padding-top: 0; }
+}

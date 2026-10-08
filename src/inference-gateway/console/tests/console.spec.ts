@@ -38,7 +38,7 @@ test('audit list expands escaped JSON and links to the run', async ({ page }) =>
   await login(page);
   await page.getByRole('link', { name: 'Audit log', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'alice', exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'inference_request', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Model call', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: id.slice(0, 8) })).toHaveAttribute('href', `#run/${id}`);
   await page.getByRole('button', { name: 'Show JSON' }).click();
   await expect(page.locator('pre')).toHaveText(JSON.stringify(auditEntry().event, null, 2));
@@ -58,7 +58,7 @@ test('audit filters and cursor pagination use the applied range', async ({ page 
   await page.getByLabel('From', { exact: true }).fill('2026-10-01T10:00');
   await page.getByLabel('To', { exact: true }).fill('2026-10-09T10:00');
   await page.getByLabel('Actor', { exact: true }).fill('alice');
-  await page.getByLabel('Event type').fill('inference_request');
+  await page.getByLabel('Event type', { exact: true }).selectOption('inference_request');
   await page.getByLabel('Project', { exact: true }).fill('default');
   await page.getByLabel('Run ID', { exact: true }).fill(id);
   await page.getByRole('button', { name: 'Apply filters' }).click();
@@ -700,7 +700,9 @@ test('revoking a key requires confirmation and updates its status', async ({ pag
   expect(deletes).toBe(0);
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Revoke Alice' }).click();
-  await expect(page.getByRole('cell', { name: /^Revoked/ })).toContainText(new Date(1791316800 * 1000).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }));
+  // Format the expected date in the page, so it uses the same locale and time zone as the console, whatever browser or machine runs the test.
+  const revokedOn = await page.evaluate(() => new Date(1791316800 * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }));
+  await expect(page.getByRole('cell', { name: /^Revoked/ })).toContainText(revokedOn);
   await expect(page.getByRole('button', { name: 'Revoke Alice' })).toHaveCount(0);
   expect(deletes).toBe(1);
 });
@@ -779,7 +781,8 @@ for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
     expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
     await expect(page.getByRole('status')).toContainText('Settings saved.');
     await expect(page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    // Right after saving, the bar shows only the confirmation.
+    await expect(page.getByRole('button', { name: 'Save settings' })).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }
