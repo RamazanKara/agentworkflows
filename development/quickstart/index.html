@@ -2065,7 +2065,7 @@ both modes: no external document is published.</p>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>my-research
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>ResearchWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@input.json'</span>
 </code></pre></div>
-<p>You now have editable <code>workflow.py</code>, <code>worker.py</code>, and <code>input.json</code>, plus a README with
+<p>You now have editable <code>workflow.py</code>, <code>worker.py</code>, <code>input.json</code>, and <code>input-schema.json</code>, plus a README with
 worker instructions. <code>init --help</code> lists <strong>research</strong>, <strong>code-review</strong>, <strong>support-triage</strong>,
 <strong>weekly-report</strong>, <strong>incident-summary</strong>, and <strong>document-qa</strong>.
 It never overwrites an existing project. The built-in worker runs the unchanged templates;
@@ -2099,7 +2099,14 @@ approval and <code>publish</code>, plus six notification receipts from the local
 email fakes. Every entry has a <code>receipt_id</code>. The draft call falls back from OpenAI to Anthropic on purpose. The approval records the identity
 of your gateway key. <code>approve --reject</code> instead finishes without publishing.</p>
 <p>Open <a href="http://127.0.0.1:8080/console/">http://127.0.0.1:8080/console/</a> and sign in with <code>local-development-only</code> to see the
-same run, draft, result, timeline, and costs. Temporal history is at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a>.</p>
+same run, draft, result, timeline, and costs. Expand a step's <strong>Input and output</strong> to see
+what it sent and received, with redaction and truncation notes. The demo captures redacted
+content for seven days; terminal run records expire after 30 days. Receipt hashes contain
+no captured text. Temporal history is at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a> and has its own retention.</p>
+<p>You can also choose <strong>Run workflow</strong>, select any starter, and fill in its generated form.
+Forms come from the workflow policy's <code>inputSchema</code>; workflows without one use a JSON box.
+For your edited project, keep <code>workflow.py</code>'s schema declaration and the reviewed policy
+in sync using <code>input-schema.json</code>. Invalid fields are reported before a run starts.</p>
 <p>To verify the retained receipt chain, return to the checkout root:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Bash (Linux/macOS)</label><label for="__tabbed_3_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">

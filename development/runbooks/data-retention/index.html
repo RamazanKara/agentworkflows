@@ -1821,6 +1821,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#workflow-records-and-captured-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow records and captured content
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validate-retention" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1912,6 +1923,60 @@
 <li>Coding-agent workspace PVC data should be purged on tenant offboarding.</li>
 <li>Model governance evidence has longer retention because it supports model lifecycle audit.</li>
 </ul>
+<h2 id="workflow-records-and-captured-content">Workflow records and captured content<a class="headerlink" href="#workflow-records-and-captured-content" title="Permanent link">&para;</a></h2>
+<p>The gateway uses the existing budget Redis for these records. Configure positive integer
+gateway environment variables:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Applies to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CONTENT_RETENTION_SECONDS</code></td>
+<td><code>604800</code> (7 days)</td>
+<td>Each captured run/step input/output key, from its last write</td>
+</tr>
+<tr>
+<td><code>CONTENT_MAX_BYTES</code></td>
+<td><code>16384</code> (16 KB)</td>
+<td>Each captured input or output field, in UTF-8 bytes after redaction</td>
+</tr>
+<tr>
+<td><code>RUN_RECORD_RETENTION_SECONDS</code></td>
+<td><code>2592000</code> (30 days)</td>
+<td>Terminal run metadata, budget, timeline, capture markers, notifications, and start intent/input</td>
+</tr>
+</tbody>
+</table>
+<p><code>captureContent: none|redacted|full</code> is a team default and an optional per-workflow override
+in <code>SandboxPolicySet</code>. Capture defaults to <code>none</code> when both are absent; the Compose demo
+team uses <code>redacted</code>. Full capture still follows gateway admission and output DLP; redacted
+capture additionally runs the existing redactors on stored text. Receipts remain fingerprints
+and accounting metadata. Run readers must pass the existing authenticated team/project checks.</p>
+<p>Content lives under <code>PREFIX:workflow:TEAM:RUN:content:STEP_HASH</code>, separately from the
+timeline and receipts. Each value contains text input/output, per-field <code>truncated</code> flags,
+and the <code>redaction</code> mode. After content expiry the API returns <code>content: null</code> with
+<code>content_reason: expired</code>; uncaptured steps return <code>capture_off</code>.</p>
+<p>The run monitor checks Temporal every 30 seconds and applies a fixed expiry at Temporal's
+close time plus the run retention period for completed, failed, canceled, terminated,
+timed-out, and continued-as-new runs. Inspection also applies retention. Reads and duplicate worker
+initialization do not extend deadlines. Active runs do not get a run-record TTL.
+Shorter existing TTLs, including content TTLs, are preserved. Expired run IDs are pruned
+from project indexes during listing and monitoring, without breaking pagination.</p>
+<p>An idempotent online state migration runs in the monitor after gateway startup. It scans
+existing run metadata in batches and asks Temporal for each execution's state, because
+older Redis metadata did not store terminal status. It backfills terminal TTLs without
+resetting active runs, audit chains, budgets for other runs, or identity/session keys.
+Already-old terminal records expire immediately. When Temporal has already purged a run,
+the migration starts its final Redis retention window at discovery. Transient failures
+leave the migration pending for retry; check gateway warnings, Redis, and Temporal health.</p>
+<p>These TTLs do not erase Temporal history, backups, exported audit logs, or workflow side
+effects. Configure Temporal namespace retention and backup expiry separately. Changing
+retention settings affects new deadlines; existing earlier deadlines are never extended.</p>
 <h2 id="validate-retention">Validate Retention<a class="headerlink" href="#validate-retention" title="Permanent link">&para;</a></h2>
 <p>Run:</p>
 <div class="highlight"><pre><span></span><code>make retention-check

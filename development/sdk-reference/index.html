@@ -2060,7 +2060,7 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 </tr>
 <tr>
 <td><code>runs inspect RUN_ID</code></td>
-<td>Status, draft, completed result, budget, and receipt timeline</td>
+<td>Status, draft, completed result, budget, and timeline including opt-in step content</td>
 </tr>
 <tr>
 <td><code>runs approve RUN_ID</code></td>
@@ -2095,7 +2095,9 @@ to the authenticated admin's team and project access. You cannot revoke or demot
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.</p>
 <p>The <a href="../templates/">template gallery</a> includes input fields, expected results and adaptation
-steps for every starter. Install from this checkout to get its current template set.</p>
+steps for every starter. Install from this checkout to get its current template set.
+Scaffolds include <code>input-schema.json</code> and a schema declaration in <code>workflow.py</code>. Copy the
+schema to the workflow policy's <code>inputSchema</code> to enable console forms and gateway validation.</p>
 <h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2132,7 +2134,15 @@ steps for every starter. Install from this checkout to get its current template 
 </tbody>
 </table>
 <h2 id="workflow-sdk">Workflow SDK<a class="headerlink" href="#workflow-sdk" title="Permanent link">&para;</a></h2>
-<p>Import <code>WorkflowGateway</code>, <code>Budget</code>, and <code>ApprovalWorkflow</code> from <code>agentworkflows.workflows</code>.</p>
+<p>Import <code>WorkflowGateway</code>, <code>Budget</code>, and <code>ApprovalWorkflow</code> from <code>agentworkflows.workflows</code>.
+Use <code>@input_schema(schema)</code> from the same module on a workflow class to declare its inputs;
+the schema is available as <code>WorkflowClass.input_schema</code>. In TypeScript, import <code>InputSchema</code>
+and <code>withInputSchema</code> from <code>@agentworkflows/sdk/workflows</code>, then export
+<code>withInputSchema(schema, implementation)</code>; it preserves the function and exposes <code>.inputSchema</code>.
+Declarations do not register or replace administrator-approved workflow policies.</p>
+<p>Schemas use the flat JSON Schema draft 2020-12 subset documented in
+<a href="../workflows/#workflow-forms-and-step-content">workflow forms</a>: object properties with primitive
+types or string arrays, enums, required fields, descriptions, defaults, and examples.</p>
 <table>
 <thead>
 <tr>
@@ -2180,6 +2190,10 @@ with exponential backoff. Policy denials are non-retryable; transient gateway fa
 retry. Existing Temporal <code>RetryPolicy</code> and <code>timedelta</code> parameters remain available on
 <code>WorkflowGateway</code>. <code>data_classification</code> defaults to <code>internal</code>; confidential data needs an
 approved self-hosted route. Approval expires after seven days with an actionable failure.</p>
+<p>Both SDKs send model/tool input and output through gateway capture automatically when
+the policy enables <code>captureContent</code>. Run inspection includes per-step text, redaction mode,
+and per-field truncation flags. Capture uses a separate Redis TTL (seven days by default),
+never receipt bodies. Terminal run records default to 30-day retention.</p>
 <p>Template research budgets accept integer <code>token_limit</code> from 1 to 1,000,000,000 and finite
 <code>cost_limit_usd</code> greater than zero up to 1,000,000. Policy ceilings still take precedence.</p>
 <h2 id="gateway-client-and-errors">Gateway client and errors<a class="headerlink" href="#gateway-client-and-errors" title="Permanent link">&para;</a></h2>
@@ -2189,7 +2203,10 @@ the CLI. <a href="../client-examples/">Client examples</a> cover model calls and
 <p><code>GatewayError</code> exposes <code>status_code</code>, <code>reason</code>, <code>request_id</code>, and <code>detail</code>. Validation errors
 identify the invalid fields. CLI output includes a recovery action and request ID without
 printing your credential. <code>GatewayRetryAfterError.retry_after</code> reports when the server asks
-for a delay longer than the client's retry cap; transport errors are <code>httpx.HTTPError</code>.</p>
+for a delay longer than the client's retry cap; transport errors are <code>httpx.HTTPError</code>.
+Schema errors return HTTP 422 with <code>detail.reason = "workflow_input_invalid"</code> and a
+<code>detail.fields</code> list of <code>{field: "input.property", message: "..."}</code>. Validation happens
+before a start intent or Temporal execution is created; defaults are not inserted by the API.</p>
 <table>
 <thead>
 <tr>
