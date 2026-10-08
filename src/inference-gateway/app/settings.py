@@ -211,6 +211,9 @@ class Settings:
     responses_redis_timeout_seconds: float = 0.5
     responses_key_prefix: str = "agentworkflows:responses"
     responses_retention_seconds: int = 86400
+    content_retention_seconds: int = 604800
+    content_max_bytes: int = 16384
+    run_record_retention_seconds: int = 2592000
     # Opt-in team console served at /console. Off by default for API-only deployments.
     admin_console_enabled: bool = False
 
@@ -345,6 +348,9 @@ class Settings:
             raise ValueError("responses_redis_timeout_seconds must be greater than zero")
         if self.responses_retention_seconds <= 0:
             raise ValueError("responses_retention_seconds must be greater than zero")
+        for name in ("content_retention_seconds", "content_max_bytes", "run_record_retention_seconds"):
+            if getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be greater than zero")
         if not self.responses_key_prefix.strip():
             raise ValueError("responses_key_prefix must not be empty")
 
@@ -521,6 +527,9 @@ class Settings:
             responses_redis_timeout_seconds=_float_from_env("RESPONSES_REDIS_TIMEOUT_SECONDS", 0.5),
             responses_key_prefix=os.getenv("RESPONSES_KEY_PREFIX", "agentworkflows:responses"),
             responses_retention_seconds=_positive_int_from_env("RESPONSES_RETENTION_SECONDS", 86400),
+            content_retention_seconds=_positive_int_from_env("CONTENT_RETENTION_SECONDS", 604800),
+            content_max_bytes=_positive_int_from_env("CONTENT_MAX_BYTES", 16384),
+            run_record_retention_seconds=_positive_int_from_env("RUN_RECORD_RETENTION_SECONDS", 2592000),
             admin_console_enabled=_bool_from_env("ADMIN_CONSOLE_ENABLED", False),
         )
 

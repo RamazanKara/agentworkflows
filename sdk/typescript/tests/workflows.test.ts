@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { condition, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
-import { AgentWorkflowsTrigger, ApprovalWorkflow, Budget, WorkflowGateway } from '../src/workflows';
+import { AgentWorkflowsTrigger, ApprovalWorkflow, Budget, WorkflowGateway, withInputSchema } from '../src/workflows';
 import { CodeReviewWorkflow, SupportTriageWorkflow } from '../src/examples/workflows';
 
 const mocks = vi.hoisted(() => ({ call: vi.fn(), trigger: vi.fn(), condition: vi.fn<() => Promise<boolean>>() }));
@@ -12,6 +12,17 @@ vi.mock('@temporalio/workflow', async (original) => ({
 }));
 
 beforeEach(() => { vi.clearAllMocks(); });
+
+it('declares serializable input schemas without wrapping or changing workflow calls', async () => {
+  const schema = { type: 'object' as const, properties: { name: { type: 'string' as const } }, required: ['name'] };
+  const implementation = async (input: { name: string }) => input.name;
+  const declared = withInputSchema(schema, implementation);
+  expect(declared).toBe(implementation);
+  expect(declared.inputSchema).toEqual(schema);
+  expect(await declared({ name: 'Ada' })).toBe('Ada');
+  expect(JSON.parse(JSON.stringify(CodeReviewWorkflow.inputSchema)).required).toEqual(['diff']);
+  expect(SupportTriageWorkflow.inputSchema.properties.ticket.type).toBe('string');
+});
 
 it('schedules model and tool activities with budgets, classification, and bounded retries', async () => {
   mocks.call.mockResolvedValueOnce({ choices: [{ message: { content: 'answer' } }] }).mockResolvedValueOnce({ result: 'source' });

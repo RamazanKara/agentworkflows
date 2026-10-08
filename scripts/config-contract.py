@@ -157,6 +157,9 @@ GATEWAY_VARS = (
     ConfigVar("RESPONSES_REDIS_TIMEOUT_SECONDS", "responses_redis_timeout_seconds", "float", 0.5, "responses.store.redisTimeoutSeconds", "0.5", "Redis response-store operation timeout in seconds."),
     ConfigVar("RESPONSES_KEY_PREFIX", "responses_key_prefix", "string", "agentworkflows:responses", "responses.store.keyPrefix", "agentworkflows:responses", "Redis key prefix for stored responses."),
     ConfigVar("RESPONSES_RETENTION_SECONDS", "responses_retention_seconds", "integer", 86400, "responses.store.retentionSeconds", 86400, "Retention TTL in seconds for stored responses before they expire."),
+    ConfigVar("CONTENT_RETENTION_SECONDS", "content_retention_seconds", "integer", 604800, "workflowRecords.contentRetentionSeconds", 604800, "Seconds captured workflow step inputs and outputs are kept before they expire."),
+    ConfigVar("CONTENT_MAX_BYTES", "content_max_bytes", "integer", 16384, "workflowRecords.contentMaxBytes", 16384, "Largest single captured workflow step value in bytes; longer values are truncated."),
+    ConfigVar("RUN_RECORD_RETENTION_SECONDS", "run_record_retention_seconds", "integer", 2592000, "workflowRecords.runRecordRetentionSeconds", 2592000, "Seconds finished workflow run records are kept before they are removed."),
     ConfigVar("ADMIN_CONSOLE_ENABLED", "admin_console_enabled", "boolean", False, "adminConsole.enabled", False, "Whether the read-only admin console is served at /console (ADR 0013). Off by default."),
 )
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from temporalio import workflow
 from temporalio.exceptions import ApplicationError
 
-from agentworkflows.workflows import WorkflowGateway
+from agentworkflows.workflows import WorkflowGateway, input_schema
 
 
 @dataclass
@@ -16,6 +16,30 @@ class DocumentQARequest:
     model: str = "demo-openai"
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "question": {
+                "type": "string",
+                "description": "Question about the team documents",
+                "examples": ["Who can approve a workflow, and when does approval expire?"],
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "model": {
+                "type": "string",
+                "description": "Approved model ID",
+                "default": "demo-openai",
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+        },
+        "required": ["question"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class DocumentQAWorkflow:
     @workflow.query

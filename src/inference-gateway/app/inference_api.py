@@ -62,6 +62,7 @@ from app.streaming import (
     _terminal_stream_error_event,
     _usage_from_sse_chunk,
 )
+from app.workflow_content import capture_field, capture_input
 
 
 def _forward_only_reviewed_params(
@@ -101,6 +102,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
             prompt_action = _apply_prompt_secret_mode(effective, payload_dict, call.route)
             if prompt_action:
                 request.state.prompt_guardrail_action = prompt_action
+            await capture_input(request, effective, payload_dict["messages"])
             # Exact-match per-sandbox cache (non-streaming only). A hit returns the prior
             # response without a runtime call or budget reservation.
             cache_enabled = settings.response_cache_enabled and not payload_dict.get("stream") and not workflow_call
@@ -254,6 +256,14 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
             # credentials, PII, or denied content (OWASP LLM02:2025/LLM05:2025). Applied pre-cache so
             # a secret is never persisted in the response cache.
             _apply_output_guardrail(call.runtime_response, settings, call.route, request)
+            if getattr(request.state, "step_content", None) is not None:
+                messages = [choice.get("message", {}) for choice in call.runtime_response.get("choices", [])]
+                output = (
+                    messages[0].get("content")
+                    if len(messages) == 1 and not (messages[0].get("tool_calls") or messages[0].get("function_call"))
+                    else messages
+                )
+                await capture_field(request, effective, "output", output)
             if cache_enabled:
                 await asyncio.to_thread(request.app.state.response_cache.set, cache_id, call.runtime_response)
             if shadow_route is not None:

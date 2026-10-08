@@ -2,6 +2,12 @@
 
 ## v0.5.0 - unreleased
 
+- Capture opt-in redacted/full model and tool step input/output separately from receipts,
+  with per-field size limits, Redis TTLs, and expandable console details.
+- Declare workflow input schemas in both SDKs and policy, generate console forms, validate
+  starts with field-level 422 errors, and include schemas in templates and `agentworkflows init`.
+- Expire terminal run records after 30 days by default, backfill existing runs through an
+  online state migration, and prune expired entries from run lists.
 - Start the Compose quickstart without building: the stack pulls the signed release images.
 - Install the SDKs from GitHub releases: `agentworkflows init` pins the release wheel, and the
   TypeScript SDK installs from the release tarball.

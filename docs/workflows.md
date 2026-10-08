@@ -28,12 +28,13 @@ After `make compose-up`, open <http://127.0.0.1:8080/console>:
 
 1. Sign in with `local-development-only` (demo admin). Keep the local fake providers on
    **Get started**; no cloud key or paid call is needed.
-2. Choose **Run workflow**, keep `ResearchWorkflow` and the suggested topic/model, and
+2. Choose **Run workflow**, select `ResearchWorkflow`, fill in its schema-generated form, and
    select **Start run**. Its detail page refreshes while the workflow is active.
 3. Open **Approvals**, read the draft, then **Approve** or **Reject**. Approval allows
    the configured publish tool to run; rejection finishes without publishing.
-4. Open the run from **Workflow runs**. Expand **Receipt** and **Step logs** in its timeline
-   to inspect provider/model, usage, cost, routing attempts, and the full redacted receipt.
+4. Open the run from **Workflow runs**. Expand **Input and output** to read each model/tool
+   step's captured content and redaction/truncation notes. **Receipt** and **Step logs** show
+   provider/model, usage, cost, routing attempts, and fingerprints without captured text.
 5. Open **Costs** for current-window team, provider, and workflow costs. **Providers & budgets**
    shows admins key presence and limits, with a copyable fragment and links for configuring
    real providers through the existing reviewed policy and gateway Secret deployment.
@@ -41,7 +42,8 @@ After `make compose-up`, open <http://127.0.0.1:8080/console>:
 Use project, workflow, and status filters to find runs. **Load more** advances through older
 index pages, including pages with no matches. The approvals inbox walks every page of every
 available project. Expired Temporal executions are omitted from lists; direct inspection
-reports that the run is unavailable.
+reports that the run is unavailable. Terminal Redis run records expire after 30 days by
+default; reading a run does not extend its retention.
 
 Sign-in exchanges a team API key or signed JWT for a server-side Redis session. Reloading
 restores the workspace; **Sign out** invalidates the session on every replica.
@@ -68,6 +70,45 @@ Step logs here are gateway event/routing records, not worker stdout or full Temp
 Receipt hashes must still be checked against the retained audit export and head anchors.
 Provider keys and budget edits remain reviewed deployment configuration; key presence does
 not prove live provider acceptance.
+
+### Workflow forms and step content
+
+Set `inputSchema` on a workflow in the `SandboxPolicySet`. `GET /v1/workflow-policies`
+returns it to the console, which renders text fields, longer text areas, numbers,
+checkboxes, enum selects, and string arrays with one item per line. Workflows without
+a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
+string, number, integer, boolean, or array-of-string properties, optional `enum`,
+`required`, `description`, `default`, and `examples`. `additionalProperties: false`
+rejects unknown fields. Nested objects and schema references are not supported.
+The templates retain their nonempty text and budget checks with `minLength`, `pattern`,
+`minimum`, `maximum`, and `exclusiveMinimum` constraints.
+Defaults prefill the console; examples are hints. The gateway validates submitted input
+without inserting defaults or coercing types. Invalid input returns HTTP 422 before
+starting Temporal, with `detail.reason: workflow_input_invalid` and
+`detail.fields: [{field: "input.topic", message: "Field is required."}]`.
+
+The Python `@input_schema({...})` decorator and TypeScript `withInputSchema(schema, workflow)`
+attach schema metadata to workflow code. Copy that schema into the reviewed workflow
+policy; workers cannot override the gateway's policy. `agentworkflows init` includes
+the declaration in `workflow.py` and writes `input-schema.json` for that purpose.
+
+`captureContent` can be `none`, `redacted`, or `full` at the team level or on a workflow.
+An explicit workflow setting overrides the team default, including `none`. Absent both,
+capture is off. Compose's demo team defaults to `redacted`. Both SDKs' governed model and
+tool activities capture automatically through the gateway, after admission and output
+checks. `redacted` additionally applies the gateway's configured secret/PII and blocked-term
+redactors to the stored text; `full` stores the admitted request and guarded result as-is.
+Neither mode bypasses DLP. Each input/output field is limited to `CONTENT_MAX_BYTES`
+(default 16,384 UTF-8 bytes), after redaction.
+
+Run timeline steps expose `content: {input, output, truncated: {input, output}, redaction}`.
+Input and output are text (structured values are JSON text); an unfinished/failed call can
+have a null output. A retried step shows its latest captured attempt. Content is separate
+from receipts and expires after `CONTENT_RETENTION_SECONDS` (default seven days).
+Missing content is `null` with `content_reason: capture_off` or `expired`. The same team,
+project, and role checks that protect run details protect content; all four read roles
+can inspect it. See the [retention runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/data-retention.md)
+for TTL migration and Temporal history handling.
 
 ## Teams, projects, and roles
 
@@ -226,7 +267,7 @@ The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
 | Method and path | Purpose |
 | --- | --- |
 | `GET /v1/team` | Discover role, projects, providers, and spend limit |
-| `GET /v1/workflow-policies` | Discover approved workflow types and limits |
+| `GET /v1/workflow-policies` | Discover approved workflow types, limits, capture mode, and input schemas |
 | `POST /v1/workflow-runs` | Start with `workflow`, JSON `input`, optional `project` and UUID `request_id` |
 | `GET /v1/workflow-runs?project=briefing&offset=0&limit=20&status=awaiting_approval` | Page through project runs; optional `status` and `workflow` filters |
 | `GET /v1/workflow-runs/{run_id}` | Status, draft, budget, step timeline with receipt IDs |

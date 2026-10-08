@@ -5,6 +5,30 @@ import {
 import type { ActivityOptions } from '@temporalio/workflow';
 import type { Call, ChatCompletion, GovernedActivities, TriggerRequest, TriggerResult } from './types';
 
+export type InputProperty = {
+  type: 'string' | 'number' | 'integer' | 'boolean' | 'array';
+  description?: string;
+  default?: string | number | boolean | string[];
+  examples?: (string | number | boolean | string[])[];
+  enum?: (string | number | boolean | string[])[];
+  items?: { type: 'string' };
+  minLength?: number; pattern?: string;
+  minimum?: number; maximum?: number; exclusiveMinimum?: number;
+};
+
+export type InputSchema = {
+  $schema?: 'https://json-schema.org/draft/2020-12/schema';
+  type: 'object';
+  properties: Record<string, InputProperty>;
+  required?: string[];
+  description?: string;
+  additionalProperties?: boolean;
+};
+
+export function withInputSchema<T extends (...args: never[]) => Promise<unknown>>(schema: InputSchema, workflow: T): T & { inputSchema: InputSchema } {
+  return Object.assign(workflow, { inputSchema: schema });
+}
+
 export class Budget {
   constructor(readonly tokenLimit = 10_000, readonly costLimitUsd = 5) {
     if (!Number.isInteger(tokenLimit) || tokenLimit < 1 || tokenLimit > 1_000_000_000 ||

@@ -12,12 +12,28 @@ export type Team = {
 export type Session = { csrfToken: string; team: Team; id: number };
 export type BrowserSession = { csrf_token: string; principal: { key_id?: string }; sandbox_id: string };
 export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
-export type Policy = { allowedModels: string[]; allowedProviders: string[]; tokenLimit: number; costLimitUsd: number };
+export type InputProperty = {
+  type: 'string' | 'number' | 'integer' | 'boolean' | 'array';
+  description?: string; default?: string | number | boolean | string[];
+  examples?: (string | number | boolean | string[])[];
+  enum?: (string | number | boolean | string[])[]; items?: { type: 'string' };
+  minLength?: number; pattern?: string;
+  minimum?: number; maximum?: number; exclusiveMinimum?: number;
+};
+export type InputSchema = {
+  type: 'object'; properties: Record<string, InputProperty>; required?: string[]; description?: string;
+};
+export type Policy = {
+  allowedModels: string[]; allowedProviders: string[]; tokenLimit: number; costLimitUsd: number;
+  inputSchema?: InputSchema | null; captureContent?: 'none' | 'redacted' | 'full';
+};
 export type Step = {
   step_id: string; action: string; provider: string; model: string; tool: string;
   tokens: number; cost_usd: number; duration_ms: number; timestamp: number;
   status_code: number | null; receipt_id: string; chain_id: string;
   attempts: unknown[]; receipt: Record<string, unknown>;
+  content?: { input: string | null; output: string | null; truncated: { input: boolean; output: boolean }; redaction: 'redacted' | 'full' } | null;
+  content_reason?: string;
 };
 export type Run = {
   run_id: string; workflow: string; project: string; created_at: number; status: string;

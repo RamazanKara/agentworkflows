@@ -7,7 +7,7 @@ from typing import Any
 
 from temporalio import workflow
 
-from agentworkflows.workflows import ApprovalWorkflow, Budget, WorkflowGateway
+from agentworkflows.workflows import ApprovalWorkflow, Budget, WorkflowGateway, input_schema
 
 
 @dataclass
@@ -18,6 +18,44 @@ class ResearchRequest:
     cost_limit_usd: float = 5.0
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "topic": {
+                "type": "string",
+                "description": "Research topic",
+                "examples": ["How should our team evaluate AI agents?"],
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "model": {
+                "type": "string",
+                "description": "Approved model ID",
+                "default": "demo-openai",
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "token_limit": {
+                "type": "integer",
+                "description": "Run token budget",
+                "default": 10000,
+                "minimum": 1,
+                "maximum": 1000000000,
+            },
+            "cost_limit_usd": {
+                "type": "number",
+                "description": "Run cost budget in USD",
+                "default": 5,
+                "exclusiveMinimum": 0,
+                "maximum": 1000000,
+            },
+        },
+        "required": ["topic"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class ResearchWorkflow(ApprovalWorkflow):
     @workflow.run

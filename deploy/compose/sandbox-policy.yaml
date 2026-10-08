@@ -4,6 +4,7 @@ spec:
   policies:
     - sandboxId: demo
       projects: [default, engineering]
+      captureContent: redacted
       webhookSecretEnv: COMPOSE_WEBHOOK_SECRET
       notifications:
         consoleUrl: http://127.0.0.1:8080/console/
@@ -48,6 +49,14 @@ spec:
             search: 0.01
       workflows:
         DailyReportWorkflow:
+          inputSchema:
+            type: "object"
+            properties:
+              topic:
+                type: "string"
+                description: "Daily report topic"
+                default: "agent operations"
+            additionalProperties: false
           allowedProviders: [openai]
           allowedModels: [demo-openai]
           allowedEgress: [http://cloud-fake:8000]
@@ -70,6 +79,36 @@ spec:
               kind: webhook
               project: engineering
         ResearchWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            properties:
+              topic:
+                type: "string"
+                description: "Research topic"
+                examples: ["How should our team evaluate AI agents?"]
+                minLength: 1
+                pattern: "\\S"
+              model:
+                type: "string"
+                description: "Approved model ID"
+                default: "demo-openai"
+                minLength: 1
+                pattern: "\\S"
+              token_limit:
+                type: "integer"
+                description: "Run token budget"
+                default: 10000
+                minimum: 1
+                maximum: 1000000000
+              cost_limit_usd:
+                type: "number"
+                description: "Run cost budget in USD"
+                default: 5
+                exclusiveMinimum: 0
+                maximum: 1000000
+            required: ["topic"]
+            additionalProperties: false
           allowedProviders: [openai, anthropic]
           allowedModels: [demo-openai, demo-anthropic]
           allowedTools: [research, publish]
@@ -77,6 +116,24 @@ spec:
           tokenLimit: 10000
           costLimitUsd: 5
         SupportTriageWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            properties:
+              ticket:
+                type: "string"
+                description: "Support ticket text"
+                examples: ["I cannot sign in after resetting my password."]
+                minLength: 1
+                pattern: "\\S"
+              model:
+                type: "string"
+                description: "Approved model ID"
+                default: "demo-openai"
+                minLength: 1
+                pattern: "\\S"
+            required: ["ticket"]
+            additionalProperties: false
           allowedProviders: [openai]
           allowedModels: [demo-openai]
           allowedTools: []
@@ -84,6 +141,24 @@ spec:
           tokenLimit: 10000
           costLimitUsd: 5
         CodeReviewWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            properties:
+              diff:
+                type: "string"
+                description: "Pull request diff"
+                examples: ["- return user.is_admin\n+ return True"]
+                minLength: 1
+                pattern: "\\S"
+              model:
+                type: "string"
+                description: "Approved model ID"
+                default: "demo-openai"
+                minLength: 1
+                pattern: "\\S"
+            required: ["diff"]
+            additionalProperties: false
           allowedProviders: [openai]
           allowedModels: [demo-openai]
           allowedTools: []
@@ -98,6 +173,24 @@ spec:
           tokenLimit: 4000
           costLimitUsd: 1
         WeeklyReportWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            properties:
+              period:
+                type: "string"
+                description: "Reporting period"
+                examples: ["2026-09-28/2026-10-04"]
+                minLength: 1
+                pattern: "\\S"
+              model:
+                type: "string"
+                description: "Approved model ID"
+                default: "demo-openai"
+                minLength: 1
+                pattern: "\\S"
+            required: ["period"]
+            additionalProperties: false
           allowedProviders: [openai]
           allowedModels: [demo-openai]
           allowedTools: [report_source]
@@ -105,6 +198,24 @@ spec:
           tokenLimit: 10000
           costLimitUsd: 5
         IncidentSummaryWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            properties:
+              incident_id:
+                type: "string"
+                description: "Incident identifier"
+                examples: ["INC-1042"]
+                minLength: 1
+                pattern: "\\S"
+              model:
+                type: "string"
+                description: "Approved model ID"
+                default: "demo-openai"
+                minLength: 1
+                pattern: "\\S"
+            required: ["incident_id"]
+            additionalProperties: false
           allowedProviders: [openai]
           allowedModels: [demo-openai]
           allowedTools: [incident_logs]
@@ -112,6 +223,24 @@ spec:
           tokenLimit: 10000
           costLimitUsd: 5
         DocumentQAWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            properties:
+              question:
+                type: "string"
+                description: "Question about the team documents"
+                examples: ["Who can approve a workflow, and when does approval expire?"]
+                minLength: 1
+                pattern: "\\S"
+              model:
+                type: "string"
+                description: "Approved model ID"
+                default: "demo-openai"
+                minLength: 1
+                pattern: "\\S"
+            required: ["question"]
+            additionalProperties: false
           allowedProviders: [openai]
           allowedModels: [demo-openai]
           allowedTools: [search_documents]

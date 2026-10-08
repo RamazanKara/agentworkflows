@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, date, label, money, number, shortId, status, useData, workflowName, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { api, date, label, money, number, shortId, status, useData, workflowName, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
 import { Badge, Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
@@ -62,22 +62,13 @@ export function StartRun({ session }: { session: Session }) {
   const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
   const [workflow, setWorkflow] = useState('');
   const [project, setProject] = useState(session.team.projects[0] || '');
-  const [topic, setTopic] = useState('How should our team evaluate AI agents?');
-  const [model, setModel] = useState('');
-  const [input, setInput] = useState<string | null>(null);
+  const [input, setInput] = useState('{}');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const names = Object.keys(policies.data?.workflows || {});
-  const selected = workflow || (names.includes('ResearchWorkflow') ? 'ResearchWorkflow' : names[0]);
+  const selected = workflow || names[0];
   const policy = policies.data?.workflows[selected];
-  const chosenModel = model || policy?.allowedModels[0] || '';
-  const suggestedInput = selected === 'SupportTriageWorkflow'
-    ? '{"ticket":"I cannot sign in after resetting my password."}'
-    : selected === 'CodeReviewWorkflow' ? JSON.stringify({ diff: '- return user.is_admin\n+ return True' })
-    : selected === 'WeeklyReportWorkflow' ? '{"period":"2026-09-28/2026-10-04"}'
-    : selected === 'IncidentSummaryWorkflow' ? '{"incident_id":"INC-1042"}'
-    : selected === 'DocumentQAWorkflow' ? '{"question":"Who can approve a workflow, and when does approval expire?"}' : '{}';
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
     <ErrorMessage message={error || policies.error}/>
@@ -86,8 +77,8 @@ export function StartRun({ session }: { session: Session }) {
         event.preventDefault(); setError(''); setBusy(true);
         try {
           let value: unknown;
-          if (selected === 'ResearchWorkflow') value = { topic, ...(chosenModel ? { model: chosenModel } : {}) };
-          else { try { value = JSON.parse(input ?? suggestedInput); } catch { throw new Error(`Workflow input must be valid JSON. For example: ${suggestedInput}.`); } }
+          if (policy?.inputSchema) value = schemaInput(policy.inputSchema, new FormData(event.currentTarget));
+          else { try { value = JSON.parse(input); } catch { throw new Error('Workflow input must be valid JSON.'); } }
           const body = { workflow: selected, project, input: value };
           const fingerprint = JSON.stringify(body);
           if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
@@ -96,18 +87,52 @@ export function StartRun({ session }: { session: Session }) {
         } catch (error) { setError((error as Error).message); }
         finally { setBusy(false); }
       }}>
-        <label>Workflow<select value={selected} onChange={e => { setWorkflow(e.target.value); setModel(''); setInput(null); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></label>
+        <label>Workflow<select value={selected} onChange={e => { setWorkflow(e.target.value); setInput('{}'); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></label>
         <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
-        {selected === 'ResearchWorkflow' ? <>
-          <label>Research topic<textarea required value={topic} onChange={e => setTopic(e.target.value)} rows={3}/></label>
-          {policy?.allowedModels.length ? <label>Model<select value={chosenModel} onChange={e => setModel(e.target.value)}>{policy.allowedModels.map(m => <option key={m}>{m}</option>)}</select></label> : <p>The example uses its worker’s default model.</p>}
-          <p className="callout">Research → draft → approval → publish. An approver or admin reviews the draft before the publish tool runs.</p>
-        </> : <label>Workflow input (JSON)<textarea required spellCheck={false} value={input ?? suggestedInput} onChange={e => setInput(e.target.value)} rows={6}/></label>}
+        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema}/> : <label>Workflow input (JSON)<textarea required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></label>}
         {policy && <p className="muted">Policy ceiling: {number(policy.tokenLimit)} tokens · {money(policy.costLimitUsd)} per run. The workflow can use a lower limit.</p>}
         <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to runs</a></div>
         {error && request.current && <p className="muted">Retry here with unchanged input to reuse request ID <code>{request.current.id}</code>.</p>}
       </form>}
   </>;
+}
+
+function schemaInput(schema: InputSchema, form: FormData): Record<string, unknown> {
+  const input: Record<string, unknown> = {};
+  for (const [name, property] of Object.entries(schema.properties)) {
+    const raw = form.get(`input.${name}`);
+    if (property.enum) {
+      if (raw !== null && raw !== '') input[name] = property.enum[Number(raw)];
+    } else if (property.type === 'boolean') input[name] = raw === 'on';
+    else if (raw !== '' || schema.required?.includes(name)) {
+      const text = String(raw ?? '');
+      input[name] = property.type === 'array' ? text.split(/\r?\n/).filter(line => line.length > 0)
+        : property.type === 'number' || property.type === 'integer' ? Number(text) : text;
+    }
+  }
+  return input;
+}
+
+function SchemaFields({ schema }: { schema: InputSchema }) {
+  return <>{schema.description && <p>{schema.description}</p>}{Object.entries(schema.properties).map(([name, property]) => {
+    const required = schema.required?.includes(name);
+    const common = { name: `input.${name}`, required, 'aria-describedby': property.description ? `description-${name}` : undefined };
+    const value = property.default;
+    const example = property.examples?.[0];
+    const text = (v: unknown) => Array.isArray(v) ? v.join('\n') : v === undefined ? '' : String(v);
+    const multiline = [value, ...(property.examples || [])].some(v => typeof v === 'string' && (v.length > 80 || v.includes('\n')));
+    return <div key={name}>
+      <label>{label(name)}
+        {property.enum ? <select {...common} defaultValue={value === undefined ? '' : String(property.enum.findIndex(v => JSON.stringify(v) === JSON.stringify(value)))}>
+          <option value="">Choose a value</option>{property.enum.map((v, i) => <option key={i} value={i}>{text(v)}</option>)}
+        </select> : property.type === 'boolean' ? <input name={common.name} aria-describedby={common['aria-describedby']} type="checkbox" defaultChecked={value === true}/>
+          : property.type === 'array' || multiline ? <textarea {...common} minLength={property.minLength} defaultValue={text(value)} placeholder={text(example)} rows={4}/>
+          : <input {...common} type={['number', 'integer'].includes(property.type) ? 'number' : 'text'} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} minLength={property.minLength} pattern={property.pattern} defaultValue={text(value)} placeholder={text(example)}/>}
+      </label>
+      {property.description && <p className="muted" id={`description-${name}`}>{property.description}</p>}
+      {property.type === 'array' && <p className="muted">One item per line.</p>}
+    </div>;
+  })}</>;
 }
 
 function Review({ session, run, onDone }: { session: Session; run: Run; onDone: () => void }) {
@@ -236,6 +261,15 @@ function StepCard({ step }: { step: Step }) {
     <p className="muted">{date(step.timestamp)} · {number(step.duration_ms)} ms</p>
     {(step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider || '—'}</dd></div><div><dt>Model / tool</dt><dd>{step.tool || step.model || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
     {failed.length > 0 && <p className="callout">{failed.map(a => a.provider).join(', ')} failed, so {step.provider} served this step.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${failed[0].provider} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
+    <details><summary>Input and output</summary>
+      {step.content ? <>
+        <p className="muted">{step.content.redaction === 'redacted' ? 'Gateway redaction applied.' : 'Full capture after gateway admission and output checks.'}</p>
+        <h4>Input</h4><pre className="step-content">{step.content.input ?? 'No input recorded.'}</pre>
+        {step.content.truncated.input && <p className="muted">Input truncated at the capture size limit.</p>}
+        <h4>Output</h4><pre className="step-content">{step.content.output ?? 'No output recorded.'}</pre>
+        {step.content.truncated.output && <p className="muted">Output truncated at the capture size limit.</p>}
+      </> : <p className="muted">{step.content_reason === 'expired' ? 'Captured content expired.' : 'Content capture is off for this step.'}</p>}
+    </details>
     <Receipt step={step}/>
     <details><summary>Step logs</summary><p>Gateway event and routing attempts. Worker output stays in the operator’s logs.</p><pre>{JSON.stringify({ timestamp: step.timestamp, action: step.action, status_code: step.status_code, duration_ms: step.duration_ms, attempts: step.attempts, reason: step.receipt?.reason }, null, 2)}</pre></details>
   </article>;

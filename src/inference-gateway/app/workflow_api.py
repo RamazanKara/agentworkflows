@@ -17,6 +17,7 @@ from app.guardrails import _apply_output_guardrail, _apply_prompt_secret_mode
 from app.policy import DATA_CLASSIFICATIONS
 from app.settings import AdmissionPolicyError, Settings
 from app.workflow_budget import INIT, RunBudget, nanodollars, redis_call, reserve_run, run_key
+from app.workflow_content import capture_field, capture_input, capture_mode
 
 
 class ToolCall(BaseModel):
@@ -141,7 +142,13 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
     async def workflow_policies(request: Request) -> dict[str, Any]:
         team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
         return {
-            "workflows": {name: policy.model_dump(by_alias=True) for name, policy in team.workflows.items()}
+            "workflows": {
+                name: {
+                    **policy.model_dump(by_alias=True),
+                    "captureContent": capture_mode(team, policy),
+                }
+                for name, policy in team.workflows.items()
+            }
             if team
             else {}
         }
@@ -199,6 +206,7 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             effective.validate_tool_admission(payload)
             request.state.prompt_guardrail_action = _apply_prompt_secret_mode(effective, payload, call.route)
             arguments = json.loads(payload["messages"][0]["content"])
+            await capture_input(request, effective, arguments)
             identity = (
                 f"{request.state.sandbox_id}:{request.state.workflow_run_id}:{request.state.workflow_step_id}:{tool}"
             )
@@ -229,4 +237,5 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             text = guarded["choices"][0]["message"]["content"]
             if getattr(request.state, "output_guardrail_action", None) == "blocked":
                 raise AdmissionPolicyError("tool_output_blocked", "Tool output was withheld by the output policy.")
+            await capture_field(request, effective, "output", json.loads(text))
             return {"result": json.loads(text)}

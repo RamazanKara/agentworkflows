@@ -80,9 +80,9 @@ def run_key(request: Request, run_id: str | None = None) -> str:
     )
 
 
-async def redis_call(request: Request, method: str, *args: Any) -> Any:
+async def redis_call(request: Request, method: str, *args: Any, **kwargs: Any) -> Any:
     try:
-        return await asyncio.to_thread(getattr(run_store(request), method), *args)
+        return await asyncio.to_thread(getattr(run_store(request), method), *args, **kwargs)
     except (RedisError, OSError) as exc:
         raise HTTPException(
             503,

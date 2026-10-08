@@ -10,9 +10,10 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import yaml
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
 from app.settings import Settings, validate_sandbox_id
+from app.workflow_schema import InputSchema
 
 LOCAL_BACKENDS = {"ollama", "vllm"}
 CLOUD_BACKENDS = {"openai", "anthropic", "azure-openai", "bedrock", "vertex"}
@@ -340,6 +341,12 @@ class WorkflowPolicy(BaseModel):
     cost_limit_usd: float = Field(default=5, alias="costLimitUsd", gt=0, le=1_000_000, allow_inf_nan=False)
     agents: dict[str, WorkspaceAgent] = Field(default_factory=dict)
     triggers: dict[str, WorkflowTrigger] = Field(default_factory=dict)
+    capture_content: Literal["none", "redacted", "full"] = Field(default="none", alias="captureContent")
+    input_schema: InputSchema | None = Field(default=None, alias="inputSchema")
+
+    @field_serializer("input_schema")
+    def serialize_input_schema(self, value: InputSchema | None) -> dict[str, Any] | None:
+        return value.model_dump(by_alias=True, exclude_unset=True) if value else None
 
     @field_validator("triggers")
     @classmethod
@@ -375,6 +382,7 @@ class SandboxPolicy:
     """Per-sandbox overrides for admission limits and budget allowances."""
 
     sandbox_id: str
+    capture_content: Literal["none", "redacted", "full"] = "none"
     allowed_models: tuple[str, ...] = ()
     max_messages: int | None = None
     max_prompt_chars: int | None = None
@@ -460,6 +468,9 @@ class SandboxPolicySet:
             if any(not re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", name) for name in tools):
                 raise ValueError("tool names must be 1-128 letters, digits, dots, underscores, or hyphens")
             workflow_policies = {name: WorkflowPolicy.model_validate(raw) for name, raw in workflows.items()}
+            capture_content = item.get("captureContent", "none")
+            if capture_content not in {"none", "redacted", "full"}:
+                raise ValueError("captureContent must be none, redacted, or full")
             projects = item.get("projects", [])
             if not isinstance(projects, list) or any(not isinstance(p, str) for p in projects):
                 raise ValueError("projects must be a list of project IDs")
@@ -496,6 +507,7 @@ class SandboxPolicySet:
                 raise ValueError("webhook triggers require a per-team webhookSecretEnv")
             policies[sandbox_id] = SandboxPolicy(
                 sandbox_id=sandbox_id,
+                capture_content=capture_content,
                 allowed_models=tuple(str(model) for model in item.get("allowedModels", []) if str(model)),
                 max_messages=_optional_positive_int(item, "maxMessages", sandbox_id),
                 max_prompt_chars=_optional_positive_int(item, "maxPromptChars", sandbox_id),

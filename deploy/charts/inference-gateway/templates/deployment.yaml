@@ -313,6 +313,12 @@ spec:
               value: {{ .Values.responses.store.keyPrefix | quote }}
             - name: RESPONSES_RETENTION_SECONDS
               value: {{ .Values.responses.store.retentionSeconds | quote }}
+            - name: CONTENT_RETENTION_SECONDS
+              value: {{ .Values.workflowRecords.contentRetentionSeconds | quote }}
+            - name: CONTENT_MAX_BYTES
+              value: {{ .Values.workflowRecords.contentMaxBytes | quote }}
+            - name: RUN_RECORD_RETENTION_SECONDS
+              value: {{ .Values.workflowRecords.runRecordRetentionSeconds | quote }}
             - name: ADMIN_CONSOLE_ENABLED
               value: {{ .Values.adminConsole.enabled | quote }}
           ports:

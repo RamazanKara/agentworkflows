@@ -13,7 +13,7 @@ from typing import Any, Literal
 from uuid import UUID, uuid4, uuid5
 
 from fastapi import FastAPI, HTTPException, Query, Request
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 from temporalio.client import Client, WorkflowUpdateFailedError, WorkflowUpdateRPCTimeoutOrCancelledError
 from temporalio.common import WorkflowIDReusePolicy
 from temporalio.exceptions import WorkflowAlreadyStartedError
@@ -21,7 +21,9 @@ from temporalio.service import RPCError, RPCStatusCode
 
 from app.audit import chain_audit_event, emit_audit_record
 from app.teams import project_access, require_role
-from app.workflow_budget import RunBudget, redis_call, run_key
+from app.workflow_budget import redis_call, run_key
+from app.workflow_content import step_content
+from app.workflow_retention import TERMINAL_STATES, retain_run
 
 RPC_TIMEOUT = timedelta(seconds=10)
 
@@ -81,7 +83,7 @@ async def run_metadata(request: Request, run_id: str) -> dict[str, Any]:
 
 
 async def save_metadata(request: Request, run_id: str, data: dict[str, Any]) -> None:
-    await redis_call(request, "set", run_key(request, run_id) + ":metadata", json.dumps(data))
+    await redis_call(request, "setnx", run_key(request, run_id) + ":metadata", json.dumps(data))
     await redis_call(request, "zadd", index_key(request, data["project"]), {run_id: data["created_at"]})
 
 
@@ -107,6 +109,10 @@ async def execution(request: Request, run_id: str) -> tuple[Any, dict[str, Any]]
 async def describe_run(request: Request, run_id: str, *, timeline: bool = True) -> dict[str, Any]:
     handle, data = await execution(request, run_id)
     description = await handle.describe(rpc_timeout=RPC_TIMEOUT)
+    if description.status.name.lower() in TERMINAL_STATES:
+        deadline = await retain_run(request, run_id, data, description.close_time)
+        if deadline <= time():
+            raise HTTPException(404, detail={"reason": "workflow_run_missing", "message": "Run retention expired."})
     result = {k: v for k, v in data.items() if k not in {"input", "fingerprint"}}
     result.update(run_id=run_id, status=description.status.name.lower())
     if result["status"] == "completed":
@@ -158,6 +164,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
                     "attempts": event.get("routing_attempts", []),
                     "principal": event.get("principal"),
                     "receipt": event,
+                    **await step_content(request, run_id, event.get("workflow_step_id") or ""),
                 }
             )
     return result
@@ -172,46 +179,17 @@ async def start_run(request: Request, body: StartRun) -> dict[str, Any]:
             403,
             detail={"reason": "workflow_not_allowed", "message": "Choose a workflow from GET /v1/workflow-policies."},
         )
-    field = {
-        "ResearchWorkflow": "topic",
-        "SupportTriageWorkflow": "ticket",
-        "CodeReviewWorkflow": "diff",
-        "WeeklyReportWorkflow": "period",
-        "IncidentSummaryWorkflow": "incident_id",
-        "DocumentQAWorkflow": "question",
-    }.get(body.workflow)
-    if field:
-        value = body.input
-        allowed = {field, "model"}
-        if body.workflow == "ResearchWorkflow":
-            allowed |= {"token_limit", "cost_limit_usd"}
-        problem = ""
-        if not isinstance(value, dict):
-            problem = "input must be a JSON object."
-        elif not isinstance(value.get(field), str) or not value[field].strip():
-            problem = f"input.{field} must be a nonempty string."
-        elif value.keys() - allowed:
-            problem = f"Unknown input fields: {', '.join(sorted(value.keys() - allowed))}. "
-            problem += f"Allowed fields: {', '.join(sorted(allowed))}."
-        elif "model" in value and (not isinstance(value["model"], str) or not value["model"].strip()):
-            problem = "input.model must be a nonempty model ID from agentworkflows models."
-        elif body.workflow == "ResearchWorkflow":
-            try:
-                RunBudget.model_validate(
-                    {k: v for k, v in value.items() if k in {"token_limit", "cost_limit_usd"}}, strict=True
-                )
-            except ValidationError:
-                problem = "input.token_limit must be an integer from 1 to 1000000000; "
-                problem += "input.cost_limit_usd must be a number greater than 0 and at most 1000000."
-        if problem:
-            raise HTTPException(
-                422,
-                detail={
-                    "reason": "workflow_input_invalid",
-                    "message": f"{body.workflow}: {problem} "
-                    "Edit input.json from agentworkflows init and use --input '@input.json'.",
-                },
-            )
+    schema = team.workflows[body.workflow].input_schema
+    errors = schema.errors(body.input) if schema else []
+    if errors:
+        raise HTTPException(
+            422,
+            detail={
+                "reason": "workflow_input_invalid",
+                "message": " ".join(f"{error['field']}: {error['message']}" for error in errors),
+                "fields": errors,
+            },
+        )
     workflow_id = f"{request.state.sandbox_id}/{project}/{body.request_id}"
     canonical = json.dumps({"workflow": body.workflow, "input": body.input}, sort_keys=True)
     fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
@@ -312,11 +290,18 @@ def register_operation_routes(app: FastAPI) -> None:
         # next_offset advances even when this page has no matching runs.
         ids = await redis_call(request, "zrevrange", index_key(request, selected), offset, offset + limit)
         rows = []
+        removed = 0
         for run_id in ids[:limit]:
-            if workflow and (await run_metadata(request, run_id))["workflow"] != workflow:
-                continue
             try:
+                if workflow and (await run_metadata(request, run_id))["workflow"] != workflow:
+                    continue
                 row = await describe_run(request, run_id, timeline=False)
+            except HTTPException as exc:
+                if exc.status_code != 404 or exc.detail.get("reason") != "workflow_run_missing":
+                    raise
+                await redis_call(request, "zrem", index_key(request, selected), run_id)
+                removed += 1
+                continue
             except RPCError as exc:
                 if exc.status != RPCStatusCode.NOT_FOUND:
                     raise
@@ -328,7 +313,7 @@ def register_operation_routes(app: FastAPI) -> None:
             rows.append(row)
         return {
             "runs": rows,
-            "next_offset": offset + limit if len(ids) > limit else None,
+            "next_offset": offset + limit - removed if len(ids) > limit else None,
         }
 
     @app.post(
@@ -418,12 +403,16 @@ def register_operation_routes(app: FastAPI) -> None:
 
     async def refresh_metrics() -> None:
         from app.metrics import TEAM_COST_LIMIT, TEAM_SPEND, WORKFLOW_RUNS, WORKFLOW_STATUS_REFRESH
+        from app.state_migrations import migrate_run_retention
         from app.team_budget import team_cost_report
         from app.workflow_notifications import notify_run
         from app.workflow_triggers import reconcile_schedules
 
+        migrated = False
         while True:
             try:
+                if not migrated:
+                    migrated = await migrate_run_retention(app)
                 for team in app.state.sandbox_policy_set.policies.values():
                     counts: dict[str, int] = {}
                     request = Request(
@@ -448,11 +437,16 @@ def register_operation_routes(app: FastAPI) -> None:
                         offset = 0
                         while True:
                             ids = await redis_call(request, "zrange", index_key(request, project), offset, offset + 99)
+                            removed = 0
                             for run_id in ids:
                                 try:
                                     row = await describe_run(request, run_id, timeline=False)
                                     await notify_run(request, row)
                                 except (HTTPException, RPCError, OSError):
+                                    if not await redis_call(request, "get", run_key(request, run_id) + ":metadata"):
+                                        await redis_call(request, "zrem", index_key(request, project), run_id)
+                                        removed += 1
+                                        continue
                                     logging.getLogger("uvicorn.error").warning(
                                         "Run refresh unavailable; check Temporal, Redis and notification receipts."
                                     )
@@ -463,7 +457,7 @@ def register_operation_routes(app: FastAPI) -> None:
                                 counts[status] = counts.get(status, 0) + 1
                             if len(ids) < 100:
                                 break
-                            offset += 100
+                            offset += 100 - removed
                     report = await team_cost_report(request)
                     if report:
                         TEAM_SPEND.labels(team.sandbox_id).set(report["reserved_and_spent_usd"])

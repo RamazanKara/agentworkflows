@@ -25,9 +25,10 @@ from tests.test_workflows import RunRedis
 class TeamRedis(RunRedis):
     def set(self, key, value):
         self.data[key] = value
+        self.expires.pop(key, None)
 
     def setnx(self, key, value):
-        if key in self.data:
+        if self.get(key) is not None:
             return 0
         self.set(key, value)
         return 1
@@ -37,6 +38,9 @@ class TeamRedis(RunRedis):
 
     def zadd(self, key, values):
         self.data.setdefault(key, {}).update(values)
+
+    def zrem(self, key, value):
+        return self.data.get(key, {}).pop(value, None) is not None
 
     def zrange(self, key, start, end):
         return sorted(self.data.get(key, {}), key=self.data.get(key, {}).get)[start : end + 1]
@@ -71,12 +75,13 @@ class Execution:
     def __init__(self):
         self.first_execution_run_id = str(uuid4())
         self.status = "RUNNING"
+        self.close_time = None
         self.stage = "awaiting_approval"
         self.reviewer = None
         self.updates = {}
 
     async def describe(self, **kwargs):
-        return SimpleNamespace(status=SimpleNamespace(name=self.status))
+        return SimpleNamespace(status=SimpleNamespace(name=self.status), close_time=self.close_time)
 
     async def query(self, name, **kwargs):
         return {"stage": self.stage, "draft": "Reviewed draft"}
@@ -156,6 +161,17 @@ def team_gateway(tmp_path):
             "allowedProviders": ["openai", "anthropic"],
             "allowedModels": ["primary", "backup"],
             "allowedEgress": ["http://fake"],
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "minLength": 1, "pattern": r"\S"},
+                    "model": {"type": "string", "minLength": 1, "pattern": r"\S"},
+                    "token_limit": {"type": "integer", "minimum": 1, "maximum": 1_000_000_000},
+                    "cost_limit_usd": {"type": "number", "exclusiveMinimum": 0, "maximum": 1_000_000},
+                },
+                "required": ["topic"],
+                "additionalProperties": False,
+            },
         }
     )
     app.state.sandbox_policy_set = SandboxPolicySet(
@@ -215,6 +231,7 @@ def test_start_roles_and_verified_team(team_gateway, role, code):
         {"topic": "ok", "typo": 1},
         {"topic": "ok", "model": None},
         {"topic": "ok", "token_limit": -1},
+        {"topic": "ok", "token_limit": 1.5},
         {"topic": "ok", "cost_limit_usd": "1"},
         {"topic": "ok", "cost_limit_usd": True},
     ],
@@ -224,7 +241,7 @@ def test_bad_template_input_does_not_start_a_stuck_execution(team_gateway, value
     response = start(client, input=value)
     assert response.status_code == 422
     assert response.json()["detail"]["reason"] == "workflow_input_invalid"
-    assert "input.json" in response.json()["detail"]["message"]
+    assert response.json()["detail"]["fields"][0]["field"].startswith("input")
     assert not app.state.temporal_client.executions
 
 
@@ -250,7 +267,13 @@ def test_completed_run_exposes_result_in_detail_not_listing(team_gateway):
 def test_gallery_inputs_are_validated_before_temporal(team_gateway, workflow, field):
     client, app = team_gateway
     workflows = app.state.sandbox_policy_set.policies["team"].workflows
-    workflows[workflow] = workflows["ResearchWorkflow"]
+    workflows[workflow] = WorkflowPolicy.model_validate({
+        **workflows["ResearchWorkflow"].model_dump(by_alias=True),
+        "inputSchema": {
+            "type": "object", "properties": {field: {"type": "string", "minLength": 1, "pattern": r"\S"}},
+            "required": [field], "additionalProperties": False,
+        },
+    })
     for value in ({}, {field: " "}, {field: 12}, {field: "valid", "typo": True}):
         response = start(client, workflow=workflow, input=value)
         assert response.status_code == 422

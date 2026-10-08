@@ -1,6 +1,8 @@
 import json
 import logging
 from dataclasses import replace
+from fnmatch import fnmatchcase
+from time import time
 from uuid import uuid4
 
 import httpx
@@ -16,14 +18,47 @@ from tests.gateway_support import FakeRedisBudgetStore, _tool_settings
 
 
 class RunRedis(FakeRedisBudgetStore):
+    def __init__(self):
+        super().__init__()
+        self.now = time()
+        self.expires = {}
+
     def get(self, key):
+        if self.expires.get(key, float("inf")) <= self.now:
+            self.delete(key)
         return self.data.get(key)
 
     def setex(self, key, seconds, value):
-        assert 0 < seconds <= 600
+        assert seconds > 0
         self.data[key] = value
+        self.expires[key] = self.now + seconds
+
+    def hset(self, key, field, value):
+        self.data.setdefault(key, {})[field] = value
+
+    def hgetall(self, key):
+        return dict(self.get(key) or {})
+
+    def hget(self, key, field):
+        return self.hgetall(key).get(field)
+
+    def ttl(self, key):
+        if self.get(key) is None:
+            return -2
+        return int(self.expires[key] - self.now) if key in self.expires else -1
+
+    def expireat(self, key, deadline, *, lt=False):
+        if self.get(key) is None or (lt and self.expires.get(key, float("inf")) <= deadline):
+            return False
+        self.expires[key] = deadline
+        self.get(key)
+        return True
+
+    def scan(self, cursor, *, match, count):
+        return 0, [key for key in list(self.data) if self.get(key) is not None and fnmatchcase(key, match)]
 
     def delete(self, key):
+        self.expires.pop(key, None)
         return self.data.pop(key, None) is not None
 
     def eval(self, script, numkeys, key, *args):

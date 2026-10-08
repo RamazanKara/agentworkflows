@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
@@ -9,6 +10,20 @@ from typing import Any
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError
+
+
+def input_schema(schema: dict[str, Any]) -> Callable[[type[Any]], type[Any]]:
+    """Declare a workflow's JSON input schema; publish it as policy inputSchema.
+
+    This attaches metadata without wrapping Temporal's workflow class. The gateway
+    validates input against the administrator-approved policy, not worker metadata.
+    """
+
+    def declare(cls: type[Any]) -> type[Any]:
+        cls.input_schema = schema
+        return cls
+
+    return declare
 
 
 @dataclass(frozen=True)
