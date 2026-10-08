@@ -1,0 +1,15 @@
+{{- if index .Values "inference-gateway" "enabled" }}
+{{- $gateway := deepCopy (index .Subcharts "inference-gateway") }}
+{{- if not .Values.workflows.enabled }}
+{{- $_ := set $gateway.Values.workflows "temporalAddress" "" }}
+{{- end }}
+{{- range $provider, $config := .Values.providers }}
+{{- if $config.existingSecret }}
+{{- $credential := dict "env" (printf "%s_API_KEY" (upper $provider)) "secretName" $config.existingSecret "secretKey" "api-key" }}
+{{- $_ := set $gateway.Values "providerCredentials" (append $gateway.Values.providerCredentials $credential) }}
+{{- end }}
+{{- end }}
+{{- $deployment := include "inference-gateway.deployment" $gateway | fromYaml }}
+{{- $_ := set $deployment.spec.template.metadata "annotations" (dict "checksum/policies" (toJson (list $gateway.Values.routing.policy $gateway.Values.sandboxPolicy.policy) | sha256sum)) }}
+{{- toYaml $deployment }}
+{{- end }}

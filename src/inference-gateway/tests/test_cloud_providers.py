@@ -416,6 +416,9 @@ def test_missing_credentials_fail_closed(monkeypatch, caplog):
     app, sent = cloud_app(monkeypatch, [route])
     monkeypatch.delenv("FIXTURE_PROVIDER_KEY")
     with TestClient(app) as client:
+        ready = client.get("/readyz")
+        assert ready.status_code == 200
+        assert ready.json()["runtimes"]["openai"]["detail"] == "not_configured"
         response = client.post(
             "/v1/chat/completions", json={**CHAT, "model": route.model_id, "api_key": "caller-value"}
         )

@@ -365,7 +365,11 @@ class RuntimeClient:
                         if resolved_backend in team.provider_credentials
                     }
                     for credential in credentials or {route.credential_env}:
-                        credential_headers(replace(route, credential_env=credential))
+                        try:
+                            credential_headers(replace(route, credential_env=credential))
+                        except AdmissionPolicyError:
+                            # Keep the console reachable for provider setup; inference still fails closed.
+                            return {"status": "not_configured", "probe": "credentials_only"}
             return {"status": "configured", "probe": "credentials_only"}
         # Short, fixed ceiling: this backs /readyz, whose kubelet probe times out after a
         # few seconds. A health endpoint that needs longer is itself the answer.

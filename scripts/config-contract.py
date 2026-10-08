@@ -361,6 +361,35 @@ def selected_contracts(service: str | None) -> dict[str, ServiceContract]:
     return CONTRACTS
 
 
+def validate_umbrella() -> list[str]:
+    values = yaml.safe_load((ROOT / "deploy/charts/agentworkflows/values.yaml").read_text(encoding="utf-8"))
+    expected = {
+        "bootstrapAdmin.existingSecret": "agentworkflows-admin",
+        "providers.openai.existingSecret": "",
+        "providers.anthropic.existingSecret": "",
+        "inference-gateway.enabled": True,
+        "inference-gateway.deployment.create": False,
+        "inference-gateway.workflows.temporalAddress": "temporal-frontend:7233",
+        "inference-gateway.auth.enabled": True,
+        "inference-gateway.adminConsole.enabled": True,
+        "budget-redis.enabled": True,
+        "workflows.enabled": True,
+        "workflows.worker.team": "default",
+        "workflows.worker.gatewayUrl": "http://inference-gateway:8080",
+        "ollama.enabled": False,
+        "vllm.enabled": False,
+        "rag-service.enabled": False,
+        "qdrant-vector-store.enabled": False,
+    }
+    errors: list[str] = []
+    for path, default in expected.items():
+        try:
+            require(errors, nested(values, path) == default, f"agentworkflows: {path} default drifted from contract")
+        except KeyError:
+            errors.append(f"agentworkflows: chart path missing: {path}")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate and validate service runtime configuration contracts.",
@@ -372,7 +401,7 @@ def main() -> int:
     if not args.check and not args.write:
         args.check = True
 
-    errors: list[str] = []
+    errors = validate_umbrella() if not args.service else []
     wrote: list[str] = []
     for service, contract in selected_contracts(args.service).items():
         errors.extend(validate_contract(contract))

@@ -1,10 +1,8 @@
 apiVersion: v2
 name: agentworkflows
 description: >-
-  Umbrella chart that installs the full AgentWorkflows stack (inference gateway, RAG
-  service, Ollama/vLLM runtimes, Qdrant vector store, budget Redis) as one release. Each
-  component is toggled with its <name>.enabled flag. GitOps (Argo CD) remains the recommended
-  path for multi-namespace installs; this chart is for a single-command dev/demo bring-up.
+  Cloud-first AgentWorkflows: gateway and console, Redis, Temporal, PostgreSQL,
+  and a workflow worker in one namespace. Self-hosted models and retrieval are opt-in.
 type: application
 version: 0.4.0
 appVersion: "0.4.0"
@@ -31,6 +29,10 @@ annotations:
     - name: support
       url: https://github.com/RamazanKara/agentworkflows/issues
 dependencies:
+  - name: workflows
+    version: "0.4.0"
+    repository: "file://../workflows"
+    condition: workflows.enabled
   - name: inference-gateway
     version: "0.4.0"
     repository: "file://../inference-gateway"

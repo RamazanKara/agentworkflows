@@ -56,14 +56,14 @@ def package_charts(args: argparse.Namespace) -> dict:
             values["image"]["tag"] = f"v{args.version}"
             _write_yaml(values_path, values)
 
-        # The umbrella must vendor the digest-bound component copies, not stale
-        # ignored archives from a developer checkout.
-        subprocess.run(["helm", "dependency", "update", str(charts / "agentworkflows")], check=True)
         subprocess.run(["helm", "dependency", "update", str(charts / "workflows")], check=True)
         worker_values = charts / "workflows" / "values.yaml"
         values = yaml.safe_load(worker_values.read_text(encoding="utf-8"))
         values["worker"]["image"] = f"ghcr.io/ramazankara/agentworkflows/workflow-worker@{args.worker_digest}"
         _write_yaml(worker_values, values)
+
+        # Vendor Temporal and the digest-bound worker before packaging the umbrella.
+        subprocess.run(["helm", "dependency", "update", str(charts / "agentworkflows")], check=True)
 
         packages: list[dict[str, str]] = []
         for chart in sorted(charts.iterdir(), key=lambda path: (path.name == "agentworkflows", path.name)):

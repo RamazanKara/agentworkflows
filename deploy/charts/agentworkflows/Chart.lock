@@ -1,4 +1,7 @@
 dependencies:
+- name: workflows
+  repository: file://../workflows
+  version: 0.4.0
 - name: inference-gateway
   repository: file://../inference-gateway
   version: 0.4.0
@@ -17,5 +20,5 @@ dependencies:
 - name: vllm
   repository: file://../vllm
   version: 0.4.0
-digest: sha256:af4c3d6b8c798e2921675641a71c33af14c0eca09e0032b0af57651ed000402a
-generated: "2026-10-08T01:00:00.000000000+02:00"
+digest: sha256:11ab87d46dcc255ce227fa4f714f5315ad21a676974f1d3bfcccb3587d217e4e
+generated: "2026-10-08T15:26:17.2679729+02:00"

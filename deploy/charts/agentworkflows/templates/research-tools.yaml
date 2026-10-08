@@ -1,0 +1,70 @@
+{{- if and .Values.workflows.enabled (index .Values "inference-gateway" "enabled") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: research-tools
+data:
+  research-tools.py: |
+    {{- .Files.Get "files/research-tools.py" | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: research-tools
+spec:
+  ports:
+    - name: http
+      port: 8000
+  selector:
+    app.kubernetes.io/name: research-tools
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research-tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: research-tools
+  template:
+    metadata:
+      annotations:
+        checksum/tools: {{ .Files.Get "files/research-tools.py" | sha256sum }}
+      labels:
+        app.kubernetes.io/name: research-tools
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: tools
+          image: {{ .Values.workflows.worker.image | quote }}
+          command: [python, /tools/research-tools.py]
+          ports:
+            - name: http
+              containerPort: 8000
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          volumeMounts:
+            - name: tools
+              mountPath: /tools
+              readOnly: true
+      volumes:
+        - name: tools
+          configMap:
+            name: research-tools
+{{- end }}

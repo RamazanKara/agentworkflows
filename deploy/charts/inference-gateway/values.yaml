@@ -1,6 +1,10 @@
 replicaCount: 1
 terminationGracePeriodSeconds: 210
 
+# The umbrella renders this same Deployment with its provider and workflow wiring.
+deployment:
+  create: true
+
 workflows:
   # Set when workflow operations are enabled; readiness checks Temporal as well as Redis.
   temporalAddress: ""

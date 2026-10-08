@@ -107,6 +107,7 @@ nav:
       - Durable workflows and teams: workflows.md
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md
+      - Install on Kubernetes: install-kubernetes.md
       - Production readiness: production-readiness.md
       - Developer workflow: development.md
   - Reference:

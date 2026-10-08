@@ -114,6 +114,12 @@ function ProviderSettings({ session }: { session: Session }) {
           : <><span className="badge awaiting_approval">Key missing</span>{usedBy(provider).length > 0 && <small>Needed by {usedBy(provider).join(', ')}</small>}</>}</td></tr>)}
       </tbody></table></div> : <Empty title="Connect your first provider"><p>Choose a cloud provider and follow the steps below.</p></Empty>}
     </div><p className="muted">Key presence is a configuration check, not a live provider test. Secret values never appear here.</p>
+    {['openai', 'anthropic'].filter(provider => {
+      const configuration = settings?.provider_configuration?.[provider];
+      return configuration?.configured === false && configuration.environment_variable === `${provider.toUpperCase()}_API_KEY`;
+    }).map(provider =>
+      <p className="callout" key={provider}>For a Helm installation, create a <code>{provider}-api-key</code> Secret in the release namespace with an <code>api-key</code> entry, then upgrade with <code>--set providers.{provider}.existingSecret={provider}-api-key</code>. <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Provider setup commands</a></p>
+    )}
     <section className="setup panel"><h2>{missing ? `Connect ${providerName(target)}` : 'Add a provider or change a budget'}</h2>
       <ol><li>Store the {providerName(target)} key in the gateway’s <code>{variable}</code> environment variable or Kubernetes Secret.</li>
         <li>Merge the fragment below into your team’s entry in the policy (<code>sandboxId: {session.team.team_id}</code>). Keep your existing providers, projects, tools and workflows.</li>
