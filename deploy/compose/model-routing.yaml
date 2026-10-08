@@ -1,9 +1,11 @@
 apiVersion: platform.ai/v1alpha1
 kind: ModelRoutingPolicy
 spec:
+  # Every route here is a local fake; `simulated` lets the console say no provider is billed.
   models:
     - id: demo-openai
       backend: openai
+      simulated: true
       fallbacks: [demo-anthropic]
       connection:
         baseUrl: http://cloud-fake:8000/openai/v1
@@ -14,6 +16,7 @@ spec:
         outputUsdPer1kTokens: 3
     - id: demo-anthropic
       backend: anthropic
+      simulated: true
       connection:
         baseUrl: http://cloud-fake:8000/anthropic/v1
         model: fixture-model
@@ -21,6 +24,7 @@ spec:
       pricing: *fixture-pricing
     - id: demo-azure-openai
       backend: azure-openai
+      simulated: true
       connection:
         baseUrl: http://cloud-fake:8000/azure-openai/openai/v1
         model: fixture-deployment
@@ -28,6 +32,7 @@ spec:
       pricing: *fixture-pricing
     - id: demo-bedrock
       backend: bedrock
+      simulated: true
       connection:
         baseUrl: http://cloud-fake:8000/bedrock
         model: fixture-model
@@ -35,6 +40,7 @@ spec:
       pricing: *fixture-pricing
     - id: demo-vertex
       backend: vertex
+      simulated: true
       connection:
         baseUrl: http://cloud-fake:8000/vertex/v1/projects/fixture/locations/local/endpoints/openapi
         model: google/fixture-gemini
@@ -43,6 +49,7 @@ spec:
     # Always returns 503 so the smoke test and demo show ordered fallback.
     - id: demo-fallback
       backend: vllm
+      simulated: true
       fallbacks: [demo-openai]
       pricing:
         inputUsdPer1kTokens: 1

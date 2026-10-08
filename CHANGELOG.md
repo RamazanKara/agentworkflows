@@ -6,7 +6,7 @@
   generate persistent bootstrap credentials, and ship a default team, cloud routes and
   Research example tools. Add the Kubernetes install guide; keep GitOps defaults unchanged.
 - Keep the gateway console ready for provider setup when cloud keys are missing, while
-  inference still fails closed; show Helm Secret setup hints in Providers & budgets.
+  inference still fails closed.
 - Capture opt-in redacted/full model and tool step input/output separately from receipts,
   with per-field size limits, Redis TTLs, and expandable console details.
 - Declare workflow input schemas in both SDKs and policy, generate console forms, validate
@@ -26,8 +26,14 @@
 - Redesign the console for phones and first use: a compact phone menu, run forms with
   required fields first and optional ones under More options, model answers previewed on
   each step, prompts shown as a transcript, an Approval step that names the reviewer,
-  readable trigger schedules, copyable webhook URLs and run IDs, and spend shown as Spent,
-  Team limit and Tokens with usage bars.
+  readable trigger schedules, copyable webhook URLs and run IDs, approval cards that lead
+  with the draft's title, and one spend summary (spent and tokens against the team limit,
+  with usage bars) on Costs and Providers. Your own key is marked and cannot be revoked
+  from the console; the Compose demo says when its models are simulated.
+- `GET /v1/models` names each model's provider in `owned_by` and flags routes marked
+  `simulated: true`; the Compose demo marks its fakes, so its console note never appears
+  on a real provider route. Providers & budgets lists only the steps still needed to
+  connect a missing key, including the Helm Secret for OpenAI and Anthropic.
 - Record the person's display name on browser sessions and receipts: the managed key's
   name, or the `name`/`email` claim from company sign-in.
 

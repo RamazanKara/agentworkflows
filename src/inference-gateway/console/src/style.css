@@ -15,7 +15,8 @@ button.secondary { background: white; color: var(--teal); border-color: #8ba59d;
 button.secondary:hover { background: #eaf4ef; }
 button.danger { background: white; color: #9d3429; border-color: #bd5a4e; }
 button.danger:hover { background: #fff0eb; }
-:focus-visible { outline: 3px solid #bd7700; outline-offset: 4px; }
+:focus-visible { outline: 2px solid #007c70; outline-offset: 3px; }
+.sidebar :focus-visible { outline-color: #9fe3d5; }
 input, select, textarea { border: 1px solid #a9bcb3; color: #172321; background: white; padding: 10px 12px; border-radius: 4px; width: 100%; min-height: 44px; }
 textarea { resize: vertical; }
 label { display: block; font-size: 14px; font-weight: 600; }
@@ -92,7 +93,7 @@ td a { color: #163f35; font-weight: 600; }
 .step-number { background: #e1ede5; border: 1px solid #b9cfc2; color: #145644; font: 14px/36px ui-monospace, monospace; width: 37px; height: 37px; border-radius: 50%; text-align: center; }
 .step { padding: 24px; }
 .step-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
-.step-facts dd { overflow-wrap: anywhere; }
+.step-facts dd { overflow-wrap: break-word; }
 details { border-top: 1px solid var(--line); padding-top: 13px; margin-top: 13px; }
 summary { cursor: pointer; color: #176c5c; padding: 5px 0; font-weight: 600; }
 details[open] summary { margin-bottom: 12px; }
@@ -237,7 +238,7 @@ h1, h2, h3 { text-wrap: balance; }
 th.num, td[data-label="Calls"], td[data-label="Tokens"], td[data-label="Cost"], td[data-label="Token limit"], td[data-label="Cost limit"] { text-align: right; }
 .metrics dd small { display: block; font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--muted); margin-top: 4px; }
 .metrics dd small.inline { display: inline; font-size: 14px; }
-.usage-bar { display: block; height: 6px; background: #e3ebe6; border-radius: 3px; margin-top: 10px; overflow: hidden; max-width: 220px; }
+.usage-bar { display: block; height: 6px; background: #e3ebe6; border-radius: 3px; margin-top: 10px; overflow: hidden; max-width: 360px; }
 .usage-bar span { display: block; height: 100%; background: var(--teal); border-radius: 3px; }
 .model-list { list-style: none; padding: 0; }
 .model-list li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; background: white; }
@@ -330,4 +331,17 @@ button.copy-id svg { width: 15px; height: 15px; }
   .stack:not(.runs-stack) td[data-label]:has(.copy-field) { padding-left: 0; padding-top: 24px; }
   .copy-field { align-items: flex-start; }
   .copy-field button { min-height: 44px; }
+}
+/* Gate round 3 fixes: provider fallback note, phone tap targets, wrapping. */
+.note-warn { margin: 14px 0; padding: 10px 14px; border-left: 3px solid #c98a12; background: #fff7e6; color: #5c3d00; font-size: 14px; }
+table.numeric { table-layout: fixed; }
+table.numeric th:first-child { width: 40%; }
+@media (max-width: 760px) {
+  summary { padding: 11px 0; }
+  a.tap, button.link { display: inline-flex; align-items: center; min-height: 44px; }
+  .review-meta { column-gap: 14px; }
+  .review-meta > * + *::before { content: none; }
+  .step pre.json { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .step-facts { grid-template-columns: repeat(2, minmax(0, auto)); justify-content: start; column-gap: 32px; }
+  table.numeric th:first-child { width: auto; }
 }

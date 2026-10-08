@@ -8,6 +8,7 @@ import pytest
 from agentworkflows.activities import GatewayActivities
 from agentworkflows.examples.code_review import CodeReviewWorkflow
 from agentworkflows.examples.document_qa import DocumentQARequest, DocumentQAWorkflow
+from agentworkflows.examples.frameworks import FrameworkWorkflow
 from agentworkflows.examples.incident_summary import IncidentSummaryRequest, IncidentSummaryWorkflow
 from agentworkflows.examples.research import ResearchWorkflow
 from agentworkflows.examples.support_triage import SupportTriageWorkflow
@@ -34,6 +35,7 @@ def test_input_schema_preserves_temporal_workflow_definition(monkeypatch):
 @pytest.mark.parametrize("workflow_class, field", [
     (ResearchWorkflow, "topic"), (CodeReviewWorkflow, "diff"), (SupportTriageWorkflow, "ticket"),
     (WeeklyReportWorkflow, "period"), (IncidentSummaryWorkflow, "incident_id"), (DocumentQAWorkflow, "question"),
+    (FrameworkWorkflow, "topic"),
 ])
 def test_template_declares_serializable_input_schema(workflow_class, field):
     schema = json.loads(json.dumps(workflow_class.input_schema))

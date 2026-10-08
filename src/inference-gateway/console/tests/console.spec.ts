@@ -236,6 +236,28 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   expect(errors).toEqual([]);
 });
 
+test('a fresh Helm install says which provider Secret to add, without demo wording', async ({ page }) => {
+  await page.route('**/v1/team', route => route.fulfill({ json: { team_id: 'default', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
+    provider_configuration: { openai: { configured: false, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: false, environment_variable: 'ANTHROPIC_API_KEY' } } } }));
+  await page.route('**/v1/models', route => route.fulfill({ json: { data: [{ id: 'research', owned_by: 'openai' }, { id: 'anthropic', owned_by: 'anthropic' }] } }));
+  await login(page);
+  await expect(page.locator('.model-list')).toContainText('researchOpenAI');
+  await expect(page.getByText('Compose demo', { exact: false })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
+  const setup = page.locator('section.setup');
+  await expect(setup.getByRole('heading', { name: 'Connect OpenAI' })).toBeVisible();
+  await expect(setup).toContainText('--set providers.openai.existingSecret=openai-api-key');
+  await expect(setup).toContainText('Then repeat these steps for Anthropic.');
+  await expect(setup).not.toContainText('model route');
+  await expect(setup.getByRole('button', { name: 'Copy policy fragment' })).toHaveCount(0);
+});
+
+test('only gateways serving simulated models show the Compose demo note', async ({ page }) => {
+  await page.route('**/v1/models', route => route.fulfill({ json: { data: [{ id: 'demo-openai', owned_by: 'openai', simulated: true }] } }));
+  await login(page);
+  await expect(page.getByText('Its models are simulated', { exact: false })).toBeVisible();
+});
+
 test('invalid auth and expiry give a clear recovery path', async ({ page }) => {
   await page.goto('/console/');
   await page.getByLabel('API key', { exact: true }).fill('invalid');
@@ -397,14 +419,14 @@ test('fallback holds are explained and notification receipts read as one step', 
   });
   await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: { ...detail, timeline: [
     { ...step, tokens: 548, cost_usd: 1.634, attempts: [
-      { provider: 'openai', status: 'failed', reserved: { tokens: 541, cost_usd: 1.623 } },
+      { provider: 'openai', status: 'failed', status_code: 503, reserved: { tokens: 541, cost_usd: 1.623 } },
       { provider: 'anthropic', status: 'served', reserved: { tokens: 541, cost_usd: 1.623 }, charged: { tokens: 7, cost_usd: .011 } },
     ] },
     notification('slack', 'attempted', 1), notification('slack', 'delivered', 2), notification('email', 'delivered', 3),
   ] } }));
   await login(page);
   await page.getByRole('link', { name: 'Open the latest run' }).click();
-  await expect(page.getByText('OpenAI failed, so Anthropic served this step. $1.62 and 541 tokens stay held for the failed OpenAI attempt')).toBeVisible();
+  await expect(page.getByText('OpenAI returned 503, so the gateway sent this step to Anthropic. $1.62 and 541 tokens stay held for the failed OpenAI attempt')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toHaveCount(1);
   await expect(page.locator('.step-facts').first()).toContainText('$0.01');
   await expect(page.locator('.notifications li')).toHaveCount(2);

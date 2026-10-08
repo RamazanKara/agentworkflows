@@ -55,7 +55,7 @@ export type Usage = {
   };
 };
 export type Budget = { usage: { estimated_tokens: number }; limits: { estimated_tokens: number } };
-export type Models = { data: { id: string; owned_by: string }[] };
+export type Models = { data: { id: string; owned_by: string; simulated?: boolean }[] };
 
 export async function api<T>(csrfToken: string, path: string, init: RequestInit = {}): Promise<T> {
   const csrf = csrfToken || document.cookie.split('; ').find(value => value.startsWith('aw_csrf='))?.slice(8) || '';
@@ -116,8 +116,8 @@ const providerNames: Record<string, string> = {
   vertex: 'Vertex Gemini', ollama: 'Ollama', vllm: 'vLLM', tool: 'Tools',
 };
 export const providerName = (value: string) => providerNames[value] || value;
-// The Compose demo routes models named demo-*; demo-only guidance appears only there.
-export const isDemo = (models?: Models) => Boolean(models?.data.some(model => model.id.startsWith('demo-')));
+// The gateway flags routes served by local fakes (the Compose demo); demo guidance appears only then.
+export const isDemo = (models?: Models) => Boolean(models?.data.some(model => model.simulated));
 export const status = (run: Run) => run.progress?.stage === 'awaiting_approval' ? 'awaiting_approval'
   : run.status === 'completed' && (run.outcome ?? (run.result as { status?: string } | undefined)?.status) === 'rejected' ? 'rejected' : run.status;
 export const label = (value: string) => value.replaceAll('_', ' ').replace(/^./, char => char.toUpperCase());

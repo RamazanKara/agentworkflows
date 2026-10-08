@@ -323,6 +323,7 @@ def test_fallback_obeys_classification_and_records_selected_provider(monkeypatch
         receipt = [event for event in receipts(caplog) if event.get("event") == "inference_request"][-1]
         assert receipt["provider"] == "openai"
         assert [attempt["status"] for attempt in receipt["routing_attempts"]] == ["failed", "served"]
+        assert receipt["routing_attempts"][0]["status_code"] == 503
         before = len(sent)
         denied = client.post(
             "/v1/chat/completions",

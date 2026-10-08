@@ -140,6 +140,7 @@ Mount `SandboxPolicySet` to narrow per-sandbox limits:
             requestLimit: 100
 
 The gateway exposes `GET /v1/models` for approved models and `GET /readyz` for runtime-aware readiness. `/readyz` omits backend URLs and secrets.
+Each listed model's `owned_by` names its provider backend. Routes marked `simulated: true` (the Compose demo's fakes) are listed with `"simulated": true`, and the console then tells people that no provider is billed.
 
 ## Human SSO for Operator Dashboards
 

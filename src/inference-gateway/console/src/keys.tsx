@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api, label, useData, type AuthConfig, type Session, type Team } from './api';
-import { Empty, ErrorMessage, Loading, PageHeader, Refresh } from './ui';
+import { Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh } from './ui';
 
 type Key = {
   key_id: string; name: string; role: Team['role']; project: string | null; created_at: number;
@@ -55,7 +55,7 @@ function KeyManagement({ session }: { session: Session }) {
         <p>Copy it now and share it securely with its owner. You won’t be able to see it again.</p>
         <code aria-label="New API key">{created.key}</code>
         <div className="actions">
-          <button onClick={async () => { try { await navigator.clipboard.writeText(created.key); setMessage('Key copied.'); } catch { setError('Copy failed. Select the key and copy it manually.'); } }}>Copy key</button>
+          <button onClick={async () => { try { await navigator.clipboard.writeText(created.key); setMessage('Key copied.'); } catch { setError('Copy failed. Select the key and copy it manually.'); } }}><Icon name="copy"/>Copy key</button>
           <button className="secondary" onClick={() => { setCreated(undefined); setMessage(''); }}>Done</button>
         </div>
       </div> : <><h2 id="create-key">Create a key</h2>

@@ -100,7 +100,7 @@ def test_compose_templates_declare_schemas():
     for name, field in [
         ("ResearchWorkflow", "topic"), ("CodeReviewWorkflow", "diff"), ("SupportTriageWorkflow", "ticket"),
         ("WeeklyReportWorkflow", "period"), ("IncidentSummaryWorkflow", "incident_id"),
-        ("DocumentQAWorkflow", "question"),
+        ("DocumentQAWorkflow", "question"), ("FrameworkWorkflow", "topic"),
     ]:
         schema = team.workflows[name].input_schema
         assert schema is not None

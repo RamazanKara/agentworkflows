@@ -165,6 +165,19 @@ spec:
           tokenLimit: 10000
           costLimitUsd: 5
         FrameworkWorkflow:
+          inputSchema:
+            $schema: "https://json-schema.org/draft/2020-12/schema"
+            type: "object"
+            description: "Runs one topic through the OpenAI, Anthropic, Agents SDK and LangGraph agents."
+            properties:
+              topic:
+                type: "string"
+                description: "A question or subject, in a sentence."
+                examples: ["How should our team evaluate AI agents?"]
+                minLength: 1
+                pattern: "\\S"
+            required: ["topic"]
+            additionalProperties: false
           allowedProviders: [openai, anthropic]
           allowedModels: [demo-openai, demo-anthropic]
           allowedTools: [team.search]

@@ -92,12 +92,12 @@ export function StartRun({ session }: { session: Session }) {
         finally { setBusy(false); }
       }}>
         <div className="field-row">
-          <div className="field"><label htmlFor="run-workflow">Workflow</label><select id="run-workflow" value={selected} onChange={e => { setWorkflow(e.target.value); setInput('{}'); setMore(false); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></div>
+          <div className="field"><label htmlFor="run-workflow">Workflow</label><select id="run-workflow" value={selected} aria-describedby={policy?.inputSchema?.description ? 'run-workflow-help' : undefined} onChange={e => { setWorkflow(e.target.value); setInput('{}'); setMore(false); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select>{policy?.inputSchema?.description && <small id="run-workflow-help">{policy.inputSchema.description}</small>}</div>
           <div className="field"><label htmlFor="run-project">Project</label><select id="run-project" value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></div>
         </div>
-        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema} models={policy.allowedModels} onMore={setMore}/> : <div className="field"><label htmlFor="run-input">Workflow input (JSON)</label><textarea id="run-input" required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></div>}
+        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema} models={policy.allowedModels} onMore={setMore}/> : <div className="field"><label htmlFor="run-input">Workflow input (JSON)</label><textarea id="run-input" required spellCheck={false} aria-describedby="run-input-help" value={input} onChange={e => setInput(e.target.value)} rows={6}/><small id="run-input-help">This workflow has no input form yet. Enter the JSON input its builder documents.</small></div>}
         {policy && !more && <p className="muted ceiling">Each run can use up to <span className="nowrap">{number(policy.tokenLimit)} tokens</span> and <span className="nowrap">{money(policy.costLimitUsd)}.</span></p>}
-        <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to workflow runs</a></div>
+        <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a className="tap" href="#runs">Back to workflow runs</a></div>
         {error && request.current && <p className="muted">Retry here with unchanged input to reuse request ID <code>{request.current.id}</code>.</p>}
       </form>}
   </>;
@@ -129,8 +129,7 @@ function SchemaFields({ schema, models, onMore }: { schema: InputSchema; models:
   const primary = entries.filter(([name]) => schema.required?.includes(name));
   const more = primary.length ? entries.filter(([name]) => !schema.required?.includes(name)) : [];
   const field = ([name, property]: [string, InputProperty]) => <SchemaField key={name} name={name} property={property} required={Boolean(schema.required?.includes(name))} models={models}/>;
-  return <>{schema.description && <p className="muted">{schema.description}</p>}
-    {(primary.length ? primary : entries).map(field)}
+  return <>{(primary.length ? primary : entries).map(field)}
     {more.length > 0 && <details className="more-options" onToggle={e => onMore(e.currentTarget.open)}><summary>More options</summary><div>{more.map(field)}</div></details>}
   </>;
 }
@@ -213,7 +212,7 @@ export function Approvals({ session }: { session: Session }) {
     {!busy && !error && !rows.length && <Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a href="#runs">Explore workflow runs</a></Empty>}
     {rows.map(run => <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
       eyebrow={workflowName(run.workflow)} title={firstLine(run.progress?.draft) || 'Review the draft'}
-      meta={<p className="muted review-meta"><span>Project {run.project}</span><span>Started <span className="nowrap">{date(run.created_at)}</span></span><span>{money(run.budget.cost_usd)} so far</span><a href={`#run/${run.run_id}`}>Open run</a></p>}/>)}
+      meta={<p className="muted review-meta"><span>Project {run.project}</span><span>Started <span className="nowrap">{date(run.created_at)}</span></span><span>{money(run.budget.cost_usd)} so far</span><a className="tap" href={`#run/${run.run_id}`}>Open run</a></p>}/>)}
   </>;
 }
 
@@ -275,7 +274,7 @@ const who = (principal: Record<string, unknown> | undefined) => String(principal
 function ApprovalStep({ step }: { step: Step }) {
   const approved = step.receipt.approved === true;
   return <article className="panel step"><div className="section-heading"><h3>Approval</h3><Badge value={approved ? 'succeeded' : 'failed'} text={approved ? 'Approved' : 'Rejected'}/></div>
-    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong> · <span className="nowrap">{date(step.timestamp)}</span></p>
+    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong> <span className="nowrap">· {date(step.timestamp)}</span></p>
     <Receipt step={step}/>
   </article>;
 }
@@ -298,7 +297,7 @@ function Receipt({ step }: { step: Step }) {
 }
 
 function StepCard({ step }: { step: Step }) {
-  const attempts = (step.attempts || []) as { provider?: string; status?: string; reserved?: { tokens: number; cost_usd: number }; charged?: unknown }[];
+  const attempts = (step.attempts || []) as { provider?: string; status?: string; status_code?: number; reserved?: { tokens: number; cost_usd: number }; charged?: unknown }[];
   const failed = attempts.filter(a => a.status === 'failed');
   const held = failed.reduce((sum, a) => sum + (a.charged ? 0 : a.reserved?.cost_usd || 0), 0);
   const heldTokens = failed.reduce((sum, a) => sum + (a.charged ? 0 : a.reserved?.tokens || 0), 0);
@@ -312,7 +311,7 @@ function StepCard({ step }: { step: Step }) {
     <p className="muted">{date(step.timestamp)} · {number(step.duration_ms)} ms</p>
     {tool ? <dl className="step-facts"><div><dt>Tool</dt><dd>{step.tool || '—'}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>
       : (step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider ? providerName(step.provider) : '—'}</dd></div><div><dt>Model</dt><dd>{step.model || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
-    {failed.length > 0 && <p className="callout">{failed.map(a => providerName(a.provider || '')).join(', ')} failed, so {providerName(step.provider)} served this step.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${providerName(failed[0].provider || '')} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
+    {failed.length > 0 && <p className="note-warn">{failed.map(a => `${providerName(a.provider || '')}${a.status_code ? ` returned ${a.status_code}` : ' failed'}`).join(', ')}, so the gateway sent this step to {providerName(step.provider)}.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${providerName(failed[0].provider || '')} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
     {answer && !open && <blockquote className="step-preview">{answer}</blockquote>}
     <details onToggle={e => setOpen(e.currentTarget.open)}><summary>{tool ? 'Arguments and result' : 'Prompt and response'}</summary>
       {step.content ? <>

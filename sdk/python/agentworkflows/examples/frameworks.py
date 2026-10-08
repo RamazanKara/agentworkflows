@@ -6,7 +6,7 @@ from typing import Any, NotRequired, TypedDict
 
 from temporalio import workflow
 
-from agentworkflows.workflows import WorkflowGateway
+from agentworkflows.workflows import WorkflowGateway, input_schema
 
 
 class BriefingState(TypedDict):
@@ -14,10 +14,30 @@ class BriefingState(TypedDict):
     answer: NotRequired[str]
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "description": "Runs one topic through the OpenAI, Anthropic, Agents SDK and LangGraph agents.",
+        "properties": {
+            "topic": {
+                "type": "string",
+                "description": "A question or subject, in a sentence.",
+                "examples": ["How should our team evaluate AI agents?"],
+                "minLength": 1,
+                "pattern": "\\S",
+            }
+        },
+        "required": ["topic"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class FrameworkWorkflow:
     @workflow.run
-    async def run(self, topic: str) -> dict[str, Any]:
+    async def run(self, request: dict[str, Any] | str) -> dict[str, Any]:
+        # Console and API starts send {"topic": ...}; direct Temporal starts may pass the topic string.
+        topic = request if isinstance(request, str) else request["topic"]
         gateway = WorkflowGateway()
         results = {}
         for name in ("openai", "anthropic", "agents-sdk", "langgraph"):
