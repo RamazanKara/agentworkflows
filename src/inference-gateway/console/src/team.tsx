@@ -22,10 +22,10 @@ export function GetStarted({ session }: { session: Session }) {
     {isDemo(models.data) && <DemoNote/>}
     <ol className="onboarding">
       <li><span className="onboarding-number">01</span><div><h2>{blocked ? 'Add a provider key' : 'Check your models'}</h2>
-        {blocked ? <p className="note-warn">No provider key yet. {providerList(missing)} {missing.length > 1 ? 'keys are' : 'key is'} missing, so runs fail until you add one.</p>
+        {blocked ? <p className="note-warn">No provider key yet. {providerList(missing)} {missing.length > 1 ? 'keys are' : 'key is'} missing, so runs fail until you add {missing.length > 1 ? 'them' : 'it'}.</p>
           : <p>These are the models your team can use. Provider keys stay on your server; nobody sees them here.</p>}
         <ErrorMessage message={models.error}/>
-        {models.data ? models.data.data.length ? <ul className="model-list">{models.data.data.map(model => <li key={model.id}><code>{model.id}</code>{model.owned_by && !model.id.toLowerCase().includes(model.owned_by.toLowerCase()) && <span className="muted">{providerName(model.owned_by)}</span>}{!model.simulated && keyMissing(model.owned_by) && <span className="badge awaiting_approval">Key missing</span>}</li>)}</ul> : <p>No models yet. Ask your admin to connect a provider and approve a model.</p> : !models.error && <Loading/>}
+        {models.data ? models.data.data.length ? <ul className="model-list">{models.data.data.map(model => <li key={model.id}>{model.id.toLowerCase() !== model.owned_by?.toLowerCase() && <code>{model.id}</code>}{model.owned_by && <span className={model.id.toLowerCase() === model.owned_by.toLowerCase() ? undefined : 'muted'}>{providerName(model.owned_by)}</span>}{!model.simulated && keyMissing(model.owned_by) && <span className="badge awaiting_approval">Key missing</span>}</li>)}</ul> : <p>No models yet. Ask your admin to connect a provider and approve a model.</p> : !models.error && <Loading/>}
         {session.team.role === 'admin' ? blocked ? <a className="button" href="#providers">Connect a provider</a> : <a className="tap" href="#providers">Connect a provider or review budgets</a> : <p className="muted">Your team admin manages providers.</p>}
       </div></li>
       <li><span className="onboarding-number">02</span><div><h2>Run the example workflow</h2><p>Research a topic, draft a briefing, review it, and publish. The example has a budget and a human approval step built in.</p>
@@ -49,7 +49,7 @@ function DemoNote() {
 function CostTable({ title, rows }: { title: string; rows: Record<string, CostRow> }) {
   return <section><h2>{title}</h2><div className="panel">
     {Object.keys(rows).length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}><table className="stack numeric"><thead><tr><th>{title === 'By provider' ? 'Provider' : 'Workflow'}</th><th className="num">Calls</th><th className="num">Tokens</th><th className="num">Cost</th></tr></thead>
-      <tbody>{Object.entries(rows).sort((a, b) => (b[1].cost_usd || 0) - (a[1].cost_usd || 0)).map(([name, row]) => <tr key={name}><th scope="row">{title === 'By provider' ? providerName(name) : workflowName(name)}</th><td data-label="Calls">{number(row.calls)}</td><td data-label="Tokens">{number(row.tokens)}</td><td data-label="Cost">{money(row.cost_usd)}</td></tr>)}</tbody></table></div> :
+      <tbody>{Object.entries(rows).sort((a, b) => (b[1].cost_usd || 0) - (a[1].cost_usd || 0)).map(([name, row]) => <tr key={name}><th scope="row">{title === 'By provider' ? name === 'tool' ? 'Tool calls' : providerName(name) : workflowName(name)}</th><td data-label="Calls">{number(row.calls)}</td><td data-label="Tokens">{number(row.tokens)}</td><td data-label="Cost">{money(row.cost_usd)}</td></tr>)}</tbody></table></div> :
       <Empty title={`No ${title === 'By provider' ? 'provider' : 'workflow'} spend yet`}><p>{title === 'By provider' ? 'Costs appear here as governed calls finish.' : 'Calls made outside a workflow appear only under By provider.'}</p></Empty>}
   </div></section>;
 }
@@ -124,10 +124,10 @@ function ProviderSettings({ session }: { session: Session }) {
   // A listed model means the gateway already has a route for that provider.
   const routed = Boolean(models.data?.data.some(model => model.owned_by === target));
   // Lines stay near 40 characters so the block reads on a phone. Release and namespace follow the install guide.
-  const helmCommands = ['# Release "aw" in namespace "aw", as in', '# the install guide. Change both if', '# yours differ.',
+  const helmCommands = ['# Release and namespace "aw" as in the', '# install guide; change both if yours', '# differ.',
     ...helm.flatMap(provider => [
       `read -rs -p '${providerName(provider)} key: ' KEY; echo`,
-      `printf '%s' "$KEY" | kubectl create \\`, `  secret generic ${provider}-api-key -n aw \\`, '  --from-file=api-key=/dev/stdin',
+      `printf '%s' "$KEY" | kubectl create \\`, `  secret generic ${provider}-api-key \\`, '  -n aw --from-file=api-key=/dev/stdin',
     ]),
     'unset KEY', 'helm upgrade aw \\', '  deploy/charts/agentworkflows -n aw \\', '  --reuse-values --wait \\',
     ...helm.map((provider, i) => `  --set providers.${provider}.existingSecret=${provider}-api-key${i < helm.length - 1 ? ' \\' : ''}`),
@@ -153,7 +153,7 @@ function ProviderSettings({ session }: { session: Session }) {
     {missing ? <section className="setup panel"><h2>Connect {providerList(helm.length ? helm : [target])}</h2>
       {helm.length > 0 && <>
         <p>Installed with Helm? Store {helm.length > 1 ? 'each key in its own Secret' : 'the key in a Secret'} and upgrade the release; the upgrade restarts the gateway. Then refresh this page.</p>
-        <pre className="json">{helmCommands}</pre>
+        <div className="code-scroll"><pre className="json">{helmCommands}</pre></div>
         <div className="actions"><button className="secondary" onClick={() => void copy(helmCommands, 'Commands copied.')}><Icon name="copy"/>Copy commands</button><span role="status">{copied}</span></div>
         <p className="muted">Not using Helm? Set {helm.map((provider, i) => <span key={provider}>{i > 0 && ' and '}<code>{settings?.provider_configuration?.[provider]?.environment_variable}</code></span>)} in the gateway’s environment, restart the gateway, then refresh this page.</p>
       </>}
