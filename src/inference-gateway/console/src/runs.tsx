@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, date, label, money, number, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { api, date, label, money, noProviderKeys, number, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
 import { Badge, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
@@ -75,6 +75,7 @@ export function StartRun({ session }: { session: Session }) {
   const policy = policies.data?.workflows[selected];
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
+    {noProviderKeys(session.team) && <p className="note-warn">No provider key yet, so model calls in this run will fail. <a href="#providers">Add a provider key</a> first.</p>}
     <ErrorMessage message={error || policies.error}/>
     {!policies.data ? <Loading/> : !names.length ? <Empty title="No workflows configured"><p>Ask your team admin to register a workflow and start its worker.</p>{session.team.role === 'admin' && <a href="#providers">Open provider and budget setup</a>}</Empty> :
       <form className="panel form-panel" onSubmit={async event => {
@@ -240,7 +241,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
     finally { setBusy(false); }
   }
   const running = run?.status === 'running';
-  return <><a className="back" href="#runs">Back to workflow runs</a><PageHeader title={run ? workflowName(run.workflow) : 'Run detail'}>
+  return <><a className="back tap" href="#runs">Back to workflow runs</a><PageHeader title={run ? workflowName(run.workflow) : 'Run detail'}>
       {running && canBuild(session) && !confirmCancel && <button className="danger" onClick={() => setConfirmCancel(true)}>Cancel run</button>}
     </PageHeader>
     <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status" className="status">{notice || copied}</p>
@@ -274,7 +275,8 @@ const who = (principal: Record<string, unknown> | undefined) => String(principal
 function ApprovalStep({ step }: { step: Step }) {
   const approved = step.receipt.approved === true;
   return <article className="panel step"><div className="section-heading"><h3>Approval</h3><Badge value={approved ? 'succeeded' : 'failed'} text={approved ? 'Approved' : 'Rejected'}/></div>
-    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong> <span className="nowrap">· {date(step.timestamp)}</span></p>
+    <p className="muted">{date(step.timestamp)}</p>
+    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong></p>
     <Receipt step={step}/>
   </article>;
 }

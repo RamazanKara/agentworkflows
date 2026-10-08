@@ -116,6 +116,10 @@ const providerNames: Record<string, string> = {
   vertex: 'Vertex Gemini', ollama: 'Ollama', vllm: 'vLLM', tool: 'Tools',
 };
 export const providerName = (value: string) => providerNames[value] || value;
+export const providerList = (values: string[]) => values.map(providerName).join(' and ');
+// Admins see which provider keys are configured. With none present, every model call fails.
+export const missingKeys = (team: Team) => Object.entries(team.provider_configuration || {}).filter(([, value]) => !value.configured).map(([provider]) => provider);
+export const noProviderKeys = (team: Team) => Object.keys(team.provider_configuration || {}).length > 0 && missingKeys(team).length === Object.keys(team.provider_configuration || {}).length;
 // The gateway flags routes served by local fakes (the Compose demo); demo guidance appears only then.
 export const isDemo = (models?: Models) => Boolean(models?.data.some(model => model.simulated));
 export const status = (run: Run) => run.progress?.stage === 'awaiting_approval' ? 'awaiting_approval'

@@ -59,7 +59,7 @@ export function Triggers({ session }: { session: Session }) {
     <section className="panel setup"><h2>Notifications</h2>
       {session.team.notifications?.channels.length ? <p>Connected channels: {session.team.notifications.channels.map(channel => ({ slack: 'Slack', webhook: 'Webhook', email: 'Email' } as Record<string, string>)[channel] || channel).join(', ')}. Alerts cover waiting approvals, failed runs and {Math.round(session.team.notifications.budget_threshold * 100)}% of a run’s token or cost budget.</p> : <p>No notification channels configured. Ask your admin to connect Slack, an outgoing webhook or SMTP in the team configuration.</p>}
       <p>Each delivery attempt is recorded in the run’s receipts. Approval alerts link to the run in this console, where reviewers approve or reject the work.</p>
-      <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md#triggers-and-notifications">Trigger signing and notification setup</a>
+      <a className="tap" href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md#triggers-and-notifications">Trigger signing and notification setup</a>
     </section>
   </>;
 }

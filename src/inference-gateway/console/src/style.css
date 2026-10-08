@@ -11,13 +11,13 @@ a:hover { color: #034b43; }
 button, .button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid var(--teal); background: var(--teal); color: white; padding: 10px 18px; min-height: 44px; border-radius: 4px; font-weight: 600; cursor: pointer; text-decoration: none; }
 button:hover, .button:hover { background: #005f56; color: white; }
 button:disabled { cursor: wait; opacity: .6; }
-button.secondary { background: white; color: var(--teal); border-color: #8ba59d; }
-button.secondary:hover { background: #eaf4ef; }
+button.secondary, .button.secondary { background: white; color: var(--teal); border-color: #8ba59d; }
+button.secondary:hover, .button.secondary:hover { background: #eaf4ef; }
 button.danger { background: white; color: #9d3429; border-color: #bd5a4e; }
 button.danger:hover { background: #fff0eb; }
 :focus-visible { outline: 2px solid #007c70; outline-offset: 3px; }
 .sidebar :focus-visible { outline-color: #9fe3d5; }
-input, select, textarea { border: 1px solid #a9bcb3; color: #172321; background: white; padding: 10px 12px; border-radius: 4px; width: 100%; min-height: 44px; }
+input, select, textarea { border: 1px solid #7f948b; color: #172321; background: white; padding: 10px 12px; border-radius: 4px; width: 100%; min-height: 44px; }
 textarea { resize: vertical; }
 label { display: block; font-size: 14px; font-weight: 600; }
 label input, label select, label textarea { margin-top: 7px; }
@@ -345,3 +345,16 @@ table.numeric th:first-child { width: 40%; }
   .step-facts { grid-template-columns: repeat(2, minmax(0, auto)); justify-content: start; column-gap: 32px; }
   table.numeric th:first-child { width: auto; }
 }
+/* Gate round 4 fixes: whole run rows open the run, stacked copy fields on phones. */
+.runs-stack tbody tr { position: relative; }
+.runs-stack td:first-child a::after { content: ''; position: absolute; inset: 0; }
+.model-list .badge { margin-left: 2px; }
+.onboarding .note-warn { margin-top: 0; }
+@media (max-width: 760px) {
+  .copy-field { flex-direction: column; align-items: stretch; }
+  .copy-field code { max-width: none; }
+  .copy-field button { align-self: flex-start; }
+  .setup-links a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+.setup .actions + p { margin-top: 18px; }
+.onboarding .button + p { margin-top: 10px; }
