@@ -3,7 +3,7 @@
 The umbrella chart installs the gateway and console, persistent Redis, Temporal with
 PostgreSQL, a worker for the `default` team, and the Research example's tools in one
 namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
-[GitOps deployment](../deploy/clusters/customer/README.md) keeps its existing defaults.
+[GitOps deployment](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md) keeps its existing defaults.
 
 ## Prerequisites
 
