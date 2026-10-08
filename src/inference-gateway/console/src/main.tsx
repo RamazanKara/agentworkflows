@@ -23,7 +23,7 @@ const signinErrors: Record<string, string> = {
 const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
 function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
-  onSignIn: (csrfToken: string, team: Team, name?: string) => void; cancel?: () => void; message?: string;
+  onSignIn: (csrfToken: string, team: Team, principal: BrowserSession['principal']) => void; cancel?: () => void; message?: string;
   config?: AuthConfig; csrfToken: string;
 }) {
   const [token, setToken] = useState('');
@@ -47,13 +47,13 @@ function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
         const session = await api<BrowserSession>(csrfToken, '/v1/auth/session', { method: 'POST', body: JSON.stringify({ key: token.trim() }) });
         setToken('');
         const team = await api<Team>(session.csrf_token, '/v1/team');
-        onSignIn(session.csrf_token, team, session.principal.name);
+        onSignIn(session.csrf_token, team, session.principal);
       }
       catch (error) { setError((error as Error).message); }
       finally { setBusy(false); }
     }}>
       <label htmlFor="credential">API key</label>
-      <input id="credential" type="password" autoComplete="off" autoFocus={!sso} required value={token} onChange={e => setToken(e.target.value)} aria-describedby="credential-help"/>
+      <input id="credential" type="password" autoComplete="off" autoFocus={!sso && matchMedia('(pointer: fine)').matches} required value={token} onChange={e => setToken(e.target.value)} aria-describedby="credential-help"/>
       <p id="credential-help" className="muted">Exchanged for a secure session and never stored in this browser.</p>
       <ErrorMessage message={error}/>
       <div className="actions"><button className={sso ? 'secondary' : undefined} disabled={busy}>{busy ? 'Verifying…' : 'Sign in'}</button>{cancel && <button type="button" className="secondary" onClick={cancel}>Back to workspace</button>}</div>
@@ -88,7 +88,7 @@ function App() {
     const configuration = api<AuthConfig>('', '/v1/auth/config', options).then(setConfig);
     const restore = api<BrowserSession>('', '/v1/auth/session', options).then(async value => {
       const team = await api<Team>(value.csrf_token, '/v1/team', options);
-      if (!controller.signal.aborted) setSession({ csrfToken: value.csrf_token, team, id: ++sequence.current, name: value.principal.name });
+      if (!controller.signal.aborted) setSession({ csrfToken: value.csrf_token, team, id: ++sequence.current, name: value.principal.name, keyId: value.principal.key_id });
     });
     Promise.allSettled([configuration, restore]).then(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -109,8 +109,8 @@ function App() {
   if (!session || adding) return <SignIn config={config} csrfToken={session?.csrfToken || ''}
     message={expired ? 'Your session expired. Sign in again to continue.' : signinError}
     cancel={session ? () => setAdding(false) : undefined}
-    onSignIn={(csrfToken, team, name) => {
-      setSession({ csrfToken, team, id: ++sequence.current, name });
+    onSignIn={(csrfToken, team, principal) => {
+      setSession({ csrfToken, team, id: ++sequence.current, name: principal.name, keyId: principal.key_id });
       setAdding(false); setExpired(false); setError('');
     }}/>;
   const active = route.startsWith('run/') || route === 'new' ? 'runs' : route;
@@ -122,6 +122,7 @@ function App() {
       <section className="identity" aria-label="Signed in as">{session.name && <span className="who">{session.name}</span>}<span className="team">{session.team.team_id}</span><span className="role">{label(session.team.role)}</span></section>
       <button className="menu-button" aria-expanded={menu} aria-controls="app-menu" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu(value => !value)}><Icon name={menu ? 'close' : 'menu'}/></button>
       <div id="app-menu" className="app-menu">
+        <p className="menu-who">{session.name && <strong>{session.name}</strong>}<span>{session.team.team_id} · {label(session.team.role)}</span></p>
         <nav aria-label="Main navigation">{navigation.filter(([id]) => !['providers', 'keys'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
           <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}
         </nav>

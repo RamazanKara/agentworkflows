@@ -248,11 +248,11 @@ th.num, td[data-label="Calls"], td[data-label="Tokens"], td[data-label="Cost"], 
 pre.step-content.prose { font-family: inherit; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
 pre.json { white-space: pre; overflow-x: auto; overflow-wrap: normal; }
 .copy-field { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
-.copy-field code { flex: 1; min-width: 0; max-width: 380px; white-space: nowrap; overflow-x: auto; overflow-wrap: normal; padding: 9px 12px; background: #f1f5f2; border: 1px solid var(--line); border-radius: 4px; }
+.copy-field code { flex: 1; min-width: 0; max-width: 420px; white-space: normal; overflow-wrap: break-word; font-size: 13px; line-height: 1.5; padding: 8px 12px; background: #f1f5f2; border: 1px solid var(--line); border-radius: 4px; }
 .copy-field button { flex: none; min-height: 40px; padding: 8px 12px; gap: 6px; }
 .copy-field svg, button.icon svg { width: 16px; height: 16px; }
-.new-key code { white-space: nowrap; overflow-x: auto; overflow-wrap: normal; }
-.keys-table tr.new th, .keys-table tr.new td { background: #f1faf5; }
+.new-key code { white-space: normal; word-break: break-all; }
+.keys-table tr.new { background: #f1faf5; box-shadow: inset 3px 0 0 var(--teal); }
 .run-id { display: inline-flex; align-items: center; gap: 6px; }
 button.icon { min-height: 32px; width: 32px; padding: 0; background: transparent; border: 0; color: #006f65; }
 button.icon:hover { background: #eaf4ef; color: #034b43; }
@@ -307,4 +307,27 @@ button.icon:hover { background: #eaf4ef; color: #034b43; }
   .runs-stack tr { gap: 8px 18px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
   .keys-table button, .row-action button { min-height: 44px; }
   .copy-field code { max-width: none; }
+}
+/* Gate round 2 fixes: one-line dates, approval cards, identity in the phone menu, wrapped secrets. */
+.nowrap { white-space: nowrap; }
+.metrics { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.eyebrow { margin: 0 0 4px; font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: #006f65; }
+.review-meta { display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; }
+.review-meta > * + *::before { content: '·'; display: inline-block; margin: 0 9px; color: #9aaba3; }
+button.copy-id { min-height: 32px; padding: 4px 8px; gap: 5px; background: transparent; border: 0; color: #006f65; font-size: 13px; font-weight: 600; }
+button.copy-id:hover { background: #eaf4ef; color: #034b43; }
+button.copy-id svg { width: 15px; height: 15px; }
+.menu-who { display: none; }
+.badge.you { margin-left: 8px; color: #24577e; background: #e4f1fb; vertical-align: 1px; }
+.badge.you::before { display: none; }
+.demo-note { margin: 0 0 24px; }
+@media (max-width: 760px) {
+  .metrics { grid-auto-flow: row; }
+  .menu-open .menu-who { display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px; padding: 4px 12px 12px; border-bottom: 1px solid #2b5e53; color: #cfe6dc; font-size: 13px; }
+  .menu-who strong { color: #f5fffa; font-size: 15px; }
+  button.copy-id { min-height: 44px; padding: 4px 10px; }
+  .run-meta { gap: 6px 16px; }
+  .stack:not(.runs-stack) td[data-label]:has(.copy-field) { padding-left: 0; padding-top: 24px; }
+  .copy-field { align-items: flex-start; }
+  .copy-field button { min-height: 44px; }
 }

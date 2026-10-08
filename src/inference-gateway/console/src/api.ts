@@ -9,7 +9,7 @@ export type Team = {
   notifications?: { channels: string[]; budget_threshold: number };
   provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
 };
-export type Session = { csrfToken: string; team: Team; id: number; name?: string };
+export type Session = { csrfToken: string; team: Team; id: number; name?: string; keyId?: string };
 export type BrowserSession = { csrf_token: string; principal: { key_id?: string; name?: string }; sandbox_id: string };
 export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
 export type InputProperty = {
