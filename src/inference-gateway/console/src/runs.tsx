@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, date, label, money, noProviderKeys, number, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { api, date, label, missingKeys, money, noProviderKeys, number, providerList, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
 import { Badge, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
@@ -53,7 +53,7 @@ export function Runs({ session }: { session: Session }) {
       {rows.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow runs table"><table className="stack runs-stack">
         <thead><tr>{['Workflow', 'Run', 'Status', 'Started', 'Tokens', 'Cost'].map(h => <th key={h} className={['Tokens', 'Cost'].includes(h) ? 'num' : undefined}>{h}</th>)}</tr></thead>
         <tbody>{rows.map(run => <tr key={run.run_id}><td><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a><small>{run.project}</small></td><td data-label="Run"><code title={run.run_id}>{shortId(run.run_id)}</code></td><td data-label="Status"><Badge value={status(run)}/></td><td data-label="Started">{date(run.created_at)}</td><td data-label="Tokens">{number(run.budget.tokens)}</td><td data-label="Cost">{money(run.budget.cost_usd)}</td></tr>)}</tbody>
-      </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs on this page' : 'Your first workflow starts here'}><p>{offset === null ? 'Start a workflow or choose different filters.' : 'Load more to continue searching older runs.'}</p>{canBuild(session) && <a href="#new">Run a workflow</a>}</Empty>}
+      </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs' : 'Your first workflow starts here'}><p>{offset !== null ? 'Load more to continue searching older runs.' : filter || workflow ? 'No run in this project matches these filters.' : 'Runs appear here with their status, cost and receipts.'}</p>{canBuild(session) && !filter && !workflow && <a className="tap" href="#new">Run a workflow</a>}</Empty>}
       {busy && <Loading/>}
       {offset !== null && !busy && <div className="table-footer"><button className="secondary" onClick={() => void load(offset)}>Load more</button></div>}
     </div>
@@ -61,9 +61,9 @@ export function Runs({ session }: { session: Session }) {
   </>;
 }
 
-export function StartRun({ session }: { session: Session }) {
+export function StartRun({ session, initial = '' }: { session: Session; initial?: string }) {
   const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
-  const [workflow, setWorkflow] = useState('');
+  const [workflow, setWorkflow] = useState(initial);
   const [project, setProject] = useState(session.team.projects[0] || '');
   const [input, setInput] = useState('{}');
   const [error, setError] = useState('');
@@ -71,11 +71,14 @@ export function StartRun({ session }: { session: Session }) {
   const [more, setMore] = useState(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const names = Object.keys(policies.data?.workflows || {});
-  const selected = workflow || names[0];
+  const selected = names.includes(workflow) ? workflow : names[0];
   const policy = policies.data?.workflows[selected];
+  // Admins see key status; warn when a provider this workflow uses has no key.
+  const keyless = noProviderKeys(session.team) ? [] : (policy?.allowedProviders || []).filter(provider => missingKeys(session.team).includes(provider));
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
     {noProviderKeys(session.team) && <p className="note-warn">No provider key yet, so model calls in this run will fail. <a href="#providers">Add a provider key</a> first.</p>}
+    {keyless.length > 0 && <p className="note-warn">{providerList(keyless)} {keyless.length > 1 ? 'have' : 'has'} no key yet, so this workflow’s calls there fail. <a href="#providers">Add the key</a> first.</p>}
     <ErrorMessage message={error || policies.error}/>
     {!policies.data ? <Loading/> : !names.length ? <Empty title="No workflows configured"><p>Ask your team admin to register a workflow and start its worker.</p>{session.team.role === 'admin' && <a href="#providers">Open provider and budget setup</a>}</Empty> :
       <form className="panel form-panel" onSubmit={async event => {
@@ -164,7 +167,7 @@ function SchemaField({ name, property, required, models }: { name: string; prope
   </div>;
 }
 
-function Review({ session, run, onDone, title = 'Review the draft', eyebrow, meta }: { session: Session; run: Run; onDone: () => void; title?: string; eyebrow?: string; meta?: ReactNode }) {
+function Review({ session, run, onDone, title = 'Review the draft', eyebrow, meta, draft = run.progress?.draft }: { session: Session; run: Run; onDone: () => void; title?: string; eyebrow?: string; meta?: ReactNode; draft?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -177,7 +180,7 @@ function Review({ session, run, onDone, title = 'Review the draft', eyebrow, met
     finally { setBusy(false); }
   }
   return <section className="review panel">{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{meta}
-    <pre className="draft">{run.progress?.draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}</pre>
+    <pre className="draft">{draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}</pre>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
     {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">An approver or admin must review this draft. Use Switch account to sign in as one.</p>}
   </section>;
@@ -210,10 +213,10 @@ export function Approvals({ session }: { session: Session }) {
   return <><PageHeader title="Approvals" subtitle="Drafts waiting for a decision, across your projects."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={error} retry={() => setRevision(v => v + 1)}/>
     {busy && <Loading/>}
-    {!busy && !error && !rows.length && <Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a href="#runs">Explore workflow runs</a></Empty>}
-    {rows.map(run => <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
-      eyebrow={workflowName(run.workflow)} title={firstLine(run.progress?.draft) || 'Review the draft'}
-      meta={<p className="muted review-meta"><span>Project {run.project}</span><span>Started <span className="nowrap">{date(run.created_at)}</span></span><span>{money(run.budget.cost_usd)} so far</span><a className="tap" href={`#run/${run.run_id}`}>Open run</a></p>}/>)}
+    {!busy && !error && !rows.length && <div className="panel"><Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a className="tap" href="#runs">Explore workflow runs</a></Empty></div>}
+    {rows.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
+      eyebrow={workflowName(run.workflow)} title={heading || 'Review the draft'} draft={body}
+      meta={<p className="muted review-meta"><span>Project {run.project}</span><span>Started <span className="nowrap">{date(run.created_at)}</span></span><span>{money(run.budget.cost_usd)} so far</span><a className="tap" href={`#run/${run.run_id}`}>Open run</a></p>}/>; })}
   </>;
 }
 
@@ -269,7 +272,15 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
   </>;
 }
 
-const firstLine = (text?: string) => text?.split('\n').find(line => line.trim())?.trim().slice(0, 80) || '';
+// A draft's first line ("# Briefing: …") becomes the card title and leaves the preview; a long one stays in it.
+function splitDraft(text?: string): [string, string | undefined] {
+  const lines = text?.split('\n') || [];
+  const index = lines.findIndex(line => line.trim());
+  if (index < 0) return ['', text];
+  const heading = lines[index].trim().replace(/^#+\s*/, '').replace(/^\*\*(.+)\*\*$/, '$1').trim();
+  const rest = lines.slice(index + 1).join('\n').replace(/^\s*\n/, '');
+  return heading.length <= 80 && rest.trim() ? [heading, rest] : [heading.length <= 80 ? heading : `${heading.slice(0, 79)}…`, text];
+}
 const who = (principal: Record<string, unknown> | undefined) => String(principal?.name || principal?.sub || principal?.key_id || 'a reviewer');
 
 function ApprovalStep({ step }: { step: Step }) {

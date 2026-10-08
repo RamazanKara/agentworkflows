@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Console: opening the console lands on Approvals when drafts wait, then Workflow runs, and on Get started for a new team.
+- Console: Get started and the run form warn when a workflow uses a provider whose key is missing, even if other keys are present.
+- Console: Providers & budgets gives one Helm block that stores every missing OpenAI and Anthropic key and runs a single `helm upgrade`; command lines fit a phone screen, and the key column is called "Environment variable".
+- Console: approval cards use the draft's first line as the title without repeating it in the preview; revoked keys show their revoke date.
+- Console: clearer empty states for runs, approvals and costs, model IDs no longer repeat the provider name, and hover colors apply only on devices that hover.
+
 ## v0.5.0 - 2026-10-08
 
 - Make the umbrella Helm chart cloud-first: include Temporal/PostgreSQL and the worker,
