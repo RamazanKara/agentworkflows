@@ -30,10 +30,24 @@ import time
 from collections.abc import Iterator, Mapping
 from importlib import metadata
 from types import TracebackType
-from typing import Any
+from typing import Any, Unpack
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from temporalio import workflow as _workflow
+
+from agentworkflows.types import (
+    AuditFilters,
+    AuditPage,
+    AuditVerification,
+    CreatedKey,
+    KeyList,
+    KeyOptions,
+    KeyUpdate,
+    ManagedKey,
+    TeamSettings,
+    TeamSettingValue,
+)
 
 with _workflow.unsafe.imports_passed_through():
     import httpx
@@ -495,13 +509,97 @@ class GatewayClient:
         """Discover the current credential's team, role, and projects."""
         return self._get("/v1/team")
 
+    def list_keys(self) -> KeyList:
+        """List the team's managed keys, including revoked and expired keys (admin only)."""
+        return self._request("GET", "/v1/team/keys").json()
+
+    def create_key(self, name: str, **options: Unpack[KeyOptions]) -> CreatedKey:
+        """Issue a managed key; its plaintext is returned only here. Role defaults to viewer.
+
+        ``expires_at`` is an ISO-8601 timestamp with a timezone. Omit ``project`` for
+        a team-wide key. Requires an admin credential with access to that project.
+        """
+        return self._request(
+            "POST", "/v1/team/keys", json={"name": name, **options}, creates_state=True
+        ).json()
+
+    def update_key(self, key_id: str, **changes: Unpack[KeyUpdate]) -> ManagedKey:
+        """Update only supplied key fields; None clears project or expiry (admin only)."""
+        return self._request(
+            "PATCH", f"/v1/team/keys/{quote(key_id, safe='')}", json=changes, creates_state=True
+        ).json()
+
+    def revoke_key(self, key_id: str) -> ManagedKey:
+        """Revoke a managed key immediately; the current key cannot revoke itself."""
+        return self._request("DELETE", f"/v1/team/keys/{quote(key_id, safe='')}", creates_state=True).json()
+
+    def team_settings(self) -> TeamSettings:
+        """Read effective settings, policy defaults and the revision (unrestricted admin only)."""
+        return self._request("GET", "/v1/team/settings").json()
+
+    def update_team_settings(
+        self, fields: Mapping[str, TeamSettingValue], *, revision: int | str
+    ) -> TeamSettings:
+        """Atomically override fields using a revision or quoted ETag in If-Match.
+
+        Stale revisions raise GatewayError (409); invalid fields raise 422 with
+        ``detail['fields']``. Reload and review conflicts before writing again.
+        """
+        return self._request(
+            "PATCH", "/v1/team/settings", json={"fields": dict(fields)},
+            headers={"If-Match": str(revision)}, creates_state=True,
+        ).json()
+
+    def reset_team_setting(self, field: str, *, revision: int | str) -> TeamSettings:
+        """Reset one field to policy using its revision or ETag; stale writes raise 409."""
+        return self._request(
+            "DELETE", f"/v1/team/settings/{quote(field, safe='')}",
+            headers={"If-Match": str(revision)}, creates_state=True,
+        ).json()
+
+    def audit(self, **filters: Unpack[AuditFilters]) -> AuditPage:
+        """Read one newest-first audit page (unrestricted admin only).
+
+        ``from_time`` and ``to`` are inclusive Unix seconds. Other filters match
+        exactly; pass ``next_cursor`` as ``cursor`` for older events. ``limit``
+        defaults to 50 on the gateway, with a maximum of 200.
+        """
+        params = {"from" if key == "from_time" else key: value for key, value in filters.items()}
+        return self._request("GET", "/v1/team/audit", params=params).json()
+
+    def verify_audit(self, *, from_time: float | None = None, to: float | None = None) -> AuditVerification:
+        """Verify all retained team events in an inclusive Unix-time range.
+
+        Verification does not accept actor/event/project/run filters. ``ok`` is
+        None when disabled; boundaries describe a selected or retained prefix.
+        """
+        params = {key: value for key, value in {"from": from_time, "to": to}.items() if value is not None}
+        return self._request("GET", "/v1/team/audit/verify", params=params).json()
+
+    def export_audit(self, **filters: Unpack[AuditFilters]) -> Iterator[str]:
+        """Yield original events as JSON Lines, following every matching cursor page.
+
+        Each string ends with a newline. ``to`` defaults to the export start time
+        and stays fixed during paging. Disabled views raise RuntimeError; failed
+        reads propagate GatewayError/HTTPError, possibly after yielding some lines.
+        Retention still applies; this is not a complete process log for the operator verifier.
+        """
+        filters.setdefault("to", time.time())
+        while True:
+            page = self.audit(**filters)
+            if not page["enabled"]:
+                raise RuntimeError(page.get("message") or "Audit view is off.")
+            for entry in page["events"]:
+                yield json.dumps(entry["event"]) + "\n"
+            if page["next_cursor"] is None:
+                return
+            filters["cursor"] = page["next_cursor"]
+
     def triggers(self) -> dict[str, Any]:
         """List configured workflow triggers and their effective pause state."""
         return self._get("/v1/workflow-triggers")
 
     def pause_trigger(self, workflow: str, name: str, *, paused: bool = True) -> dict[str, Any]:
-        from urllib.parse import quote
-
         response = self._request(
             "PATCH", f"/v1/workflow-triggers/{quote(workflow, safe='')}/{quote(name, safe='')}", json={"paused": paused}
         )

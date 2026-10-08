@@ -22,6 +22,12 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `keys create --name NAME --role builder --project PROJECT` | Issue a key; role defaults to viewer, project is optional; plaintext is printed once |
 | `keys update KEY_ID --name NAME --role viewer --expires-at TIMESTAMP` | Change selected metadata; unspecified fields stay unchanged |
 | `keys revoke KEY_ID` | Revoke immediately on all replicas, including sessions using the key |
+| `settings show` | Effective team settings, policy defaults and revision (unrestricted admin only) |
+| `settings set --fields '{"cost_limit_usd":100}' --revision 0` | Atomically override supplied fields; `--fields @settings.json` also works |
+| `settings reset FIELD --revision 1` | Remove one override and restore its policy default |
+| `audit list --limit 50 --cursor CURSOR` | One page of retained team receipts, newest first; cursor is optional |
+| `audit verify --from UNIX_SECONDS --to UNIX_SECONDS` | Verify every team event in the selected time range; both bounds are optional |
+| `audit export --output audit-log.jsonl` | Follow all cursor pages and write original events as JSON Lines; omit output or use `-` for stdout |
 | `usage` | Usage, estimated spend, provider and workflow breakdowns |
 | `runs start [WORKFLOW] --input '@input.json'` | Start a workflow (default ResearchWorkflow); input can also be inline JSON |
 | `runs list --project PROJECT --offset OFFSET` | List runs; both options are optional; use returned next_offset for pagination |
@@ -43,6 +49,30 @@ save a newly created `key` securely, since list/update cannot recover it. Keys a
 to the authenticated admin's team and project access. You cannot revoke or demote your
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.
+
+Settings and audit SDK methods and CLI commands are available from this checkout
+(v0.6.0 in progress); they are not in the v0.5.1 wheel above. Both require an
+unrestricted team admin credential. Run `settings show` before changing settings,
+review the values, and pass its `revision` to `set` or `reset`. `--fields` is a
+non-empty JSON object of field names to values, without an outer `fields` wrapper.
+Only supplied fields change. A 409 means another writer changed the settings:
+reload, review and reapply with the new revision. The CLI never refreshes the
+revision or resubmits a stale change automatically. A 422 reports invalid fields;
+the entire patch is rejected. See [team settings](team-settings.md) for field names
+and accepted values.
+
+`audit list` and `audit export` accept `--from`, `--to` (inclusive Unix seconds),
+`--event-type`, `--actor`, `--project`, `--run-id`, `--cursor`, and `--limit` (1–200,
+default 50 per page). Pass the list result's `next_cursor` to read older events.
+Export follows cursors until exhausted and captures the current time as `--to`
+when omitted, keeping it fixed throughout the export. File output is UTF-8.
+Verification accepts only time bounds and checks all team events in that range,
+including events hidden by other filters. `audit verify` prints the full result
+and exits **1** for a broken chain or disabled view; `audit export` also exits **1**
+when disabled. A disabled `audit list` returns its `enabled: false` JSON response.
+Failed exports exit nonzero and may leave partial output. Retention continues
+during paging; these exports are not complete process logs for the operator
+verifier. See [audit log](audit-log.md) for boundaries and verification limits.
 
 The [template gallery](templates.md) includes input fields, expected results and adaptation
 steps for every starter. Install from this checkout to get its current template set.
@@ -104,6 +134,45 @@ Use `GatewayClient(base_url, api_key=...)` as a context manager for authenticate
 Its `start_run`, `runs`, `run`, `approve_run`, `cancel_run`, and `retry_run` methods mirror
 the CLI. [Client examples](client-examples.md) cover model calls and compatible framework SDKs.
 
+The admin methods return typed dictionaries, with request/response types available
+from `agentworkflows.types` (`ManagedKey`, `CreatedKey`, `KeyOptions`, `KeyUpdate`,
+`KeyList`, `Role`, `TeamSettings`, `TeamSetting`, `TeamSettingValue`, `AuditFilters`,
+`AuditEntry`, `AuditPage`, `AuditPosition`, and `AuditVerification`). Responses retain
+the API's field names and timestamps in Unix seconds; key **input** expiry uses an
+ISO-8601 string with a timezone.
+
+| Client method | Result / behavior |
+| --- | --- |
+| `list_keys()` | `KeyList`, including expired and revoked managed keys |
+| `create_key(name, role="viewer", project=..., expires_at=...)` | `CreatedKey`; plaintext `key` appears only in this response; options are optional |
+| `update_key(key_id, name=..., role=..., project=..., expires_at=...)` | `ManagedKey`; only supplied fields change; `None` clears project or expiry |
+| `revoke_key(key_id)` | Revoked `ManagedKey`; the current key cannot revoke itself |
+| `team_settings()` | `TeamSettings`: revision, update metadata, fields with value/source/policy_default, and available routes/providers/approver_roles |
+| `update_team_settings(fields, revision=...)` | Atomically apply the field/value map and return `TeamSettings`; revision or quoted ETag is sent as `If-Match` |
+| `reset_team_setting(field, revision=...)` | Reset one field to policy and return `TeamSettings` |
+| `audit(**filters)` | One `AuditPage` with envelopes, original events and `next_cursor` |
+| `verify_audit(from_time=..., to=...)` | `AuditVerification` with `ok`, `checked`, `first_break` and `boundaries`; `ok` is `None` when disabled |
+| `export_audit(**filters)` | Iterator of newline-terminated JSON strings, one original event per line across all pages; disabled views raise `RuntimeError` |
+
+Audit filter names are `from_time`, `to`, `event_type`, `actor`, `project`, `run_id`,
+`cursor`, and `limit`. Both time bounds are inclusive Unix seconds. All filters
+are optional; `limit` defaults to 50 on the gateway and cannot exceed 200.
+
+```python
+from agentworkflows import GatewayClient
+
+with GatewayClient("http://127.0.0.1:8080", api_key="YOUR_ADMIN_KEY") as gateway:
+    settings = gateway.team_settings()
+    saved = gateway.update_team_settings({"cost_limit_usd": 100}, revision=settings["revision"])
+    gateway.reset_team_setting("cost_limit_usd", revision=saved["revision"])
+    with open("audit-log.jsonl", "w", encoding="utf-8", newline="\n") as output:
+        output.writelines(gateway.export_audit(event_type="team_settings_changed"))
+```
+
+Admin mutations do not retry ambiguous HTTP failures or read timeouts. Settings
+conflicts and validation failures surface as `GatewayError` with the original
+status and structured detail; settings field errors are in `detail["fields"]`.
+
 `GatewayError` exposes `status_code`, `reason`, `request_id`, and `detail`. Validation errors
 identify the invalid fields. CLI output includes a recovery action and request ID without
 printing your credential. `GatewayRetryAfterError.retry_after` reports when the server asks
@@ -120,6 +189,10 @@ before a start intent or Temporal execution is created; defaults are not inserte
 | `prompt_secret_detected` | Remove credentials or sensitive personal data from the prompt/tool arguments |
 | `approval_not_waiting` | Inspect the run's stage and existing decision; never approve an unseen draft |
 | `workflow_start_conflict` | Use the original input for that request ID, or a new ID for a different run |
+| `team_settings_conflict` (409) | Reload with `settings show`, review and retry with its revision |
+| `team_settings_invalid` (422) | Correct the named fields using `settings show` and the team settings reference |
+| `audit_range_invalid` (422) | Use inclusive Unix timestamps with `from` at or before `to` |
+| `audit_view_unavailable` (503) | Restore the audit Redis backend before retrying; an export may be partial |
 | `workflow_run_missing` | Use `runs list` with the correct team and project |
 | `temporal_unavailable`, `worker_unavailable` | Check Temporal health and the team's worker/queue, then inspect again |
 | Budget / rate limit | Inspect `usage`; wait for the window or ask an admin to review the limit |

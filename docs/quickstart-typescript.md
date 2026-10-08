@@ -156,21 +156,86 @@ without retries; transient gateway failures retry, honoring `Retry-After`.
 Approval expires after seven days.
 Worker credentials and HTTP clients must never be imported into a workflow module.
 
-The client methods are `startRun`, `runs`, `run`, `approveRun`, `cancelRun`,
+The workflow client methods are `startRun`, `runs`, `run`, `approveRun`, `cancelRun`,
 `retryRun`, `triggers`, and `pauseTrigger`. Use `{ paused: false }` to resume a
 trigger and `{ project, offset }` to page through runs. JSON response fields retain
 the API's snake_case names. This SDK covers governed model/tool workflows and the
-workflow API; Python's framework adapters and container runner remain Python APIs.
+workflow and team administration APIs; Python's framework adapters and container runner remain Python APIs.
 
 `GatewayError` exposes `statusCode`, `reason`, `requestId`, and `detail`.
 `GatewayTransportError` gives a redacted connection failure.
 `GatewayRetryAfterError.retryAfter` is a delay in seconds above the client's retry
 cap (30 seconds by default). Read requests and idempotent starts retry twice;
-approval, cancel, retry-run, and trigger mutations are not automatically repeated.
+approval, cancel, retry-run, trigger, key and settings mutations are not automatically repeated.
 Keep a `requestId` and reuse it with identical input after an ambiguous start.
 Inside workflows, gateway failures arrive as Temporal `ActivityFailure` with an
 `ApplicationFailure` cause whose `type` is the gateway reason. See the Python
 [error recovery table](sdk-reference.md#gateway-client-and-errors) for the shared reasons.
+
+## Team administration
+
+The admin methods below are available from this checkout (v0.6.0 in progress),
+not the v0.5.1 release tarball above. Use an admin key; settings and audit require
+a credential without a project restriction.
+
+| Method | Typed result / behavior |
+| --- | --- |
+| `listKeys()` | `KeyList`, including revoked and expired keys |
+| `createKey(name, { role, project, expires_at })` | `CreatedKey`; save the one-time plaintext `key`; options are optional and role defaults to viewer |
+| `updateKey(keyId, { name, role, project, expires_at })` | `ManagedKey`; omitted fields stay unchanged; `null` clears project or expiry |
+| `revokeKey(keyId)` | Revoked `ManagedKey`; the current key cannot revoke itself |
+| `teamSettings()` | `TeamSettings`: revision, update metadata, effective fields with value/source/policy_default and available route/provider/approver choices |
+| `updateTeamSettings(fields, { revision })` | Atomically apply a field/value map and return `TeamSettings` |
+| `resetTeamSetting(field, { revision })` | Remove one override and return `TeamSettings` |
+| `audit({ from, to, eventType, actor, project, runId, cursor, limit })` | One newest-first `AuditPage` with original events, chain metadata and `next_cursor`; all options optional |
+| `verifyAudit({ from, to })` | `AuditVerification`: enabled, ok, checked, first_break and boundaries; `ok` is null when disabled |
+| `exportAudit(filters)` | Async generator of newline-terminated JSON strings, one original event per line, following all matching cursor pages |
+
+The package exports the request/response types `Role`, `KeyOptions`, `KeyUpdate`,
+`ManagedKey`, `CreatedKey`, `KeyList`, `TeamSettingValue`, `TeamSetting`,
+`TeamSettings`, `AuditRange`, `AuditFilters`, `AuditEntry`, `AuditPage`,
+`AuditPosition`, and `AuditVerification`. Key input expiry is an ISO-8601 string
+with a timezone. Response timestamps are Unix seconds.
+
+Read and review settings before writing. Pass the returned integer revision (or
+a quoted ETag string) to either mutation; the SDK sends it as `If-Match`. A stale
+write throws `GatewayError` with `statusCode: 409` and
+`reason: 'team_settings_conflict'`. Reload, review and reapply; the SDK does not
+refresh the revision or retry the change. A 422 rejects the whole patch and
+retains `detail.fields` entries containing `field` and `message`. See
+[team settings](team-settings.md) for field names and limits.
+
+```typescript
+import { GatewayClient } from '@agentworkflows/sdk';
+import { open } from 'node:fs/promises';
+
+const admin = new GatewayClient('http://127.0.0.1:8080', {
+  apiKey: process.env.AGENTWORKFLOWS_API_KEY,
+});
+const settings = await admin.teamSettings();
+const saved = await admin.updateTeamSettings({ cost_limit_usd: 100 }, { revision: settings.revision });
+await admin.resetTeamSetting('cost_limit_usd', { revision: saved.revision });
+
+const output = await open('audit-log.jsonl', 'w');
+try {
+  for await (const line of admin.exportAudit({ eventType: 'team_settings_changed' })) {
+    await output.write(line, undefined, 'utf8');
+  }
+} finally {
+  await output.close();
+}
+```
+
+Audit times are inclusive Unix seconds. List/export filters match exactly;
+`limit` is the page size (default 50, maximum 200). Supply the previous page's
+`next_cursor` as `cursor` for older events. Export fixes `to` at the start time
+when omitted and preserves all filters across pages. Verification accepts only
+time bounds and includes events hidden by other filters. Check `enabled` on list
+and verification results; a disabled view has `ok: null`, and export throws an
+`Error` with the gateway's message. Gateway read failures propagate and can leave
+partial output. Retention continues during paging; these team exports are not
+complete process logs for the operator verifier. See [audit log](audit-log.md)
+for range boundaries and what verification proves.
 
 ## Verify and stop
 

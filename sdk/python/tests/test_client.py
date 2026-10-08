@@ -419,3 +419,205 @@ def test_custom_transport_and_default_headers():
     )
     assert client.ready() is True
     assert seen["traceparent"].startswith("00-aaaa")
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "options", "verb", "path", "body"),
+    [
+        ("list_keys", (), {}, "GET", "/v1/team/keys", None),
+        ("create_key", ("CI",), {}, "POST", "/v1/team/keys", {"name": "CI"}),
+        ("create_key", ("CI",), {"role": "builder", "project": "default", "expires_at": "2030-01-01T00:00:00Z"},
+         "POST", "/v1/team/keys",
+         {"name": "CI", "role": "builder", "project": "default", "expires_at": "2030-01-01T00:00:00Z"}),
+        ("update_key", ("key/id",), {"name": "CI", "project": None, "expires_at": None}, "PATCH",
+         "/v1/team/keys/key%2Fid", {"name": "CI", "project": None, "expires_at": None}),
+        ("revoke_key", ("key/id",), {}, "DELETE", "/v1/team/keys/key%2Fid", None),
+    ],
+)
+def test_managed_key_methods(monkeypatch, method, args, options, verb, path, body):
+    result = {"keys": []} if method == "list_keys" else {"key_id": "key/id", "revoked_at": None}
+    if method == "create_key":
+        result["key"] = "one-time-key"
+
+    def handler(request):
+        assert request.method == verb
+        assert request.url.raw_path.decode() == path
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        assert (json.loads(request.content) if request.content else None) == body
+        return httpx.Response(200, json=result)
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        assert getattr(client, method)(*args, **options) == result
+
+
+def test_team_settings_methods_preserve_revisions_and_encode_fields(monkeypatch):
+    calls = []
+    settings = {
+        "revision": 0, "updated_by": None, "updated_at": None,
+        "fields": {"cost_limit_usd": {"value": None, "source": "policy", "policy_default": None}},
+        "routes": ["openai"], "providers": ["openai"], "approver_roles": ["admin", "approver"],
+    }
+
+    def handler(request):
+        calls.append(request)
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        return httpx.Response(200, json=settings, headers={"ETag": '"0"'})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        assert client.team_settings() == settings
+        assert client.update_team_settings({"cost_limit_usd": 0}, revision=0) == settings
+        assert client.reset_team_setting("model_routes.team/a & b", revision='"1"') == settings
+    assert [(r.method, r.url.raw_path.decode()) for r in calls] == [
+        ("GET", "/v1/team/settings"), ("PATCH", "/v1/team/settings"),
+        ("DELETE", "/v1/team/settings/model_routes.team%2Fa%20%26%20b"),
+    ]
+    assert "If-Match" not in calls[0].headers
+    assert calls[1].headers["If-Match"] == "0"
+    assert json.loads(calls[1].content) == {"fields": {"cost_limit_usd": 0}}
+    assert calls[2].headers["If-Match"] == '"1"' and not calls[2].content
+
+
+@pytest.mark.parametrize("operation", ["update_team_settings", "reset_team_setting"])
+@pytest.mark.parametrize("status,reason", [(409, "team_settings_conflict"), (422, "team_settings_invalid")])
+def test_settings_errors_retain_details_without_retry(monkeypatch, operation, status, reason):
+    calls = []
+    detail = {"reason": reason, "fields": [{"field": "cost_limit_usd", "message": "Use a finite USD amount."}]}
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(status, json={"detail": detail}, headers={"X-Request-ID": "settings-req"})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client, pytest.raises(GatewayError) as error:
+        getattr(client, operation)({"cost_limit_usd": -1} if operation == "update_team_settings"
+                                   else "cost_limit_usd", revision=0)
+    assert error.value.status_code == status and error.value.reason == reason
+    assert error.value.request_id == "settings-req" and error.value.detail == detail
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "operation,args,options",
+    [
+        ("create_key", ("CI",), {}), ("update_key", ("id",), {"name": "CI"}), ("revoke_key", ("id",), {}),
+        ("update_team_settings", ({"cost_limit_usd": 5},), {"revision": 0}),
+        ("reset_team_setting", ("cost_limit_usd",), {"revision": 0}),
+    ],
+)
+@pytest.mark.parametrize("failure", [502, "timeout"])
+def test_admin_mutations_do_not_repeat_ambiguous_failures(monkeypatch, operation, args, options, failure):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout("response lost", request=request)
+        return httpx.Response(failure, json={})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client, pytest.raises(httpx.HTTPError):
+        getattr(client, operation)(*args, **options)
+    assert len(calls) == 1
+
+
+def test_audit_filters_and_cursor_are_encoded(monkeypatch):
+    page = {"enabled": True, "events": [{"event": {"event": "team_key"}, "id": "5-0"}], "next_cursor": "5-0"}
+
+    def handler(request):
+        assert request.method == "GET" and request.url.path == "/v1/team/audit"
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        assert dict(request.url.params) == {
+            "from": "0", "to": "100.5", "event_type": "team_key", "actor": "Ada & Bob",
+            "project": "a/b", "run_id": "run/id", "cursor": "9-0", "limit": "200",
+        }
+        return httpx.Response(200, json=page)
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        assert client.audit(from_time=0, to=100.5, event_type="team_key", actor="Ada & Bob",
+                            project="a/b", run_id="run/id", cursor="9-0", limit=200) == page
+
+
+@pytest.mark.parametrize("ok", [True, False, None])
+def test_audit_verification_preserves_breaks_boundaries_and_disabled_state(monkeypatch, ok):
+    position = {"chain_id": "chain", "sequence": 3, "reason": "record_hash_mismatch"}
+    verification = {
+        "enabled": ok is not None, "ok": ok, "checked": 0 if ok is None else 2,
+        "first_break": position if ok is False else None,
+        "boundaries": [{**position, "reason": "time_range"}], "message": "off" if ok is None else None,
+    }
+
+    def handler(request):
+        assert request.url.path == "/v1/team/audit/verify"
+        assert dict(request.url.params) == {"from": "0", "to": "100"}
+        return httpx.Response(200, json=verification)
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client:
+        assert client.verify_audit(from_time=0, to=100) == verification
+
+
+@pytest.mark.parametrize("end", [None, 0, 100.5])
+def test_audit_export_follows_cursors_with_fixed_filters_and_upper_bound(monkeypatch, end):
+    monkeypatch.setattr(agentworkflows.time, "time", lambda: 200.5)
+    calls = []
+    events = [{"event": "team_key", "name": "Grüße\nCI"}, {"event": "team_key", "name": "older"}]
+
+    def handler(request):
+        calls.append(request)
+        assert dict(request.url.params) == {
+            "from": "0", "to": str(200.5 if end is None else end), "actor": "Ada & Bob",
+            "event_type": "team_key", "project": "demo", "run_id": "run", "limit": "1",
+            "cursor": "9-0" if len(calls) == 1 else "5-0",
+        }
+        return httpx.Response(200, json={"enabled": True, "events": [{"event": events[len(calls) - 1]}],
+                                        "next_cursor": "5-0" if len(calls) == 1 else None})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client:
+        lines = list(client.export_audit(
+            from_time=0, actor="Ada & Bob", event_type="team_key", project="demo", run_id="run", cursor="9-0",
+            limit=1, **({"to": end} if end is not None else {}),
+        ))
+    assert len(calls) == 2
+    assert [json.loads(line) for line in lines] == events
+    assert all(line.endswith("\n") and len(line.splitlines()) == 1 for line in lines)
+
+
+def test_audit_omits_unspecified_filters_and_exports_empty_view(monkeypatch):
+    paths = []
+
+    def handler(request):
+        paths.append(request.url.raw_path.decode())
+        return httpx.Response(200, json={"enabled": True, "events": [], "next_cursor": None})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client:
+        client.audit()
+        client.verify_audit()
+        assert list(client.export_audit(to=0)) == []
+    assert paths == ["/v1/team/audit", "/v1/team/audit/verify", "/v1/team/audit?to=0"]
+
+
+def test_audit_export_rejects_disabled_view(monkeypatch):
+    _mock_transport(monkeypatch, lambda _: httpx.Response(200, json={"enabled": False, "message": "Enable Redis."}))
+    with GatewayClient("http://gateway.test") as client, pytest.raises(RuntimeError, match="Enable Redis"):
+        list(client.export_audit())
+
+
+def test_audit_export_propagates_later_page_failure(monkeypatch):
+    def handler(request):
+        if "cursor" in request.url.params:
+            return httpx.Response(503, json={"detail": {"reason": "audit_view_unavailable"}})
+        return httpx.Response(200, json={"enabled": True, "events": [{"event": {"event": "team_key"}}],
+                                        "next_cursor": "5-0"})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", max_retries=0) as client:
+        lines = client.export_audit()
+        assert json.loads(next(lines)) == {"event": "team_key"}
+        with pytest.raises(GatewayError) as error:
+            next(lines)
+    assert error.value.reason == "audit_view_unavailable"

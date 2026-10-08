@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add typed managed-key, revision-checked settings and audit methods to the Python
+  and TypeScript SDKs. Add `settings show|set|reset` and `audit list|verify|export`
+  to the Python CLI, including filtered cursor paging, JSON Lines export and
+  actionable settings conflicts and validation errors; preserve the keys commands.
 - Add Redis-backed team settings with YAML defaults, revision-checked admin APIs,
   field resets and chained change receipts. Apply monthly team/project budgets,
   workflow limits and approval rules, provider allowances and existing model alias

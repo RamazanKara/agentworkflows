@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './errors';
 import { requestJson } from './http';
-import type { StartedRun, WorkflowRun } from './types';
+import type {
+  AuditFilters, AuditPage, AuditRange, AuditVerification, CreatedKey, KeyList, KeyOptions, KeyUpdate,
+  ManagedKey, StartedRun, TeamSettings, TeamSettingValue, WorkflowRun,
+} from './types';
 
 export interface ClientOptions {
   apiKey?: string;
@@ -14,10 +17,12 @@ export interface ClientOptions {
 export class GatewayClient {
   constructor(readonly baseUrl: string, private readonly options: ClientOptions = {}) {}
 
-  private async request<T>(method: string, path: string, body?: unknown, retry = method === 'GET'): Promise<T> {
+  private async request<T>(
+    method: string, path: string, body?: unknown, retry = method === 'GET', headers: Record<string, string> = {},
+  ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       try {
-        return await requestJson<T>(this.baseUrl, this.options.apiKey, method, path, body, {},
+        return await requestJson<T>(this.baseUrl, this.options.apiKey, method, path, body, headers,
           AbortSignal.timeout(this.options.timeoutMs ?? 120_000));
       } catch (error) {
         const transient = error instanceof GatewayTransportError ||
@@ -30,6 +35,77 @@ export class GatewayClient {
         if (attempt >= (this.options.maxRetries ?? 2)) throw error;
         await setTimeout(Math.max(250 * 2 ** attempt, (delay ?? 0) * 1000));
       }
+    }
+  }
+
+  /** List managed keys, including revoked and expired keys (admin only). */
+  listKeys(): Promise<KeyList> {
+    return this.request('GET', '/v1/team/keys');
+  }
+
+  /** Issue a key whose plaintext is returned only here; role defaults to viewer. Expiry is ISO-8601 with a timezone. */
+  createKey(name: string, options: KeyOptions = {}): Promise<CreatedKey> {
+    return this.request('POST', '/v1/team/keys', { name, ...options });
+  }
+
+  /** Change supplied fields only; null clears project or expires_at (admin only). */
+  updateKey(keyId: string, changes: KeyUpdate): Promise<ManagedKey> {
+    return this.request('PATCH', `/v1/team/keys/${encodeURIComponent(keyId)}`, changes);
+  }
+
+  /** Revoke a key immediately; the current key cannot revoke itself. */
+  revokeKey(keyId: string): Promise<ManagedKey> {
+    return this.request('DELETE', `/v1/team/keys/${encodeURIComponent(keyId)}`, undefined, false);
+  }
+
+  /** Read effective values, policy defaults and the current revision (unrestricted admin only). */
+  teamSettings(): Promise<TeamSettings> {
+    return this.request('GET', '/v1/team/settings');
+  }
+
+  /** Atomically override fields with If-Match; stale revisions raise 409 and invalid fields raise 422. */
+  updateTeamSettings(fields: Record<string, TeamSettingValue>, options: { revision: number | string }): Promise<TeamSettings> {
+    return this.request('PATCH', '/v1/team/settings', { fields }, false, { 'If-Match': String(options.revision) });
+  }
+
+  /** Reset a field to policy using a revision or quoted ETag; stale revisions raise 409. */
+  resetTeamSetting(field: string, options: { revision: number | string }): Promise<TeamSettings> {
+    return this.request('DELETE', `/v1/team/settings/${encodeURIComponent(field)}`, undefined, false,
+      { 'If-Match': String(options.revision) });
+  }
+
+  /** Read one newest-first audit page; times are inclusive Unix seconds and limit defaults to 50 (maximum 200). */
+  audit(options: AuditFilters = {}): Promise<AuditPage> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries({
+      from: options.from, to: options.to, event_type: options.eventType, actor: options.actor,
+      project: options.project, run_id: options.runId, cursor: options.cursor, limit: options.limit,
+    })) {
+      if (value !== undefined) query.set(key, String(value));
+    }
+    return this.request('GET', `/v1/team/audit${query.size ? `?${query}` : ''}`);
+  }
+
+  /** Verify every retained event in the time range, regardless of other filters; ok is null when disabled. */
+  verifyAudit(options: AuditRange = {}): Promise<AuditVerification> {
+    const query = new URLSearchParams();
+    if (options.from !== undefined) query.set('from', String(options.from));
+    if (options.to !== undefined) query.set('to', String(options.to));
+    return this.request('GET', `/v1/team/audit/verify${query.size ? `?${query}` : ''}`);
+  }
+
+  /** Yield original events as newline-terminated JSON, following cursors with a fixed to (default: now).
+   * Disabled views throw Error; read failures propagate, possibly after yielding partial output.
+   * Retention still applies. The export is not a complete process log for the operator verifier.
+   */
+  async *exportAudit(options: AuditFilters = {}): AsyncGenerator<string> {
+    const filters = { ...options, to: options.to ?? Date.now() / 1000 };
+    for (;;) {
+      const page = await this.audit(filters);
+      if (!page.enabled) throw new Error(page.message || 'Audit view is off.');
+      for (const entry of page.events) yield JSON.stringify(entry.event) + '\n';
+      if (page.next_cursor === null) return;
+      filters.cursor = page.next_cursor;
     }
   }
 

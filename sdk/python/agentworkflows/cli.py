@@ -6,14 +6,16 @@ import argparse
 import json
 import os
 import sys
+from contextlib import nullcontext
 from pathlib import Path
-from urllib.parse import quote
+from typing import Any
 from uuid import UUID, uuid4
 
 import httpx
 
 from agentworkflows import GatewayClient, GatewayError, __version__
 from agentworkflows.scaffold import TEMPLATES, init_project
+from agentworkflows.types import TeamSettingValue
 
 
 def workflow_input(value: str) -> object:
@@ -28,6 +30,16 @@ def workflow_input(value: str) -> object:
         raise argparse.ArgumentTypeError(
             'Input must be valid JSON. Use --input @input.json or --input \'{"topic":"Evaluate agents"}\'.'
         ) from None
+
+
+def settings_fields(value: str) -> dict[str, TeamSettingValue]:
+    try:
+        parsed = workflow_input(value)
+    except argparse.ArgumentTypeError as exc:
+        raise argparse.ArgumentTypeError(str(exc).replace("--input", "--fields")) from None
+    if not isinstance(parsed, dict) or not parsed:
+        raise argparse.ArgumentTypeError("--fields must be a non-empty JSON object mapping setting names to values.")
+    return parsed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -63,6 +75,29 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--role", choices=("admin", "builder", "approver", "viewer"))
             sub.add_argument("--project", help="Project binding; use an empty string to clear it.")
             sub.add_argument("--expires-at", help="ISO-8601 expiry with timezone; use an empty string to clear it.")
+    settings = commands.add_parser("settings", help="Inspect or change team settings (unrestricted admin only).")
+    setting_operations = settings.add_subparsers(dest="operation", required=True)
+    setting_operations.add_parser("show", help="Show effective values, policy defaults and the current revision.")
+    for operation in ("set", "reset"):
+        sub = setting_operations.add_parser(operation, help=f"{operation.title()} settings at a reviewed revision.")
+        sub.add_argument("--revision", required=True, type=int, help="Revision from 'agentworkflows settings show'.")
+        if operation == "set":
+            sub.add_argument("--fields", required=True, type=settings_fields, help="Field/value JSON object or @file.")
+        else:
+            sub.add_argument("field", help="Field name from settings show to reset to its policy default.")
+    audit = commands.add_parser("audit", help="Read, verify or export retained team receipts (admin only).")
+    audit_operations = audit.add_subparsers(dest="operation", required=True)
+    for operation in ("list", "verify", "export"):
+        sub = audit_operations.add_parser(operation, help=f"{operation.title()} the team's retained audit events.")
+        sub.add_argument("--from", dest="from_time", type=float, help="Inclusive Unix timestamp in seconds.")
+        sub.add_argument("--to", type=float, help="Inclusive Unix timestamp in seconds.")
+        if operation != "verify":
+            for field in ("event-type", "actor", "project", "run-id"):
+                sub.add_argument(f"--{field}", help="Exact-match filter.")
+            sub.add_argument("--cursor", help="next_cursor from an earlier page; read older events.")
+            sub.add_argument("--limit", type=int, default=50, help="Events per page (1-200; default: 50).")
+        if operation == "export":
+            sub.add_argument("--output", default="-", help="JSON Lines file; '-' or omitted writes to stdout.")
     triggers = commands.add_parser("triggers", help="Inspect, pause or resume configured workflow triggers.")
     trigger_operations = triggers.add_subparsers(dest="operation", required=True)
     trigger_operations.add_parser("list", help="Show schedules (UTC), webhook endpoints and pause state.")
@@ -133,20 +168,53 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == "team":
                 print(json.dumps(gateway.team(), indent=2))
             elif args.command == "keys":
-                path = "/v1/team/keys"
-                if args.operation in {"update", "revoke"}:
-                    path += "/" + quote(args.key_id, safe="")
-                method = {"list": "GET", "create": "POST", "update": "PATCH", "revoke": "DELETE"}[args.operation]
-                body = {
+                body: dict[str, Any] = {
                     field: (getattr(args, field) or None)
                     for field in ("name", "role", "project", "expires_at")
                     if getattr(args, field, None) is not None
                 }
-                response = gateway._request(
-                    method, path, creates_state=args.operation == "create",
-                    **({"json": body} if args.operation in {"create", "update"} else {}),
-                )
-                print(json.dumps(response.json(), indent=2))
+                if args.operation == "list":
+                    key_result: object = gateway.list_keys()
+                elif args.operation == "create":
+                    key_result = gateway.create_key(**body)
+                elif args.operation == "update":
+                    key_result = gateway.update_key(args.key_id, **body)
+                else:
+                    key_result = gateway.revoke_key(args.key_id)
+                print(json.dumps(key_result, indent=2))
+            elif args.command == "settings":
+                if args.operation == "show":
+                    settings_result = gateway.team_settings()
+                elif args.operation == "set":
+                    settings_result = gateway.update_team_settings(args.fields, revision=args.revision)
+                else:
+                    settings_result = gateway.reset_team_setting(args.field, revision=args.revision)
+                print(json.dumps(settings_result, indent=2))
+            elif args.command == "audit":
+                filters: dict[str, Any] = {
+                    field: getattr(args, field)
+                    for field in ("from_time", "to", "event_type", "actor", "project", "run_id", "cursor", "limit")
+                    if getattr(args, field, None) is not None
+                }
+                if args.operation == "list":
+                    print(json.dumps(gateway.audit(**filters), indent=2))
+                elif args.operation == "verify":
+                    verification = gateway.verify_audit(**filters)
+                    print(json.dumps(verification, indent=2))
+                    if verification["ok"] is not True:
+                        print(verification.get("message") or "Audit verification failed; inspect first_break.",
+                              file=sys.stderr)
+                        return 1
+                else:
+                    try:
+                        with (
+                            nullcontext(sys.stdout) if args.output == "-"
+                            else Path(args.output).open("w", encoding="utf-8", newline="\n")
+                        ) as output:
+                            output.writelines(gateway.export_audit(**filters))
+                    except (OSError, RuntimeError) as exc:
+                        print(f"agentworkflows: audit export failed: {exc}", file=sys.stderr)
+                        return 1
             elif args.command == "triggers":
                 result = (
                     gateway.triggers()
@@ -188,6 +256,12 @@ def main(argv: list[str] | None = None) -> int:
             hint = "Choose an approved model from 'agentworkflows models'."
         elif exc.reason == "workflow_run_missing":
             hint = "Use 'agentworkflows runs list' with the correct team's gateway key and project."
+        elif exc.reason == "team_settings_conflict":
+            hint = "Run 'agentworkflows settings show', review the changes, then retry with its --revision."
+        elif args.command == "settings" and exc.status_code == 422:
+            hint = "Correct the named fields using 'agentworkflows settings show' and 'settings set --help'."
+        elif args.command == "audit" and exc.status_code == 422:
+            hint = "Check the time range, cursor and filters using 'agentworkflows audit --help'."
         print(
             f"agentworkflows: {exc}. {hint} Request ID: {exc.request_id or 'unavailable'}.{start_hint}", file=sys.stderr
         )

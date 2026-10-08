@@ -1,4 +1,8 @@
 export { GatewayClient } from './client';
 export type { ClientOptions } from './client';
 export { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './errors';
-export type { ChatCompletion, Receipt, RunBudget, StartedRun, WorkflowRun } from './types';
+export type {
+  AuditEntry, AuditFilters, AuditPage, AuditPosition, AuditRange, AuditVerification, ChatCompletion,
+  CreatedKey, KeyList, KeyOptions, KeyUpdate, ManagedKey, Receipt, Role, RunBudget, StartedRun,
+  TeamSetting, TeamSettings, TeamSettingValue, WorkflowRun,
+} from './types';

@@ -4,6 +4,104 @@ export interface ChatCompletion {
   [key: string]: unknown;
 }
 
+export type Role = 'admin' | 'builder' | 'approver' | 'viewer';
+
+export interface KeyOptions {
+  role?: Role;
+  project?: string | null;
+  expires_at?: string | null;
+}
+
+export interface KeyUpdate extends KeyOptions {
+  name?: string;
+}
+
+export interface ManagedKey {
+  key_id: string;
+  team: string;
+  name: string;
+  role: Role;
+  project: string | null;
+  created_by: string;
+  created_at: number;
+  expires_at: number | null;
+  last_used_at: number | null;
+  revoked_at: number | null;
+}
+
+export interface CreatedKey extends ManagedKey {
+  key: string;
+}
+
+export interface KeyList {
+  keys: ManagedKey[];
+}
+
+export type TeamSettingValue = string | number | boolean | string[] | null;
+
+export interface TeamSetting {
+  value: TeamSettingValue;
+  source: 'policy' | 'override';
+  policy_default: TeamSettingValue;
+}
+
+export interface TeamSettings {
+  revision: number;
+  updated_by: string | null;
+  updated_at: number | null;
+  fields: Record<string, TeamSetting>;
+  routes: string[];
+  providers: string[];
+  approver_roles: ('admin' | 'approver')[];
+}
+
+export interface AuditRange {
+  from?: number;
+  to?: number;
+}
+
+export interface AuditFilters extends AuditRange {
+  eventType?: string;
+  actor?: string;
+  project?: string;
+  runId?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface AuditEntry {
+  id: string;
+  chain_id: string;
+  sequence: number;
+  team_sequence: number;
+  record_hash: string;
+  view_prev_hash: string;
+  view_hash: string;
+  event: Record<string, unknown>;
+}
+
+export interface AuditPage {
+  enabled: boolean;
+  message?: string | null;
+  events: AuditEntry[];
+  next_cursor: string | null;
+}
+
+export interface AuditPosition {
+  chain_id: string;
+  sequence: number;
+  reason: string;
+}
+
+export interface AuditVerification {
+  enabled: boolean;
+  message?: string | null;
+  ok: boolean | null;
+  checked: number;
+  first_break: AuditPosition | null;
+  boundaries: AuditPosition[];
+}
+
 export interface RunBudget {
   token_limit: number;
   cost_limit_usd: number;

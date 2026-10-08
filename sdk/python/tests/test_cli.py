@@ -273,3 +273,203 @@ def test_scaffold_pins_the_packaged_sdk_version() -> None:
 
     pyproject = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
     assert pyproject["project"]["version"] == scaffold.SDK_VERSION
+
+
+@pytest.mark.parametrize(
+    "args,method,path,body,revision",
+    [
+        (["settings", "show"], "GET", "/v1/team/settings", None, None),
+        (["settings", "set", "--fields", '{"cost_limit_usd":0}', "--revision", "0"],
+         "PATCH", "/v1/team/settings", {"fields": {"cost_limit_usd": 0}}, "0"),
+        (["settings", "reset", "model_routes.team/a & b", "--revision", "4"],
+         "DELETE", "/v1/team/settings/model_routes.team%2Fa%20%26%20b", None, "4"),
+    ],
+)
+def test_settings_commands(monkeypatch, capsys, args, method, path, body, revision):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        assert request.method == method and request.url.raw_path.decode() == path
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        assert request.headers.get("If-Match") == revision
+        assert (json.loads(request.content) if request.content else None) == body
+        return httpx.Response(200, json={"revision": 5, "fields": {}})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(args) == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == {"revision": 5, "fields": {}} and not captured.err
+    assert len(calls) == 1
+
+
+def test_settings_set_reads_json_file(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    path = tmp_path / "settings with spaces.json"
+    fields = {"cost_limit_usd": 0, "workflows.Report.approval_required": False,
+              "workflows.Report.allowed_providers": ["openai"]}
+    path.write_text(json.dumps(fields), encoding="utf-8-sig")
+
+    def respond(request):
+        assert json.loads(request.content) == {"fields": fields}
+        assert request.headers["If-Match"] == "0"
+        return httpx.Response(200, json={"revision": 1})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(["settings", "set", "--fields", f"@{path}", "--revision", "0"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"revision": 1}
+
+
+@pytest.mark.parametrize("fields", ["{}", "[]", "null", "broken", '{"cost_limit_usd": NaN}'])
+def test_settings_set_rejects_invalid_input(fields, capsys):
+    with pytest.raises(SystemExit) as error:
+        main(["settings", "set", "--fields", fields, "--revision", "0"])
+    assert error.value.code == 2
+    assert "--fields" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("args", [["settings", "set", "--fields", '{"cost_limit_usd":5}'],
+                                 ["settings", "reset", "cost_limit_usd"]])
+def test_settings_writes_require_a_reviewed_revision(args, capsys):
+    with pytest.raises(SystemExit) as error:
+        main(args)
+    assert error.value.code == 2 and "--revision" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("operation", ["set", "reset"])
+@pytest.mark.parametrize("status,reason,message", [
+    (409, "team_settings_conflict", "Settings changed. Reload and review them before saving again."),
+    (422, "team_settings_invalid", "cost_limit_usd: Use a finite USD amount between 0 and 1000000."),
+])
+def test_settings_errors_are_actionable(monkeypatch, capsys, operation, status, reason, message):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "private-admin-key")
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(status, headers={"X-Request-ID": "settings-request"},
+                              json={"detail": {"reason": reason, "message": message}})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    args = ["settings", operation, "--revision", "0"]
+    args += ["--fields", '{"cost_limit_usd":-1}'] if operation == "set" else ["cost_limit_usd"]
+    assert main(args) == 1
+    captured = capsys.readouterr()
+    assert not captured.out and len(calls) == 1
+    assert message in captured.err and "settings show" in captured.err
+    assert "settings-request" in captured.err and "private-admin-key" not in captured.err
+    assert "--revision" in captured.err if status == 409 else "named fields" in captured.err
+
+
+@pytest.mark.parametrize("operation", ["list", "verify"])
+def test_audit_commands_send_filters(monkeypatch, capsys, operation):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    args = ["audit", operation, "--from", "0", "--to", "100.5"]
+    expected = {"from": "0.0", "to": "100.5"}
+    result = {"enabled": True, "ok": True, "checked": 0, "first_break": None, "boundaries": []}
+    if operation == "list":
+        args += ["--event-type", "team_key", "--actor", "Ada & Bob", "--project", "a/b", "--run-id", "run",
+                 "--cursor", "9-0", "--limit", "200"]
+        expected.update(
+            event_type="team_key", actor="Ada & Bob", project="a/b", run_id="run", cursor="9-0", limit="200"
+        )
+        result = {"enabled": True, "events": [], "next_cursor": "5-0"}
+
+    def respond(request):
+        assert request.method == "GET" and request.url.path == "/v1/team/audit" + (
+            "/verify" if operation == "verify" else "")
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        assert dict(request.url.params) == expected
+        return httpx.Response(200, json=result)
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(args) == 0
+    assert json.loads(capsys.readouterr().out) == result
+
+
+@pytest.mark.parametrize("ok", [False, None])
+def test_audit_verify_fails_for_broken_or_disabled_views(monkeypatch, capsys, ok):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    verification = {
+        "enabled": ok is not None, "ok": ok, "checked": 0, "boundaries": [],
+        "first_break": {"chain_id": "c", "sequence": 2, "reason": "broken_view_link"} if ok is False else None,
+        "message": "Enable Redis." if ok is None else None,
+    }
+    original = httpx.Client
+    monkeypatch.setattr(agentworkflows.httpx, "Client", lambda **kwargs: original(
+        **kwargs, transport=httpx.MockTransport(lambda _: httpx.Response(200, json=verification))))
+    assert main(["audit", "verify"]) == 1
+    captured = capsys.readouterr()
+    assert json.loads(captured.out) == verification
+    assert ("first_break" if ok is False else "Enable Redis") in captured.err
+
+
+@pytest.mark.parametrize("destination", ["default", "stdout", "file"])
+def test_audit_export_writes_original_json_lines_and_pages(monkeypatch, tmp_path, capsys, destination):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    output = tmp_path / "audit log.jsonl"
+    events = [{"event": "team_key", "name": "Grüße\nCI"}, {"event": "team_key", "name": "older"}]
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        assert dict(request.url.params) == {"from": "0.0", "to": "100.0", "actor": "Ada & Bob", "limit": "1",
+                                            "cursor": "9-0" if len(calls) == 1 else "5-0"}
+        return httpx.Response(200, json={"enabled": True, "events": [{"event": events[len(calls) - 1]}],
+                                        "next_cursor": "5-0" if len(calls) == 1 else None})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    args = ["audit", "export", "--from", "0", "--to", "100", "--actor", "Ada & Bob", "--limit", "1", "--cursor", "9-0"]
+    if destination != "default":
+        args += ["--output", str(output) if destination == "file" else "-"]
+    assert main(args) == 0
+    captured = capsys.readouterr()
+    lines = output.read_text(encoding="utf-8") if destination == "file" else captured.out
+    assert [json.loads(line) for line in lines.splitlines()] == events
+    assert lines.endswith("\n") and len(calls) == 2 and not captured.err
+    if destination == "file":
+        assert not captured.out
+        assert b"\r\n" not in output.read_bytes()
+
+
+def test_audit_export_reports_disabled_view(monkeypatch, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    original = httpx.Client
+    monkeypatch.setattr(agentworkflows.httpx, "Client", lambda **kwargs: original(
+        **kwargs, transport=httpx.MockTransport(lambda _: httpx.Response(
+            200, json={"enabled": False, "message": "Enable Redis."}))))
+    assert main(["audit", "export"]) == 1
+    captured = capsys.readouterr()
+    assert not captured.out and "Enable Redis" in captured.err
+
+
+def test_audit_export_reports_unwritable_file(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    assert main(["audit", "export", "--output", str(tmp_path)]) == 1
+    captured = capsys.readouterr()
+    assert not captured.out and "audit export failed" in captured.err
+
+
+@pytest.mark.parametrize("command", [["settings"], ["settings", "set"], ["settings", "reset"],
+                                     ["audit"], ["audit", "list"], ["audit", "verify"], ["audit", "export"]])
+def test_admin_command_help_needs_no_credentials(monkeypatch, capsys, command):
+    monkeypatch.delenv("AGENTWORKFLOWS_API_KEY", raising=False)
+    with pytest.raises(SystemExit) as error:
+        main([*command, "--help"])
+    assert error.value.code == 0 and capsys.readouterr().out
