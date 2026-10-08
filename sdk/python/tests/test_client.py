@@ -621,3 +621,56 @@ def test_audit_export_propagates_later_page_failure(monkeypatch):
         with pytest.raises(GatewayError) as error:
             next(lines)
     assert error.value.reason == "audit_view_unavailable"
+
+
+def test_run_export_follows_empty_cursor_pages_and_includes_details(monkeypatch):
+    run_id = "aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"
+    detail = {"run_id": run_id, "result": "Grüße\nteam", "timeline": [{"content": {"output": "answer"}}]}
+    pages = []
+
+    def handler(request):
+        if request.url.path.endswith(run_id):
+            return httpx.Response(200, json=detail)
+        pages.append(dict(request.url.params))
+        return httpx.Response(200, json={
+            "runs": [] if len(pages) == 1 else [{"run_id": run_id}], "next_offset": None,
+            "next_cursor": "older" if len(pages) == 1 else None,
+        })
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client:
+        lines = list(client.export_runs(
+            project="A & B", workflow="ResearchWorkflow", status="completed", limit=1, offset=2,
+        ))
+    assert [json.loads(line) for line in lines] == [detail]
+    assert lines[0].endswith("\n") and len(lines[0].splitlines()) == 1
+    assert pages == [
+        {"project": "A & B", "workflow": "ResearchWorkflow", "status": "completed", "limit": "1", "offset": "2"},
+        {"project": "A & B", "workflow": "ResearchWorkflow", "status": "completed", "limit": "1", "offset": "0",
+         "cursor": "older"},
+    ]
+
+
+@pytest.mark.parametrize("failure", ["page", "detail"])
+def test_run_export_propagates_read_failure(monkeypatch, failure):
+    run_id = "aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"
+
+    def handler(request):
+        if "cursor" in request.url.params or (failure == "detail" and request.url.path.endswith(run_id)):
+            return httpx.Response(503, json={"detail": {"reason": "workflow_store_unavailable"}})
+        return httpx.Response(200, json={"runs": [{"run_id": run_id}], "next_cursor": "older"})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", max_retries=0) as client:
+        lines = client.export_runs()
+        if failure == "page":
+            next(lines)
+        with pytest.raises(GatewayError) as error:
+            next(lines)
+    assert error.value.reason == "workflow_store_unavailable"
+
+
+def test_run_export_rejects_a_gateway_without_cursor_support(monkeypatch):
+    _mock_transport(monkeypatch, lambda _: httpx.Response(200, json={"runs": [], "next_offset": 20}))
+    with GatewayClient("http://gateway.test") as client, pytest.raises(RuntimeError, match="upgrade the gateway"):
+        list(client.export_runs())

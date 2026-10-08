@@ -237,6 +237,41 @@ partial output. Retention continues during paging; these team exports are not
 complete process logs for the operator verifier. See [audit log](audit-log.md)
 for range boundaries and what verification proves.
 
+## Run history and export (v0.6.0 checkout)
+
+Use the source-built gateway from the [Python quickstart](quickstart.md#1-install-and-start)
+and install/build `sdk/typescript` from this checkout; the v0.5.1 release tarball
+does not include these methods. `runs({ project, workflow, status, cursor, limit })`
+returns a typed `RunPage`. All filters are optional. Pass `next_cursor` with the
+same project and filters until it is null, including on empty pages. `limit`
+bounds scanned records before filtering (1–100, default 20). Cursors remain stable
+when newer runs arrive or records expire; legacy `offset` remains supported.
+
+`exportRuns(filters)` yields newline-terminated JSON strings containing each
+retained run's full details, results and timeline, including captured content
+still retained by policy. It follows every cursor page. The package exports
+`RunFilters` and `RunPage`.
+
+```typescript
+const gateway = new GatewayClient('http://127.0.0.1:8080', {
+  apiKey: process.env.AGENTWORKFLOWS_API_KEY,
+});
+const output = await open('runs.jsonl', 'w');
+try {
+  for await (const line of gateway.exportRuns({ status: 'completed' })) {
+    await output.write(line, undefined, 'utf8');
+  }
+} finally {
+  await output.close();
+}
+```
+
+As in the audit example, import `GatewayClient` and `open` above. Gateway and
+transport errors propagate and can leave partial output. Retention and status
+changes continue during export; this is not a transactional snapshot or backup.
+Expired runs/content are not recovered, and the stored start input is omitted.
+Downloaded files need their own retention policy. See [CLI and SDK paging](sdk-reference.md#cli).
+
 ## Verify and stop
 
 From `sdk/typescript`, run `npm run build`, `npm run lint`, and `npm test`. Vitest

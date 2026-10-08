@@ -1220,6 +1220,49 @@
         "title": "RunBudget",
         "type": "object"
       },
+      "RunPage": {
+        "properties": {
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque continuation, including for empty filtered pages.",
+            "title": "Next Cursor"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Legacy offset; use next_cursor for stable paging.",
+            "title": "Next Offset"
+          },
+          "runs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "runs",
+          "next_offset",
+          "next_cursor"
+        ],
+        "title": "RunPage",
+        "type": "object"
+      },
       "ScheduleFiring": {
         "additionalProperties": false,
         "properties": {
@@ -1413,7 +1456,7 @@
   "info": {
     "description": "OpenAI-compatible private inference gateway with sandbox traceability, admission controls, budget enforcement, redacted audit events, and runtime routing to Ollama or vLLM.",
     "title": "AgentWorkflows Inference Gateway",
-    "version": "0.5.1"
+    "version": "0.6.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -3902,6 +3945,26 @@
             }
           },
           {
+            "description": "next_cursor from the previous page, with unchanged filters",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor from the previous page, with unchanged filters",
+              "title": "Cursor"
+            }
+          },
+          {
             "in": "query",
             "name": "workflow",
             "required": false,
@@ -3932,7 +3995,8 @@
                     "failed",
                     "canceled",
                     "terminated",
-                    "timed_out"
+                    "timed_out",
+                    "continued_as_new"
                   ],
                   "type": "string"
                 },
@@ -3949,9 +4013,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Runs V1 Workflow Runs Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RunPage"
                 }
               }
             },

@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## v0.6.0 - Unreleased
+
+- Add stable cursor paging for run history and approvals, including equal timestamps,
+  expired records and empty filtered pages. Keep legacy offsets compatible and bind
+  cursors to the authenticated team, project and filters.
+- Add filtered run JSON Lines export with retained results, timelines and step content
+  in the Python CLI and both SDKs. Document retention and partial-export limits;
+  synchronize the OpenAPI response and SDK paging types.
+- Console: balance the Providers Helm comment, scroll step JSON sideways on phones
+  with a right-edge fade, keep “Add the key” together, show at least 4 pixels for
+  nonzero spend, and style provider labels consistently in fresh-install model chips.
 
 - Add typed managed-key, revision-checked settings and audit methods to the Python
   and TypeScript SDKs. Add `settings show|set|reset` and `audit list|verify|export`

@@ -15,6 +15,7 @@ from app.policy import ModelRoute, ModelRoutingPolicy, SandboxPolicy, SandboxPol
 from app.runtime_client import RuntimeClient
 from app.team_budget import RESERVE_COST, SETTLE_COST
 from app.team_settings import CHANGE as CHANGE_SETTINGS
+from app.workflow_operations import RUN_PAGE
 from fastapi.testclient import TestClient
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
@@ -46,8 +47,10 @@ class TeamRedis(RunRedis):
     def zrange(self, key, start, end):
         return sorted(self.data.get(key, {}), key=self.data.get(key, {}).get)[start : end + 1]
 
-    def zrevrange(self, key, start, end):
-        return sorted(self.data.get(key, {}), key=self.data.get(key, {}).get, reverse=True)[start : end + 1]
+    def zrevrange(self, key, start, end, withscores=False):
+        values = sorted(self.data.get(key, {}).items(), key=lambda row: (row[1], row[0]), reverse=True)
+        rows = values[start : end + 1]
+        return rows if withscores else [row[0] for row in rows]
 
     def rpush(self, key, value):
         self.data.setdefault(key, []).append(value)
@@ -57,6 +60,10 @@ class TeamRedis(RunRedis):
         return rows[start:] if end == -1 else rows[start : end + 1]
 
     def eval(self, script, numkeys, key, *args):
+        if script == RUN_PAGE:
+            rows = self.zrevrange(key, 0, len(self.data.get(key, {})), withscores=True)
+            older = [row for row in rows if (row[1], row[0]) < (args[0], args[1])]
+            return [value for row in older[:args[2] + 1] for value in row]
         if script == CHANGE_SETTINGS:
             old = json.loads(self.data[key]) if key in self.data else {"revision": 0}
             if old["revision"] != args[0]:
@@ -357,7 +364,7 @@ def test_run_filters_advance_past_empty_pages_and_respect_project(team_gateway):
     second = start(client).json()
     app.state.temporal_client.executions[second["workflow_id"]].stage = "draft"
     page = client.get("/v1/workflow-runs?status=awaiting_approval&limit=1", headers=auth("viewer")).json()
-    assert page == {"runs": [], "next_offset": 1}
+    assert page["runs"] == [] and page["next_offset"] == 1 and page["next_cursor"]
     page = client.get("/v1/workflow-runs?status=awaiting_approval&limit=1&offset=1", headers=auth("viewer")).json()
     assert page["runs"][0]["run_id"] == first["run_id"]
     assert page["next_offset"] is None

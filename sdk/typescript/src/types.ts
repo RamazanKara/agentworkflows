@@ -145,6 +145,21 @@ export interface WorkflowRun {
   timeline?: Receipt[];
 }
 
+export interface RunFilters {
+  project?: string;
+  workflow?: string;
+  status?: WorkflowRun['status'] | 'awaiting_approval';
+  cursor?: string;
+  offset?: number;
+  limit?: number;
+}
+
+export interface RunPage {
+  runs: WorkflowRun[];
+  next_offset: number | null;
+  next_cursor: string | null;
+}
+
 export interface TriggerRequest {
   workflow: string;
   trigger: string;

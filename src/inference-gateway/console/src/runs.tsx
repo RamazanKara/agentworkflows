@@ -11,30 +11,31 @@ export function Runs({ session }: { session: Session }) {
   const [workflow, setWorkflow] = useState('');
   const [revision, setRevision] = useState(0);
   const [rows, setRows] = useState<Run[]>([]);
-  const [offset, setOffset] = useState<number | null>(0);
+  const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const [filters, setFilters] = useState(false);
   const current = useRef<AbortController | null>(null);
   const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
-  async function load(cursor: number, reset = false) {
+  async function load(after: string | null, reset = false) {
     current.current?.abort();
     const controller = new AbortController(); current.current = controller;
     setBusy(true); setError('');
     if (reset) setRows([]);
     try {
-      const query = new URLSearchParams({ project, offset: String(cursor), limit: '20' });
+      const query = new URLSearchParams({ project, limit: '20' });
+      if (after) query.set('cursor', after);
       if (filter) query.set('status', filter);
       if (workflow) query.set('workflow', workflow);
       const result = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
       if (!controller.signal.aborted) {
         setRows(values => [...(reset ? [] : values), ...result.runs].filter((r, i, all) => all.findIndex(v => v.run_id === r.run_id) === i));
-        setOffset(result.next_offset);
+        setCursor(result.next_cursor);
       }
     } catch (error) { if (!controller.signal.aborted) setError((error as Error).message); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   }
-  useEffect(() => { void load(0, true); return () => current.current?.abort(); }, [project, filter, workflow, revision]);
+  useEffect(() => { void load(null, true); return () => current.current?.abort(); }, [project, filter, workflow, revision]);
   return <>
     <PageHeader title="Workflow runs" subtitle="Runs in your projects, newest first."><Refresh onClick={() => setRevision(v => v + 1)}/>{canBuild(session) && <a className="button" href="#new">Run workflow</a>}</PageHeader>
     <Metrics compact items={[
@@ -48,14 +49,14 @@ export function Runs({ session }: { session: Session }) {
       <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label>Workflow<select value={workflow} onChange={e => setWorkflow(e.target.value)}><option value="">All workflows</option>{Object.keys(policies.data?.workflows || {}).map(w => <option key={w} value={w}>{workflowName(w)}</option>)}</select></label>
     </div>
-    <ErrorMessage message={error || policies.error} retry={() => void load(offset ?? 0)}/>
+    <ErrorMessage message={error || policies.error} retry={() => void load(cursor)}/>
     <div className="panel">
       {rows.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow runs table"><table className="stack runs-stack">
         <thead><tr>{['Workflow', 'Run', 'Status', 'Started', 'Tokens', 'Cost'].map(h => <th key={h} className={['Tokens', 'Cost'].includes(h) ? 'num' : undefined}>{h}</th>)}</tr></thead>
         <tbody>{rows.map(run => <tr key={run.run_id}><td><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a><small>{run.project}</small></td><td data-label="Run"><code title={run.run_id}>{shortId(run.run_id)}</code></td><td data-label="Status"><Badge value={status(run)}/></td><td data-label="Started">{date(run.created_at)}</td><td data-label="Tokens">{number(run.budget.tokens)}</td><td data-label="Cost">{money(run.budget.cost_usd)}</td></tr>)}</tbody>
-      </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs' : 'Your first workflow starts here'}><p>{offset !== null ? 'Load more to continue searching older runs.' : filter || workflow ? 'No run in this project matches these filters.' : 'Runs appear here with their status, cost and receipts.'}</p>{canBuild(session) && !filter && !workflow && <a className="tap" href="#new">Run a workflow</a>}</Empty>}
+      </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs' : 'Your first workflow starts here'}><p>{cursor !== null ? 'Load more to continue searching older runs.' : filter || workflow ? 'No run in this project matches these filters.' : 'Runs appear here with their status, cost and receipts.'}</p>{canBuild(session) && !filter && !workflow && <a className="tap" href="#new">Run a workflow</a>}</Empty>}
       {busy && <Loading/>}
-      {offset !== null && !busy && <div className="table-footer"><button className="secondary" onClick={() => void load(offset)}>Load more</button></div>}
+      {cursor !== null && !busy && <div className="table-footer"><button className="secondary" onClick={() => void load(cursor)}>Load more</button></div>}
     </div>
     <p className="muted">Costs are estimates from configured prices. Open a run to see each step and its receipt.</p>
   </>;
@@ -78,7 +79,7 @@ export function StartRun({ session, initial = '' }: { session: Session; initial?
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
     {noProviderKeys(session.team) && <p className="note-warn form-width">No provider key yet, so model calls in this run will fail. <a href="#providers">Add a provider key</a> first.</p>}
-    {keyless.length > 0 && <p className="note-warn form-width">{providerList(keyless)} {keyless.length > 1 ? 'have' : 'has'} no key yet, so this workflow’s calls there fail. <a href="#providers">Add the key</a> first.</p>}
+    {keyless.length > 0 && <p className="note-warn form-width">{providerList(keyless)} {keyless.length > 1 ? 'have' : 'has'} no key yet, so this workflow’s calls there fail. <a className="nowrap" href="#providers">Add the key</a> first.</p>}
     <ErrorMessage message={error || policies.error}/>
     {!policies.data ? <Loading/> : !names.length ? <Empty title="No workflows configured"><p>Ask your team admin to register a workflow and start its worker.</p>{session.team.role === 'admin' && <a href="#providers">Open provider and budget setup</a>}</Empty> :
       <form className="panel form-panel" onSubmit={async event => {
@@ -197,13 +198,14 @@ export function Approvals({ session }: { session: Session }) {
       try {
         // Walk every authorized project and page, including empty filtered pages.
         for (const project of session.team.projects) {
-          let offset: number | null = 0;
+          let cursor: string | null = null;
           do {
-            const query = new URLSearchParams({ project, status: 'awaiting_approval', offset: String(offset), limit: '100' });
+            const query = new URLSearchParams({ project, status: 'awaiting_approval', limit: '100' });
+            if (cursor) query.set('cursor', cursor);
             const page: RunPage = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
             if (controller.signal.aborted) return;
-            setRows(values => [...values, ...page.runs]); offset = page.next_offset;
-          } while (offset !== null);
+            setRows(values => [...values, ...page.runs]); cursor = page.next_cursor;
+          } while (cursor !== null);
         }
       } catch (error) { if (!controller.signal.aborted) setError((error as Error).message); }
       finally { if (!controller.signal.aborted) setBusy(false); }
@@ -355,7 +357,7 @@ function Content({ text, empty }: { text: string | null; empty: string }) {
       <span className={`speaker ${message.role}`}>{label(String(message.role))}</span><pre className="step-content prose">{messageText(message.content)}</pre>
     </li>)}</ol>;
   }
-  return value !== null && typeof value === 'object' ? <pre className="step-content json">{JSON.stringify(value, null, 2)}</pre>
+  return value !== null && typeof value === 'object' ? <div className="code-scroll"><pre className="step-content json">{JSON.stringify(value, null, 2)}</pre></div>
     : <pre className="step-content prose">{typeof value === 'string' ? value : text}</pre>;
 }
 

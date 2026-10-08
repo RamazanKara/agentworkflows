@@ -50,6 +50,38 @@ it('reuses the same request UUID and body after an ambiguous workflow start', as
   expect(setTimeout).toHaveBeenCalledWith(250);
 });
 
+it('exports full run details across empty pages with unchanged filters', async () => {
+  const detail = { run_id: 'run', result: 'Grüße\nteam', timeline: [{ content: { output: 'answer' } }] };
+  fetchMock.mockResolvedValueOnce(ok({ runs: [], next_cursor: 'older', next_offset: null }))
+    .mockResolvedValueOnce(ok({ runs: [{ run_id: 'run' }], next_cursor: null, next_offset: null }))
+    .mockResolvedValueOnce(ok(detail));
+  const options = { project: 'A & B', status: 'completed' as const, workflow: 'ResearchWorkflow', limit: 1, offset: 2 };
+  const lines = [];
+  for await (const line of client.exportRuns(options)) lines.push(line);
+  expect(lines).toEqual([JSON.stringify(detail) + '\n']);
+  expect(options.offset).toBe(2);
+  const queries = fetchMock.mock.calls.slice(0, 2).map(([url]) => Object.fromEntries(new URL(String(url)).searchParams));
+  expect(queries).toEqual([
+    { project: 'A & B', status: 'completed', workflow: 'ResearchWorkflow', limit: '1', offset: '2' },
+    { project: 'A & B', status: 'completed', workflow: 'ResearchWorkflow', limit: '1', offset: '0', cursor: 'older' },
+  ]);
+});
+
+it.each(['page', 'detail'])('propagates run export %s failures', async (failure) => {
+  fetchMock.mockResolvedValueOnce(ok({ runs: [{ run_id: 'run' }], next_cursor: 'older' }));
+  if (failure === 'page') fetchMock.mockResolvedValueOnce(ok({ run_id: 'run' }));
+  fetchMock.mockImplementation(async () => new Response('{}', { status: 503 }));
+  const lines = client.exportRuns();
+  if (failure === 'page') await lines.next();
+  await expect(lines.next()).rejects.toBeInstanceOf(GatewayError);
+});
+
+it('rejects run export against a gateway without cursor support', async () => {
+  fetchMock.mockResolvedValueOnce(ok({ runs: [], next_offset: 20 }));
+  await expect(client.exportRuns().next()).rejects.toThrow('v0.6.0 or newer');
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
 it.each(['approveRun', 'retryRun', 'cancelRun'] as const)('does not automatically repeat %s on an ambiguous error', async (method) => {
   fetchMock.mockResolvedValue(new Response('{}', { status: 502 }));
   await expect(client[method]('run')).rejects.toBeInstanceOf(GatewayError);

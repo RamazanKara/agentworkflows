@@ -30,7 +30,8 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `audit export --output audit-log.jsonl` | Follow all cursor pages and write original events as JSON Lines; omit output or use `-` for stdout |
 | `usage` | Usage, estimated spend, provider and workflow breakdowns |
 | `runs start [WORKFLOW] --input '@input.json'` | Start a workflow (default ResearchWorkflow); input can also be inline JSON |
-| `runs list --project PROJECT --offset OFFSET` | List runs; both options are optional; use returned next_offset for pagination |
+| `runs list --project PROJECT --cursor CURSOR` | One run page; options are optional; pass next_cursor with the same filters for older runs |
+| `runs export --status completed --output runs.jsonl` | Export full retained run details as JSON Lines; status/output are optional |
 | `runs inspect RUN_ID` | Status, draft, completed result, budget, and timeline including opt-in step content |
 | `runs approve RUN_ID` | Approve as your authenticated identity; `--reject` rejects instead |
 | `runs cancel RUN_ID` | Request cancellation; cannot undo already-sent tool actions |
@@ -41,6 +42,31 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 `runs start` also accepts `--project` and `--request-id UUID`. If a start response is lost,
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
+
+Run cursors and export require the v0.6.0 checkout SDK and gateway (unreleased),
+not the v0.5.1 wheel or images. `runs list` and `runs export` accept `--project`,
+`--workflow`, `--status`, `--cursor` and `--limit` (1–100, default 20). Limit bounds
+records scanned before filtering; an empty page can still have `next_cursor`.
+Continue until it is null. Cursors use creation time and run ID, so new runs and
+expired entries do not shift subsequent pages, including tied timestamps. Keep
+project and filters unchanged; otherwise the API returns 422 `run_cursor_invalid`.
+Legacy `--offset`/`next_offset` remain available; don't combine them with cursors.
+
+Exports follow all pages, fetch each run's result, budget and timeline, and include
+step input/output only while retained and allowed by capture policy. They omit the
+stored start input. Files are UTF-8; omit `--output` or use `-` for stdout. A read or
+write failure exits 1 and can leave a partial file. Retention and run status changes
+continue during export: this is not a transactional snapshot or backup, and it does
+not recover expired runs or content. Each call enforces the credential's team and
+project access. Store exports according to your content policy; server expiry does
+not remove downloaded files.
+
+The Python methods are `runs(**filters) -> RunPage` and
+`export_runs(**filters) -> Iterator[str]`, with `RunFilters`, `RunStatus` and
+`RunPage` in `agentworkflows.types`. Each exported string is one full run detail
+object followed by a newline. `GatewayError`/transport errors propagate on failed
+reads, including when a run expires between its listing and detail request. Export
+rejects gateways without cursor support with an upgrade message before writing rows.
 
 Key creation and updates accept `--expires-at` as ISO-8601 with a timezone, for example
 `2027-01-01T00:00:00Z`. On updates, `--expires-at ''` clears expiry and `--project ''`

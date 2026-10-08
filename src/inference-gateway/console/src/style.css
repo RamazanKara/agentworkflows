@@ -342,9 +342,8 @@ table.numeric th:first-child { width: 40%; }
   a.tap, button.link { display: inline-flex; align-items: center; min-height: 44px; }
   .review-meta { column-gap: 14px; }
   .review-meta > * + *::before { content: none; }
-  .step pre.json { white-space: pre-wrap; overflow-wrap: anywhere; }
   .setup pre.json { font-size: 12px; padding: 12px 14px; }
-  /* The two long --set lines scroll sideways; a fade on the right edge says there is more. */
+  /* A fade on the right edge signals that long code lines scroll sideways. */
   .code-scroll { position: relative; margin: 12px 0; }
   .code-scroll pre { margin: 0; }
   .code-scroll::after { content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 22px; border-radius: 0 4px 4px 0; background: linear-gradient(to right, rgb(241 245 242 / 0), #f1f5f2); pointer-events: none; }

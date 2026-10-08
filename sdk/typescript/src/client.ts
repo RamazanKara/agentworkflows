@@ -4,7 +4,7 @@ import { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './e
 import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CreatedKey, KeyList, KeyOptions, KeyUpdate,
-  ManagedKey, StartedRun, TeamSettings, TeamSettingValue, WorkflowRun,
+  ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, WorkflowRun,
 } from './types';
 
 export interface ClientOptions {
@@ -115,10 +115,28 @@ export class GatewayClient {
     }, true);
   }
 
-  runs(options: { project?: string; offset?: number } = {}): Promise<{ runs: WorkflowRun[]; next_offset: number | null }> {
+  /** Limit bounds scanned records (1-100, default 20); empty filtered pages can still have next_cursor. */
+  runs(options: RunFilters = {}): Promise<RunPage> {
     const query = new URLSearchParams({ offset: String(options.offset ?? 0) });
-    if (options.project) query.set('project', options.project);
+    for (const [key, value] of Object.entries(options)) {
+      if (value !== undefined) query.set(key, String(value));
+    }
     return this.request('GET', `/v1/workflow-runs?${query}`);
+  }
+
+  /** Yield full run details and retained step content as JSON Lines, following every cursor page.
+   * Retention and status changes continue during export. Read failures may leave partial output.
+   */
+  async *exportRuns(options: RunFilters = {}): AsyncGenerator<string> {
+    const filters = { ...options };
+    for (;;) {
+      const page = await this.runs(filters);
+      if (page.next_cursor === undefined) throw new Error('Run export requires gateway v0.6.0 or newer; upgrade the gateway and retry.');
+      for (const run of page.runs) yield JSON.stringify(await this.run(run.run_id)) + '\n';
+      if (page.next_cursor === null) return;
+      delete filters.offset;
+      filters.cursor = page.next_cursor;
+    }
   }
 
   run(runId: string): Promise<WorkflowRun> {

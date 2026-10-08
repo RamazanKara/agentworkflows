@@ -2,6 +2,21 @@
 
 Use this checklist before trusting a public release in a customer-owned cluster.
 
+For the unreleased v0.6.0 checkout, run the local gate before tagging:
+
+```bash
+make lint test-gateway test-scripts api-contract config-contract chart-docs
+make test-typescript test-console
+```
+
+Build Helm dependencies, then run `helm lint` and `helm template` for the charts
+being shipped. The console suite captures fixture-based screens at 393 and 1440
+CSS pixels in `.out/console-v0.6.0/`; inspect them yourself after the tests pass.
+To repeat only those captures after a console build, run
+`npm test -- --grep 'release console layouts'` from `src/inference-gateway/console`.
+These cover Get started, provider setup, costs, step JSON, settings and audit;
+the separate Compose smoke test exercises the live gateway.
+
 Set the release and repository once:
 
 ```bash

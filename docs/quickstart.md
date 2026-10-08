@@ -40,6 +40,14 @@ Compose pulls the signed v0.5.1 release images; nothing is built locally. `--wai
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
+**Testing the unreleased v0.6.0 checkout:** use your existing checkout instead of
+cloning v0.5.1, install `./sdk/python`, and replace `--no-build` above with `--build`
+(`docker compose ... up -d --wait --build workflow-worker temporal-ui`). This builds
+the gateway and worker from source; it requires network access for build dependencies.
+The default pull-only path remains v0.5.1 until the new release is published.
+Generated projects pin the SDK's release version; before v0.6.0 is published, install
+the checkout SDK in those projects instead of its generated release-wheel URL.
+
 The default **fake** returns canned text and synthetic prices without contacting a cloud.
 For real generated text, select the [OpenAI option](#use-a-real-openai-key) now, then continue
 with exactly the same workflow steps. Research and publish tools remain local fixtures in
@@ -97,10 +105,17 @@ email fakes. Every entry has a `receipt_id`. The draft call falls back from Open
 of your gateway key. `approve --reject` instead finishes without publishing.
 
 Open <http://127.0.0.1:8080/console/> and sign in with `local-development-only` to see the
-same run, draft, result, timeline, and costs. Expand a step's **Input and output** to see
+same run, draft, result, timeline, and costs. Expand **Prompt and response** on a model
+step or **Arguments and result** on a tool step to see
 what it sent and received, with redaction and truncation notes. The demo captures redacted
 content for seven days; terminal run records expire after 30 days. Receipt hashes contain
 no captured text. Temporal history is at <http://127.0.0.1:8233> and has its own retention.
+
+On the v0.6.0 checkout, save completed runs before their retention deadline with
+`agentworkflows runs export --status completed --output runs.jsonl`. This follows
+cursor pages and includes results, receipts and retained step content. Settings and
+the audit log are available to team admins in the console. Run and audit exports
+are retained views, not backups; see [CLI paging and export](sdk-reference.md#cli).
 
 You can also choose **Run workflow**, select any starter, and fill in its generated form.
 Forms come from the workflow policy's `inputSchema`; workflows without one use a JSON box.

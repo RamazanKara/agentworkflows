@@ -64,6 +64,26 @@ class AuditFilters(TypedDict, total=False):
     limit: int
 
 
+RunStatus = Literal[
+    "running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out", "continued_as_new"
+]
+
+
+class RunFilters(TypedDict, total=False):
+    project: str | None
+    workflow: str | None
+    status: RunStatus | None
+    cursor: str | None
+    offset: int
+    limit: int
+
+
+class RunPage(TypedDict):
+    runs: list[dict[str, Any]]
+    next_offset: int | None
+    next_cursor: str | None
+
+
 class AuditEntry(TypedDict):
     id: str
     chain_id: str

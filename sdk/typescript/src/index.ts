@@ -3,6 +3,6 @@ export type { ClientOptions } from './client';
 export { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './errors';
 export type {
   AuditEntry, AuditFilters, AuditPage, AuditPosition, AuditRange, AuditVerification, ChatCompletion,
-  CreatedKey, KeyList, KeyOptions, KeyUpdate, ManagedKey, Receipt, Role, RunBudget, StartedRun,
+  CreatedKey, KeyList, KeyOptions, KeyUpdate, ManagedKey, Receipt, Role, RunBudget, RunFilters, RunPage, StartedRun,
   TeamSetting, TeamSettings, TeamSettingValue, WorkflowRun,
 } from './types';

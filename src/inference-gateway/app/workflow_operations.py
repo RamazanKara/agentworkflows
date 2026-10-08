@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import json
 import logging
@@ -27,6 +28,37 @@ from app.workflow_content import step_content
 from app.workflow_retention import TERMINAL_STATES, retain_run
 
 RPC_TIMEOUT = timedelta(seconds=10)
+
+# Find the first older (score, UUID) pair atomically, even if the cursor's run expired.
+RUN_PAGE = """
+local low, high = 0, redis.call('ZCARD', KEYS[1])
+local score = tonumber(ARGV[1])
+while low < high do
+    local mid = math.floor((low + high) / 2)
+    local row = redis.call('ZREVRANGE', KEYS[1], mid, mid, 'WITHSCORES')
+    local newer = tonumber(row[2]) > score or (tonumber(row[2]) == score and row[1] >= ARGV[2])
+    if newer then low = mid + 1 else high = mid end
+end
+return redis.call('ZREVRANGE', KEYS[1], low, low + tonumber(ARGV[3]), 'WITHSCORES')
+"""
+
+
+class RunCursor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1] = 1
+    team: str
+    project: str
+    workflow: str | None
+    status: str | None
+    created_at: float = Field(ge=0, allow_inf_nan=False)
+    run_id: UUID
+
+
+class RunPage(BaseModel):
+    runs: list[dict[str, Any]]
+    next_offset: int | None = Field(description="Legacy offset; use next_cursor for stable paging.")
+    next_cursor: str | None = Field(description="Opaque continuation, including for empty filtered pages.")
 
 
 class StartRun(BaseModel):
@@ -277,23 +309,50 @@ def register_operation_routes(app: FastAPI) -> None:
     async def start(request: Request, body: StartRun) -> dict[str, Any]:
         return await start_run(request, body)
 
-    @app.get("/v1/workflow-runs", tags=["workflows"], summary="List your project's runs, newest first")
+    @app.get(
+        "/v1/workflow-runs", tags=["workflows"], summary="List your project's runs, newest first",
+        response_model=RunPage,
+    )
     async def runs(
         request: Request,
         project: str | None = None,
         offset: int = Query(0, ge=0),
         limit: int = Query(20, ge=1, le=100),
+        cursor: str | None = Query(
+            None, min_length=1, max_length=2048,
+            description="next_cursor from the previous page, with unchanged filters",
+        ),
         workflow: str | None = Query(None, max_length=128),
-        status: Literal["running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out"]
+        status: Literal[
+            "running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out",
+            "continued_as_new"
+        ]
         | None = None,
     ) -> dict[str, Any]:
         selected = project_access(request, project)
+        scope = {"team": request.state.sandbox_id, "project": selected, "workflow": workflow, "status": status}
+        key = index_key(request, selected)
         # Page the underlying index before filtering, keeping Temporal fan-out bounded.
-        # next_offset advances even when this page has no matching runs.
-        ids = await redis_call(request, "zrevrange", index_key(request, selected), offset, offset + limit)
+        # Continuations advance even when this page has no matching runs.
+        if cursor:
+            try:
+                position = RunCursor.model_validate_json(base64.b64decode(cursor, altchars=b"-_", validate=True))
+                if offset or any(getattr(position, field) != value for field, value in scope.items()):
+                    raise ValueError("cursor scope changed")
+            except ValueError as exc:
+                raise HTTPException(422, detail={
+                    "reason": "run_cursor_invalid",
+                    "message": "Use next_cursor with the same project and filters, without a nonzero offset.",
+                }) from exc
+            values = await redis_call(
+                request, "eval", RUN_PAGE, 1, key, position.created_at, str(position.run_id), limit,
+            )
+            ids = [(values[i], float(values[i + 1])) for i in range(0, len(values), 2)]
+        else:
+            ids = await redis_call(request, "zrevrange", key, offset, offset + limit, withscores=True)
         rows = []
         removed = 0
-        for run_id in ids[:limit]:
+        for run_id, _ in ids[:limit]:
             try:
                 if workflow and (await run_metadata(request, run_id))["workflow"] != workflow:
                     continue
@@ -315,7 +374,10 @@ def register_operation_routes(app: FastAPI) -> None:
             rows.append(row)
         return {
             "runs": rows,
-            "next_offset": offset + limit - removed if len(ids) > limit else None,
+            "next_offset": offset + limit - removed if len(ids) > limit and cursor is None else None,
+            "next_cursor": base64.urlsafe_b64encode(RunCursor(
+                **scope, created_at=ids[limit - 1][1], run_id=ids[limit - 1][0],
+            ).model_dump_json().encode()).decode() if len(ids) > limit else None,
         }
 
     @app.post(

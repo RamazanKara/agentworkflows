@@ -47,7 +47,7 @@ export type Run = {
   result?: unknown;
   outcome?: string;
 };
-export type RunPage = { runs: Run[]; next_offset: number | null };
+export type RunPage = { runs: Run[]; next_cursor: string | null };
 export type CostRow = { calls?: number; tokens?: number; cost_usd?: number };
 export type Usage = {
   estimated_cost: number;

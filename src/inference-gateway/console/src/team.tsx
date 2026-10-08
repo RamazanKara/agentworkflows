@@ -26,11 +26,11 @@ export function GetStarted({ session }: { session: Session }) {
         {blocked ? <p className="note-warn">No provider key yet. {providerList(missing)} {missing.length > 1 ? 'keys are' : 'key is'} missing, so runs fail until you add {missing.length > 1 ? 'them' : 'it'}.</p>
           : <p>These are the models your team can use. Provider keys stay on your server; nobody sees them here.</p>}
         <ErrorMessage message={models.error}/>
-        {models.data ? models.data.data.length ? <ul className="model-list">{models.data.data.map(model => <li key={model.id}>{model.id.toLowerCase() !== model.owned_by?.toLowerCase() && <code>{model.id}</code>}{model.owned_by && <span className={model.id.toLowerCase() === model.owned_by.toLowerCase() ? undefined : 'muted'}>{providerName(model.owned_by)}</span>}{!model.simulated && keyMissing(model.owned_by) && <span className="badge awaiting_approval">Key missing</span>}</li>)}</ul> : <p>No models yet. Ask your admin to connect a provider and approve a model.</p> : !models.error && <Loading/>}
+        {models.data ? models.data.data.length ? <ul className="model-list">{models.data.data.map(model => <li key={model.id}>{model.id.toLowerCase() !== model.owned_by?.toLowerCase() && <code>{model.id}</code>}{model.owned_by && <span className="muted">{providerName(model.owned_by)}</span>}{!model.simulated && keyMissing(model.owned_by) && <span className="badge awaiting_approval">Key missing</span>}</li>)}</ul> : <p>No models yet. Ask your admin to connect a provider and approve a model.</p> : !models.error && <Loading/>}
         {session.team.role === 'admin' ? blocked ? <a className="button" href="#providers">Connect a provider</a> : <a className="tap" href="#providers">Connect a provider or review budgets</a> : <p className="muted">Your team admin manages providers.</p>}
       </div></li>
       <li><span className="onboarding-number">02</span><div><h2>Run the example workflow</h2><p>Research a topic, draft a briefing, review it, and publish. The example has a budget and a human approval step built in.</p>
-        {exampleMissing.length > 0 && <p className="note-warn">The example uses {providerList(exampleMissing)}, which {exampleMissing.length > 1 ? 'have' : 'has'} no key yet, so its calls there fail. <a href="#providers">Add the key</a> first.</p>}
+        {exampleMissing.length > 0 && <p className="note-warn">The example uses {providerList(exampleMissing)}, which {exampleMissing.length > 1 ? 'have' : 'has'} no key yet, so its calls there fail. <a className="nowrap" href="#providers">Add the key</a> first.</p>}
         {builder ? blocked || exampleMissing.length ? <><a className="button secondary" href={start}>Run workflow</a><p className="muted">{blocked ? 'Runs work once a provider key is added.' : 'You can start it now; steps on a provider without a key fail.'}</p></> : <a className="button" href={start}>Run workflow</a> : <p>Your role can inspect work. Ask a builder to start the example.</p>}
       </div></li>
       <li><span className="onboarding-number">03</span><div><h2>Approve it and check the evidence</h2><p>Approve the draft in Approvals. Then open the run to see each step’s prompt, answer, cost and receipt.</p>
@@ -61,7 +61,7 @@ const scope = (seconds?: number) => seconds === 86400 ? 'today' : seconds === 36
 const tokenWindow = (seconds?: number) => !seconds ? 'this window' : `this ${seconds <= 172800 ? `${Math.round(seconds / 3600)}-hour` : `${Math.round(seconds / 86400)}-day`} window`;
 
 function Usage({ value, limit }: { value: number; limit: number }) {
-  return <span className="usage-bar" role="img" aria-label={`${Math.round(Math.min(value / limit, 1) * 100)}% used`}><span style={{ width: `${Math.min(value / limit, 1) * 100}%` }}/></span>;
+  return <span className="usage-bar" role="img" aria-label={`${Math.round(Math.min(value / limit, 1) * 100)}% used`}><span style={{ width: `${Math.min(value / limit, 1) * 100}%`, minWidth: value > 0 ? 4 : 0 }}/></span>;
 }
 
 // Spend and tokens against their limits, shared by Costs and Providers & budgets.
@@ -128,7 +128,7 @@ function ProviderSettings({ session }: { session: Session }) {
   // A listed model means the gateway already has a route for that provider.
   const routed = Boolean(models.data?.data.some(model => model.owned_by === target));
   // Lines stay near 40 characters so the block reads on a phone. Release and namespace follow the install guide.
-  const helmCommands = ['# Release and namespace "aw" as in the', '# install guide; change both if yours', '# differ.',
+  const helmCommands = ['# Release and namespace are "aw", as in', '# the install guide. Change if needed.',
     ...helm.flatMap(provider => [
       `read -rs -p '${providerName(provider)} key: ' KEY; echo`,
       `printf '%s' "$KEY" | kubectl create \\`, `  secret generic ${provider}-api-key \\`, '  -n aw --from-file=api-key=/dev/stdin',

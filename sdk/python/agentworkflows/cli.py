@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         sub = trigger_operations.add_parser(operation, help=f"{operation.title()} a configured workflow trigger.")
         sub.add_argument("workflow")
         sub.add_argument("name")
-    runs = commands.add_parser("runs", help="Start, list, inspect, cancel, retry, or approve workflow runs.")
+    runs = commands.add_parser("runs", help="Start, list, export, inspect, cancel, retry, or approve workflow runs.")
     operations = runs.add_subparsers(dest="operation", required=True)
     start = operations.add_parser("start", help="Start an approved workflow; defaults to ResearchWorkflow.")
     start.add_argument("workflow", nargs="?", default="ResearchWorkflow")
@@ -116,9 +116,20 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument(
         "--request-id", type=UUID, help="Reuse after an ambiguous start failure to avoid a duplicate run."
     )
-    listing = operations.add_parser("list", help="List the latest runs in your project.")
-    listing.add_argument("--project")
-    listing.add_argument("--offset", type=int, default=0, help="next_offset from the previous page.")
+    for operation in ("list", "export"):
+        sub = operations.add_parser(operation, help=f"{operation.title()} retained runs in your project.")
+        sub.add_argument("--project")
+        sub.add_argument("--workflow", help="Exact workflow name.")
+        sub.add_argument("--status", choices=(
+            "running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out",
+            "continued_as_new",
+        ))
+        sub.add_argument("--limit", type=int, default=20, help="Records scanned per page (1-100; default: 20).")
+        paging = sub.add_mutually_exclusive_group()
+        paging.add_argument("--cursor", help="next_cursor from the previous page; keep the same filters.")
+        paging.add_argument("--offset", type=int, help="Legacy next_offset; prefer --cursor while runs change.")
+        if operation == "export":
+            sub.add_argument("--output", default="-", help="JSON Lines file; '-' or omitted writes to stdout.")
     for operation in ("inspect", "cancel", "retry", "approve"):
         sub = operations.add_parser(
             operation,
@@ -216,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
                         print(f"agentworkflows: audit export failed: {exc}", file=sys.stderr)
                         return 1
             elif args.command == "triggers":
-                result = (
+                result: object = (
                     gateway.triggers()
                     if args.operation == "list"
                     else gateway.pause_trigger(args.workflow, args.name, paused=args.operation == "pause")
@@ -230,8 +241,24 @@ def main(argv: list[str] | None = None) -> int:
                         project=args.project,
                         request_id=str(args.request_id) if args.request_id else None,
                     )
-                elif args.operation == "list":
-                    result = gateway.runs(project=args.project, offset=args.offset)
+                elif args.operation in {"list", "export"}:
+                    run_filters = {
+                        field: getattr(args, field)
+                        for field in ("project", "workflow", "status", "limit", "cursor", "offset")
+                        if getattr(args, field) is not None
+                    }
+                    if args.operation == "export":
+                        try:
+                            with (
+                                nullcontext(sys.stdout) if args.output == "-"
+                                else Path(args.output).open("w", encoding="utf-8", newline="\n")
+                            ) as output:
+                                output.writelines(gateway.export_runs(**run_filters))
+                        except (OSError, RuntimeError) as exc:
+                            print(f"agentworkflows: run export failed: {exc}", file=sys.stderr)
+                            return 1
+                        return 0
+                    result = gateway.runs(**run_filters)
                 elif args.operation == "inspect":
                     result = gateway.run(str(args.run_id))
                 elif args.operation == "cancel":

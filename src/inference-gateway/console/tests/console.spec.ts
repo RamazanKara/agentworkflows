@@ -308,7 +308,7 @@ test.beforeEach(async ({ page }) => {
     else if (url.pathname === '/v1/sandbox/budget') body = { usage: { estimated_tokens: 63 }, limits: { estimated_tokens: 200000 } };
     else if (url.pathname === '/v1/usage') body = { estimated_cost: .0432, spend: { project: null, window_start: 1791316800, window_seconds: 86400, cost_limit_usd: 50, reserved_and_spent_usd: .0432, providers: { anthropic: costs }, workflows: { ResearchWorkflow: costs }, accounting: 'Configured prices, not provider invoices.' } };
     else if (url.pathname === '/v1/workflow-runs' && route.request().method() === 'POST') body = { run_id: id };
-    else if (url.pathname === '/v1/workflow-runs') body = { runs: team === 'other' || url.searchParams.get('project') === 'engineering' || url.searchParams.get('status') === 'failed' ? [] : [run()], next_offset: null };
+    else if (url.pathname === '/v1/workflow-runs') body = { runs: team === 'other' || url.searchParams.get('project') === 'engineering' || url.searchParams.get('status') === 'failed' ? [] : [run()], next_cursor: null };
     else if (url.pathname.endsWith('/approve')) body = { approved: route.request().postDataJSON().approved, reviewer: token };
     else if (url.pathname === `/v1/workflow-runs/${id}`) body = run();
     else return route.fulfill({ status: 404, json: {} });
@@ -330,6 +330,74 @@ test('model prompts read as a transcript and the answer is previewed on the step
   await expect(page.locator('.transcript pre').last()).toHaveText('Compare <b>two</b> vendors.');
   await expect(page.locator('.step-content').last()).toHaveText('Vendor A wins on cost.');
 });
+
+for (const width of [393, 1440]) {
+  test(`release console layouts at ${width}px`, async ({ page }) => {
+    test.setTimeout(60000);
+    await page.setViewportSize({ width, height: width === 393 ? 852 : 1000 });
+    const capture = async (name: string) => {
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      await page.screenshot({ path: `../../../.out/console-v0.6.0/${width}-${name}.png`, fullPage: true });
+    };
+    let openaiConfigured = false;
+    await page.route('**/v1/team', route => route.fulfill({ json: {
+      team_id: 'demo', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
+      provider_configuration: { openai: { configured: openaiConfigured, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: false, environment_variable: 'ANTHROPIC_API_KEY' } },
+    } }));
+    await page.route('**/v1/models', route => route.fulfill({ json: { data: [
+      { id: 'openai', owned_by: 'openai' }, { id: 'claude-sonnet', owned_by: 'anthropic' },
+    ] } }));
+    await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [], next_cursor: null } }));
+    await login(page);
+    const labels = page.locator('.model-list li > span.muted');
+    await expect(labels).toHaveText(['OpenAI', 'Anthropic']);
+    const styles = await labels.evaluateAll(nodes => nodes.map(node => {
+      const style = getComputedStyle(node); return [style.color, style.fontSize, style.fontWeight];
+    }));
+    expect(styles[0]).toEqual(styles[1]);
+    await capture('get-started');
+    openaiConfigured = true;
+    await page.reload();
+    await expect(page.locator('.onboarding .note-warn a')).toHaveCSS('white-space', 'nowrap');
+    await capture('get-started-key-warning');
+    openaiConfigured = false;
+    await page.goto('/console/#providers');
+    const helm = page.locator('.setup pre');
+    await expect(helm).toContainText('# Release and namespace are "aw", as in\n# the install guide. Change if needed.');
+    expect(await page.locator('.usage-bar > span').first().evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThanOrEqual(4);
+    await capture('providers');
+    await page.goto('/console/#costs');
+    await expect(page.getByRole('heading', { name: 'By provider' })).toBeVisible();
+    await capture('costs');
+    const original = run();
+    await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: {
+      ...original, status: 'completed', progress: undefined, result: { status: 'published', publication: 'Research briefing' },
+      timeline: [{ ...original.timeline[0], action: 'tool_exec', tool: 'research', content: {
+        input: JSON.stringify({ topic: 'Agent workflow evaluation' }),
+        output: JSON.stringify({ sources: [{ title: 'Evaluation guide', url: 'https://example.com/research/agent-workflows/evaluation-and-human-approvals' }] }),
+        redaction: 'redacted', truncated: { input: false, output: false },
+      } }],
+    } }));
+    await page.goto(`/console/#run/${id}`);
+    await page.getByText('Arguments and result', { exact: true }).click();
+    const json = page.locator('.step-content.json').last();
+    await expect(json).toHaveCSS('white-space', 'pre');
+    await expect(json).toHaveCSS('overflow-wrap', 'normal');
+    if (width === 393) {
+      expect(await json.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+      expect(await json.locator('..').evaluate(node => getComputedStyle(node, '::after').backgroundImage)).toContain('linear-gradient');
+    }
+    await capture('run-detail');
+    await page.goto('/console/#team');
+    await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toBeVisible();
+    await capture('team-settings');
+    await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: [auditEntry()], next_cursor: null } }));
+    await page.goto('/console/#audit');
+    await expect(page.locator('.audit-table').getByText('Model call', { exact: true })).toBeVisible();
+    await capture('audit');
+  });
+}
 
 test('triggers show schedules and signed endpoints; pause and resume are accessible', async ({ page }) => {
   const errors: string[] = [];
@@ -510,7 +578,7 @@ test('approval inbox follows empty filtered pages in every project and rejects s
   await page.route('**/v1/workflow-runs?**', route => {
     const url = new URL(route.request().url());
     if (url.searchParams.get('status') !== 'awaiting_approval') return route.fallback();
-    return route.fulfill({ json: url.searchParams.get('project') === 'default' ? { runs: [], next_offset: null } : url.searchParams.get('offset') === '0' ? { runs: [], next_offset: 100 } : { runs: [run({ project: 'engineering' })], next_offset: null } });
+    return route.fulfill({ json: url.searchParams.get('project') === 'default' ? { runs: [], next_cursor: null } : !url.searchParams.has('cursor') ? { runs: [], next_cursor: 'older' } : { runs: [run({ project: 'engineering' })], next_cursor: null } });
   });
   await login(page, 'approver');
   await page.getByRole('link', { name: 'Approvals', exact: true }).click();
@@ -614,7 +682,7 @@ test('fallback holds are explained and notification receipts read as one step', 
 });
 
 test('rejected runs read as rejected in the run list, with a readable result', async ({ page }) => {
-  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [run({ status: 'completed', progress: undefined, outcome: 'rejected' })], next_offset: null } }));
+  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [run({ status: 'completed', progress: undefined, outcome: 'rejected' })], next_cursor: null } }));
   await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({ status: 'completed', progress: undefined, result: { status: 'rejected', reviewer: 'approver' } }) }));
   await login(page);
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
@@ -759,7 +827,7 @@ test('a workflow that needs a provider without a key warns before it runs', asyn
 });
 
 test('approval cards use the draft heading as the title without repeating it', async ({ page }) => {
-  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [{ ...run(), progress: { stage: 'awaiting_approval', draft: '# Briefing: agent evaluation\n\nThe first paragraph.' } }], next_offset: null } }));
+  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [{ ...run(), progress: { stage: 'awaiting_approval', draft: '# Briefing: agent evaluation\n\nThe first paragraph.' } }], next_cursor: null } }));
   await login(page, 'approver');
   await page.getByRole('link', { name: 'Approvals', exact: true }).click();
   await expect(page.locator('.review h2').first()).toHaveText('Briefing: agent evaluation');

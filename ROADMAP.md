@@ -105,8 +105,18 @@ See the [template gallery](docs/templates.md) and [decision guide](docs/decision
   SDKs install from published release artifacts.
 - Product-first docs. The ranked gap list is in [docs/PRODUCT-GAPS.md](docs/PRODUCT-GAPS.md).
 
-Later: editing budgets and provider routing in the console, a read-only audit log page,
-and a durable database for run records.
+## Milestone 12: team administration and retained history — v0.6.0, unreleased
+
+- Edit monthly team/project budgets, workflow approvals and approved model routes in
+  the console, API and SDKs, with revision checks and change receipts.
+- Read, verify and export the retained team audit view in the console, CLI and SDKs.
+- Page run history and approvals with stable cursors; export retained run details as
+  JSON Lines using either SDK or the CLI. Existing offset clients remain compatible.
+- Production Helm controls for TLS ingress, HA, NetworkPolicies and external stores.
+
+Run metadata, captured content, budgets, settings and the audit view still use Redis;
+Temporal's PostgreSQL stores workflow execution history, not these gateway records.
+A PostgreSQL system of record for gateway runs and audit remains the next storage item.
 
 ## Next: deployment validation and integration coverage
 

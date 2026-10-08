@@ -218,7 +218,7 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     assert "@input_schema(" in (target / "workflow.py").read_text()
     assert "worker.py" in (target / "README.md").read_text()
     assert f"templates/#{template}" in (target / "README.md").read_text()
-    assert "releases/download/v0.5.1/agentworkflows-0.5.1-py3-none-any.whl" in (target / "requirements.txt").read_text()
+    assert "releases/download/v0.6.0/agentworkflows-0.6.0-py3-none-any.whl" in (target / "requirements.txt").read_text()
     assert "--input '@input.json'" in capsys.readouterr().out
     before = {p.name: p.read_bytes() for p in target.iterdir()}
     with pytest.raises(SystemExit) as exc:
@@ -464,6 +464,49 @@ def test_audit_export_reports_unwritable_file(monkeypatch, tmp_path, capsys):
     assert main(["audit", "export", "--output", str(tmp_path)]) == 1
     captured = capsys.readouterr()
     assert not captured.out and "audit export failed" in captured.err
+
+
+@pytest.mark.parametrize("destination", ["stdout", "file"])
+def test_run_export_writes_json_lines(monkeypatch, tmp_path, capsys, destination):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "viewer-key")
+    output = tmp_path / "run history.jsonl"
+    record = {"run_id": "example", "result": "Grüße\nteam"}
+
+    def export(self, **filters):
+        assert filters == {"project": "demo", "status": "completed", "limit": 1, "cursor": "older"}
+        yield json.dumps(record) + "\n"
+
+    monkeypatch.setattr(agentworkflows.GatewayClient, "export_runs", export)
+    args = ["runs", "export", "--project", "demo", "--status", "completed", "--limit", "1", "--cursor", "older"]
+    assert main([*args, *(["--output", str(output)] if destination == "file" else [])]) == 0
+    captured = capsys.readouterr()
+    text = output.read_text(encoding="utf-8") if destination == "file" else captured.out
+    assert [json.loads(line) for line in text.splitlines()] == [record]
+    assert not captured.err
+    if destination == "file":
+        assert not captured.out
+
+
+def test_run_export_reports_unwritable_file(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "viewer-key")
+    assert main(["runs", "export", "--output", str(tmp_path)]) == 1
+    assert "run export failed" in capsys.readouterr().err
+
+
+def test_run_list_sends_filters_and_rejects_mixed_paging(monkeypatch, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "viewer-key")
+
+    def runs(self, **filters):
+        assert filters == {"workflow": "ResearchWorkflow", "status": "awaiting_approval", "limit": 5, "cursor": "older"}
+        return {"runs": [], "next_cursor": None, "next_offset": None}
+
+    monkeypatch.setattr(agentworkflows.GatewayClient, "runs", runs)
+    assert main(["runs", "list", "--workflow", "ResearchWorkflow", "--status", "awaiting_approval",
+                 "--limit", "5", "--cursor", "older"]) == 0
+    assert json.loads(capsys.readouterr().out)["next_cursor"] is None
+    with pytest.raises(SystemExit) as exc:
+        main(["runs", "list", "--offset", "1", "--cursor", "older"])
+    assert exc.value.code == 2
 
 
 @pytest.mark.parametrize("command", [["settings"], ["settings", "set"], ["settings", "reset"],

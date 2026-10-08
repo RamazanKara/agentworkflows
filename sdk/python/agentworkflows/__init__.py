@@ -45,6 +45,8 @@ from agentworkflows.types import (
     KeyOptions,
     KeyUpdate,
     ManagedKey,
+    RunFilters,
+    RunPage,
     TeamSettings,
     TeamSettingValue,
 )
@@ -614,8 +616,31 @@ class GatewayClient:
             {"workflow": workflow, "input": input, "project": project, "request_id": request_id or str(uuid4())},
         )
 
-    def runs(self, *, project: str | None = None, offset: int = 0) -> dict[str, Any]:
-        return self._get("/v1/workflow-runs", params={"offset": offset, **({"project": project} if project else {})})
+    def runs(self, **filters: Unpack[RunFilters]) -> RunPage:
+        """Read one run page; continue with next_cursor and unchanged project/filters.
+
+        Limit bounds scanned records (1-100, default 20), so a filtered page can be
+        empty with a continuation. Legacy offset paging remains available.
+        """
+        params = {key: value for key, value in {"offset": 0, **filters}.items() if value is not None}
+        return self._request("GET", "/v1/workflow-runs", params=params).json()
+
+    def export_runs(self, **filters: Unpack[RunFilters]) -> Iterator[str]:
+        """Yield full run details, including retained step content, as JSON Lines.
+
+        Follow cursors through empty pages. Retention and status changes continue
+        during export; a read failure propagates and may leave partial output.
+        """
+        while True:
+            page = self.runs(**filters)
+            if "next_cursor" not in page:
+                raise RuntimeError("Run export requires gateway v0.6.0 or newer; upgrade the gateway and retry.")
+            for run in page["runs"]:
+                yield json.dumps(self.run(run["run_id"])) + "\n"
+            if page["next_cursor"] is None:
+                return
+            filters.pop("offset", None)
+            filters["cursor"] = page["next_cursor"]
 
     def run(self, run_id: str) -> dict[str, Any]:
         return self._get(f"/v1/workflow-runs/{UUID(run_id)!s}")

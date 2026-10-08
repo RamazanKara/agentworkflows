@@ -46,7 +46,9 @@ def test_terminal_runs_expire_at_close_time_without_extending_content(team_gatew
     assert store.expires[base + ":metadata"] == deadline
     store.now = deadline + 1
     assert client.get(path, headers=auth("viewer")).status_code == 404
-    assert client.get("/v1/workflow-runs", headers=auth("viewer")).json() == {"runs": [], "next_offset": None}
+    assert client.get("/v1/workflow-runs", headers=auth("viewer")).json() == {
+        "runs": [], "next_offset": None, "next_cursor": None,
+    }
     assert not store.data[f"{settings.sandbox_budget_key_prefix}:runs:team:default"]
 
 
@@ -83,7 +85,7 @@ def test_expired_records_do_not_break_filtered_pagination(team_gateway):
     prefix = app.state.settings.sandbox_budget_key_prefix
     store.delete(f"{prefix}:workflow:team:{third['run_id']}:metadata")
     page = client.get("/v1/workflow-runs?workflow=ResearchWorkflow&limit=1", headers=auth("viewer")).json()
-    assert page == {"runs": [], "next_offset": 0}
+    assert page["runs"] == [] and page["next_offset"] == 0 and page["next_cursor"]
     page = client.get("/v1/workflow-runs?limit=1&offset=0", headers=auth("viewer")).json()
     assert page["runs"][0]["run_id"] == second["run_id"]
     page = client.get("/v1/workflow-runs?limit=1&offset=1", headers=auth("viewer")).json()

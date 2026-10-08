@@ -20,6 +20,6 @@ layer around it is thin: identity, membership, configuration and install are YAM
 Deliberately not planned: hosted SaaS, billing and plans (self-hosted product; see
 [scope](scope-and-non-goals.md)), a visual workflow builder (workflows are code by design).
 
-Status: 1–7 shipped in v0.5.0 (2026-10-08) after the console passed the screenshot gate on 2024 phones and desktop. 8–10 are next: Codex job D (team settings in the console) and E (audit log viewer), then the Postgres store.
+Status: 1–7 shipped in v0.5.0 (2026-10-08). Gaps 8 and 10 are implemented for v0.6.0 (unreleased): revision-checked team settings and the retained audit viewer, verification and export. Run retention shipped in v0.5.0; v0.6.0 adds stable run cursors and full-detail JSON Lines export. Gap 9 remains partly open: gateway runs and audit still use Redis, while Temporal has its own PostgreSQL history store. Postgres durability for gateway records is the next storage priority.
 
 Codex job prompts live in `docs/codex/` (not published on the docs site).
