@@ -394,6 +394,118 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "KeyCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "role": {
+            "default": "viewer",
+            "enum": [
+              "admin",
+              "builder",
+              "approver",
+              "viewer"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "KeyCreate",
+        "type": "object"
+      },
+      "KeyUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "builder",
+                  "approver",
+                  "viewer"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "KeyUpdate",
+        "type": "object"
+      },
       "Message": {
         "additionalProperties": true,
         "description": "A single chat message with an OpenAI-style role and content.\n\n``content`` accepts a plain string, an OpenAI-style content-part array (text\nand ``image_url`` parts, enabling vision-capable runtimes), or ``null`` for an\nassistant turn that only carries ``tool_calls``. ``extra=\"allow\"`` lets any\nadditional OpenAI message fields pass through to the runtime unchanged.",
@@ -952,6 +1064,22 @@
         "title": "ScheduleFiring",
         "type": "object"
       },
+      "SessionLogin": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "SessionLogin",
+        "type": "object"
+      },
       "StartRun": {
         "additionalProperties": false,
         "properties": {
@@ -1070,10 +1198,21 @@
         "scheme": "bearer",
         "type": "http"
       },
+      "CsrfToken": {
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "type": "apiKey"
+      },
       "GitHubSignature": {
         "description": "GitHub HMAC-SHA256 of the raw body using the team's secret. Also send X-GitHub-Delivery. The signed body fingerprint protects against replay.",
         "in": "header",
         "name": "X-Hub-Signature-256",
+        "type": "apiKey"
+      },
+      "SessionCookieAuth": {
+        "description": "Opaque console session; non-GET requests also require the double-submit CSRF token.",
+        "in": "cookie",
+        "name": "aw_session",
         "type": "apiKey"
       },
       "WebhookSignature": {
@@ -1212,6 +1351,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Revoke a step credential and receipt its result",
@@ -1274,11 +1417,204 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Authorize a container step in an existing workspace",
         "tags": [
           "workflows"
+        ]
+      }
+    },
+    "/v1/auth/callback": {
+      "get": {
+        "operationId": "callback_v1_auth_callback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Error",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Callback",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/config": {
+      "get": {
+        "operationId": "auth_config_v1_auth_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Config V1 Auth Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auth Config",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "get": {
+        "operationId": "login_oidc_v1_auth_login_get",
+        "responses": {
+          "302": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Login Oidc",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Logout V1 Auth Logout Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/session": {
+      "get": {
+        "operationId": "get_session_v1_auth_session_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Session V1 Auth Session Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Get Session",
+        "tags": [
+          "auth"
+        ]
+      },
+      "post": {
+        "operationId": "login_key_v1_auth_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Login Key V1 Auth Session Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login Key",
+        "tags": [
+          "auth"
         ]
       }
     },
@@ -1326,6 +1662,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Process a batch of chat completions synchronously",
@@ -1395,6 +1735,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List batches",
@@ -1440,6 +1783,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Create an asynchronous batch",
@@ -1492,6 +1839,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Retrieve a batch",
@@ -1544,6 +1894,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Cancel a batch",
@@ -1595,6 +1949,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Create a private chat completion",
@@ -1647,6 +2005,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Create a private legacy text completion",
@@ -1698,6 +2060,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Create private embeddings",
@@ -1729,6 +2095,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List uploaded files",
@@ -1754,6 +2123,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Upload a JSONL file (purpose=batch)",
@@ -1806,6 +2179,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Delete a file",
@@ -1856,6 +2233,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Retrieve a file object",
@@ -1904,6 +2284,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Download file content",
@@ -2026,6 +2409,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Create a private Anthropic-style message",
@@ -2057,6 +2444,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List approved private models",
@@ -2108,6 +2498,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Classify content against the gateway policy",
@@ -2160,6 +2554,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Record an agent action on the audit chain",
@@ -2212,6 +2610,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Create a private OpenAI Responses API response",
@@ -2264,6 +2666,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Delete a stored response",
@@ -2314,6 +2720,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Retrieve a stored response (requires the response store)",
@@ -2366,6 +2775,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List the input items of a stored response",
@@ -2397,6 +2809,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Get sandbox budget usage",
@@ -2428,9 +2843,219 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Discover your team, role, projects, and provider configuration",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/keys": {
+      "get": {
+        "operationId": "list_keys_v1_team_keys_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Keys V1 Team Keys Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "List Keys",
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "operationId": "create_key_v1_team_keys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Key V1 Team Keys Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Create Key",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/keys/{key_id}": {
+      "delete": {
+        "operationId": "revoke_key_v1_team_keys__key_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Revoke Key V1 Team Keys  Key Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Revoke Key",
+        "tags": [
+          "teams"
+        ]
+      },
+      "patch": {
+        "operationId": "update_key_v1_team_keys__key_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Key V1 Team Keys  Key Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Update Key",
         "tags": [
           "teams"
         ]
@@ -2459,6 +3084,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List this team's approved workflow tools",
@@ -2521,6 +3149,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Execute an approved tool through gateway governance",
@@ -2552,6 +3184,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Get sandbox usage and estimated cost",
@@ -2583,6 +3218,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Discover this team's workflow policies",
@@ -2707,6 +3345,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List your project's runs, newest first",
@@ -2756,6 +3397,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Start an approved workflow in your project",
@@ -2809,6 +3454,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Inspect this team's run budget",
@@ -2870,6 +3518,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Initialize an immutable per-run budget",
@@ -2923,6 +3575,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Worker-only durable approval notification event",
@@ -2986,6 +3642,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Review the waiting draft as your verified identity",
@@ -3039,6 +3699,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Request cancellation of this exact execution",
@@ -3092,6 +3756,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Start a fresh execution of a failed or canceled run",
@@ -3123,6 +3791,9 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
           }
         ],
         "summary": "List configured triggers, schedules and pause state",
@@ -3194,6 +3865,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Pause or resume a configured trigger",
@@ -3265,6 +3940,10 @@
           },
           {
             "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
           }
         ],
         "summary": "Worker-only Temporal schedule delivery",

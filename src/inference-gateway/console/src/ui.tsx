@@ -10,6 +10,7 @@ export function Icon({ name }: { name: string }) {
     providers: <><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></>,
     costs: <path d="M5 21V11m7 10V3m7 18V7"/>,
     triggers: <><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></>,
+    keys: <><circle cx="8" cy="8" r="5"/><path d="m12 12 9 9m-4-4 3-3m-6 0 3-3"/></>,
     refresh: <><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></>,
     add: <path d="M12 3v18M3 12h18"/>,
     signout: <><path d="M10 3H3v18h7M8 12h13m-5-5 5 5-5 5"/></>,

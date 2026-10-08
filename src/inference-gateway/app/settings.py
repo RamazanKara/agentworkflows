@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from app.admission import (
     BUILT_IN_SECRET_PATTERNS as BUILT_IN_SECRET_PATTERNS,
@@ -166,6 +167,16 @@ class Settings:
     jwt_required_scopes: tuple[str, ...] = ()
     jwt_cache_seconds: int = 300
     jwt_tenant_claim: str = ""
+    oidc_issuer: str = ""
+    oidc_client_id: str = ""
+    oidc_client_secret: str = dataclasses.field(default="", repr=False)
+    oidc_redirect_url: str = ""
+    oidc_scopes: str = "openid profile email"
+    oidc_team_claim: str = ""
+    oidc_role_claim: str = "role"
+    oidc_project_claim: str = "project"
+    oidc_default_role: str = "viewer"
+    session_cookie_secure: bool = True
     runtime_max_retries: int = 2
     runtime_retry_backoff_seconds: float = 0.1
     runtime_circuit_failure_threshold: int = 0
@@ -277,6 +288,25 @@ class Settings:
             raise ValueError("jwt_jwks_url must be set when JWT auth is enabled")
         if self.jwt_cache_seconds <= 0:
             raise ValueError("jwt_cache_seconds must be greater than zero")
+        if self.oidc_default_role not in {"admin", "builder", "approver", "viewer"}:
+            raise ValueError("oidc_default_role must be admin, builder, approver, or viewer")
+        if any((self.oidc_issuer, self.oidc_client_id, self.oidc_client_secret, self.oidc_redirect_url)):
+            if not all((self.oidc_issuer, self.oidc_client_id, self.oidc_redirect_url)):
+                raise ValueError("OIDC requires OIDC_ISSUER, OIDC_CLIENT_ID, and OIDC_REDIRECT_URL")
+            if self.sandbox_budget_backend != "redis":
+                raise ValueError("OIDC sessions require SANDBOX_BUDGET_BACKEND=redis")
+            if not (self.oidc_team_claim or self.jwt_tenant_claim):
+                raise ValueError("OIDC requires OIDC_TEAM_CLAIM or JWT_TENANT_CLAIM")
+            if "openid" not in self.oidc_scopes.split():
+                raise ValueError("OIDC_SCOPES must include openid")
+            for value in (self.oidc_issuer, self.oidc_redirect_url):
+                url = urlsplit(value)
+                local = url.hostname in {"localhost", "127.0.0.1", "::1"}
+                if (
+                    not url.hostname or url.username or url.password or url.fragment or url.query
+                    or (url.scheme != "https" and not (url.scheme == "http" and local))
+                ):
+                    raise ValueError("OIDC URLs must use HTTPS (HTTP is allowed only on localhost)")
         if self.runtime_max_retries < 0:
             raise ValueError("runtime_max_retries must be zero or greater")
         if self.runtime_retry_backoff_seconds <= 0:
@@ -441,6 +471,16 @@ class Settings:
             jwt_required_scopes=_csv_from_env("JWT_REQUIRED_SCOPES", ()),
             jwt_cache_seconds=_positive_int_from_env("JWT_CACHE_SECONDS", 300),
             jwt_tenant_claim=os.getenv("JWT_TENANT_CLAIM", "").strip(),
+            oidc_issuer=os.getenv("OIDC_ISSUER", "").strip(),
+            oidc_client_id=os.getenv("OIDC_CLIENT_ID", "").strip(),
+            oidc_client_secret=os.getenv("OIDC_CLIENT_SECRET", ""),
+            oidc_redirect_url=os.getenv("OIDC_REDIRECT_URL", "").strip(),
+            oidc_scopes=os.getenv("OIDC_SCOPES", "openid profile email").strip(),
+            oidc_team_claim=os.getenv("OIDC_TEAM_CLAIM", "").strip(),
+            oidc_role_claim=os.getenv("OIDC_ROLE_CLAIM", "role").strip(),
+            oidc_project_claim=os.getenv("OIDC_PROJECT_CLAIM", "project").strip(),
+            oidc_default_role=os.getenv("OIDC_DEFAULT_ROLE", "viewer").strip(),
+            session_cookie_secure=_bool_from_env("SESSION_COOKIE_SECURE", True),
             runtime_max_retries=_int_from_env("RUNTIME_MAX_RETRIES", 2),
             runtime_retry_backoff_seconds=_positive_float_from_env(
                 "RUNTIME_RETRY_BACKOFF_SECONDS",

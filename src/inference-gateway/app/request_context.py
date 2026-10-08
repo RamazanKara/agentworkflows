@@ -17,7 +17,7 @@ from starlette.routing import Match
 
 from app.batchstore import BATCH_IN_PROGRESS
 from app.jwt_auth import JwtAuthError, JwtVerifier
-from app.key_records import KeyRecord, KeyRecordSet
+from app.key_records import KeyRecord, KeyRecordSet, key_record_effective_budget_updates
 from app.metrics import AUTH_FAILURES, LOAD_SHED, RATE_LIMITED
 from app.metrics import sandbox_label as _sandbox_label
 from app.settings import Settings, validate_sandbox_id
@@ -167,7 +167,7 @@ def require_bound_tenant(request: Request, feature: str) -> str:
     tenant claim. With authentication off, the deployment has no tenants to separate.
     """
     settings: Settings = request.app.state.settings
-    auth_enabled = settings.api_key_auth_enabled or settings.jwt_auth_enabled
+    auth_enabled = settings.api_key_auth_enabled or settings.jwt_auth_enabled or bool(settings.oidc_issuer)
     if auth_enabled and not getattr(request.state, "sandbox_bound", False):
         raise HTTPException(
             status_code=403,
@@ -191,7 +191,10 @@ def _auth_required(path: str) -> bool:
     # auth here makes the pod never become Ready when API-key auth is enabled.
     # /console/* is the static admin console (ADR 0013): the page is public HTML/JS; the API
     # calls it makes to /v1/* carry the operator's key and are governed like any other request.
-    return path not in {"/healthz", "/readyz", "/metrics", "/docs", "/openapi.json"} and not path.startswith("/console")
+    return path not in {
+        "/healthz", "/readyz", "/metrics", "/docs", "/openapi.json",
+        "/v1/auth/config", "/v1/auth/login", "/v1/auth/callback", "/v1/auth/session",
+    } and not path.startswith("/console")
 
 
 def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
@@ -215,6 +218,11 @@ def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
             "name": settings.api_key_header,
             "description": "API key header accepted by gateway middleware when API key authentication is enabled.",
         }
+        security_schemes["SessionCookieAuth"] = {
+            "type": "apiKey", "in": "cookie", "name": "aw_session",
+            "description": "Opaque console session; non-GET requests also require the double-submit CSRF token.",
+        }
+        security_schemes["CsrfToken"] = {"type": "apiKey", "in": "header", "name": "X-CSRF-Token"}
         security_schemes["WebhookSignature"] = {
             "type": "apiKey",
             "in": "header",
@@ -230,6 +238,12 @@ def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
             "Also send X-GitHub-Delivery. The signed body fingerprint protects against replay.",
         }
         for path, operations in schema.get("paths", {}).items():
+            if path in {"/v1/auth/session", "/v1/auth/logout"}:
+                method = "get" if path.endswith("/session") else "post"
+                operations[method]["security"] = [
+                    {"SessionCookieAuth": [], **({"CsrfToken": []} if method == "post" else {})}
+                ]
+                continue
             if not _auth_required(path):
                 continue
             for method, operation in operations.items():
@@ -237,7 +251,10 @@ def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
                     operation["security"] = (
                         [{"WebhookSignature": []}, {"GitHubSignature": []}]
                         if path.startswith("/v1/hooks/")
-                        else [{"BearerAuth": []}, {"ApiKeyAuth": []}]
+                        else [
+                            {"BearerAuth": []}, {"ApiKeyAuth": []},
+                            {"SessionCookieAuth": [], **({"CsrfToken": []} if method.lower() != "get" else {})},
+                        ]
                     )
         app.openapi_schema = schema
         return app.openapi_schema
@@ -296,7 +313,9 @@ class ApiKeyOutcome:
         self.expired = expired
 
 
-def _resolve_api_key(request: Request, settings: Settings, record_set: KeyRecordSet) -> ApiKeyOutcome:
+def _resolve_api_key(
+    request: Request, settings: Settings, record_set: KeyRecordSet, digest: str | None = None,
+) -> ApiKeyOutcome:
     """Resolve the presented API key against key records and flat hashes.
 
     Records take precedence over the flat allowlist: a digest that matches a record is
@@ -306,37 +325,78 @@ def _resolve_api_key(request: Request, settings: Settings, record_set: KeyRecord
     as an unbound principal. An expired record is rejected (never fails open to unbound).
     The digest is computed once and compared in constant time by each source.
     """
-    digest = _api_key_digest(request, settings)
+    digest = digest or _api_key_digest(request, settings)
     if digest is None:
         return ApiKeyOutcome(valid=False, record=None, expired=False)
+    flat_match = _matches_flat_key(digest, settings)
     record = record_set.match(digest)
     if record is not None:
         if record.is_expired(time()):
             return ApiKeyOutcome(valid=False, record=record, expired=True)
         return ApiKeyOutcome(valid=True, record=record, expired=False)
-    if _matches_flat_key(digest, settings):
+    if flat_match:
         return ApiKeyOutcome(valid=True, record=None, expired=False)
     return ApiKeyOutcome(valid=False, record=None, expired=False)
 
 
-async def _valid_jwt(request: Request, verifier: JwtVerifier) -> dict[str, Any] | None:
-    """Return the verified JWT claims, or ``None`` when the token is absent/invalid.
+async def authenticate_credential(
+    request: Request, token: str | None = None, *, digest: str | None = None,
+) -> JSONResponse | None:
+    settings = request.app.state.settings
+    allow_jwt = token is not None or request.headers.get("authorization", "").strip().lower().startswith("bearer ")
+    token = token if token is not None else _api_key_from_request(request, settings)
+    digest = digest or (hashlib.sha256(token.encode()).hexdigest() if token else None)
+    if digest is None:
+        return _auth_failure_response(request, "invalid_or_missing_api_key")
+    outcome = (
+        _resolve_api_key(request, settings, request.app.state.key_record_set, digest)
+        if settings.api_key_auth_enabled else ApiKeyOutcome(False, None, False)
+    )
+    if not outcome.valid and not outcome.expired and digest and request.app.state.budget_tracker.backend == "redis":
+        from app.managed_keys import lookup_key
 
-    Returning the claims (rather than a bool) lets the caller propagate the
-    authenticated principal into request state and the audit trail. Propagates
-    :class:`JwksUnavailableError` so the caller can distinguish an unreachable
-    issuer (503) from a rejected token (401).
-    """
-    authorization = request.headers.get("authorization", "").strip()
-    if not authorization.lower().startswith("bearer "):
+        record = await lookup_key(request, digest)
+        if record is not None:
+            expired = record.is_expired(time())
+            outcome = ApiKeyOutcome(not expired, record, expired)
+    if outcome.valid:
+        record = outcome.record
+        request.state.principal = (
+            _api_key_principal(request, settings, record) if record else {"auth": "api_key", "key_id": digest[:12]}
+        )
+        request.state.credential_digest = digest
+        if record is not None:
+            if record.sandbox is not None:
+                explicit = request.headers.get("x-sandbox-id")
+                if explicit is not None and validate_sandbox_id(explicit) != record.sandbox:
+                    return _sandbox_binding_response(request, "sandbox_identity_mismatch")
+                request.state.sandbox_id = record.sandbox
+                request.state.sandbox_bound = True
+            request.state.key_budget_updates = key_record_effective_budget_updates(record)
+            if BATCH_REPLAY_SCOPE in record.scopes:
+                return await _bind_batch_replay(request)
         return None
-    token = authorization[7:].strip()
-    if not token or token.count(".") != 2:
-        return None
-    try:
-        return await verifier.verify(token)
-    except (JwtAuthError, httpx.HTTPError):
-        return None
+    if not outcome.expired and settings.jwt_auth_enabled and allow_jwt and token and token.count(".") == 2:
+        try:
+            claims = await request.app.state.jwt_verifier.verify(token)
+        except (JwtAuthError, httpx.HTTPError):
+            claims = None
+        if claims is not None:
+            request.state.principal = _jwt_principal(claims)
+            request.state.credential_expires_at = float(claims["exp"])
+            if settings.jwt_tenant_claim:
+                try:
+                    bound = _bound_sandbox_id(claims, settings.jwt_tenant_claim)
+                except ValueError:
+                    return _sandbox_binding_response(request, "sandbox_claim_invalid")
+                explicit = request.headers.get("x-sandbox-id")
+                if explicit is not None and validate_sandbox_id(explicit) != bound:
+                    return _sandbox_binding_response(request, "sandbox_identity_mismatch")
+                request.state.sandbox_id = bound
+                request.state.sandbox_bound = True
+            return None
+    reason = "api_key_expired" if outcome.expired else "invalid_or_missing_api_key"
+    return _auth_failure_response(request, reason)
 
 
 def _api_key_principal(request: Request, settings: Settings, record: KeyRecord | None = None) -> dict[str, Any]:

@@ -238,6 +238,7 @@ responses:
 # Enable alongside managed team policies, Redis accounting, and Temporal workers.
 adminConsole:
   enabled: false
+  cookieSecure: true
 
 traceability:
   auditLogEnabled: true
@@ -294,6 +295,19 @@ auth:
     # X-Sandbox-ID is rejected so per-sandbox budget/policy/attribution cannot be
     # spoofed via the client header. Empty disables binding (header-trusted).
     tenantClaim: ""
+  oidc:
+    issuer: ""
+    clientId: ""
+    clientSecret: ""
+    existingSecret:
+      name: ""
+      key: oidc-client-secret
+    redirectUrl: ""
+    scopes: openid profile email
+    teamClaim: ""
+    roleClaim: role
+    projectClaim: project
+    defaultRole: viewer
 
 service:
   # ClusterIP keeps the gateway in-cluster (port-forward or Ingress for outside clients).

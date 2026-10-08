@@ -90,8 +90,14 @@ class FakeRedisBudgetStore:
 
     def eval(self, script, numkeys, key, *args):
         if key.endswith(":schema-version"):
-            self.data[key] = "1"
-            return 1
+            from app.state_migrations import SCHEMA_VERSION
+
+            self.data[key] = str(SCHEMA_VERSION)
+            return SCHEMA_VERSION
+        from app.managed_keys import LOOKUP
+
+        if script == LOOKUP:
+            return None
         if script == REDIS_USAGE_SCRIPT:
             counters = self.data.setdefault(key, {})
             for name, value in zip(args[1::2], args[2::2], strict=True):

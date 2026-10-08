@@ -48,6 +48,13 @@ CONTRACTS = {
             "/v1/sandbox/budget": RouteContract("get"),
             "/v1/usage": RouteContract("get"),
             "/v1/team": RouteContract("get"),
+            "/v1/team/keys": RouteContract("post", request_schema="KeyCreate", success_status="201"),
+            "/v1/team/keys/{key_id}": RouteContract("patch", request_schema="KeyUpdate"),
+            "/v1/auth/config": RouteContract("get"),
+            "/v1/auth/login": RouteContract("get", success_status="302"),
+            "/v1/auth/callback": RouteContract("get", success_status="303"),
+            "/v1/auth/session": RouteContract("post", request_schema="SessionLogin"),
+            "/v1/auth/logout": RouteContract("post"),
             "/v1/workflow-runs": RouteContract("post", request_schema="StartRun", success_status="201"),
             "/v1/workflow-runs/{run_id}/cancel": RouteContract("post"),
             "/v1/workflow-runs/{run_id}/retry": RouteContract("post", success_status="201"),
@@ -119,6 +126,8 @@ CONTRACTS = {
                 "/v1/sandbox/budget",
                 "/v1/usage",
                 "/v1/team",
+                "/v1/team/keys",
+                "/v1/team/keys/{key_id}",
                 "/v1/workflow-runs",
                 "/v1/workflow-runs/{run_id}/cancel",
                 "/v1/workflow-runs/{run_id}/retry",
@@ -455,6 +464,8 @@ def validate_schema(service: str, contract: ServiceContract, schema: dict[str, A
                 names == {"WebhookSignature", "GitHubSignature"},
                 f"{service}: webhooks require exclusive HMAC authentication",
             )
+        elif path == "/v1/auth/logout":
+            require(errors, names == {"SessionCookieAuth", "CsrfToken"}, "Logout requires a session and CSRF token")
         elif path in contract.protected_paths:
             require(
                 errors,

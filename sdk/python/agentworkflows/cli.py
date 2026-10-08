@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import httpx
@@ -50,6 +51,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     commands.add_parser("usage", help="Show your team's token usage, estimated cost, and provider breakdown.")
     commands.add_parser("team", help="Show your team, role, projects, and configured providers.")
+    keys = commands.add_parser("keys", help="Manage your team's API keys (admin only).")
+    key_operations = keys.add_subparsers(dest="operation", required=True)
+    key_operations.add_parser("list", help="List managed keys, including revoked and expired keys.")
+    for operation in ("create", "update", "revoke"):
+        sub = key_operations.add_parser(operation, help=f"{operation.title()} a team API key.")
+        if operation != "create":
+            sub.add_argument("key_id")
+        if operation != "revoke":
+            sub.add_argument("--name", required=operation == "create")
+            sub.add_argument("--role", choices=("admin", "builder", "approver", "viewer"))
+            sub.add_argument("--project", help="Project binding; use an empty string to clear it.")
+            sub.add_argument("--expires-at", help="ISO-8601 expiry with timezone; use an empty string to clear it.")
     triggers = commands.add_parser("triggers", help="Inspect, pause or resume configured workflow triggers.")
     trigger_operations = triggers.add_subparsers(dest="operation", required=True)
     trigger_operations.add_parser("list", help="Show schedules (UTC), webhook endpoints and pause state.")
@@ -119,6 +132,21 @@ def main(argv: list[str] | None = None) -> int:
                     print(model["id"])
             elif args.command == "team":
                 print(json.dumps(gateway.team(), indent=2))
+            elif args.command == "keys":
+                path = "/v1/team/keys"
+                if args.operation in {"update", "revoke"}:
+                    path += "/" + quote(args.key_id, safe="")
+                method = {"list": "GET", "create": "POST", "update": "PATCH", "revoke": "DELETE"}[args.operation]
+                body = {
+                    field: (getattr(args, field) or None)
+                    for field in ("name", "role", "project", "expires_at")
+                    if getattr(args, field, None) is not None
+                }
+                response = gateway._request(
+                    method, path, creates_state=args.operation == "create",
+                    **({"json": body} if args.operation in {"create", "update"} else {}),
+                )
+                print(json.dumps(response.json(), indent=2))
             elif args.command == "triggers":
                 result = (
                     gateway.triggers()

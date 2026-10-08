@@ -92,6 +92,7 @@ services:
       RESPONSES_STORE_ENABLED: "true"
       # The team console is bundled in this image: http://127.0.0.1:8080/console
       ADMIN_CONSOLE_ENABLED: "true"
+      SESSION_COOKIE_SECURE: "false"
       AUDIT_LOG_ENABLED: "true"
       AUDIT_CHAIN_STORE_BACKEND: redis
       AUDIT_CHAIN_STORE_REDIS_URL: redis://budget-redis:6379/0

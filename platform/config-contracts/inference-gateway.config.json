@@ -727,6 +727,119 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "auth.oidc.clientId",
+      "description": "Registered OIDC client ID and expected ID-token audience.",
+      "field": "oidc_client_id",
+      "name": "OIDC_CLIENT_ID",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "auth.oidc.clientSecret",
+      "description": "OIDC client secret; omit for public clients, or source from auth.oidc.existingSecret.",
+      "field": "oidc_client_secret",
+      "name": "OIDC_CLIENT_SECRET",
+      "sensitive": true,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [
+        "admin",
+        "builder",
+        "approver",
+        "viewer"
+      ],
+      "app_default": "viewer",
+      "chart_default": "viewer",
+      "chart_value": "auth.oidc.defaultRole",
+      "description": "Role for OIDC identities with no role claim.",
+      "field": "oidc_default_role",
+      "name": "OIDC_DEFAULT_ROLE",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "auth.oidc.issuer",
+      "description": "Company OpenID Connect issuer; empty disables company sign-in.",
+      "field": "oidc_issuer",
+      "name": "OIDC_ISSUER",
+      "sensitive": false,
+      "type": "url"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "project",
+      "chart_default": "project",
+      "chart_value": "auth.oidc.projectClaim",
+      "description": "Optional scalar ID-token project claim.",
+      "field": "oidc_project_claim",
+      "name": "OIDC_PROJECT_CLAIM",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "auth.oidc.redirectUrl",
+      "description": "Registered absolute gateway callback URL ending in /v1/auth/callback.",
+      "field": "oidc_redirect_url",
+      "name": "OIDC_REDIRECT_URL",
+      "sensitive": false,
+      "type": "url"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "role",
+      "chart_default": "role",
+      "chart_value": "auth.oidc.roleClaim",
+      "description": "Scalar ID-token claim containing the team role.",
+      "field": "oidc_role_claim",
+      "name": "OIDC_ROLE_CLAIM",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "openid profile email",
+      "chart_default": "openid profile email",
+      "chart_value": "auth.oidc.scopes",
+      "description": "Space-separated OIDC scopes; must include openid.",
+      "field": "oidc_scopes",
+      "name": "OIDC_SCOPES",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "auth.oidc.teamClaim",
+      "description": "ID-token team claim; empty uses JWT_TENANT_CLAIM. Must identify an existing team.",
+      "field": "oidc_team_claim",
+      "name": "OIDC_TEAM_CLAIM",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": "http://ollama.ollama.svc.cluster.local:11434",
       "chart_default": "http://ollama.ollama.svc.cluster.local:11434",
       "chart_value": "runtime.ollamaBaseUrl",
@@ -1297,6 +1410,18 @@
       "name": "SANDBOX_REQUEST_BUDGET",
       "sensitive": false,
       "type": "integer"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": true,
+      "chart_default": true,
+      "chart_value": "adminConsole.cookieSecure",
+      "description": "Send browser cookies only over HTTPS; false is allowed only for HTTP localhost.",
+      "field": "session_cookie_secure",
+      "name": "SESSION_COOKIE_SECURE",
+      "sensitive": false,
+      "type": "boolean"
     },
     {
       "aliases": [],

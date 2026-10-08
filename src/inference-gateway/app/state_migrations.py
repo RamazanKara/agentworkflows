@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MIGRATIONS = Path(__file__).with_name("migrations")
 
 

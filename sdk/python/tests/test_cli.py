@@ -7,6 +7,36 @@ from agentworkflows.cli import main
 from agentworkflows.scaffold import TEMPLATES
 
 
+@pytest.mark.parametrize(
+    ("args", "method", "path", "body"),
+    [
+        (["keys", "list"], "GET", "/v1/team/keys", None),
+        (["keys", "create", "--name", "Alice", "--role", "builder", "--project", "default"],
+         "POST", "/v1/team/keys", {"name": "Alice", "role": "builder", "project": "default"}),
+        (["keys", "update", "abc", "--name", "CI", "--expires-at", "2030-01-01T00:00:00Z"],
+         "PATCH", "/v1/team/keys/abc", {"name": "CI", "expires_at": "2030-01-01T00:00:00Z"}),
+        (["keys", "update", "abc", "--expires-at", "", "--project", ""],
+         "PATCH", "/v1/team/keys/abc", {"expires_at": None, "project": None}),
+        (["keys", "revoke", "abc"], "DELETE", "/v1/team/keys/abc", None),
+    ],
+)
+def test_key_commands(monkeypatch, capsys, args, method, path, body):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+
+    def respond(request):
+        assert request.method == method and request.url.path == path
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        assert (json.loads(request.content) if request.content else None) == body
+        return httpx.Response(200, json={"key_id": "abc"})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(args) == 0
+    assert json.loads(capsys.readouterr().out) == {"key_id": "abc"}
+
+
 def test_help_needs_no_credentials(monkeypatch, capsys):
     monkeypatch.delenv("AGENTWORKFLOWS_API_KEY", raising=False)
     with pytest.raises(SystemExit) as exc:

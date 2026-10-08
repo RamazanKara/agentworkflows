@@ -214,6 +214,33 @@ spec:
               value: {{ .Values.auth.jwt.cacheSeconds | quote }}
             - name: JWT_TENANT_CLAIM
               value: {{ .Values.auth.jwt.tenantClaim | quote }}
+            - name: OIDC_ISSUER
+              value: {{ .Values.auth.oidc.issuer | quote }}
+            - name: OIDC_CLIENT_ID
+              value: {{ .Values.auth.oidc.clientId | quote }}
+            - name: OIDC_CLIENT_SECRET
+              {{- if .Values.auth.oidc.existingSecret.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.oidc.existingSecret.name | quote }}
+                  key: {{ .Values.auth.oidc.existingSecret.key | quote }}
+              {{- else }}
+              value: {{ .Values.auth.oidc.clientSecret | quote }}
+              {{- end }}
+            - name: OIDC_REDIRECT_URL
+              value: {{ .Values.auth.oidc.redirectUrl | quote }}
+            - name: OIDC_SCOPES
+              value: {{ .Values.auth.oidc.scopes | quote }}
+            - name: OIDC_TEAM_CLAIM
+              value: {{ .Values.auth.oidc.teamClaim | quote }}
+            - name: OIDC_ROLE_CLAIM
+              value: {{ .Values.auth.oidc.roleClaim | quote }}
+            - name: OIDC_PROJECT_CLAIM
+              value: {{ .Values.auth.oidc.projectClaim | quote }}
+            - name: OIDC_DEFAULT_ROLE
+              value: {{ .Values.auth.oidc.defaultRole | quote }}
+            - name: SESSION_COOKIE_SECURE
+              value: {{ .Values.adminConsole.cookieSecure | quote }}
             - name: API_KEY_SHA256S
               {{- if .Values.auth.existingSecret.name }}
               valueFrom:
