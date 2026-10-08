@@ -15,13 +15,11 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 === "Bash (Linux/macOS)"
 
     ```bash
-    git clone https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.4.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python3 -m venv .venv
     source .venv/bin/activate
     python -m pip install ./sdk/python
-    docker compose -f deploy/compose/compose.yaml build inference-gateway
-    docker compose -f deploy/compose/compose.yaml build workflow-worker
     docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker temporal-ui
     export AGENTWORKFLOWS_API_KEY=local-development-only
     ```
@@ -29,18 +27,16 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    git clone https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.4.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python -m venv .venv
     $env:Path = "$PWD\.venv\Scripts;$env:Path"
     python -m pip install ./sdk/python
-    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml build inference-gateway
-    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml build workflow-worker
     wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'local-development-only'
     ```
 
-Images build one at a time. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
+Compose pulls the signed v0.4.0 release images; nothing is built locally. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 

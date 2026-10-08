@@ -12,10 +12,11 @@ and synthetic prices from the existing Compose fakes.
 
 ## 1. Install and start the fake gateway
 
-From a checkout of AgentWorkflows, install the SDK and build it:
+Clone the release, then install and build the SDK and its examples:
 
 ```sh
-cd sdk/typescript
+git clone --branch v0.4.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+cd agentworkflows/sdk/typescript
 npm ci --no-audit --no-fund --maxsockets=2
 npm run build
 cd ../..
@@ -28,7 +29,6 @@ Choose ports using the existing `AGENTWORKFLOWS_GATEWAY_PORT` and
 === "Bash (Linux/macOS)"
 
     ```bash
-    docker compose -p aw-typescript -f deploy/compose/compose.yaml build inference-gateway
     docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait inference-gateway notification-fake temporal-ui
     export AGENTWORKFLOWS_API_KEY=demo-worker
     export AGENTWORKFLOWS_URL=http://127.0.0.1:8080
@@ -40,7 +40,6 @@ Choose ports using the existing `AGENTWORKFLOWS_GATEWAY_PORT` and
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml build inference-gateway
     wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait inference-gateway notification-fake temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'demo-worker'
     $env:AGENTWORKFLOWS_URL = 'http://127.0.0.1:8080'
@@ -113,9 +112,12 @@ Change the prompt and rebuild with `npm run build` before restarting the worker.
 
 ## Write a workflow
 
-Install this checkout's package in your own Node project with
-`npm install /path/to/agentworkflows/sdk/typescript` after building it as above.
-The package uses that compiled output; it is not yet published to npm.
+Install the SDK in your own Node project from the GitHub release (it is not on npm yet):
+
+```sh
+npm install https://github.com/RamazanKara/agentworkflows/releases/download/v0.4.0/agentworkflows-sdk-0.4.0.tgz
+```
+
 Import workflow code from the dedicated sandbox-safe subpath:
 
 ```typescript
