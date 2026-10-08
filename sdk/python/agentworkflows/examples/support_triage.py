@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from temporalio import workflow
 
-from agentworkflows.workflows import WorkflowGateway
+from agentworkflows.workflows import WorkflowGateway, input_schema
 
 
 @dataclass
@@ -13,6 +13,30 @@ class SupportTriageRequest:
     model: str = "demo-openai"
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "ticket": {
+                "type": "string",
+                "description": "Support ticket text",
+                "examples": ["I cannot sign in after resetting my password."],
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "model": {
+                "type": "string",
+                "description": "Approved model ID",
+                "default": "demo-openai",
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+        },
+        "required": ["ticket"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class SupportTriageWorkflow:
     @workflow.query

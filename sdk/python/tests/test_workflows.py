@@ -14,10 +14,32 @@ from agentworkflows.examples.support_triage import SupportTriageWorkflow
 from agentworkflows.examples.triggered import DailyReportWorkflow, GitHubIssueTriageWorkflow
 from agentworkflows.examples.weekly_report import WeeklyReportRequest, WeeklyReportWorkflow
 from agentworkflows.triggers import ScheduledTrigger
-from agentworkflows.workflows import Budget, Call, WorkflowGateway
+from agentworkflows.workflows import Budget, Call, WorkflowGateway, input_schema
 from temporalio.exceptions import ApplicationError
 from temporalio.testing import ActivityEnvironment
 from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
+
+
+def test_input_schema_preserves_temporal_workflow_definition(monkeypatch):
+    from temporalio.workflow import _Definition
+
+    schema = {"type": "object", "properties": {"topic": {"type": "string"}}, "required": ["topic"]}
+    original = _Definition.must_from_class(ResearchWorkflow)
+    monkeypatch.setattr(ResearchWorkflow, "input_schema", ResearchWorkflow.input_schema)
+    assert input_schema(schema)(ResearchWorkflow) is ResearchWorkflow
+    assert _Definition.must_from_class(ResearchWorkflow) is original
+    assert ResearchWorkflow.input_schema is schema
+
+
+@pytest.mark.parametrize("workflow_class, field", [
+    (ResearchWorkflow, "topic"), (CodeReviewWorkflow, "diff"), (SupportTriageWorkflow, "ticket"),
+    (WeeklyReportWorkflow, "period"), (IncidentSummaryWorkflow, "incident_id"), (DocumentQAWorkflow, "question"),
+])
+def test_template_declares_serializable_input_schema(workflow_class, field):
+    schema = json.loads(json.dumps(workflow_class.input_schema))
+    assert schema["type"] == "object"
+    assert schema["required"] == [field]
+    assert schema["properties"][field]["type"] == "string"
 
 
 @pytest.mark.parametrize(

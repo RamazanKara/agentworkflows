@@ -55,7 +55,7 @@ cd my-research
 agentworkflows runs start ResearchWorkflow --input '@input.json'
 ```
 
-You now have editable `workflow.py`, `worker.py`, and `input.json`, plus a README with
+You now have editable `workflow.py`, `worker.py`, `input.json`, and `input-schema.json`, plus a README with
 worker instructions. `init --help` lists **research**, **code-review**, **support-triage**,
 **weekly-report**, **incident-summary**, and **document-qa**.
 It never overwrites an existing project. The built-in worker runs the unchanged templates;
@@ -97,7 +97,15 @@ email fakes. Every entry has a `receipt_id`. The draft call falls back from Open
 of your gateway key. `approve --reject` instead finishes without publishing.
 
 Open <http://127.0.0.1:8080/console/> and sign in with `local-development-only` to see the
-same run, draft, result, timeline, and costs. Temporal history is at <http://127.0.0.1:8233>.
+same run, draft, result, timeline, and costs. Expand a step's **Input and output** to see
+what it sent and received, with redaction and truncation notes. The demo captures redacted
+content for seven days; terminal run records expire after 30 days. Receipt hashes contain
+no captured text. Temporal history is at <http://127.0.0.1:8233> and has its own retention.
+
+You can also choose **Run workflow**, select any starter, and fill in its generated form.
+Forms come from the workflow policy's `inputSchema`; workflows without one use a JSON box.
+For your edited project, keep `workflow.py`'s schema declaration and the reviewed policy
+in sync using `input-schema.json`. Invalid fields are reported before a run starts.
 
 To verify the retained receipt chain, return to the checkout root:
 

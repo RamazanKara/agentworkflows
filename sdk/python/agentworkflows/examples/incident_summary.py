@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from temporalio import workflow
 
-from agentworkflows.workflows import WorkflowGateway
+from agentworkflows.workflows import WorkflowGateway, input_schema
 
 
 @dataclass
@@ -14,6 +14,30 @@ class IncidentSummaryRequest:
     model: str = "demo-openai"
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "incident_id": {
+                "type": "string",
+                "description": "Incident identifier",
+                "examples": ["INC-1042"],
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "model": {
+                "type": "string",
+                "description": "Approved model ID",
+                "default": "demo-openai",
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+        },
+        "required": ["incident_id"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class IncidentSummaryWorkflow:
     @workflow.query

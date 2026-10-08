@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from temporalio import workflow
 
-from agentworkflows.workflows import WorkflowGateway
+from agentworkflows.workflows import WorkflowGateway, input_schema
 
 
 @dataclass
@@ -14,6 +14,30 @@ class WeeklyReportRequest:
     model: str = "demo-openai"
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "period": {
+                "type": "string",
+                "description": "Reporting period",
+                "examples": ["2026-09-28/2026-10-04"],
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "model": {
+                "type": "string",
+                "description": "Approved model ID",
+                "default": "demo-openai",
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+        },
+        "required": ["period"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class WeeklyReportWorkflow:
     @workflow.query

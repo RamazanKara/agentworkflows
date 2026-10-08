@@ -427,6 +427,30 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": 16384,
+      "chart_default": 16384,
+      "chart_value": "workflowRecords.contentMaxBytes",
+      "description": "Largest single captured workflow step value in bytes; longer values are truncated.",
+      "field": "content_max_bytes",
+      "name": "CONTENT_MAX_BYTES",
+      "sensitive": false,
+      "type": "integer"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 604800,
+      "chart_default": 604800,
+      "chart_value": "workflowRecords.contentRetentionSeconds",
+      "description": "Seconds captured workflow step inputs and outputs are kept before they expire.",
+      "field": "content_retention_seconds",
+      "name": "CONTENT_RETENTION_SECONDS",
+      "sensitive": false,
+      "type": "integer"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": "USD",
       "chart_default": "USD",
       "chart_value": "cost.currency",
@@ -1287,6 +1311,18 @@
       "name": "RUNTIME_RETRY_BACKOFF_SECONDS",
       "sensitive": false,
       "type": "float"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 2592000,
+      "chart_default": 2592000,
+      "chart_value": "workflowRecords.runRecordRetentionSeconds",
+      "description": "Seconds finished workflow run records are kept before they are removed.",
+      "field": "run_record_retention_seconds",
+      "name": "RUN_RECORD_RETENTION_SECONDS",
+      "sensitive": false,
+      "type": "integer"
     },
     {
       "aliases": [],

@@ -1,6 +1,7 @@
 import base64
 import hmac
 import json
+from fnmatch import fnmatchcase
 
 from app.budget import REDIS_SETTLE_SCRIPT, REDIS_USAGE_SCRIPT
 from app.settings import Settings
@@ -78,6 +79,9 @@ class FakeRedisBudgetStore:
 
     def get(self, key):
         return self.data.get(key)
+
+    def scan(self, cursor, *, match, count):
+        return 0, [key for key in self.data if fnmatchcase(key, match)]
 
     def hgetall(self, key):
         return dict(self.data.get(key, {}))

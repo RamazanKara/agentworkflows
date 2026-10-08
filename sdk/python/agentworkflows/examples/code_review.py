@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from temporalio import workflow
 
-from agentworkflows.workflows import ApprovalWorkflow, WorkflowGateway
+from agentworkflows.workflows import ApprovalWorkflow, WorkflowGateway, input_schema
 
 
 @dataclass
@@ -13,6 +13,30 @@ class CodeReviewRequest:
     model: str = "demo-openai"
 
 
+@input_schema(
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "diff": {
+                "type": "string",
+                "description": "Pull request diff",
+                "examples": ["- return user.is_admin\n+ return True"],
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+            "model": {
+                "type": "string",
+                "description": "Approved model ID",
+                "default": "demo-openai",
+                "minLength": 1,
+                "pattern": "\\S",
+            },
+        },
+        "required": ["diff"],
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class CodeReviewWorkflow(ApprovalWorkflow):
     @workflow.run

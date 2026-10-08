@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from importlib import import_module
 from importlib.resources import files
 from pathlib import Path
 
@@ -46,6 +47,7 @@ def init_project(destination: Path, template: str) -> None:
     if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
         raise ValueError(f"{destination} is not an empty directory. Choose a new directory; existing files are kept.")
     module, workflow, example = TEMPLATES[template]
+    schema = getattr(import_module(f"agentworkflows.examples.{module}"), workflow).input_schema
     source = files("agentworkflows.examples").joinpath(f"{module}.py").read_text(encoding="utf-8")
     # The research module also keeps the legacy operator CLI; projects use the authenticated run API.
     source = source.split("\n\nasync def main()", 1)[0].rstrip() + "\n"
@@ -65,11 +67,14 @@ def init_project(destination: Path, template: str) -> None:
             f"    run_worker([{workflow}])\n"
         ),
         "input.json": json.dumps(example, indent=2) + "\n",
+        "input-schema.json": json.dumps(schema, indent=2) + "\n",
         "requirements.txt": _requirement(),
         ".gitignore": ".venv/\n.env\n__pycache__/\n",
         "README.md": f"""# {workflow}
 
 Edit `workflow.py` and `input.json`. The SDK is already installed if you used `agentworkflows init`.
+The workflow declares its schema; copy `input-schema.json` to the workflow policy's `inputSchema`
+to enable the console form and gateway validation. Keep the declaration and policy in sync.
 On another machine, `python -m pip install -r requirements.txt` installs the same SDK
 release from GitHub.
 

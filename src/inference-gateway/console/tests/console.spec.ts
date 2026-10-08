@@ -8,8 +8,97 @@ const run = (overrides = {}) => ({
   timeline: [{ step_id: 'draft', action: 'model_call', provider: 'anthropic', model: 'demo-anthropic', tokens: 63, cost_usd: .0332, duration_ms: 180, timestamp: 1791316802, status_code: 200, receipt_id: 'a'.repeat(64), chain_id: 'chain-one', attempts: [{ provider: 'openai', status_code: 503 }], receipt: { record_hash: 'a'.repeat(64), prev_hash: 'b'.repeat(64), provider: 'anthropic', workflow_step_id: 'draft' } }],
   ...overrides,
 });
-const policies = { workflows: { ResearchWorkflow: { allowedModels: ['demo-openai'], allowedProviders: ['openai', 'anthropic'], tokenLimit: 10000, costLimitUsd: 5 }, CustomWorkflow: { allowedModels: [], allowedProviders: [], tokenLimit: 500, costLimitUsd: 1 } } };
+const policies = { workflows: { ResearchWorkflow: { inputSchema: {"type":"object","properties":{"topic":{"type":"string","default":"How should our team evaluate AI agents?"},"model":{"type":"string","default":"demo-openai"}},"required":["topic"]}, allowedModels: ['demo-openai'], allowedProviders: ['openai', 'anthropic'], tokenLimit: 10000, costLimitUsd: 5 }, CustomWorkflow: { allowedModels: [], allowedProviders: [], tokenLimit: 500, costLimitUsd: 1 } } };
 const costs = { cost_usd: .0432, tokens: 63, calls: 2 };
+
+test('schema forms render all supported field types and submit typed values', async ({ page }) => {
+  await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: { FormWorkflow: {
+    allowedModels: [], allowedProviders: [], tokenLimit: 1000, costLimitUsd: 1,
+    inputSchema: { type: 'object', description: 'A schema supplied by the team.', properties: {
+      title: { type: 'string', description: 'Name this request', examples: ['Example title'] },
+      body: { type: 'string', examples: ['First line\nSecond line'] },
+      count: { type: 'integer', default: 2 },
+      price: { type: 'number', default: 1.5 },
+      enabled: { type: 'boolean', default: false },
+      mode: { type: 'string', enum: ['fast', 'thorough'], default: 'fast' },
+      priority: { type: 'integer', enum: [1, 2], default: 2 },
+      tags: { type: 'array', items: { type: 'string' }, default: ['one', 'two'] },
+      optional: { type: 'string' },
+    }, required: ['title', 'count', 'enabled'] },
+  } } } }));
+  const submissions: Record<string, unknown>[] = [];
+  await page.route('**/v1/workflow-runs', route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    submissions.push(route.request().postDataJSON());
+    return route.fulfill({ status: 201, json: { run_id: id } });
+  });
+  await login(page, 'builder');
+  await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
+  await expect(page.getByLabel('Workflow input (JSON)')).toHaveCount(0);
+  await expect(page.getByText('A schema supplied by the team.')).toBeVisible();
+  await page.getByRole('button', { name: 'Start run' }).click();
+  expect(submissions).toHaveLength(0);
+  await page.getByLabel('Title', { exact: true }).fill('Form test');
+  await expect(page.getByLabel('Body', { exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');
+  await page.getByLabel('Body', { exact: true }).fill('<script>untrusted</script>\nSecond line');
+  await page.getByLabel('Count', { exact: true }).fill('3');
+  await page.getByLabel('Price', { exact: true }).fill('2.25');
+  await page.getByLabel('Mode', { exact: true }).selectOption({ label: 'thorough' });
+  await page.getByLabel('Tags', { exact: true }).fill('one\nthree');
+  await page.getByRole('button', { name: 'Start run' }).click();
+  await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
+  expect(submissions[0].input).toEqual({ title: 'Form test', body: '<script>untrusted</script>\nSecond line', count: 3, price: 2.25, enabled: false, mode: 'thorough', priority: 2, tags: ['one', 'three'] });
+});
+
+test('schema validation errors identify fields and switching workflows clears form values', async ({ page }) => {
+  await page.route('**/v1/workflow-runs', route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    return route.fulfill({ status: 422, json: { detail: {
+      reason: 'workflow_input_invalid', message: 'input.topic: Field is required.',
+      fields: [{ field: 'input.topic', message: 'Field is required.' }],
+    } } });
+  });
+  await login(page, 'builder');
+  await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
+  await page.getByLabel('Topic', { exact: true }).fill('Changed topic');
+  await page.getByRole('button', { name: 'Start run' }).click();
+  await expect(page.getByRole('alert')).toContainText('input.topic: Field is required.');
+  await page.getByLabel('Workflow', { exact: true }).selectOption('CustomWorkflow');
+  await expect(page.getByLabel('Workflow input (JSON)')).toHaveValue('{}');
+  await page.getByLabel('Workflow', { exact: true }).selectOption('ResearchWorkflow');
+  await expect(page.getByLabel('Topic', { exact: true })).toHaveValue('How should our team evaluate AI agents?');
+});
+
+for (const mode of ['redacted', 'full', 'capture_off', 'expired']) {
+  test(`step content shows ${mode} with escaped text and capture notes`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    const original = run();
+    const content = ['redacted', 'full'].includes(mode) ? {
+      input: '<script>throw new Error("unsafe")</script>\nPrompt',
+      output: '<img src=x onerror=alert(1)>\nAnswer',
+      redaction: mode, truncated: { input: true, output: true },
+    } : null;
+    await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: {
+      ...original, timeline: [{ ...original.timeline[0], content, content_reason: content ? undefined : mode }],
+    } }));
+    await login(page, 'viewer');
+    await page.goto(`/console/#run/${id}`);
+    await page.getByText('Input and output', { exact: true }).click();
+    if (content) {
+      await expect(page.locator('.step-content').first()).toHaveText(content.input);
+      await expect(page.locator('.step-content').last()).toHaveText(content.output);
+      await expect(page.locator('.step-content script, .step-content img')).toHaveCount(0);
+      await expect(page.locator('.step-content').first()).toHaveCSS('white-space', 'pre-wrap');
+      await expect(page.getByText('Input truncated at the capture size limit.')).toBeVisible();
+      await expect(page.getByText('Output truncated at the capture size limit.')).toBeVisible();
+      await expect(page.getByText(mode === 'redacted' ? 'Gateway redaction applied.' : 'Full capture after gateway admission and output checks.')).toBeVisible();
+    } else {
+      await expect(page.getByText(mode === 'expired' ? 'Captured content expired.' : 'Content capture is off for this step.')).toBeVisible();
+    }
+    expect(errors).toEqual([]);
+  });
+}
 
 async function login(page: Page, token = 'admin') {
   await page.goto('/console/');
@@ -149,11 +238,11 @@ test('template inputs are ready to run and completed results are readable', asyn
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: {
     ...policies.workflows,
-    SupportTriageWorkflow: policies.workflows.ResearchWorkflow,
-    CodeReviewWorkflow: policies.workflows.ResearchWorkflow,
-    WeeklyReportWorkflow: policies.workflows.ResearchWorkflow,
-    IncidentSummaryWorkflow: policies.workflows.ResearchWorkflow,
-    DocumentQAWorkflow: policies.workflows.ResearchWorkflow,
+    SupportTriageWorkflow: { ...policies.workflows.ResearchWorkflow, inputSchema: { type: 'object', properties: { ticket: { type: 'string', default: 'Example input' } }, required: ['ticket'] } },
+    CodeReviewWorkflow: { ...policies.workflows.ResearchWorkflow, inputSchema: { type: 'object', properties: { diff: { type: 'string', default: 'Example input' } }, required: ['diff'] } },
+    WeeklyReportWorkflow: { ...policies.workflows.ResearchWorkflow, inputSchema: { type: 'object', properties: { period: { type: 'string', default: 'Example input' } }, required: ['period'] } },
+    IncidentSummaryWorkflow: { ...policies.workflows.ResearchWorkflow, inputSchema: { type: 'object', properties: { incident_id: { type: 'string', default: 'Example input' } }, required: ['incident_id'] } },
+    DocumentQAWorkflow: { ...policies.workflows.ResearchWorkflow, inputSchema: { type: 'object', properties: { question: { type: 'string', default: 'Example input' } }, required: ['question'] } },
   } } }));
   await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({
     status: 'completed', progress: undefined, result: 'Priority: high. Suggested owner: account support.',
@@ -166,10 +255,10 @@ test('template inputs are ready to run and completed results are readable', asyn
     ['IncidentSummaryWorkflow', 'incident_id'], ['DocumentQAWorkflow', 'question'],
   ]) {
     await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption(workflow);
-    expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty(field);
+    await expect(page.locator(`[name="input.${field}"]`)).toHaveValue('Example input');
   }
   await page.getByRole('combobox', { name: 'Workflow', exact: true }).selectOption('SupportTriageWorkflow');
-  expect(JSON.parse(await page.getByLabel('Workflow input (JSON)').inputValue())).toHaveProperty('ticket');
+  await expect(page.getByLabel('Ticket', { exact: true })).toHaveValue('Example input');
   const request = page.waitForRequest(r => r.url().endsWith('/v1/workflow-runs') && r.method() === 'POST');
   await page.getByRole('button', { name: 'Start run' }).click();
   expect((await request).postDataJSON().input).toHaveProperty('ticket');

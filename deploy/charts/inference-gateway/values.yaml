@@ -234,6 +234,15 @@ responses:
     keyPrefix: agentworkflows:responses
     retentionSeconds: 86400
 
+# Workflow step content capture and run-record retention. Captured step inputs and outputs follow
+# each workflow's `captureContent` policy (none, redacted or full) and expire after
+# `contentRetentionSeconds`; `contentMaxBytes` caps one captured value; finished run records are
+# removed after `runRecordRetentionSeconds`.
+workflowRecords:
+  contentRetentionSeconds: 604800
+  contentMaxBytes: 16384
+  runRecordRetentionSeconds: 2592000
+
 # Team console bundled in the gateway image at /console. Uses existing authenticated APIs.
 # Enable alongside managed team policies, Redis accounting, and Temporal workers.
 adminConsole:

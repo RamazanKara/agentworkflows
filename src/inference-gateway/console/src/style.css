@@ -220,3 +220,4 @@ details[open] summary { margin-bottom: 12px; }
   .keys-table .row-action { flex-basis: 100%; text-align: left; }
   .keys-table .row-action:empty { display: none; }
 }
+pre.step-content { white-space: pre-wrap; overflow-wrap: anywhere; }

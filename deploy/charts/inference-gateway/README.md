@@ -228,6 +228,9 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `traceability.auditChainStore.timeoutSeconds` | `0.5` |
 | `traceability.auditLogEnabled` | `true` |
 | `traceability.defaultSandboxId` | `local-lab` |
+| `workflowRecords.contentMaxBytes` | `16384` |
+| `workflowRecords.contentRetentionSeconds` | `604800` |
+| `workflowRecords.runRecordRetentionSeconds` | `2592000` |
 | `workflows.temporalAddress` | `""` |
 <!-- chart-docs:end -->
 ## Install profiles

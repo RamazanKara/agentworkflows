@@ -25,7 +25,7 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `usage` | Usage, estimated spend, provider and workflow breakdowns |
 | `runs start [WORKFLOW] --input '@input.json'` | Start a workflow (default ResearchWorkflow); input can also be inline JSON |
 | `runs list --project PROJECT --offset OFFSET` | List runs; both options are optional; use returned next_offset for pagination |
-| `runs inspect RUN_ID` | Status, draft, completed result, budget, and receipt timeline |
+| `runs inspect RUN_ID` | Status, draft, completed result, budget, and timeline including opt-in step content |
 | `runs approve RUN_ID` | Approve as your authenticated identity; `--reject` rejects instead |
 | `runs cancel RUN_ID` | Request cancellation; cannot undo already-sent tool actions |
 | `runs retry RUN_ID` | Start a new execution after failure/cancellation; steps may run again |
@@ -46,6 +46,8 @@ Machine-readable command output stays on stdout; actionable errors go to stderr.
 
 The [template gallery](templates.md) includes input fields, expected results and adaptation
 steps for every starter. Install from this checkout to get its current template set.
+Scaffolds include `input-schema.json` and a schema declaration in `workflow.py`. Copy the
+schema to the workflow policy's `inputSchema` to enable console forms and gateway validation.
 
 ## Environment
 
@@ -61,6 +63,15 @@ steps for every starter. Install from this checkout to get its current template 
 ## Workflow SDK
 
 Import `WorkflowGateway`, `Budget`, and `ApprovalWorkflow` from `agentworkflows.workflows`.
+Use `@input_schema(schema)` from the same module on a workflow class to declare its inputs;
+the schema is available as `WorkflowClass.input_schema`. In TypeScript, import `InputSchema`
+and `withInputSchema` from `@agentworkflows/sdk/workflows`, then export
+`withInputSchema(schema, implementation)`; it preserves the function and exposes `.inputSchema`.
+Declarations do not register or replace administrator-approved workflow policies.
+
+Schemas use the flat JSON Schema draft 2020-12 subset documented in
+[workflow forms](workflows.md#workflow-forms-and-step-content): object properties with primitive
+types or string arrays, enums, required fields, descriptions, defaults, and examples.
 
 | API | Result / behavior |
 | --- | --- |
@@ -79,6 +90,11 @@ retry. Existing Temporal `RetryPolicy` and `timedelta` parameters remain availab
 `WorkflowGateway`. `data_classification` defaults to `internal`; confidential data needs an
 approved self-hosted route. Approval expires after seven days with an actionable failure.
 
+Both SDKs send model/tool input and output through gateway capture automatically when
+the policy enables `captureContent`. Run inspection includes per-step text, redaction mode,
+and per-field truncation flags. Capture uses a separate Redis TTL (seven days by default),
+never receipt bodies. Terminal run records default to 30-day retention.
+
 Template research budgets accept integer `token_limit` from 1 to 1,000,000,000 and finite
 `cost_limit_usd` greater than zero up to 1,000,000. Policy ceilings still take precedence.
 
@@ -92,6 +108,9 @@ the CLI. [Client examples](client-examples.md) cover model calls and compatible 
 identify the invalid fields. CLI output includes a recovery action and request ID without
 printing your credential. `GatewayRetryAfterError.retry_after` reports when the server asks
 for a delay longer than the client's retry cap; transport errors are `httpx.HTTPError`.
+Schema errors return HTTP 422 with `detail.reason = "workflow_input_invalid"` and a
+`detail.fields` list of `{field: "input.property", message: "..."}`. Validation happens
+before a start intent or Temporal execution is created; defaults are not inserted by the API.
 
 | Error | Recovery |
 | --- | --- |

@@ -212,6 +212,10 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     ast.parse((target / "workflow.py").read_text())
     ast.parse((target / "worker.py").read_text())
     assert json.loads((target / "input.json").read_text()) == TEMPLATES[template][2]
+    schema = json.loads((target / "input-schema.json").read_text())
+    assert schema["type"] == "object"
+    assert set(schema["required"]) <= TEMPLATES[template][2].keys()
+    assert "@input_schema(" in (target / "workflow.py").read_text()
     assert "worker.py" in (target / "README.md").read_text()
     assert f"templates/#{template}" in (target / "README.md").read_text()
     assert "releases/download/v0.4.0/agentworkflows-0.4.0-py3-none-any.whl" in (target / "requirements.txt").read_text()

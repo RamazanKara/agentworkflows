@@ -6,9 +6,16 @@ from typing import Any
 from temporalio import workflow
 from temporalio.exceptions import ApplicationError
 
-from agentworkflows.workflows import ApprovalWorkflow, WorkflowGateway
+from agentworkflows.workflows import ApprovalWorkflow, WorkflowGateway, input_schema
 
 
+@input_schema(
+    {
+        "type": "object",
+        "properties": {"topic": {"type": "string", "description": "Daily report topic", "default": "agent operations"}},
+        "additionalProperties": False,
+    }
+)
 @workflow.defn
 class DailyReportWorkflow(ApprovalWorkflow):
     @workflow.run
