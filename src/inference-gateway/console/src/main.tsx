@@ -4,13 +4,14 @@ import { api, label, type AuthConfig, type BrowserSession, type RunPage, type Se
 import { ErrorMessage, Icon, Loading } from './ui';
 import { Approvals, RunDetail, Runs, StartRun } from './runs';
 import { Costs, GetStarted, Providers } from './team';
+import { TeamConfiguration } from './settings';
 import { Triggers } from './triggers';
 import { Keys } from './keys';
 import './style.css';
 
 const navigation = [
   ['start', 'Get started'], ['runs', 'Workflow runs'], ['approvals', 'Approvals'],
-  ['triggers', 'Triggers'], ['keys', 'Members & keys'], ['providers', 'Providers & budgets'], ['costs', 'Costs'],
+  ['triggers', 'Triggers'], ['keys', 'Members & keys'], ['team', 'Team settings'], ['providers', 'Providers & budgets'], ['costs', 'Costs'],
 ];
 
 // Reasons the gateway's OIDC callback can send a browser back with.
@@ -140,7 +141,7 @@ function App() {
       <button className="menu-button" aria-expanded={menu} aria-controls="app-menu" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu(value => !value)}><Icon name={menu ? 'close' : 'menu'}/></button>
       <div id="app-menu" className="app-menu">
         <p className="menu-who">{session.name && <strong>{session.name}</strong>}<span>{session.team.team_id} · {label(session.team.role)}</span></p>
-        <nav aria-label="Main navigation">{navigation.filter(([id]) => !['providers', 'keys'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
+        <nav aria-label="Main navigation">{navigation.filter(([id]) => id !== 'keys' || session.team.role === 'admin').map(([id, text]) =>
           <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}
         </nav>
         <div className="session-actions">
@@ -157,6 +158,7 @@ function App() {
       {route === 'home' ? <Landing session={session}/> : route === 'start' ? <GetStarted session={session}/> : route === 'runs' ? <Runs session={session}/> :
         route === 'new' || route.startsWith('new/') ? <StartRun session={session} initial={decodeURIComponent(route.slice(4))}/> : route === 'approvals' ? <Approvals session={session}/> :
         route === 'keys' ? <Keys session={session}/> :
+        route === 'team' ? <TeamConfiguration session={session}/> :
         route === 'triggers' ? <Triggers session={session}/> : route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> :
         /^run\/[a-f0-9-]{36}$/.test(route) ? <RunDetail session={session} runId={route.slice(4)}/> :
         <><h1>Page not found</h1><a href="#runs">Return to workflow runs</a></>}

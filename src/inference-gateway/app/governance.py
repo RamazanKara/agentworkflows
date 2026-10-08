@@ -53,9 +53,10 @@ from app.metrics import (
 from app.metrics import (
     sandbox_label as _sandbox_label,
 )
-from app.policy import DATA_CLASSIFICATIONS, LOCAL_BACKENDS, ModelRoute, ModelRoutingPolicy, SandboxPolicySet
+from app.policy import DATA_CLASSIFICATIONS, LOCAL_BACKENDS, ModelRoute, SandboxPolicySet
 from app.response_store import ResponseStoreError
 from app.settings import AdmissionPolicyError, Settings
+from app.team_settings import effective_team_settings
 
 # Outages of the opt-in state stores (stored responses, batch metadata). They are the
 # platform's fault and transient, so callers get a retryable 503, never a bare 500.
@@ -313,7 +314,9 @@ async def record_stream_end(
     )
 
 
-def resolve_single_route(request: Request, settings: Settings, payload_dict: dict[str, Any]) -> tuple[Settings, Any]:
+async def resolve_single_route(
+    request: Request, settings: Settings, payload_dict: dict[str, Any]
+) -> tuple[Settings, Any]:
     """Resolve the request's model to its single route and return (effective settings, route).
 
     The shared prologue for every endpoint that routes to exactly one model (chat resolves
@@ -322,7 +325,7 @@ def resolve_single_route(request: Request, settings: Settings, payload_dict: dic
     rejection, rewrites ``payload_dict["model"]`` to the canonical id, and folds the
     route's calibrated chars-per-token into the returned settings.
     """
-    policy: ModelRoutingPolicy = request.app.state.model_routing_policy
+    policy = (await effective_team_settings(request)).routing
     sandbox_policies: SandboxPolicySet = request.app.state.sandbox_policy_set
     effective = effective_settings(request, sandbox_policies, settings)
     try:
@@ -386,10 +389,10 @@ def workflow_route_permitted(request: Request, settings: Settings, route: ModelR
     )
 
 
-def resolve_chat_routes(
+async def resolve_chat_routes(
     request: Request, settings: Settings, payload: dict[str, Any], *, progressive: bool = False
 ) -> tuple[Settings, list[ModelRoute], ModelRoute | None]:
-    policy: ModelRoutingPolicy = request.app.state.model_routing_policy
+    policy = (await effective_team_settings(request)).routing
     effective = effective_settings(request, request.app.state.sandbox_policy_set, settings)
     try:
         chain = policy.resolve_chain(payload.get("model"), effective.model_id)

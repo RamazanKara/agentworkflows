@@ -39,6 +39,8 @@ def project_access(request: Request, project: str | None = None) -> str:
 def authorize_team_request(request: Request) -> None:
     if not request.url.path.startswith("/v1/"):
         return
+    if request.url.path == "/v1/team/settings" or request.url.path.startswith("/v1/team/settings/"):
+        require_role(request, "admin")
     principal = request.state.principal or {}
     if principal.get("auth") == "workflow_step":
         return
@@ -65,10 +67,15 @@ def authorize_team_request(request: Request) -> None:
 
 
 def register_team_routes(app: FastAPI) -> None:
+    from app.team_settings import effective_team_settings, register_team_settings_routes
+
+    register_team_settings_routes(app)
+
     @app.get("/v1/team", tags=["teams"], summary="Discover your team, role, projects, and provider configuration")
     async def team_info(request: Request) -> dict[str, Any]:
         principal = require_role(request, "admin", "builder", "approver", "viewer")
-        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        settings = await effective_team_settings(request)
+        team = settings.team
         projects = list(team.projects) if team else []
         if principal.get("project"):
             projects = [project_access(request)]
@@ -80,6 +87,8 @@ def register_team_routes(app: FastAPI) -> None:
             "projects": projects,
             "providers": sorted(team.provider_credentials) if team else [],
             "cost_limit_usd": team.cost_limit_usd if team else None,
+            "project_budgets": {name: team.project_budgets.get(name) for name in projects} if team else {},
+            "model_routes": {alias: route.model_id for route in settings.routing.routes for alias in route.aliases},
             "notifications": {
                 "channels": channels(team.notifications),
                 "budget_threshold": team.notifications.budget_threshold,

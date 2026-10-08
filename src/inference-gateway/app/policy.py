@@ -348,8 +348,11 @@ class WorkflowPolicy(BaseModel):
     allowed_models: list[str] = Field(alias="allowedModels")
     allowed_tools: list[str] = Field(default_factory=list, alias="allowedTools")
     allowed_egress: list[str] = Field(default_factory=list, alias="allowedEgress")
-    token_limit: int = Field(default=10000, alias="tokenLimit", gt=0, le=1_000_000_000, strict=True)
-    cost_limit_usd: float = Field(default=5, alias="costLimitUsd", gt=0, le=1_000_000, allow_inf_nan=False)
+    token_limit: int = Field(default=10000, alias="tokenLimit", ge=0, le=1_000_000_000, strict=True)
+    cost_limit_usd: float = Field(default=5, alias="costLimitUsd", ge=0, le=1_000_000, allow_inf_nan=False)
+    approval_required: bool = Field(default=True, alias="approvalRequired", strict=True)
+    approval_threshold_usd: float = Field(default=0, alias="approvalThresholdUsd", ge=0, allow_inf_nan=False)
+    approver_role: Literal["admin", "approver"] = Field(default="approver", alias="approverRole")
     agents: dict[str, WorkspaceAgent] = Field(default_factory=dict)
     triggers: dict[str, WorkflowTrigger] = Field(default_factory=dict)
     capture_content: Literal["none", "redacted", "full"] = Field(default="none", alias="captureContent")
@@ -408,6 +411,7 @@ class SandboxPolicy:
     projects: tuple[str, ...] = ()
     provider_credentials: dict[str, str] = field(default_factory=dict)
     cost_limit_usd: float | None = None
+    project_budgets: dict[str, float | None] = field(default_factory=dict)
     webhook_secret_env: str = ""
     notifications: TeamNotifications | None = None
 
@@ -497,9 +501,15 @@ class SandboxPolicySet:
                 isinstance(cost_limit, bool)
                 or not isinstance(cost_limit, (int, float))
                 or not isfinite(cost_limit)
-                or cost_limit <= 0
+                or cost_limit < 0
             ):
-                raise ValueError("budgets.costLimitUsd must be a finite positive USD amount")
+                raise ValueError("budgets.costLimitUsd must be a finite non-negative USD amount")
+            project_budgets = budgets.get("projectCostLimitsUsd", {})
+            if not isinstance(project_budgets, dict) or any(
+                project not in projects or type(value) not in (int, float) or not isfinite(value) or value < 0
+                for project, value in project_budgets.items()
+            ):
+                raise ValueError("budgets.projectCostLimitsUsd must map team projects to non-negative USD amounts")
             for name, workflow in workflow_policies.items():
                 if set(workflow.allowed_tools) - tools.keys():
                     raise ValueError(f"workflow {name} allowedTools must name registered team tools")
@@ -533,6 +543,7 @@ class SandboxPolicySet:
                 projects=projects,
                 provider_credentials=credentials,
                 cost_limit_usd=cost_limit,
+                project_budgets=project_budgets,
                 webhook_secret_env=webhook_secret,
                 notifications=TeamNotifications.model_validate(item["notifications"])
                 if item.get("notifications")

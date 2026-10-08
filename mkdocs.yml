@@ -105,6 +105,7 @@ nav:
       - Scope and non-goals: scope-and-non-goals.md
   - Guides:
       - Durable workflows and teams: workflows.md
+      - Team settings: team-settings.md
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md
       - Install on Kubernetes: install-kubernetes.md

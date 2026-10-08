@@ -16,7 +16,8 @@ from app.governance import effective_settings, governed, request_classification,
 from app.guardrails import _apply_output_guardrail, _apply_prompt_secret_mode
 from app.policy import DATA_CLASSIFICATIONS
 from app.settings import AdmissionPolicyError, Settings
-from app.workflow_budget import INIT, RunBudget, nanodollars, redis_call, reserve_run, run_key
+from app.team_settings import effective_team_settings
+from app.workflow_budget import INIT, RunBudget, effective_run_limits, nanodollars, redis_call, reserve_run, run_key
 from app.workflow_content import capture_field, capture_input, capture_mode
 
 
@@ -53,7 +54,7 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
 
     @app.put("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Initialize an immutable per-run budget")
     async def initialize_run(request: Request, run_id: UUID, budget: RunBudget) -> dict[str, Any]:
-        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        team = (await effective_team_settings(request)).team
         project = None
         if team and team.projects:
             from app.teams import project_access
@@ -77,13 +78,6 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
                     "message": "Set workflow to a name from GET /v1/workflow-policies.",
                 },
             )
-        if policy:
-            budget = budget.model_copy(
-                update={
-                    "token_limit": min(budget.token_limit, policy.token_limit),
-                    "cost_limit_usd": min(budget.cost_limit_usd, policy.cost_limit_usd),
-                }
-            )
         result = await redis_call(
             request,
             "eval",
@@ -105,11 +99,12 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             )
         if project:
             await redis_call(request, "hset", run_key(request, str(run_id)), "project", project)
-        return {"run_id": str(run_id), **budget.model_dump()}
+        raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))
+        return {"run_id": str(run_id), **budget.model_dump(), **effective_run_limits(raw, policy)}
 
     @app.get("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Inspect this team's run budget")
     async def run_usage(request: Request, run_id: UUID) -> dict[str, Any]:
-        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        team = (await effective_team_settings(request)).team
         if team and team.projects:
             from app.teams import project_access
 
@@ -132,15 +127,14 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
             "run_id": str(run_id),
             "sandbox_id": request.state.sandbox_id,
             "workflow": raw.get("workflow", ""),
-            "token_limit": int(raw["token_limit"]),
-            "cost_limit_usd": int(raw["cost_limit"]) / 1_000_000_000,
+            **effective_run_limits(raw, team.workflows.get(raw.get("workflow", "")) if team else None),
             "tokens": int(raw["tokens"]),
             "cost_usd": int(raw["cost"]) / 1_000_000_000,
         }
 
     @app.get("/v1/workflow-policies", tags=["workflows"], summary="Discover this team's workflow policies")
     async def workflow_policies(request: Request) -> dict[str, Any]:
-        team = app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+        team = (await effective_team_settings(request)).team
         return {
             "workflows": {
                 name: {

@@ -92,7 +92,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                     "workflow_streaming_unsupported", "Workflow model activities return complete results; omit stream."
                 )
             _forward_only_reviewed_params(request, payload_dict, "chat", settings)
-            effective, chain, shadow_route = resolve_chat_routes(
+            effective, chain, shadow_route = await resolve_chat_routes(
                 request, settings, payload_dict, progressive=not workflow_call
             )
             call.backend = chain[0].backend
@@ -287,7 +287,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
         payload_dict = payload.model_dump(exclude_none=True)
         async with governed(request, settings, route="/v1/completions", payload=payload_dict) as call:
             _forward_only_reviewed_params(request, payload_dict, "completions", settings)
-            effective, model_route = resolve_single_route(request, settings, payload_dict)
+            effective, model_route = await resolve_single_route(request, settings, payload_dict)
             call.backend = model_route.backend
             # Legacy completions do not use the chat SSE usage/guardrail machinery. Reject
             # streaming explicitly rather than forwarding an unmetered stream.
@@ -332,7 +332,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
         payload_dict = payload.model_dump(exclude_none=True)
         async with governed(request, settings, route="/v1/embeddings", payload=payload_dict) as call:
             _forward_only_reviewed_params(request, payload_dict, "embeddings", settings)
-            effective, model_route = resolve_single_route(request, settings, payload_dict)
+            effective, model_route = await resolve_single_route(request, settings, payload_dict)
             call.backend = model_route.backend
             effective.validate_embedding_admission(payload_dict)
             prompt_action = _apply_prompt_secret_mode(effective, payload_dict, call.route)
@@ -462,7 +462,7 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                             if payload.data_classification is not None:
                                 request_classification(child, {"data_classification": payload.data_classification})
                             apply_param_policy(item_dict, "chat", settings.extra_forwarded_params)
-                            item_effective, chain, _ = resolve_chat_routes(child, settings, item_dict)
+                            item_effective, chain, _ = await resolve_chat_routes(child, settings, item_dict)
                             item_effective.validate_admission(item_dict)
                             action = _apply_prompt_secret_mode(item_effective, item_dict, route)
                             child.state.prompt_guardrail_action = action

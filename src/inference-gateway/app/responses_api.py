@@ -172,7 +172,7 @@ def register_responses_routes(app: FastAPI, settings: Settings) -> None:
                 payload_dict = responses_to_chat_payload(payload, base_messages=prior.messages)
                 call.payload = payload_dict
                 request_classification(request, {"data_classification": prior.data_classification})
-            effective, chain, _ = resolve_chat_routes(request, settings, payload_dict)
+            effective, chain, _ = await resolve_chat_routes(request, settings, payload_dict)
             call.backend = chain[0].backend
             # Streaming translation to the Responses SSE event sequence is not wired through
             # the metering/guardrail machinery yet; reject it explicitly (mirroring

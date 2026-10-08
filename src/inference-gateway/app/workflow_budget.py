@@ -11,8 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from redis.exceptions import RedisError
 
 from app.budget import actual_total_tokens, budget_delta
-from app.policy import ModelRoute
+from app.policy import ModelRoute, WorkflowPolicy
 from app.settings import AdmissionPolicyError, Settings
+from app.team_settings import effective_team_settings
 
 
 class RunBudget(BaseModel):
@@ -25,13 +26,19 @@ class RunBudget(BaseModel):
 
 INIT = """
 if redis.call('EXISTS', KEYS[1]) == 1 then
-  if redis.call('HGET', KEYS[1], 'token_limit') ~= ARGV[1] or
-     redis.call('HGET', KEYS[1], 'cost_limit') ~= ARGV[2] or
-     (redis.call('HGET', KEYS[1], 'workflow') or '') ~= ARGV[3] or
+  local tokens = redis.call('HGET', KEYS[1], 'token_limit')
+  local cost = redis.call('HGET', KEYS[1], 'cost_limit')
+  if redis.call('HGET', KEYS[1], 'requested_limits') == '1' then
+    if tokens ~= ARGV[1] or cost ~= ARGV[2] then return 0 end
+  else
+    -- Older gateways stored only policy-clamped limits; keep those caps on retries.
+    if tonumber(ARGV[1]) < tonumber(tokens) or tonumber(ARGV[2]) < tonumber(cost) then return 0 end
+  end
+  if (redis.call('HGET', KEYS[1], 'workflow') or '') ~= ARGV[3] or
      (redis.call('HGET', KEYS[1], 'policy_required') or '0') ~= ARGV[4] then return 0 end
 else
   redis.call('HSET', KEYS[1], 'token_limit', ARGV[1], 'cost_limit', ARGV[2], 'tokens', 0, 'cost', 0,
-             'workflow', ARGV[3], 'policy_required', ARGV[4])
+             'workflow', ARGV[3], 'policy_required', ARGV[4], 'requested_limits', '1')
 end
 return 1
 """
@@ -40,8 +47,12 @@ RESERVE = """
 if redis.call('EXISTS', KEYS[1]) == 0 then return -1 end
 local tokens = tonumber(redis.call('HGET', KEYS[1], 'tokens')) + tonumber(ARGV[1])
 local cost = tonumber(redis.call('HGET', KEYS[1], 'cost')) + tonumber(ARGV[2])
-if tokens > tonumber(redis.call('HGET', KEYS[1], 'token_limit')) then return 1 end
-if cost > tonumber(redis.call('HGET', KEYS[1], 'cost_limit')) then return 2 end
+local token_limit = tonumber(redis.call('HGET', KEYS[1], 'token_limit'))
+local cost_limit = tonumber(redis.call('HGET', KEYS[1], 'cost_limit'))
+if tonumber(ARGV[3]) >= 0 then token_limit = math.min(token_limit, tonumber(ARGV[3])) end
+if tonumber(ARGV[4]) >= 0 then cost_limit = math.min(cost_limit, tonumber(ARGV[4])) end
+if tokens > token_limit then return 1 end
+if cost > cost_limit then return 2 end
 redis.call('HINCRBY', KEYS[1], 'tokens', ARGV[1])
 redis.call('HINCRBY', KEYS[1], 'cost', ARGV[2])
 return 0
@@ -97,7 +108,11 @@ async def reserve_run(request: Request, tokens: int, cost: float) -> tuple[int, 
     if not getattr(request.state, "workflow_run_id", None):
         return None
     amount = nanodollars(cost)
-    result = await redis_call(request, "eval", RESERVE, 1, run_key(request), tokens, amount)
+    policy = getattr(request.state, "workflow_policy", None)
+    result = await redis_call(
+        request, "eval", RESERVE, 1, run_key(request), tokens, amount,
+        policy.token_limit if policy else -1, nanodollars(policy.cost_limit_usd) if policy else -1,
+    )
     if result == -1:
         raise AdmissionPolicyError("workflow_run_missing", "Initialize this run with PUT /v1/workflow-runs/{run_id}.")
     if result:
@@ -112,13 +127,17 @@ async def reserve_run(request: Request, tokens: int, cost: float) -> tuple[int, 
 
 
 async def record_budget_threshold(request: Request) -> None:
-    team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    team = (await effective_team_settings(request)).team
     if not team or not team.notifications:
         return
     raw = await redis_call(request, "hgetall", run_key(request))
+    limits = effective_run_limits(raw, team.workflows.get(raw.get("workflow", "")))
     if any(
-        int(raw[limit]) and int(raw[used]) >= int(raw[limit]) * team.notifications.budget_threshold
-        for used, limit in (("tokens", "token_limit"), ("cost", "cost_limit"))
+        limit and used >= limit * team.notifications.budget_threshold
+        for used, limit in (
+            (int(raw["tokens"]), limits["token_limit"]),
+            (int(raw["cost"]) / 1_000_000_000, limits["cost_limit_usd"]),
+        )
     ):
         from app.workflow_notifications import queue_event
 
@@ -134,7 +153,7 @@ async def load_run_policy(request: Request) -> None:
         raise AdmissionPolicyError("workflow_run_missing", "Initialize this run with PUT /v1/workflow-runs/{run_id}.")
     name = raw.get("workflow", "")
     request.state.workflow_name = name
-    team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    team = (await effective_team_settings(request)).team
     if team and team.projects:
         request.state.project_id = raw.get("project") or team.projects[0]
         if (request.state.principal or {}).get("auth") != "workflow_step":
@@ -145,6 +164,14 @@ async def load_run_policy(request: Request) -> None:
     if policy is None and (raw.get("policy_required") == "1" or (team and team.workflows)):
         raise AdmissionPolicyError("workflow_not_allowed", "Choose a workflow from GET /v1/workflow-policies.")
     request.state.workflow_policy = policy
+
+
+def effective_run_limits(raw: dict[str, Any], policy: WorkflowPolicy | None) -> dict[str, Any]:
+    tokens, cost = int(raw.get("token_limit", 0)), int(raw.get("cost_limit", 0)) / 1_000_000_000
+    return {
+        "token_limit": min(tokens, policy.token_limit) if policy else tokens,
+        "cost_limit_usd": min(cost, policy.cost_limit_usd) if policy else cost,
+    }
 
 
 def model_charge(settings: Settings, route: ModelRoute, payload: dict[str, Any]) -> tuple[int, float]:

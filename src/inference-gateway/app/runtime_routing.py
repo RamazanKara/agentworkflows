@@ -8,12 +8,12 @@ from typing import Any
 import httpx
 from fastapi import Request
 
-from app.governance import effective_settings, governed, reserve_budget, route_settings
+from app.governance import effective_settings, governed, reserve_budget, route_settings, workflow_route_permitted
 from app.metrics import RUNTIME_FALLBACKS, SHADOW_REQUESTS
 from app.request_context import _runtime_headers
 from app.runtime_client import RuntimeClient
 from app.settings import AdmissionPolicyError
-from app.workflow_budget import model_charge, reserve_run, settle_run_model
+from app.workflow_budget import load_run_policy, model_charge, reserve_run, settle_run_model
 
 
 def _schedule_shadow(client: RuntimeClient, shadow_route: Any, payload_dict: dict[str, Any], request: Request) -> None:
@@ -89,9 +89,12 @@ async def _chat_with_fallback(
         workflow_call = bool(getattr(request.state, "workflow_run_id", None))
         reservation = None
         if workflow_call:
+            await load_run_policy(request)
             effective = route_settings(
                 effective_settings(request, request.app.state.sandbox_policy_set, request.app.state.settings), candidate
             )
+            if not workflow_route_permitted(request, effective, candidate):
+                raise AdmissionPolicyError("workflow_model_denied", "The workflow no longer allows this route.")
             reservation = await reserve_run(request, *model_charge(effective, candidate, payload))
             attempt["reserved"] = request.state.workflow_charge
         try:

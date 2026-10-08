@@ -45,7 +45,10 @@ from typing import Any
 
 # h_0 = SHA-256("genesis"); must match the gateway's AUDIT_GENESIS and the paper reference.
 GENESIS = hashlib.sha256(b"genesis").hexdigest()
-AUDIT_EVENTS = {"inference_request", "batch_request", "agent_action", "workflow_operation", "rag_query", "chain_start"}
+AUDIT_EVENTS = {
+    "inference_request", "batch_request", "agent_action", "workflow_operation", "rag_query", "chain_start",
+    "team_settings_changed",
+}
 CHAIN_FIELDS = ("prev_hash", "record_hash")
 # Sentinel chain-id for pre-v0.20.0 records that carry no chain_id field. Kept distinct from
 # any pod-derived HOSTNAME:ts so genesis-restart grouping cannot collide with a real chain.

@@ -48,6 +48,8 @@ CONTRACTS = {
             "/v1/sandbox/budget": RouteContract("get"),
             "/v1/usage": RouteContract("get"),
             "/v1/team": RouteContract("get"),
+            "/v1/team/settings": RouteContract("patch", request_schema="TeamSettingsPatch"),
+            "/v1/team/settings/{field}": RouteContract("delete"),
             "/v1/team/keys": RouteContract("post", request_schema="KeyCreate", success_status="201"),
             "/v1/team/keys/{key_id}": RouteContract("patch", request_schema="KeyUpdate"),
             "/v1/auth/config": RouteContract("get"),
@@ -126,6 +128,8 @@ CONTRACTS = {
                 "/v1/sandbox/budget",
                 "/v1/usage",
                 "/v1/team",
+                "/v1/team/settings",
+                "/v1/team/settings/{field}",
                 "/v1/team/keys",
                 "/v1/team/keys/{key_id}",
                 "/v1/workflow-runs",
@@ -161,6 +165,7 @@ CONTRACTS = {
             }
         ),
         required_schemas={
+            "TeamSettingsPatch": {"properties": {"fields"}, "required": {"fields"}},
             "ChatCompletionRequest": {
                 "properties": {
                     "model",

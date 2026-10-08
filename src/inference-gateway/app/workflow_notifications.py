@@ -18,9 +18,10 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import AnyHttpUrl
 
 from app.policy import SMTPNotification, TeamNotifications
+from app.team_settings import effective_team_settings
 from app.teams import require_role
 from app.workflow_budget import redis_call, run_key
-from app.workflow_operations import operation_receipt, run_metadata
+from app.workflow_operations import RPC_TIMEOUT, execution, operation_receipt, run_metadata
 
 CLAIM = "return redis.call('SET', KEYS[1], ARGV[1], 'NX', 'EX', 120)"
 RELEASE = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0"
@@ -175,6 +176,20 @@ def register_notification_routes(app: FastAPI) -> None:
         principal = require_role(request, "admin", "builder")
         if "workflows:execute" not in principal.get("scopes", []):
             raise HTTPException(403, detail="Approval events require the team worker credential.")
-        await run_metadata(request, str(run_id))
+        data = await run_metadata(request, str(run_id))
+        team = (await effective_team_settings(request)).team
+        policy = team.workflows.get(data["workflow"]) if team else None
+        raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))
+        spent = int(raw.get("cost", 0)) / 1_000_000_000
+        if policy and (not policy.approval_required or spent < policy.approval_threshold_usd):
+            handle, _ = await execution(request, str(run_id))
+            accepted = await handle.execute_update(
+                "review", args=[True, "team policy"], id=f"{run_id}:policy-approval", rpc_timeout=RPC_TIMEOUT,
+            )
+            if not accepted:
+                raise HTTPException(409, detail="The run is not waiting at its approval gate.")
+            await operation_receipt(request, str(run_id), "approval", approved=True, automatic=True,
+                                    approval_threshold_usd=policy.approval_threshold_usd, cost_usd=spent)
+            return {"queued": False, "approval_required": False}
         await queue_event(request, str(run_id), "awaiting_approval")
         return {"queued": True}

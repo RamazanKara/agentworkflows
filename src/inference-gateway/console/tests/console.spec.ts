@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { TeamSettings } from '../src/api';
 
 const id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb';
 const run = (overrides = {}) => ({
@@ -10,6 +11,20 @@ const run = (overrides = {}) => ({
 });
 const policies = { workflows: { ResearchWorkflow: { inputSchema: {"type":"object","properties":{"topic":{"type":"string","default":"How should our team evaluate AI agents?"},"model":{"type":"string","default":"demo-openai"}},"required":["topic"]}, allowedModels: ['demo-openai'], allowedProviders: ['openai', 'anthropic'], tokenLimit: 10000, costLimitUsd: 5 }, CustomWorkflow: { allowedModels: [], allowedProviders: [], tokenLimit: 500, costLimitUsd: 1 } } };
 const costs = { cost_usd: .0432, tokens: 63, calls: 2 };
+const settings = (): TeamSettings => ({
+  revision: 0, updated_by: null, updated_at: null, routes: ['demo-openai', 'demo-anthropic'],
+  providers: ['openai', 'anthropic'], approver_roles: ['admin', 'approver'], fields: {
+    cost_limit_usd: { value: 50, policy_default: 50, source: 'policy' },
+    'project_budgets.default': { value: null, policy_default: null, source: 'policy' },
+    'workflows.ResearchWorkflow.token_limit': { value: 10000, policy_default: 10000, source: 'policy' },
+    'workflows.ResearchWorkflow.cost_limit_usd': { value: 5, policy_default: 5, source: 'policy' },
+    'workflows.ResearchWorkflow.approval_required': { value: true, policy_default: true, source: 'policy' },
+    'workflows.ResearchWorkflow.approval_threshold_usd': { value: 0, policy_default: 0, source: 'policy' },
+    'workflows.ResearchWorkflow.approver_role': { value: 'approver', policy_default: 'approver', source: 'policy' },
+    'workflows.ResearchWorkflow.allowed_providers': { value: ['openai', 'anthropic'], policy_default: ['openai', 'anthropic'], source: 'policy' },
+    'model_routes.research': { value: 'demo-openai', policy_default: 'demo-openai', source: 'policy' },
+  },
+});
 
 test('schema forms render all supported field types and submit typed values', async ({ page }) => {
   await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: { FormWorkflow: {
@@ -111,6 +126,7 @@ async function login(page: Page, token = 'admin', path = '/console/#start') {
 
 test.beforeEach(async ({ page }) => {
   let identity = '';
+  const currentSettings = settings();
   await page.route('**/v1/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname === '/v1/auth/config') return route.fulfill({ json: { api_key: true, jwt: true, oidc: { enabled: false } } });
@@ -137,6 +153,22 @@ test.beforeEach(async ({ page }) => {
     const token = identity;
     const team = token === 'other' ? 'other' : 'demo';
     const role = token === 'other' ? 'viewer' : token;
+    if (url.pathname.startsWith('/v1/team/settings')) {
+      if (role !== 'admin') return route.fulfill({ status: 403, json: { detail: { reason: 'team_role_required' } } });
+      const method = route.request().method();
+      if (method !== 'GET') {
+        expect(route.request().headers()['if-match']).toBe(String(currentSettings.revision));
+        if (method === 'PATCH') {
+          for (const [field, value] of Object.entries(route.request().postDataJSON().fields)) currentSettings.fields[field] = { ...currentSettings.fields[field], value: value as TeamSettings['fields'][string]['value'], source: 'override' };
+        } else {
+          const field = decodeURIComponent(url.pathname.slice('/v1/team/settings/'.length));
+          currentSettings.fields[field] = { ...currentSettings.fields[field], value: currentSettings.fields[field].policy_default, source: 'policy' };
+        }
+        currentSettings.revision++;
+        currentSettings.updated_by = 'admin'; currentSettings.updated_at = 1791316800;
+      }
+      return route.fulfill({ json: currentSettings });
+    }
     if (token === 'invalid') return route.fulfill({ status: 401, json: { detail: { message: 'Invalid credential. Ask your team admin for a valid key.' } } });
     let body: unknown;
     if (url.pathname === '/v1/team') body = { team_id: team, role, projects: ['default', 'engineering'], providers: ['openai'], cost_limit_usd: 50, ...(role === 'admin' ? { provider_configuration: { openai: { configured: true, environment_variable: 'TEAM_OPENAI_KEY' } } } : {}) };
@@ -369,9 +401,10 @@ test('conflicting approval is actionable, viewer cannot decide or configure', as
   await page.getByLabel('API key', { exact: true }).fill('viewer');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Providers & budgets', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Providers & budgets', exact: true })).toBeVisible();
   await page.goto('/console/#providers');
-  await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
+  await expect(page.getByText('Read-only. Your team admin can change these settings.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save settings' })).toHaveCount(0);
 });
 
 test('team switching clears prior team data and reload restores the active session', async ({ page }) => {
@@ -598,4 +631,128 @@ test('approval cards use the draft heading as the title without repeating it', a
   await page.getByRole('link', { name: 'Approvals', exact: true }).click();
   await expect(page.locator('.review h2').first()).toHaveText('Briefing: agent evaluation');
   await expect(page.locator('.review pre.draft').first()).toHaveText('The first paragraph.');
+});
+
+for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
+  test(`admin edits and saves budgets from ${surface}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await login(page);
+    await page.getByRole('link', { name: surface, exact: true }).click();
+    await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('125');
+    await page.getByLabel('default monthly budget (USD)', { exact: true }).fill('40');
+    await page.getByLabel('Research · Budget (USD)', { exact: true }).fill('3');
+    const request = page.waitForRequest(value => value.url().endsWith('/v1/team/settings') && value.method() === 'PATCH');
+    await page.getByRole('button', { name: 'Save settings' }).click();
+    expect((await request).postDataJSON()).toEqual({ fields: { cost_limit_usd: 125, 'project_budgets.default': 40, 'workflows.ResearchWorkflow.cost_limit_usd': 3 } });
+    expect((await request).headers()['if-match']).toBe('0');
+    expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
+    await expect(page.getByRole('status')).toContainText('Settings saved.');
+    await expect(page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(errors).toEqual([]);
+  });
+}
+
+test('admin saves approval rules and selects an existing alias route', async ({ page }) => {
+  await login(page);
+  await page.getByRole('link', { name: 'Team settings', exact: true }).click();
+  await page.getByLabel('Research · Require approval', { exact: true }).uncheck();
+  await page.getByLabel('Research · Approval threshold (USD)', { exact: true }).fill('0.75');
+  await page.getByLabel('Research · Approver role', { exact: true }).selectOption('admin');
+  await page.getByLabel('Research · Allowed providers', { exact: true }).selectOption(['anthropic']);
+  await page.getByLabel('research model route', { exact: true }).selectOption('demo-anthropic');
+  const request = page.waitForRequest(value => value.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  expect((await request).postDataJSON().fields).toEqual({
+    'workflows.ResearchWorkflow.approval_required': false, 'workflows.ResearchWorkflow.approval_threshold_usd': 0.75,
+    'workflows.ResearchWorkflow.approver_role': 'admin', 'workflows.ResearchWorkflow.allowed_providers': ['anthropic'],
+    'model_routes.research': 'demo-anthropic',
+  });
+  await expect(page.getByRole('status')).toContainText('Settings saved.');
+  await page.reload();
+  await expect(page.getByLabel('research model route', { exact: true })).toHaveValue('demo-anthropic');
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('a stale settings revision requires reloading before another save', async ({ page }) => {
+  let stale = false;
+  await page.route('**/v1/team/settings', route => {
+    if (route.request().method() === 'PATCH') {
+      stale = true;
+      return route.fulfill({ status: 409, json: { detail: { reason: 'team_settings_conflict' } } });
+    }
+    const current = settings();
+    if (stale) { current.revision = 4; current.fields.cost_limit_usd.value = 99; }
+    return route.fulfill({ json: current });
+  });
+  await login(page);
+  await page.getByRole('link', { name: 'Team settings', exact: true }).click();
+  await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('100');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByRole('alert')).toContainText('Settings changed since you opened this page');
+  await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('100');
+  await expect(page.getByRole('button', { name: 'Save settings' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Reload settings' }).click();
+  await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('99');
+});
+
+test('reset removes only one override and retains other unsaved edits', async ({ page }) => {
+  await login(page);
+  await page.getByRole('link', { name: 'Team settings', exact: true }).click();
+  await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('100');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByRole('status')).toContainText('Settings saved.');
+  await page.getByLabel('default monthly budget (USD)', { exact: true }).fill('20');
+  const request = page.waitForRequest(value => value.method() === 'DELETE');
+  await page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' }).click();
+  expect((await request).url()).toContain('/v1/team/settings/cost_limit_usd');
+  expect((await request).headers()['if-match']).toBe('1');
+  await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('50');
+  await expect(page.getByLabel('default monthly budget (USD)', { exact: true })).toHaveValue('20');
+  await expect(page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByRole('status')).toContainText('Settings saved.');
+});
+
+for (const role of ['builder', 'approver', 'viewer']) {
+  test(`${role} sees read-only settings without calling the admin API`, async ({ page }) => {
+    let adminRequests = 0;
+    page.on('request', request => { if (request.url().includes('/v1/team/settings')) adminRequests++; });
+    await login(page, role);
+    for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
+      await page.getByRole('link', { name: surface, exact: true }).click();
+      await expect(page.getByText('Read-only. Your team admin can change these settings.')).toBeVisible();
+      await expect(page.getByText('Team monthly budget (USD)', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Save settings' })).toHaveCount(0);
+      await expect(page.getByRole('spinbutton')).toHaveCount(0);
+    }
+    expect(adminRequests).toBe(0);
+  });
+}
+
+test('settings validation shows the rejected field and keeps the draft', async ({ page }) => {
+  await page.route('**/v1/team/settings', route => route.request().method() === 'PATCH' ? route.fulfill({ status: 422, json: { detail: {
+    message: 'Check settings.', fields: [{ field: 'cost_limit_usd', message: 'Use a finite non-negative USD amount.' }],
+  } } }) : route.fallback());
+  await login(page);
+  await page.getByRole('link', { name: 'Team settings', exact: true }).click();
+  await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('100');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByText('Use a finite non-negative USD amount.', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('100');
+});
+
+test('monthly spend displays a zero limit as a limit', async ({ page }) => {
+  await page.route('**/v1/usage', route => route.fulfill({ json: { estimated_cost: 0, spend: {
+    period: 'month', window_start: 1790812800, window_seconds: 2678400, project: null,
+    cost_limit_usd: 0, reserved_and_spent_usd: 0, providers: {}, workflows: {},
+  } } }));
+  await login(page, 'viewer');
+  await page.getByRole('link', { name: 'Costs', exact: true }).click();
+  await expect(page.getByText('Spent this month', { exact: true })).toBeVisible();
+  await expect(page.getByText('of $0.00', { exact: true })).toBeVisible();
+  await expect(page.getByText('No team limit', { exact: true })).toHaveCount(0);
 });

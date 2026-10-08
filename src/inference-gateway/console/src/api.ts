@@ -6,6 +6,8 @@ export type Team = {
   projects: string[];
   providers: string[];
   cost_limit_usd: number | null;
+  project_budgets?: Record<string, number | null>;
+  model_routes?: Record<string, string>;
   notifications?: { channels: string[]; budget_threshold: number };
   provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
 };
@@ -26,6 +28,7 @@ export type InputSchema = {
 };
 export type Policy = {
   allowedModels: string[]; allowedProviders: string[]; tokenLimit: number; costLimitUsd: number;
+  approvalRequired?: boolean; approvalThresholdUsd?: number; approverRole?: string;
   inputSchema?: InputSchema | null; captureContent?: 'none' | 'redacted' | 'full';
 };
 export type Step = {
@@ -49,21 +52,31 @@ export type CostRow = { calls?: number; tokens?: number; cost_usd?: number };
 export type Usage = {
   estimated_cost: number;
   spend: {
-    project: string | null; window_start: number; window_seconds: number;
+    project: string | null; window_start: number; window_seconds: number; period?: 'month';
     reserved_and_spent_usd: number | null; cost_limit_usd: number | null;
     providers: Record<string, CostRow>; workflows: Record<string, CostRow>; accounting: string;
   };
 };
 export type Budget = { usage: { estimated_tokens: number }; limits: { estimated_tokens: number } };
 export type Models = { data: { id: string; owned_by: string; simulated?: boolean }[] };
+export type SettingValue = number | string | boolean | string[] | null;
+export type SettingField = { value: SettingValue; source: 'policy' | 'override'; policy_default: SettingValue };
+export type TeamSettings = {
+  revision: number; updated_by: string | null; updated_at: number | null;
+  fields: Record<string, SettingField>; routes: string[]; providers: string[]; approver_roles: string[];
+};
+export type ApiError = Error & { status: number; fields?: { field: string; message: string }[] };
 
 export async function api<T>(csrfToken: string, path: string, init: RequestInit = {}): Promise<T> {
   const csrf = csrfToken || document.cookie.split('; ').find(value => value.startsWith('aw_csrf='))?.slice(8) || '';
   let response: Response;
+  const headers = new Headers(init.headers);
+  if (csrf && init.method && init.method !== 'GET') headers.set('X-CSRF-Token', csrf);
+  if (init.body) headers.set('Content-Type', 'application/json');
   try {
     response = await fetch(path, {
       ...init, cache: 'no-store', credentials: 'include',
-      headers: { ...(csrf && init.method && init.method !== 'GET' ? { 'X-CSRF-Token': csrf } : {}), ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+      headers,
     });
   } catch (error) {
     if (init.signal?.aborted) throw error;
@@ -81,7 +94,7 @@ export async function api<T>(csrfToken: string, path: string, init: RequestInit 
       422: 'Check the workflow input and selected project, then try again.',
       503: 'The service is unavailable. Check the gateway, Redis, and Temporal, then retry.',
     };
-    throw new Error(`${detail || advice[response.status] || 'The request failed.'} (${response.status})`);
+    throw Object.assign(new Error(`${detail || advice[response.status] || 'The request failed.'} (${response.status})`), { status: response.status, fields: body.detail?.fields });
   }
   return body as T;
 }

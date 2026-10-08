@@ -20,8 +20,9 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 from temporalio.service import RPCError, RPCStatusCode
 
 from app.audit import chain_audit_event, emit_audit_record
+from app.team_settings import effective_team_settings
 from app.teams import project_access, require_role
-from app.workflow_budget import redis_call, run_key
+from app.workflow_budget import effective_run_limits, redis_call, run_key
 from app.workflow_content import step_content
 from app.workflow_retention import TERMINAL_STATES, retain_run
 
@@ -130,11 +131,12 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
                 raise
             result["progress"] = {"stage": "worker_unavailable", "message": "Check the team's worker and task queue."}
     raw = await redis_call(request, "hgetall", run_key(request, run_id))
+    team = (await effective_team_settings(request)).team
+    policy = team.workflows.get(data["workflow"]) if team else None
     result["budget"] = {
         "tokens": int(raw.get("tokens", 0)),
         "cost_usd": int(raw.get("cost", 0)) / 1_000_000_000,
-        "token_limit": int(raw.get("token_limit", 0)),
-        "cost_limit_usd": int(raw.get("cost_limit", 0)) / 1_000_000_000,
+        **effective_run_limits(raw, policy),
     }
     if timeline:
         rows = await redis_call(request, "lrange", run_key(request, run_id) + ":timeline", 0, -1)
@@ -362,7 +364,11 @@ def register_operation_routes(app: FastAPI) -> None:
     )
     async def approve(request: Request, run_id: UUID, body: Approval) -> dict[str, Any]:
         principal = require_role(request, "admin", "approver")
-        handle, _ = await execution(request, str(run_id))
+        handle, data = await execution(request, str(run_id))
+        team = (await effective_team_settings(request)).team
+        policy = team.workflows.get(data["workflow"]) if team else None
+        if policy and principal["role"] != "admin":
+            require_role(request, policy.approver_role)
         reviewer = principal.get("sub") or principal.get("key_id")
         update_id = hashlib.sha256(json.dumps([str(run_id), reviewer, body.approved]).encode()).hexdigest()
         try:

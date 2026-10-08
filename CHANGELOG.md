@@ -8,6 +8,12 @@
 - Console: approval cards use the draft's first line as the title without repeating it in the preview; revoked keys show their revoke date.
 - Console: clearer empty states for runs, approvals and costs, model IDs no longer repeat the provider name, and hover colors apply only on devices that hover.
 
+- Add Redis-backed team settings with YAML defaults, revision-checked admin APIs,
+  field resets and chained change receipts. Apply monthly team/project budgets,
+  workflow limits and approval rules, provider allowances and existing model alias
+  selections without restarting the gateway. Add console editors and read-only
+  views; keep provider keys in environment variables or Kubernetes Secrets.
+
 ## v0.5.0 - 2026-10-08
 
 - Make the umbrella Helm chart cloud-first: include Temporal/PostgreSQL and the worker,

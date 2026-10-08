@@ -127,6 +127,30 @@ If the sandbox is intentionally load testing or running an approved evaluation, 
 Teams are existing sandbox identities. Add `projects`, `providerCredentials`, and
 `budgets.costLimitUsd` to the SandboxPolicySet; role-bound keys cannot raise team limits.
 Redis atomically reserves cost across eligible providers and tools. `agentworkflows usage`
-reports current-window provider totals and conservative reservations. Configure prices
+reports monthly team/project spend and conservative reservations. Configure prices
 for every route, including local models. See [team operations](https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service)
 for examples, window semantics, retained history, and accounting limits.
+
+Team admins can change dollar budgets and per-workflow caps in the console's
+Team settings, Providers & budgets, or Costs page. No gateway restart is needed.
+The YAML is the default; Redis overrides survive rollouts. See
+[team settings](https://ramazankara.github.io/agentworkflows/team-settings/) for the
+field names, defaults and API examples.
+
+For `team_cost_budget_exceeded` or `project_cost_budget_exceeded`, inspect
+`GET /v1/usage` and `GET /v1/team/settings` before raising a limit. Team and project
+dollars now use UTC calendar months, independently of token/request windows.
+Zero denies positive-cost reservations; changing a limit does not reset counters.
+On upgrade, old fixed-window spend keys remain historical data and are not merged
+into the new month's counter. Retain the audit log for a complete history.
+
+For workflow budget rejections, the current workflow cap and the worker's requested
+run budget both apply. Repeated worker initialization uses the original requested
+limits and remains idempotent when policy changes.
+
+On a 409 from a save or reset, reload the settings and review the other admin's
+change. Do not retry with a fabricated revision. To undo a change, DELETE only the
+overridden field with the current `If-Match` revision; do not delete the Redis
+document, which would also discard its revision history. Back up the
+`<budget-prefix>:team-settings:*` documents with budget Redis. Settings cannot be
+edited or reliably enforced during a Redis outage; restore Redis before retrying.

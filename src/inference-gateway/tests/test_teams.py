@@ -14,6 +14,7 @@ from app.main import create_app
 from app.policy import ModelRoute, ModelRoutingPolicy, SandboxPolicy, SandboxPolicySet, WorkflowPolicy
 from app.runtime_client import RuntimeClient
 from app.team_budget import RESERVE_COST, SETTLE_COST
+from app.team_settings import CHANGE as CHANGE_SETTINGS
 from fastapi.testclient import TestClient
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
@@ -56,11 +57,20 @@ class TeamRedis(RunRedis):
         return rows[start:] if end == -1 else rows[start : end + 1]
 
     def eval(self, script, numkeys, key, *args):
+        if script == CHANGE_SETTINGS:
+            old = json.loads(self.data[key]) if key in self.data else {"revision": 0}
+            if old["revision"] != args[0]:
+                return 0
+            self.data[key] = args[1]
+            return 1
         if script == RESERVE_COST:
             raw = self.data.setdefault(key, {"cost": 0})
-            if args[1] and raw["cost"] + args[0] > args[1]:
+            if args[1] >= 0 and raw["cost"] + args[0] > args[1]:
                 return 0
+            if args[3] >= 0 and raw.get(args[2], 0) + args[0] > args[3]:
+                return -1
             raw["cost"] += args[0]
+            raw[args[2]] = raw.get(args[2], 0) + args[0]
             return 1
         if script == SETTLE_COST:
             raw = self.data[key]

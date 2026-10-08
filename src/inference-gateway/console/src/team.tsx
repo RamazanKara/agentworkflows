@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type Usage } from './api';
 import { Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { SettingsPanel } from './settings';
 
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
 const routes = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1';
@@ -66,10 +67,10 @@ function SpendTiles({ usage, budget }: { usage?: Usage; budget?: Budget }) {
   const spend = usage?.spend;
   const spent = spend?.reserved_and_spent_usd ?? usage?.estimated_cost;
   const held = spend?.reserved_and_spent_usd != null ? spend.reserved_and_spent_usd - (usage?.estimated_cost || 0) : 0;
-  const period = scope(spend?.window_seconds);
+  const period = spend?.period === 'month' ? 'this month' : scope(spend?.window_seconds);
   return <Metrics items={[
-    [`Spent ${period}`, spent == null ? '—' : <>{money(spent)}{spend?.cost_limit_usd ? <> <small className="inline">of {money(spend.cost_limit_usd)}</small><Usage value={spent} limit={spend.cost_limit_usd}/></> : <small>No team limit</small>}{held >= 0.005 && <small>Includes {money(held)} held for running work</small>}</>],
-    [`Tokens ${period}`, budget ? <>{number(budget.usage.estimated_tokens)}{budget.limits.estimated_tokens ? <> <small className="inline">of {number(budget.limits.estimated_tokens)}</small><Usage value={budget.usage.estimated_tokens} limit={budget.limits.estimated_tokens}/></> : <small>No token limit</small>}</> : '—'],
+    [`Spent ${period}`, spent == null ? '—' : <>{money(spent)}{spend?.cost_limit_usd != null ? <> <small className="inline">of {money(spend.cost_limit_usd)}</small>{spend.cost_limit_usd > 0 && <Usage value={spent} limit={spend.cost_limit_usd}/>}</> : <small>No team limit</small>}{held >= 0.005 && <small>Includes {money(held)} held for running work</small>}</>],
+    ['Tokens this window', budget ? <>{number(budget.usage.estimated_tokens)}{budget.limits.estimated_tokens ? <> <small className="inline">of {number(budget.limits.estimated_tokens)}</small><Usage value={budget.usage.estimated_tokens} limit={budget.limits.estimated_tokens}/></> : <small>No token limit</small>}</> : '—'],
   ]}/>;
 }
 
@@ -91,11 +92,12 @@ export function Costs({ session }: { session: Session }) {
       </> : <div className="panel"><Empty title="No recorded spend yet"><p>Costs appear by provider and workflow as governed calls finish.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
       <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes budget reserved for failed calls the provider didn’t report. Calls made outside a workflow appear only under By provider.</p>
     </>}
+    <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
   </>;
 }
 
 export function Providers({ session }: { session: Session }) {
-  if (session.team.role !== 'admin') return <div className="panel"><Empty title="Team admin access required"><p>Sign in with your team admin credential to inspect provider setup and shared budgets.</p><a className="tap" href="#runs">View workflow runs</a></Empty></div>;
+  if (session.team.role !== 'admin') return <><PageHeader title="Providers & budgets" subtitle="Your team’s effective policy."/><SettingsPanel session={session}/></>;
   return <ProviderSettings session={session}/>;
 }
 
@@ -136,7 +138,6 @@ function ProviderSettings({ session }: { session: Session }) {
     try { await navigator.clipboard.writeText(text); setCopied(done); }
     catch { setCopied('Clipboard unavailable. Select the text above and copy it.'); }
   };
-  const snippet = `# Merge into your team's policy entry.\nsandboxId: ${JSON.stringify(session.team.team_id)}\nproviderCredentials:\n${[...providers.map(([name, c]) => [name, c.environment_variable]), ...(missing || providers.some(([name]) => name === target) ? [] : [[target, variable]])].map(([name, env]) => `  ${name}: ${env}`).join('\n')}\nbudgets:\n  estimatedTokenLimit: ${budget.data?.limits.estimated_tokens || 200000}\n  costLimitUsd: ${settings?.cost_limit_usd || 25}`;
   return <><PageHeader title="Providers & budgets" subtitle="Your team’s provider keys and spending limits."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={team.error || budget.error || usage.error || policies.error} retry={() => setRevision(v => v + 1)}/>
     {!settings && !team.error && <Loading/>}
@@ -165,13 +166,10 @@ function ProviderSettings({ session }: { session: Session }) {
         {manual.length > 1 && <p className="muted">Then repeat for {providerList(manual.slice(1).map(([provider]) => provider))}.</p>}
       </>}
       <p className="setup-links">{helm.length > 0 && <><a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Kubernetes install guide</a> · </>}<a href={`${guide}#teams-projects-and-roles`}>Secret instructions</a>{manual.length > 0 && !routed && <> · <a href={routes}>Cloud routes and prices</a></>}</p>
-    </section> : <section className="setup panel"><h2>Add a provider or change a budget</h2>
-      <ol><li>Store the provider key in the gateway’s environment or a Kubernetes Secret.</li>
-        <li>Merge the fragment below into your team’s entry in the policy (team ID <code>{session.team.team_id}</code>). Keep your existing providers, projects, tools and workflows.</li>
-        <li>Approve the provider’s models, prices and network access in your gateway configuration. Restart the gateway, then refresh this page.</li></ol>
-      <pre className="json">{snippet}</pre><div className="actions"><button className="secondary" onClick={() => void copy(snippet, 'Configuration copied.')}><Icon name="copy"/>Copy policy fragment</button><span role="status">{copied}</span></div>
+    </section> : <section className="setup panel"><h2>Provider keys</h2>
+      <p>Store provider keys in the gateway’s environment or Kubernetes Secrets. New model routes, prices and network access are configured by your operator. Choose among existing routes below.</p>
       <p className="setup-links"><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href={routes}>Cloud routes and prices</a></p>
     </section>}
-    <section><h2>Workflow budgets</h2><div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow budgets table"><table className="stack numeric"><thead><tr><th>Workflow</th><th>Providers</th><th className="num">Token limit</th><th className="num">Cost limit</th></tr></thead><tbody>{workflows.map(([name, policy]) => <tr key={name}><th scope="row">{workflowName(name)}</th><td data-label="Providers">{policy.allowedProviders.map(providerName).join(', ') || 'Team policy'}</td><td data-label="Token limit">{number(policy.tokenLimit)}</td><td data-label="Cost limit">{money(policy.costLimitUsd)}</td></tr>)}</tbody></table></div></div><p className="muted">Budget changes apply to new runs. Runs in progress keep their budget.</p></section>
+    <SettingsPanel session={session} onSaved={() => setRevision(v => v + 1)}/>
   </>;
 }

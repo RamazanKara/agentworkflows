@@ -62,7 +62,7 @@ def register_messages_routes(app: FastAPI, settings: Settings) -> None:
                 raise AdmissionPolicyError(
                     "workflow_streaming_unsupported", "Workflow model activities return complete results; omit stream."
                 )
-            effective, chain, _ = resolve_chat_routes(request, settings, payload_dict)
+            effective, chain, _ = await resolve_chat_routes(request, settings, payload_dict)
             call.backend = chain[0].backend
             if payload.stream:
                 # Mark the translated payload as streaming BEFORE admission so the shared

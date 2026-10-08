@@ -281,7 +281,7 @@ The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
 | `POST /v1/workflow-runs/{run_id}/cancel` | Request cancellation of this exact execution |
 | `POST /v1/workflow-runs/{run_id}/retry` | Start a fresh execution after failure/cancellation |
 | `POST /v1/workflow-runs/{run_id}/approve` | Submit `{"approved":true}` or `false` |
-| `GET /v1/usage` | Current-window team/project usage, provider costs, and `spend.workflows` costs |
+| `GET /v1/usage` | Token/request window usage and monthly team/project spend by provider and workflow |
 
 ```bash
 curl -s http://127.0.0.1:8080/v1/workflow-runs \
@@ -441,9 +441,10 @@ real credentials. Both examples return reviewed content without publishing to ex
 ## Operate the service
 
 `agentworkflows usage` aggregates providers and tools for the bound team or project.
-`spend` shows the UTC-aligned cost window, limit, and reserved-plus-spent USD. Its length
-uses `SANDBOX_BUDGET_WINDOW_SECONDS` (default 86400); zero means lifetime accounting.
-Workflow cost rows accumulate from this version onward, in the same window as provider
+`spend` shows the UTC calendar month's limit and reserved-plus-spent USD, independently
+of `SANDBOX_BUDGET_WINDOW_SECONDS`. Team admins can edit budgets, approval rules and
+existing model alias selections in the console; see [team settings](team-settings.md).
+Workflow cost rows accumulate from this version onward, in the same month as provider
 costs. They count governed model/tool calls, not run starts, and exclude standalone calls.
 Project-bound credentials see only their project's rows. Earlier windows are not backfilled.
 Token/request budgets retain their existing window semantics. Spend reservations are
@@ -456,8 +457,9 @@ configured-price estimates, not provider invoices or billing guarantees.
 
 Persist Redis with AOF and no eviction. Run metadata, timeline indices, and cost windows
 survive gateway/worker restarts; back up Redis alongside Temporal PostgreSQL. Historical
-cost keys remain available for operator export under `...:<team>:cost:<window-start>`;
-the API reports the current window. Retain run metadata/timeline keys with Temporal history
+cost keys remain available for operator export under `...:<team>:cost:month:<month-start>`;
+older fixed-window keys remain under `...:<team>:cost:<window-start>` and are not backfilled.
+The API reports the current month. Retain run metadata/timeline keys with Temporal history
 and audit evidence. Expired Temporal executions return 404; retained receipts remain in
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
 Temporal; restrict access and retention for both stores.

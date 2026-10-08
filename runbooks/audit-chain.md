@@ -6,6 +6,11 @@ independent retention.
 
 ## What the audit events are
 
+Team setting saves and resets emit `team_settings_changed` on the gateway's
+existing chain. Each event names the authenticated actor, revision and touched
+fields' before/after values and sources. Provider credentials are never included.
+The verifier accepts these events alongside inference and workflow receipts.
+
 Every sandbox-bound gateway request emits one redacted audit event (`event: inference_request`;
 batch calls emit `event: batch_request`). Three more event types share the same chain: an
 `agent_action` receipt for what a workspace did beyond calling a model (denied egress, tool

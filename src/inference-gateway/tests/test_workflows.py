@@ -75,9 +75,13 @@ class RunRedis(FakeRedisBudgetStore):
             tokens, cost, workflow, required = args
             old = self.data.get(key)
             if old:
+                limits_match = (
+                    old["token_limit"] == tokens and old["cost_limit"] == cost
+                    if old.get("requested_limits") == "1"
+                    else old["token_limit"] <= tokens and old["cost_limit"] <= cost
+                )
                 return int(
-                    old["token_limit"] == tokens
-                    and old["cost_limit"] == cost
+                    limits_match
                     and old["workflow"] == workflow
                     and old["policy_required"] == required
                 )
@@ -88,15 +92,18 @@ class RunRedis(FakeRedisBudgetStore):
                 "cost": 0,
                 "workflow": workflow,
                 "policy_required": required,
+                "requested_limits": "1",
             }
             return 1
         if script == RESERVE:
             if key not in self.data:
                 return -1
             record = self.data[key]
-            if record["tokens"] + args[0] > record["token_limit"]:
+            token_limit = min(record["token_limit"], args[2]) if args[2] >= 0 else record["token_limit"]
+            cost_limit = min(record["cost_limit"], args[3]) if args[3] >= 0 else record["cost_limit"]
+            if record["tokens"] + args[0] > token_limit:
                 return 1
-            if record["cost"] + args[1] > record["cost_limit"]:
+            if record["cost"] + args[1] > cost_limit:
                 return 2
             record["tokens"] += args[0]
             record["cost"] += args[1]
