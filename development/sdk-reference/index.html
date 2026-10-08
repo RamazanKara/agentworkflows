@@ -2031,6 +2031,22 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 <td>Your team, role, projects, and configured providers</td>
 </tr>
 <tr>
+<td><code>keys list</code></td>
+<td>List your team's managed API keys (admin only)</td>
+</tr>
+<tr>
+<td><code>keys create --name NAME --role builder --project PROJECT</code></td>
+<td>Issue a key; role defaults to viewer, project is optional; plaintext is printed once</td>
+</tr>
+<tr>
+<td><code>keys update KEY_ID --name NAME --role viewer --expires-at TIMESTAMP</code></td>
+<td>Change selected metadata; unspecified fields stay unchanged</td>
+</tr>
+<tr>
+<td><code>keys revoke KEY_ID</code></td>
+<td>Revoke immediately on all replicas, including sessions using the key</td>
+</tr>
+<tr>
 <td><code>usage</code></td>
 <td>Usage, estimated spend, provider and workflow breakdowns</td>
 </tr>
@@ -2070,7 +2086,13 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 </table>
 <p><code>runs start</code> also accepts <code>--project</code> and <code>--request-id UUID</code>. If a start response is lost,
 reuse the request ID printed on stderr with <strong>identical input</strong> to avoid duplicate runs.
-Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport failure, <strong>2</strong> usage/input/scaffold error.
+Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport failure, <strong>2</strong> usage/input/scaffold error.</p>
+<p>Key creation and updates accept <code>--expires-at</code> as ISO-8601 with a timezone, for example
+<code>2027-01-01T00:00:00Z</code>. On updates, <code>--expires-at ''</code> clears expiry and <code>--project ''</code>
+clears a project binding. Commands return JSON; keep the <code>key_id</code> for future changes and
+save a newly created <code>key</code> securely, since list/update cannot recover it. Keys are scoped
+to the authenticated admin's team and project access. You cannot revoke or demote your
+current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.</p>
 <p>The <a href="../templates/">template gallery</a> includes input fields, expected results and adaptation
 steps for every starter. Install from this checkout to get its current template set.</p>
