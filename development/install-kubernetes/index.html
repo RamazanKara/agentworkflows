@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/proof/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/install-kubernetes/">
       
       
-        <link rel="prev" href="../ai-governance-crosswalk/">
+        <link rel="prev" href="../local-evaluation/">
       
       
-        <link rel="next" href="../repository-map/">
+        <link rel="next" href="../production-readiness/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Evidence and strict validation - AgentWorkflows</title>
+        <title>Install on Kubernetes - AgentWorkflows</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#evidence-and-validation" class="md-skip">
+        <a href="#install-on-kubernetes" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Evidence and strict validation
+              Install on Kubernetes
             
           </span>
         </div>
@@ -325,10 +325,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../workflows/" class="md-tabs__link">
           
   
@@ -369,12 +371,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../runbooks/" class="md-tabs__link">
           
   
@@ -787,8 +787,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -808,19 +810,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -838,7 +843,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -937,10 +942,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../install-kubernetes/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -956,6 +988,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sign in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add-a-provider-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add a provider key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enable-oidc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable OIDC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uninstall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uninstall
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1299,8 +1428,6 @@
       
   
   
-    
-  
   
   
     
@@ -1344,19 +1471,16 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -1378,13 +1502,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1709,37 +1833,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Evidence and strict validation
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../proof/" class="md-nav__link">
         
   
   
@@ -1755,70 +1852,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#current-checks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Current checks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-evidence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Release evidence
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-tool-versions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported tool versions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-sample-evidence-means" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What sample evidence means
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1942,10 +1975,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#current-checks" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current checks
+        Prerequisites
       
     </span>
   </a>
@@ -1953,10 +1986,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#release-evidence" class="md-nav__link">
+  <a href="#install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Release evidence
+        Install
       
     </span>
   </a>
@@ -1964,10 +1997,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-tool-versions" class="md-nav__link">
+  <a href="#sign-in" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported tool versions
+        Sign in
       
     </span>
   </a>
@@ -1975,10 +2008,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-sample-evidence-means" class="md-nav__link">
+  <a href="#add-a-provider-key" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What sample evidence means
+        Add a provider key
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enable-oidc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable OIDC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uninstall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uninstall
       
     </span>
   </a>
@@ -2002,7 +2068,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/proof.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/install-kubernetes.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2010,35 +2076,118 @@
   
 
 
-<h1 id="evidence-and-validation">Evidence and validation<a class="headerlink" href="#evidence-and-validation" title="Permanent link">&para;</a></h1>
-<p>This page separates repository checks and sample report shapes from evidence that must be regenerated
-for a release or customer handoff.</p>
-<h2 id="current-checks">Current checks<a class="headerlink" href="#current-checks" title="Permanent link">&para;</a></h2>
+<h1 id="install-on-kubernetes">Install on Kubernetes<a class="headerlink" href="#install-on-kubernetes" title="Permanent link">&para;</a></h1>
+<p>The umbrella chart installs the gateway and console, persistent Redis, Temporal with
+PostgreSQL, a worker for the <code>default</code> team, and the Research example's tools in one
+namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md">GitOps deployment</a> keeps its existing defaults.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>make validate</code> checks service tests, Helm rendering, contracts, governance, evidence inputs, release gates with sample fallback, and repo hygiene.</li>
-<li><code>make validate-full</code> requires the strict validation toolchain: kubeconform, Kyverno CLI, restore-drill, k6, Syft, Argo CD CLI, Cosign, and Trivy.</li>
-<li><code>make image-scan</code> builds runtime images, writes SBOMs, runs Trivy HIGH/CRITICAL scans, writes checksums, and validates supply-chain summaries.</li>
-<li><code>make loadtest-local</code> runs k6 against a local gateway backed by an OpenAI-compatible mock runtime.</li>
-<li><code>make evidence LIVE=1</code> adds live Kubernetes readiness checks after the local lab is synced.</li>
-<li><code>make release-gate-strict</code> rejects checked-in sample evidence and stale evidence.</li>
-<li>GitHub Actions publish Cosign signatures, SLSA build provenance attestations, SBOM attestations, and OpenSSF Scorecard SARIF for public release review.</li>
+<li>Kubernetes, <code>kubectl</code>, Helm 3, and a default StorageClass that can provision the
+  10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.</li>
+<li>Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.</li>
+<li>A checkout containing this chart. Until v0.5.0 is published, use <code>main</code>, not the v0.4.0 chart.</li>
 </ul>
-<h2 id="release-evidence">Release evidence<a class="headerlink" href="#release-evidence" title="Permanent link">&para;</a></h2>
-<p>For release reviews, attach or link:</p>
-<ul>
-<li>OpenAPI snapshots from <code>platform/api-contracts/</code></li>
-<li>Configuration snapshots from <code>platform/config-contracts/</code></li>
-<li>Current eval, load, restore, toolchain, SLO, quota, egress, retention, model-provenance, evidence-pack, and supply-chain reports under <code>results/</code></li>
-<li>SBOMs, SARIF files, checksums, signed image digests, provenance attestations, SBOM attestations, and Scorecard findings from GitHub Actions</li>
-</ul>
-<h2 id="supported-tool-versions">Supported tool versions<a class="headerlink" href="#supported-tool-versions" title="Permanent link">&para;</a></h2>
-<p>The source of truth is <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/tools/validation-toolchain.yaml">platform/tools/validation-toolchain.yaml</a>. Run:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>toolchain-report<span class="w"> </span><span class="nv">TOOLCHAIN_PROFILE</span><span class="o">=</span>strict
+<p>Prepare the local chart's dependencies once, in this order:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
 </code></pre></div>
-<p>The generated JSON and Markdown reports show which tools were present, missing, and used for the
-validation run.</p>
-<h2 id="what-sample-evidence-means">What sample evidence means<a class="headerlink" href="#what-sample-evidence-means" title="Permanent link">&para;</a></h2>
-<p>Checked-in files named <code>sample-*</code> prove report shape and gate behavior. They do not prove the current release. Strict gates must use freshly generated non-sample artifacts.</p>
+<p>Published umbrella packages include those dependencies. Component Service names are
+fixed: install one release per namespace. No ingress controller, GPU, KEDA or
+Prometheus CRDs are required.</p>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>install<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--create-namespace<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>The chart generates <code>temporal-postgres-auth</code> (<code>password</code>), <code>workflow-gateway-key</code>
+(<code>api-key</code>), and <code>agentworkflows-admin</code> (<code>api-key</code>) if they are missing. Pre-create
+these Secrets to supply your own credentials. For different names, set
+<code>workflows.postgres.existingSecret</code> (and both Temporal SQL datastore <code>existingSecret</code>
+values), <code>workflows.worker.existingSecret</code>, or <code>bootstrapAdmin.existingSecret</code>.
+Gateway key records contain hashes; the worker has execution scope and cannot approve.</p>
+<p><strong>Image compatibility during v0.5.0 development:</strong> chart defaults still reference the
+published v0.4.0 gateway and worker. The v0.4.0 gateway requires credentials for every
+cloud backend in its readiness check. Credential-free startup and the console's Helm
+Secret hints require a gateway image built from the updated source; select it with
+<code>inference-gateway.image.repository</code> and <code>inference-gateway.image.tag</code>. OIDC also
+requires the updated gateway. Static chart rendering does not verify these image behaviors.</p>
+<h2 id="sign-in">Sign in<a class="headerlink" href="#sign-in" title="Permanent link">&para;</a></h2>
+<p>Read the bootstrap admin key and keep it private:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>agentworkflows-admin<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.api-key}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>svc/inference-gateway<span class="w"> </span><span class="m">8080</span>:8080
+</code></pre></div>
+<p>Open <a href="http://127.0.0.1:8080/console/">http://127.0.0.1:8080/console/</a> and paste that key. The console uses the <code>default</code>
+team and project. In another terminal, <code>curl -fsS http://127.0.0.1:8080/readyz</code> checks
+Redis and Temporal. With the updated gateway, missing provider credentials leave the
+console available; <strong>Providers &amp; budgets</strong> identifies the missing key and Secret setup.
+Inference still rejects requests until a provider key is configured.</p>
+<h2 id="add-a-provider-key">Add a provider key<a class="headerlink" href="#add-a-provider-key" title="Permanent link">&para;</a></h2>
+<p>Create a Secret in the same namespace. This Bash example reads the key without echoing it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'OpenAI API key: '</span><span class="w"> </span>OPENAI_API_KEY<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$OPENAI_API_KEY</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>openai-api-key<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span>api-key<span class="o">=</span>/dev/stdin
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">unset</span><span class="w"> </span>OPENAI_API_KEY
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--set<span class="w"> </span>providers.openai.existingSecret<span class="o">=</span>openai-api-key<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>If the Secret already exists before installation, pass
+<code>--set providers.openai.existingSecret=openai-api-key</code> to the install command instead.
+For Anthropic, create <code>anthropic-api-key</code> with an <code>api-key</code> entry and set
+<code>providers.anthropic.existingSecret=anthropic-api-key</code>. Only the gateway receives provider
+keys, via Secret references. After rotating a provider key, run
+<code>kubectl rollout restart deployment/inference-gateway -n aw</code> to refresh its environment.</p>
+<p>The <code>research</code> route uses <a href="https://developers.openai.com/api/docs/models/gpt-4.1-mini">GPT-4.1 Mini</a>;
+<code>anthropic</code> uses <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Claude Haiku 4.5</a>. Review the
+routes, provider access and configured price estimates before paid calls. Set reviewed
+routes under <code>inference-gateway.routing.policy.models</code> and team/workflow permissions under
+<code>inference-gateway.sandboxPolicy.policy.policies</code>. There is no automatic cross-provider fallback.</p>
+<p>With the Python SDK installed as in the <a href="../quickstart/">quickstart</a>, run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>http://127.0.0.1:8080
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>agentworkflows-admin<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.api-key}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span><span class="s2">"</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>ResearchWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'{"topic":"Evaluate agent reliability","model":"research"}'</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">RUN_ID</span><span class="o">=</span><span class="s1">'paste-the-run_id-here'</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># When progress.stage is awaiting_approval, read progress.draft before approving.</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>approve<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
+</code></pre></div>
+<p>Repeat inspection until <code>status: completed</code> and <code>result.status: published</code>. Use
+<code>"model":"anthropic"</code> for that provider. The example's research source and publication
+are synthetic; no document is published externally. Model calls are real and paid.
+Replace the tool URLs with your integrations when adapting the workflow. The default
+ceilings are 10,000 tokens / $5 per run and 200,000 tokens / $50 per team budget window.</p>
+<h2 id="enable-oidc">Enable OIDC<a class="headerlink" href="#enable-oidc" title="Permanent link">&para;</a></h2>
+<p>Follow <a href="../workflows/#company-sign-in-oidc">Company sign-in (OIDC)</a> for registration,
+claims and Secret configuration. Nest its Helm values under <code>inference-gateway.auth.oidc</code>.
+Set <code>teamClaim</code> to a claim containing <code>default</code>, configure the exact HTTPS callback URL,
+and set <code>inference-gateway.adminConsole.cookieSecure=true</code> for HTTPS. The umbrella uses
+<code>false</code> for localhost port-forwarding; switch it before exposing the console through TLS ingress.</p>
+<h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">&para;</a></h2>
+<p>Back up PostgreSQL, Redis and the bootstrap Secrets together. Preserve the namespace,
+release name and credential Secret names. <code>lookup</code> reuses existing credentials on
+<code>helm upgrade</code>; Helm needs permission to read those Secrets. User-owned Secrets are
+read without being adopted. Offline <code>helm template</code> cannot look up live Secrets and
+generates new example credentials on each render; do not apply those over a running release.</p>
+<p>Keep your overrides in a values file and review new chart defaults before upgrading:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-f<span class="w"> </span>my-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>To omit the bundled workflow stack, set <code>workflows.enabled=false</code>; the gateway then
+omits the Temporal readiness check. The console's workflow operations require Temporal
+and a worker. For production, review <a href="../production-readiness/">production readiness</a>,
+storage backups, identity and ingress. The umbrella disables the component NetworkPolicies
+whose rules describe the separate GitOps namespaces.</p>
+<h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>aw<span class="w"> </span>-n<span class="w"> </span>aw
+</code></pre></div>
+<p>PostgreSQL's StatefulSet claim and user-created provider Secrets remain. Helm-managed
+credentials and Redis's chart-managed claim are removed, so save backups first. For a
+disposable namespace, remove all remaining data and stop its port-forward:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>aw
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># If you created a dedicated test cluster:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>kind<span class="w"> </span>delete<span class="w"> </span>cluster<span class="w"> </span>--name<span class="w"> </span>aw
+</code></pre></div>
+<p>Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
+<code>temporal-postgres-auth</code> Secret or delete the old claim before a fresh evaluation install.</p>
 
 
 
@@ -2076,7 +2225,7 @@ validation run.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../ai-governance-crosswalk/" class="md-footer__link md-footer__link--prev" aria-label="Previous: AI governance crosswalk">
+          <a href="../local-evaluation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Local evaluation">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2086,20 +2235,20 @@ validation run.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                AI governance crosswalk
+                Local evaluation
               </div>
             </div>
           </a>
         
         
           
-          <a href="../repository-map/" class="md-footer__link md-footer__link--next" aria-label="Next: Repository map">
+          <a href="../production-readiness/" class="md-footer__link md-footer__link--next" aria-label="Next: Production readiness">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Repository map
+                Production readiness
               </div>
             </div>
             <div class="md-footer__button md-icon">

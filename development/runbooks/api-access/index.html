@@ -796,6 +796,8 @@
       
         
       
+        
+      
     
     
     
@@ -912,6 +914,34 @@
     
   
     Local evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../install-kubernetes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on Kubernetes
   
 
     
@@ -2067,7 +2097,8 @@ spec:
       budgets:
         requestLimit: 100
 </code></pre></div>
-<p>The gateway exposes <code>GET /v1/models</code> for approved models and <code>GET /readyz</code> for runtime-aware readiness. <code>/readyz</code> omits backend URLs and secrets.</p>
+<p>The gateway exposes <code>GET /v1/models</code> for approved models and <code>GET /readyz</code> for runtime-aware readiness. <code>/readyz</code> omits backend URLs and secrets.
+Each listed model's <code>owned_by</code> names its provider backend. Routes marked <code>simulated: true</code> (the Compose demo's fakes) are listed with <code>"simulated": true</code>, and the console then tells people that no provider is billed.</p>
 <h2 id="human-sso-for-operator-dashboards">Human SSO for Operator Dashboards<a class="headerlink" href="#human-sso-for-operator-dashboards" title="Permanent link">&para;</a></h2>
 <p>Two distinct auth surfaces exist in this platform; do not conflate them:</p>
 <ul>
