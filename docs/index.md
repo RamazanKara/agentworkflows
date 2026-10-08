@@ -5,8 +5,9 @@
 AgentWorkflows is self-managed: Python and TypeScript workflow SDKs, a model gateway and a team web console.
 Temporal keeps runs durable; the gateway controls model and tool access and records usage
 and receipts. Start, inspect, approve, cancel and retry runs through the console or CLI.
-In v0.3.0, cron schedules and signed webhooks can start work, with notifications for waiting approvals,
-failures and budget thresholds.
+Cron schedules and signed webhooks can start work, with notifications for waiting approvals,
+failures and budget thresholds. People sign in with their company account (OIDC) or an API key,
+and admins add members and manage keys in the console.
 
 It is for **developers** turning agent scripts into repeatable jobs, **team leads** reviewing
 drafts and spend, and **platform engineers** managing shared provider access. Built-in routes
@@ -47,8 +48,8 @@ AgentWorkflows packages a particular integration: team roles, governed workflow 
 per-run budgets, an approval console, triggers, notifications and linked receipts. Choose it
 if that shared workflow fits your team and saves integration work. Choose your own assembly
 if you need broader provider support, already operate those systems, or want full control
-over the application UX. This young project has a narrower API surface and still needs
-production identity, backups and operations. See the [side-by-side decision guide](decision-guide.md).
+over the application UX. This young project has a narrower API surface, and you still run
+its backups, upgrades and monitoring yourself. See the [side-by-side decision guide](decision-guide.md).
 
 ## Find a capability
 
@@ -56,6 +57,7 @@ production identity, backups and operations. See the [side-by-side decision guid
 | --- | --- |
 | Call cloud models and configure fallback | [Client examples](client-examples.md) |
 | Run durable workflows with human approvals | [Workflow walkthrough](workflows.md) |
+| Sign in with your company account and manage members and API keys | [Company sign-in](workflows.md#company-sign-in-oidc), [members and keys](workflows.md#members-and-api-keys) |
 | Set team roles, projects, provider keys, and budgets | [Team setup](workflows.md#teams-projects-and-roles), [budget controls](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md) |
 | Verify model and reported tool-action receipts | [Audit chain](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md) |
 | Add retrieval or hardened workspaces | [RAG](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/rag-service.md), [agent-sandbox](agent-sandbox-integration.md) |

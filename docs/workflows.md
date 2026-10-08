@@ -28,12 +28,14 @@ After `make compose-up`, open <http://127.0.0.1:8080/console>:
 
 1. Sign in with `local-development-only` (demo admin). Keep the local fake providers on
    **Get started**; no cloud key or paid call is needed.
-2. Choose **Run workflow**, select `ResearchWorkflow`, fill in its schema-generated form, and
-   select **Start run**. Its detail page refreshes while the workflow is active.
+2. Choose **Run workflow**, select **Research**, enter a topic (or select **Use the example**),
+   and select **Start run**. Optional inputs such as the model and budgets sit under
+   **More options**. The run's detail page refreshes while the workflow is active.
 3. Open **Approvals**, read the draft, then **Approve** or **Reject**. Approval allows
    the configured publish tool to run; rejection finishes without publishing.
-4. Open the run from **Workflow runs**. Expand **Input and output** to read each model/tool
-   step's captured content and redaction/truncation notes. **Receipt** and **Step logs** show
+4. Open the run from **Workflow runs**. Model steps preview their answer; expand
+   **Prompt and response** (model steps) or **Arguments and result** (tool steps) to read the
+   captured content with redaction/truncation notes. **Receipt** and **Step logs** show
    provider/model, usage, cost, routing attempts, and fingerprints without captured text.
 5. Open **Costs** for current-window team, provider, and workflow costs. **Providers & budgets**
    shows admins key presence and limits, with a copyable fragment and links for configuring
@@ -75,8 +77,9 @@ not prove live provider acceptance.
 
 Set `inputSchema` on a workflow in the `SandboxPolicySet`. `GET /v1/workflow-policies`
 returns it to the console, which renders text fields, longer text areas, numbers,
-checkboxes, enum selects, and string arrays with one item per line. Workflows without
-a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
+checkboxes, enum selects, and string arrays with one item per line. Required fields come
+first and the rest sit under **More options**; a string property named `model` becomes a
+list of the workflow's allowed models. Workflows without a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
 string, number, integer, boolean, or array-of-string properties, optional `enum`,
 `required`, `description`, `default`, and `examples`. `additionalProperties: false`
 rejects unknown fields. Nested objects and schema references are not supported.

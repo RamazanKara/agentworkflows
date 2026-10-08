@@ -94,6 +94,19 @@ See the [template gallery](docs/templates.md) and [decision guide](docs/decision
 - Readable run timelines, explained fallback costs, result summaries and phone layouts.
 - Tag-only release workflow publishing signed images and charts plus both SDKs.
 
+## Milestone 11: a product teams can adopt — in progress for 0.5.0
+
+- Company sign-in (OIDC) with persistent browser sessions; members and API keys managed
+  in the console, CLI and API instead of YAML.
+- Run forms generated from each workflow's input schema; each step's prompt and answer,
+  with redaction and a retention limit; run records expire on a schedule.
+- One-command Kubernetes install that includes Temporal and the worker; Compose and the
+  SDKs install from published release artifacts.
+- Product-first docs. The ranked gap list is in [docs/PRODUCT-GAPS.md](docs/PRODUCT-GAPS.md).
+
+Later: editing budgets and provider routing in the console, a read-only audit log page,
+and a durable database for run records.
+
 ## Next: deployment validation and integration coverage
 
 Deployment-specific identity, networking, storage failover and retention remain operator
