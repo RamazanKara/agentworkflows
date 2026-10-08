@@ -2273,9 +2273,10 @@ available project. Expired Temporal executions are omitted from lists; direct in
 reports that the run is unavailable.</p>
 <p>Sign-in exchanges a team API key or signed JWT for a server-side Redis session. Reloading
 restores the workspace; <strong>Sign out</strong> invalidates the session on every replica.
-<strong>Switch identity</strong> replaces the active session after verifying another credential.
+<strong>Switch account</strong> replaces the active session after verifying another credential.
 The browser retains an HttpOnly session cookie, never the API key or JWT.
-When OIDC is configured, <strong>Sign in with your provider</strong> uses the company account instead.
+When OIDC is configured, <strong>Sign in with your company account</strong> comes first; if the provider
+declines or the account maps to no team, the console explains why instead of showing an error page.
 Use <code>demo-builder</code>, <code>demo-approver</code>, <code>demo-viewer</code>, or <code>demo-other-team</code> to explore roles.</p>
 <p>The gateway image includes the built console; no Node server or extra container runs in
 production. Compose enables it. For a standalone gateway Helm release, set
