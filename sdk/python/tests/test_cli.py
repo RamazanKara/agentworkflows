@@ -184,7 +184,7 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     assert json.loads((target / "input.json").read_text()) == TEMPLATES[template][2]
     assert "worker.py" in (target / "README.md").read_text()
     assert f"templates/#{template}" in (target / "README.md").read_text()
-    assert "agentworkflows==" in (target / "requirements.txt").read_text()
+    assert "releases/download/v0.4.0/agentworkflows-0.4.0-py3-none-any.whl" in (target / "requirements.txt").read_text()
     assert "--input '@input.json'" in capsys.readouterr().out
     before = {p.name: p.read_bytes() for p in target.iterdir()}
     with pytest.raises(SystemExit) as exc:
@@ -229,3 +229,13 @@ def test_input_file_handles_utf8_bom_and_reports_invalid_json(tmp_path):
         workflow_input('{"topic":')
     with pytest.raises(argparse.ArgumentTypeError, match="valid JSON"):
         workflow_input('{"cost_limit_usd": NaN}')
+
+
+def test_scaffold_pins_the_packaged_sdk_version() -> None:
+    import tomllib
+    from pathlib import Path
+
+    from agentworkflows import scaffold
+
+    pyproject = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    assert scaffold.SDK_VERSION == pyproject["project"]["version"]

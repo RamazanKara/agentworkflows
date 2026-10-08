@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.0 - unreleased
+
+- Start the Compose quickstart without building: the stack pulls the signed release images.
+- Install the SDKs from GitHub releases: `agentworkflows init` pins the release wheel, and the
+  TypeScript SDK installs from the release tarball.
+
 ## v0.4.0 - 2026-10-08
 
 - Add the TypeScript workflow SDK with governed model and tool activities, human approval,

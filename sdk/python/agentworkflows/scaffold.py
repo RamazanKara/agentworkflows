@@ -32,6 +32,16 @@ TEMPLATES = {
 }
 
 
+
+SDK_VERSION = "0.4.0"
+RELEASES = "https://github.com/RamazanKara/agentworkflows/releases/download"
+
+
+def _requirement() -> str:
+    """Pin generated projects to the SDK wheel published on the matching GitHub release."""
+    wheel = f"agentworkflows-{SDK_VERSION}-py3-none-any.whl"
+    return f"agentworkflows @ {RELEASES}/v{SDK_VERSION}/{wheel}\n"
+
 def init_project(destination: Path, template: str) -> None:
     if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
         raise ValueError(f"{destination} is not an empty directory. Choose a new directory; existing files are kept.")
@@ -55,13 +65,13 @@ def init_project(destination: Path, template: str) -> None:
             f"    run_worker([{workflow}])\n"
         ),
         "input.json": json.dumps(example, indent=2) + "\n",
-        "requirements.txt": "agentworkflows==0.4.0\n",
+        "requirements.txt": _requirement(),
         ".gitignore": ".venv/\n.env\n__pycache__/\n",
         "README.md": f"""# {workflow}
 
 Edit `workflow.py` and `input.json`. The SDK is already installed if you used `agentworkflows init`.
-On another machine, install `requirements.txt` from your package index, or install
-`sdk/python` from the same AgentWorkflows checkout until this version is published.
+On another machine, `python -m pip install -r requirements.txt` installs the same SDK
+release from GitHub.
 
 Start the stack using the [quickstart](https://ramazankara.github.io/agentworkflows/latest/quickstart/).
 Its built-in worker already runs the unchanged template. From this directory:

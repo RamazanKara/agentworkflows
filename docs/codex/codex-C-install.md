@@ -17,3 +17,5 @@ Goal: `helm install` gives a working AgentWorkflows (gateway + console, Redis, T
 4. `make lint` and `make test-gateway` stay green. If the repo has chart render tests (scripts/ or tests/ referencing helm template), update them.
 
 Report: what changed, the kind verification transcript summary, anything not verified.
+
+Also verify the Compose quickstart now that deploy/compose/compose.yaml pulls the published GHCR images (no local build): from a fresh `git clone` of main, run the docs/quickstart.md Bash steps exactly as written except clone main instead of the tag, through approval and `agentworkflows audit verify`. The cloud sandbox could resolve the manifests but was blocked from downloading the image layers, so this has not been run yet. Then `docker compose down -v`.

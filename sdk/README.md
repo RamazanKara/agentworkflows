@@ -4,11 +4,13 @@ First-party, dependency-light clients for the AgentWorkflows inference gateway.
 
 ## Python
 
-Install the client from this checkout (repository root):
+Install the released client:
 
 ```bash
-python -m pip install ./sdk/python
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.4.0/agentworkflows-0.4.0-py3-none-any.whl
 ```
+
+From a checkout (repository root), `python -m pip install ./sdk/python` installs the current source.
 
 [`python/agentworkflows`](python/agentworkflows/__init__.py) provides `GatewayClient`, which
 covers the gateway's OpenAI-compatible and Anthropic endpoints, Files/Batch, Responses, and
