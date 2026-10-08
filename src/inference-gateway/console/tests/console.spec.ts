@@ -87,7 +87,7 @@ for (const ok of [true, false]) {
     await login(page, 'admin', '/console/#audit');
     await page.getByRole('button', { name: 'Verify chain' }).click();
     await expect(page.getByRole('heading', { name: ok ? 'Chain verified' : 'Chain break found' })).toBeVisible();
-    await expect(page.getByText(ok ? '7 events checked. None were changed' : '7 events checked before the break.')).toBeVisible();
+    await expect(page.getByText(ok ? '7 events checked. None were changed' : '6 events passed before the break.')).toBeVisible();
     await expect(page.getByText(ok ? /This check starts at event 2 in chain gateway:test/ : /First break at sequence 8.*record_hash_mismatch/)).toBeVisible();
   });
 }
@@ -122,7 +122,7 @@ test('audit disabled view explains how to enable it', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Audit log is turned off' })).toBeVisible();
   await expect(page.getByText(/SANDBOX_BUDGET_BACKEND=redis/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Apply filters' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Verify chain' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Verify chain' })).toHaveCount(0);
 });
 
 test('leaving the audit page cancels an in-progress export', async ({ page }) => {

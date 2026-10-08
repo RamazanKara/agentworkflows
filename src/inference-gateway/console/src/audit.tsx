@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, date, label, money, providerName, shortId, workflowName, type Session } from './api';
 import { Badge, Empty, ErrorMessage, Icon, Loading, PageHeader } from './ui';
 
@@ -47,17 +47,24 @@ const settingValue = (field: string, snapshot: SettingSnapshot) => {
     : Array.isArray(value) ? value.map(item => providerName(String(item))).join(', ')
     : typeof value === 'number' && /(_usd|^project_budgets\.)/.test(field) ? money(value) : String(value);
 };
-const details = (event: AuditEvent) => {
+const details = (event: AuditEvent): ReactNode => {
   if (event.event === 'team_settings_changed') {
     const fields = Object.keys(event.after || {});
-    return fields.length === 1 ? `${settingName(fields[0])}: ${settingValue(fields[0], event.before?.[fields[0]])} → ${settingValue(fields[0], event.after?.[fields[0]])}`
+    return fields.length === 1 ? <>{settingName(fields[0])}: <span className="nowrap">{settingValue(fields[0], event.before?.[fields[0]])} → {settingValue(fields[0], event.after?.[fields[0]])}</span></>
       : `${fields.length} settings changed`;
   }
   if (event.event === 'team_key') return [event.action_type && label(event.action_type), event.key?.name].filter(Boolean).join(' · ');
   return [event.action_type && label(event.action_type) !== eventName(event.event) && label(event.action_type), event.provider && providerName(event.provider)].filter(Boolean).join(' · ');
 };
 const fields = [['from', 'From', 'datetime-local', ''], ['to', 'To', 'datetime-local', ''], ['event_type', 'Event type', 'text', ''],
-  ['actor', 'Actor', 'text', 'Subject or key ID'], ['project', 'Project', 'text', 'Any project'], ['run_id', 'Run ID', 'text', 'Full run ID']] as const;
+  ['actor', 'Actor', 'text', 'Key ID, worker or user ID'], ['project', 'Project', 'text', 'Any project'], ['run_id', 'Run ID', 'text', 'Full run ID']] as const;
+function Json({ id, value }: { id: string; value: unknown }) {
+  const lines = JSON.stringify(value, null, 2).split('\n');
+  return <pre className="json event-json" id={id}>{lines.map((line, index) => {
+    const indent = line.length - line.trimStart().length + 2;
+    return <span key={index} style={{ paddingLeft: `${indent}ch`, textIndent: `-${indent}ch` }}>{line}{index < lines.length - 1 && '\n'}</span>;
+  })}</pre>;
+}
 const snapshot = () => new URLSearchParams({ to: String(Date.now() / 1000) }).toString();
 const copyText = async (text: string, done: string, report: (message: string) => void) => {
   try { await navigator.clipboard.writeText(text); report(done); } catch { report('Copy failed. Select the text and copy it manually.'); }
@@ -143,16 +150,23 @@ function AuditViewer({ session }: { session: Session }) {
   const broken = verification?.first_break;
   const isBroken = (entry: Entry) => Boolean(broken && entry.chain_id === broken.chain_id && entry.sequence === broken.sequence);
   const range = new URLSearchParams(query);
-  const rangeText = range.get('from') ? `${date(Number(range.get('from')))} to ${date(Number(range.get('to')))}` : `Everything up to ${date(Number(range.get('to')))}`;
+  const checkedAt = (at: number) => {
+    const from = Number(range.get('from')) || 0;
+    const to = Number(range.get('to'));
+    return from ? `Covers ${date(from)} to ${date(to)} · checked ${date(at)}` : at - to > 60 ? `Covers events up to ${date(to)} · checked ${date(at)}` : `Checked ${date(at)}`;
+  };
+  const brokenIndex = page?.events.findIndex(isBroken) ?? -1;
   const showBroken = () => {
     const row = page?.events.find(isBroken);
     if (row) { setExpanded(row.id); document.getElementById(`row-${row.id}`)?.scrollIntoView({ block: 'center' }); }
   };
-  return <><PageHeader title="Audit log" subtitle="Who did what in your team, newest first, with a tamper check you can run any time.">
-    <button className="secondary" disabled={!page?.enabled || nothing || Boolean(busy)} onClick={() => void verify()}>{busy === 'verify' ? 'Verifying…' : 'Verify chain'}</button>
-    <button className="secondary" disabled={!page?.enabled || nothing || Boolean(busy)} onClick={() => void download()}>{busy === 'export' ? 'Exporting…' : 'Export JSON Lines'}</button>
-  </PageHeader>
+  return <><PageHeader title="Audit log" subtitle={off ? 'Who did what in your team, once audit storage is on.' : 'Who did what in your team, newest first, with a tamper check you can run any time.'}>
     {!off && <>
+      <button className="secondary" disabled={!page || nothing || Boolean(busy)} onClick={() => void verify()}>{busy === 'verify' ? 'Verifying…' : 'Verify chain'}</button>
+      <button className="secondary" disabled={!page || nothing || Boolean(busy)} onClick={() => void download()}>{busy === 'export' ? 'Exporting…' : 'Export JSON Lines'}</button>
+    </>}
+  </PageHeader>
+    {!off && !nothing && <>
       <button className="secondary filter-toggle" aria-expanded={showFilters} aria-controls="audit-filters" onClick={() => setShowFilters(value => !value)}>
         {showFilters ? 'Hide filters' : applied ? `Filters · ${applied} applied` : 'Filters'}</button>
       <form id="audit-filters" className={showFilters ? 'panel filters audit-filters' : 'panel filters audit-filters collapsed'} onSubmit={event => { event.preventDefault(); apply(); }}>
@@ -166,8 +180,8 @@ function AuditViewer({ session }: { session: Session }) {
     <ErrorMessage message={error}/>
     {!page && !error && <Loading/>}
     {off && <section className="setup panel"><h2>Audit log is turned off</h2>
-      <p className="muted">Your operator turns on audit storage on the gateway with these settings and enables Redis persistence. Then refresh this page.</p>
-      <div className="code-scroll"><pre className="json">{enableSettings}</pre></div>
+      <p className="muted">Ask your gateway operator to add these settings and turn on Redis persistence, then refresh this page.</p>
+      <pre className="json wrap">{enableSettings}</pre>
       <div className="actions"><button className="secondary" onClick={() => void copyText(enableSettings, 'Settings copied.', setCopied)}><Icon name="copy"/>Copy settings</button><span role="status">{copied}</span></div>
       <p className="setup-links"><a href={docs}>How to turn on the audit log</a></p>
     </section>}
@@ -176,27 +190,28 @@ function AuditViewer({ session }: { session: Session }) {
         {!verification.enabled ? <p>{verification.message}</p> : <>
           <h2>{verification.ok ? 'Chain verified' : 'Chain break found'}</h2>
           {broken ? <>
-            <p>{verification.checked} {verification.checked === 1 ? 'event' : 'events'} checked before the break.</p>
-            <p>First break at sequence {broken.sequence} in {broken.chain_id}: {reason(broken.reason)} ({broken.reason}). Events from this point on can’t be trusted.</p>
+            <p>{verification.checked - 1} {verification.checked === 2 ? 'event' : 'events'} passed before the break.</p>
+            <p>First break at sequence {broken.sequence} in {broken.chain_id}: {reason(broken.reason)} ({broken.reason}).
+              {brokenIndex > 0 ? ` This event and the ${brokenIndex} newer ${brokenIndex === 1 ? 'event' : 'events'} above it can’t be trusted.` : brokenIndex === 0 ? ' This event can’t be trusted.' : ' This event and every newer one can’t be trusted.'}</p>
             <p>Export this range now and tell your gateway operator.</p>
             {page.events.some(isBroken) && <button className="link" onClick={showBroken}>Show the event</button>}
           </> : <p>{verification.checked} {verification.checked === 1 ? 'event' : 'events'} checked. None were changed, removed or reordered.</p>}
           {verification.boundaries.map(boundary => <p className="muted" key={`${boundary.chain_id}:${boundary.sequence}`}>This check starts at event {boundary.sequence} in chain {boundary.chain_id}. {boundary.reason === 'time_range' ? 'Earlier events are outside the selected time range.' : 'Older events were removed by retention, so they aren’t included.'}</p>)}
-          <p className="muted">{rangeText} · checked at {date(Date.now() / 1000)}</p>
+          <p className="muted">{checkedAt(Date.now() / 1000)}</p>
         </>}
       </section>}
       {page.events.length ? <section className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Audit events table"><table className="stack audit-table">
         <thead><tr><th>Event</th><th>Time</th><th>Actor</th><th>Project</th><th>Run</th><th><span className="visually-hidden">Details</span></th></tr></thead>
         <tbody>{page.events.map(entry => { const who = actor(entry.event); const detail = details(entry.event); const open = expanded === entry.id; return <Fragment key={entry.id}>
           <tr id={`row-${entry.id}`} className={[open && 'open', isBroken(entry) && 'broken'].filter(Boolean).join(' ') || undefined}>
-            <td><span className="event-name"><strong>{eventName(entry.event.event)}</strong>{entry.event.decision === 'denied' && <Badge value="failed" text="Denied"/>}{isBroken(entry) && <Badge value="failed" text="Chain break"/>}</span>{detail && <small>{detail}</small>}</td>
+            <td><span className="event-name"><strong>{eventName(entry.event.event)}</strong>{entry.event.decision === 'denied' && <Badge value="failed" text="Denied"/>}{isBroken(entry) && <Badge value="failed" text="Chain break"/>}{brokenIndex > 0 && page.events.indexOf(entry) < brokenIndex && <Badge value="unverified" text="Not verified"/>}</span>{detail && <small>{detail}</small>}</td>
             <td data-label="Time">{date(entry.event.ts)}</td>
             <td data-label="Actor">{who.name || who.id || '—'}{who.name && who.id && <small title={who.id}>Key {shortId(who.id)}</small>}</td>
             <td data-label="Project" className={entry.event.project ? undefined : 'empty-cell'}>{entry.event.project || '—'}</td>
             <td data-label="Run" className={entry.event.workflow_run_id ? undefined : 'empty-cell'}>{entry.event.workflow_run_id ? <a className="run-link" href={`#run/${encodeURIComponent(entry.event.workflow_run_id)}`}><code>{shortId(entry.event.workflow_run_id)}</code></a> : '—'}</td>
             <td className="row-action"><button className="link" aria-expanded={open} aria-controls={`event-${entry.id}`} onClick={() => setExpanded(open ? undefined : entry.id)}>{open ? 'Hide JSON' : 'Show JSON'}</button></td></tr>
           {open && <tr className="json-row"><td colSpan={6}>
-            <pre className="json" id={`event-${entry.id}`}>{JSON.stringify(entry.event, null, 2)}</pre>
+            <Json id={`event-${entry.id}`} value={entry.event}/>
             <div className="actions"><button className="secondary" onClick={() => void copyText(JSON.stringify(entry.event, null, 2), 'Event copied.', setCopied)}><Icon name="copy"/>Copy JSON</button><span role="status">{copied}</span></div>
           </td></tr>}
         </Fragment>; })}</tbody>
@@ -207,7 +222,7 @@ function AuditViewer({ session }: { session: Session }) {
       </div></section>
         : <div className="panel"><Empty title={nothing ? 'No audit events yet' : 'No matching events'}><p>{nothing ? 'Model calls, approvals, and key and settings changes appear here as your team works.' : 'No retained events match these filters.'}</p>
           {nothing ? <a className="tap" href="#new">Run a workflow</a> : applied > 0 && <button className="link" onClick={clear}>Clear filters</button>}</Empty></div>}
-      <p className="muted">Times use your local time zone. Verify chain checks every team event in the time range, including events the other filters hide.</p>
+      {!nothing && <p className="muted">Times use your local time zone. Verify chain checks every team event in the time range, including events the other filters hide.</p>}
     </>}
   </>;
 }
