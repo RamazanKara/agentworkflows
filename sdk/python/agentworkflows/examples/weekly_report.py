@@ -21,14 +21,13 @@ class WeeklyReportRequest:
         "properties": {
             "period": {
                 "type": "string",
-                "description": "Reporting period",
+                "description": "Start and end dates, as YYYY-MM-DD/YYYY-MM-DD.",
                 "examples": ["2026-09-28/2026-10-04"],
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "model": {
                 "type": "string",
-                "description": "Approved model ID",
                 "default": "demo-openai",
                 "minLength": 1,
                 "pattern": "\\S",

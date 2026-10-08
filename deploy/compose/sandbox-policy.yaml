@@ -51,10 +51,11 @@ spec:
         DailyReportWorkflow:
           inputSchema:
             type: "object"
+            description: "Summarizes the day's agent operations for the team."
             properties:
               topic:
                 type: "string"
-                description: "Daily report topic"
+                description: "What the report covers."
                 default: "agent operations"
             additionalProperties: false
           allowedProviders: [openai]
@@ -82,28 +83,26 @@ spec:
           inputSchema:
             $schema: "https://json-schema.org/draft/2020-12/schema"
             type: "object"
+            description: "Researches a topic, drafts a briefing, and waits for your approval before publishing."
             properties:
               topic:
                 type: "string"
-                description: "Research topic"
+                description: "A question or subject, in a sentence."
                 examples: ["How should our team evaluate AI agents?"]
                 minLength: 1
                 pattern: "\\S"
               model:
                 type: "string"
-                description: "Approved model ID"
                 default: "demo-openai"
                 minLength: 1
                 pattern: "\\S"
               token_limit:
                 type: "integer"
-                description: "Run token budget"
                 default: 10000
                 minimum: 1
                 maximum: 1000000000
               cost_limit_usd:
                 type: "number"
-                description: "Run cost budget in USD"
                 default: 5
                 exclusiveMinimum: 0
                 maximum: 1000000
@@ -119,16 +118,16 @@ spec:
           inputSchema:
             $schema: "https://json-schema.org/draft/2020-12/schema"
             type: "object"
+            description: "Suggests a category, priority and reply draft for a support ticket."
             properties:
               ticket:
                 type: "string"
-                description: "Support ticket text"
+                description: "Paste the customer's message."
                 examples: ["I cannot sign in after resetting my password."]
                 minLength: 1
                 pattern: "\\S"
               model:
                 type: "string"
-                description: "Approved model ID"
                 default: "demo-openai"
                 minLength: 1
                 pattern: "\\S"
@@ -144,16 +143,16 @@ spec:
           inputSchema:
             $schema: "https://json-schema.org/draft/2020-12/schema"
             type: "object"
+            description: "Reviews a code change and waits for a human decision."
             properties:
               diff:
                 type: "string"
-                description: "Pull request diff"
+                description: "Paste a unified diff (git diff output)."
                 examples: ["- return user.is_admin\n+ return True"]
                 minLength: 1
                 pattern: "\\S"
               model:
                 type: "string"
-                description: "Approved model ID"
                 default: "demo-openai"
                 minLength: 1
                 pattern: "\\S"
@@ -176,16 +175,16 @@ spec:
           inputSchema:
             $schema: "https://json-schema.org/draft/2020-12/schema"
             type: "object"
+            description: "Combines code changes, support and incidents into one weekly briefing."
             properties:
               period:
                 type: "string"
-                description: "Reporting period"
+                description: "Start and end dates, as YYYY-MM-DD/YYYY-MM-DD."
                 examples: ["2026-09-28/2026-10-04"]
                 minLength: 1
                 pattern: "\\S"
               model:
                 type: "string"
-                description: "Approved model ID"
                 default: "demo-openai"
                 minLength: 1
                 pattern: "\\S"
@@ -201,16 +200,16 @@ spec:
           inputSchema:
             $schema: "https://json-schema.org/draft/2020-12/schema"
             type: "object"
+            description: "Builds an incident timeline grounded in log excerpts."
             properties:
               incident_id:
                 type: "string"
-                description: "Incident identifier"
+                description: "The ID from your incident tracker."
                 examples: ["INC-1042"]
                 minLength: 1
                 pattern: "\\S"
               model:
                 type: "string"
-                description: "Approved model ID"
                 default: "demo-openai"
                 minLength: 1
                 pattern: "\\S"
@@ -226,16 +225,16 @@ spec:
           inputSchema:
             $schema: "https://json-schema.org/draft/2020-12/schema"
             type: "object"
+            description: "Answers a question from team documents, with checked citations."
             properties:
               question:
                 type: "string"
-                description: "Question about the team documents"
+                description: "A question about your team's documents."
                 examples: ["Who can approve a workflow, and when does approval expire?"]
                 minLength: 1
                 pattern: "\\S"
               model:
                 type: "string"
-                description: "Approved model ID"
                 default: "demo-openai"
                 minLength: 1
                 pattern: "\\S"

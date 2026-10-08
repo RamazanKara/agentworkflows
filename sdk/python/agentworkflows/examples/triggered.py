@@ -12,7 +12,9 @@ from agentworkflows.workflows import ApprovalWorkflow, WorkflowGateway, input_sc
 @input_schema(
     {
         "type": "object",
-        "properties": {"topic": {"type": "string", "description": "Daily report topic", "default": "agent operations"}},
+        "properties": {
+            "topic": {"type": "string", "description": "What the report covers.", "default": "agent operations"}
+        },
         "additionalProperties": False,
     }
 )

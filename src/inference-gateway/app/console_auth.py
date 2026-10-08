@@ -129,6 +129,10 @@ async def oidc_identity(request: Request, token: str, nonce: str) -> None:
             401, detail="Company sign-in token was rejected. Sign in again or contact your admin."
         ) from exc
     request.state.principal = _jwt_principal({**claims, "role": role, "project": project})
+    # The console shows who is signed in and approvals name the reviewer.
+    display = claims.get("name") or claims.get("email")
+    if isinstance(display, str) and display.strip():
+        request.state.principal["name"] = display.strip()[:128]
     request.state.sandbox_id = team
     request.state.sandbox_bound = True
 

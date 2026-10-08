@@ -94,7 +94,7 @@ async def lookup_key(request: Request, digest: str) -> KeyRecord | None:
         raise HTTPException(401, detail={"reason": "api_key_revoked", "message": "This API key was revoked."})
     return KeyRecord(
         sha256=digest, key_id=record["key_id"], sandbox=record["team"], role=record["role"],
-        project=record["project"], expires_at=record["expires_at"],
+        project=record["project"], expires_at=record["expires_at"], name=record.get("name"),
     )
 
 

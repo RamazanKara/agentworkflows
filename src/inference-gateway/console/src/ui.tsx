@@ -15,6 +15,10 @@ export function Icon({ name }: { name: string }) {
     add: <path d="M12 3v18M3 12h18"/>,
     signout: <><path d="M10 3H3v18h7M8 12h13m-5-5 5 5-5 5"/></>,
     signin: <><path d="M14 3h7v18h-7M3 12h13m-5-5 5 5-5 5"/></>,
+    swap: <><path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/></>,
+    menu: <path d="M4 6h16M4 12h16M4 18h16"/>,
+    close: <path d="M6 6l12 12M18 6 6 18"/>,
+    copy: <><rect x="9" y="9" width="11" height="11" rx="1"/><path d="M5 15H4V4h11v1"/></>,
   };
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -26,15 +30,22 @@ export function Loading() { return <p className="loading" role="status">Loading 
 export function Empty({ title, children }: { title: string; children: ReactNode }) {
   return <div className="empty"><h2>{title}</h2><div>{children}</div></div>;
 }
-export function Badge({ value }: { value: string }) {
-  return <span className={`badge ${value}`}>{label(value)}</span>;
+export function Badge({ value, text }: { value: string; text?: string }) {
+  return <span className={`badge ${value}`}>{text || label(value)}</span>;
 }
-export function Metrics({ items }: { items: [string, ReactNode][] }) {
-  return <dl className="metrics">{items.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>;
+export function Metrics({ items, compact }: { items: [string, ReactNode][]; compact?: boolean }) {
+  return <dl className={compact ? 'metrics compact' : 'metrics'}>{items.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>;
 }
-export function PageHeader({ title, subtitle, children }: { title: string; subtitle: string; children?: ReactNode }) {
-  return <header className="page-heading"><div><h1 tabIndex={-1}>{title}</h1><p>{subtitle}</p></div><div className="actions">{children}</div></header>;
+export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
+  return <header className="page-heading"><div><h1 tabIndex={-1}>{title}</h1>{subtitle && <p>{subtitle}</p>}</div><div className="actions">{children}</div></header>;
 }
+// On phones the label hides and the button becomes a 44px icon on the title row.
 export function Refresh({ onClick }: { onClick: () => void }) {
-  return <button className="secondary" onClick={onClick}><Icon name="refresh"/>Refresh</button>;
+  return <button className="secondary refresh" onClick={onClick} aria-label="Refresh"><Icon name="refresh"/><span>Refresh</span></button>;
+}
+// A single-line value (webhook URL, new secret) that scrolls instead of wrapping, with a copy button.
+export function CopyField({ value, label: name, onCopied }: { value: string; label: string; onCopied?: (ok: boolean) => void }) {
+  return <div className="copy-field"><code aria-label={name}>{value}</code><button type="button" className="secondary" onClick={async () => {
+    try { await navigator.clipboard.writeText(value); onCopied?.(true); } catch { onCopied?.(false); }
+  }}><Icon name="copy"/>Copy</button></div>;
 }

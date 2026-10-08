@@ -20,14 +20,13 @@ class CodeReviewRequest:
         "properties": {
             "diff": {
                 "type": "string",
-                "description": "Pull request diff",
+                "description": "Paste a unified diff (git diff output).",
                 "examples": ["- return user.is_admin\n+ return True"],
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "model": {
                 "type": "string",
-                "description": "Approved model ID",
                 "default": "demo-openai",
                 "minLength": 1,
                 "pattern": "\\S",

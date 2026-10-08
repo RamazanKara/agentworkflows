@@ -21,14 +21,13 @@ class IncidentSummaryRequest:
         "properties": {
             "incident_id": {
                 "type": "string",
-                "description": "Incident identifier",
+                "description": "The ID from your incident tracker.",
                 "examples": ["INC-1042"],
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "model": {
                 "type": "string",
-                "description": "Approved model ID",
                 "default": "demo-openai",
                 "minLength": 1,
                 "pattern": "\\S",

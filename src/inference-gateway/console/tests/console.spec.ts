@@ -94,7 +94,7 @@ for (const mode of ['redacted', 'full', 'capture_off', 'expired']) {
       await expect(page.locator('.step-content').first()).toHaveCSS('white-space', 'pre-wrap');
       await expect(page.getByText('Input truncated at the capture size limit.')).toBeVisible();
       await expect(page.getByText('Output truncated at the capture size limit.')).toBeVisible();
-      await expect(page.getByText(mode === 'redacted' ? 'Gateway redaction applied.' : 'Full capture after gateway admission and output checks.')).toBeVisible();
+      await expect(page.getByText(mode === 'redacted' ? 'Saved with sensitive values masked.' : 'Saved in full after the gateway’s checks.')).toBeVisible();
     } else {
       await expect(page.getByText(mode === 'expired' ? 'Captured content expired.' : 'Content capture is off for this step.')).toBeVisible();
     }
@@ -106,7 +106,7 @@ async function login(page: Page, token = 'admin') {
   await page.goto('/console/');
   await page.getByLabel('API key', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('navigation')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Signed in as' })).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -186,7 +186,7 @@ test('triggers show schedules and signed endpoints; pause and resume are accessi
   await page.getByRole('link', { name: 'Triggers', exact: true }).click();
   await expect(page).toHaveURL(/#triggers$/);
   await expect(page.getByRole('heading', { name: 'Triggers', exact: true })).toBeVisible();
-  await expect(page.getByText('0 9 * * *')).toBeVisible();
+  await expect(page.getByText('Every day at 09:00 UTC')).toBeVisible();
   await expect(page.getByText('/v1/hooks/demo/GitHubIssueTriageWorkflow/github')).toBeVisible();
   await page.getByRole('button', { name: 'Pause daily' }).click();
   await expect(page.getByRole('button', { name: 'Resume daily' })).toBeEnabled();
@@ -221,7 +221,7 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   await expect(page.getByRole('heading', { name: 'No matching runs on this page' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('');
   await page.getByRole('link', { name: 'Research', exact: true }).click();
-  await page.getByText('Receipt ·', { exact: false }).click();
+  await page.getByText('Receipt', { exact: true }).first().click();
   await expect(page.getByText('"prev_hash"', { exact: false })).toBeVisible();
   await page.getByText('Step logs', { exact: true }).click();
   await expect(page.getByText('"status_code": 503', { exact: false })).toBeVisible();
@@ -359,8 +359,16 @@ test('team switching clears prior team data and reload restores the active sessi
 test('mobile navigation, keyboard skip link and bounded table scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
+  await expect(page.getByRole('navigation')).toBeHidden();
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await expect(page.getByRole('link', { name: 'Get started', exact: true })).toHaveAttribute('aria-current', 'page');
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Workflow runs', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('combobox', { name: 'Status', exact: true })).toBeHidden();
+  await page.getByRole('button', { name: 'Filters' }).click();
+  await expect(page.getByRole('combobox', { name: 'Status', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.keyboard.press('Control+Home');
   await page.getByRole('link', { name: 'Skip to content' }).focus();
@@ -374,7 +382,7 @@ test('tool steps show the tool name even when a receipt carries the gateway defa
     ...detail, timeline: [{ ...detail.timeline[0], tool: 'research', action: 'tool_exec', model: 'demo-openai' }],
   } }));
   await login(page);
-  await page.getByRole('link', { name: 'Open latest run and receipts' }).click();
+  await page.getByRole('link', { name: 'Open the latest run' }).click();
   await expect(page.getByRole('heading', { name: 'Research', exact: true, level: 3 })).toBeVisible();
   await expect(page.locator('.step-facts')).toContainText('research');
   await expect(page.locator('.step-facts')).not.toContainText('demo-openai');
@@ -395,8 +403,8 @@ test('fallback holds are explained and notification receipts read as one step', 
     notification('slack', 'attempted', 1), notification('slack', 'delivered', 2), notification('email', 'delivered', 3),
   ] } }));
   await login(page);
-  await page.getByRole('link', { name: 'Open latest run and receipts' }).click();
-  await expect(page.getByText('openai failed, so anthropic served this step. $1.62 and 541 tokens stay held for the failed openai attempt')).toBeVisible();
+  await page.getByRole('link', { name: 'Open the latest run' }).click();
+  await expect(page.getByText('OpenAI failed, so Anthropic served this step. $1.62 and 541 tokens stay held for the failed OpenAI attempt')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toHaveCount(1);
   await expect(page.locator('.step-facts').first()).toContainText('$0.01');
   await expect(page.locator('.notifications li')).toHaveCount(2);
@@ -470,7 +478,7 @@ test('creating a key shows the secret once and copies it', async ({ page, contex
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.getByLabel('New API key')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('row', { name: /Alice.*Builder.*All.*Never.*Never.*Active.*Revoke/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Alice.*Builder.*All projects.*Never.*Active.*Revoke/ })).toBeVisible();
   await expect(page.getByText(secret, { exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
 });
