@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import secrets
+from contextlib import suppress
 from math import isfinite
 from time import time
 from typing import Any
@@ -36,6 +37,7 @@ from app.workflow_budget import redis_call
 
 AUTH_PATHS = {f"/v1/auth/{name}" for name in ("config", "login", "callback", "logout", "session")}
 STATE_COOKIE = "aw_oidc_state"
+SIGNIN_ERRORS = {400: "expired", 401: "rejected"}
 
 
 class SessionLogin(BaseModel):
@@ -202,6 +204,20 @@ def register_auth_routes(app: FastAPI) -> None:
 
     @app.get("/v1/auth/callback", tags=["auth"], status_code=303, response_class=RedirectResponse)
     async def callback(request: Request, state: str = "", code: str = "", error: str = "") -> Response:
+        try:
+            return await complete_sign_in(request, state, code, error)
+        except HTTPException as exc:
+            # A browser landing here should see the console with a readable message, not JSON.
+            if "text/html" not in request.headers.get("accept", ""):
+                raise
+            reason = "declined" if error else SIGNIN_ERRORS.get(exc.status_code, "unavailable")
+            response = RedirectResponse(f"/console/?signin_error={reason}", 303)
+            with suppress(HTTPException):
+                response.delete_cookie(STATE_COOKIE, **cookie_options(request))
+            response.headers["Referrer-Policy"] = "no-referrer"
+            return response
+
+    async def complete_sign_in(request: Request, state: str, code: str, error: str) -> Response:
         if not app.state.settings.oidc_issuer:
             raise HTTPException(404, detail="Company sign-in is not configured.")
         if not state or not same_token(state, request.cookies.get(STATE_COOKIE, "")):

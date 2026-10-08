@@ -45,9 +45,10 @@ reports that the run is unavailable.
 
 Sign-in exchanges a team API key or signed JWT for a server-side Redis session. Reloading
 restores the workspace; **Sign out** invalidates the session on every replica.
-**Switch identity** replaces the active session after verifying another credential.
+**Switch account** replaces the active session after verifying another credential.
 The browser retains an HttpOnly session cookie, never the API key or JWT.
-When OIDC is configured, **Sign in with your provider** uses the company account instead.
+When OIDC is configured, **Sign in with your company account** comes first; if the provider
+declines or the account maps to no team, the console explains why instead of showing an error page.
 Use `demo-builder`, `demo-approver`, `demo-viewer`, or `demo-other-team` to explore roles.
 
 The gateway image includes the built console; no Node server or extra container runs in

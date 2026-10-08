@@ -194,3 +194,29 @@ details[open] summary { margin-bottom: 12px; }
   .result .result-summary { padding: 0 18px; }
   .result details { margin: 0 18px 18px; }
 }
+/* Sign-in with company account, account summary, and Members & keys. */
+.signin-form .sso { width: 100%; min-height: 50px; font-size: 16px; margin-top: 8px; }
+.divider { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 13px; margin: 28px 0 0; }
+.divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+.signin-form .divider + form { margin-top: 18px; }
+.identity { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 6px; padding: 12px 14px; border: 1px solid #2c5e53; border-radius: 6px; background: #0b4339; font-weight: 600; overflow-wrap: anywhere; }
+.identity .role { flex: none; font-size: 12px; font-weight: 600; color: #cdeee1; background: #1b5a4d; border-radius: 30px; padding: 3px 10px; }
+.intro { color: var(--muted); max-width: 760px; margin-top: -12px; }
+.status:empty { margin: 0; }
+.key-form form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; align-items: start; }
+.key-form .field label { margin-bottom: 7px; }
+.key-form .form-actions { grid-column: 1 / -1; }
+.key-form.form-panel { max-width: none; }
+.new-key code { display: block; font-size: 15px; padding: 14px 16px; margin: 4px 0 20px; background: #f1f5f2; border: 1px solid var(--line); border-radius: 4px; user-select: all; }
+.badge.key-active { color: #08634e; background: #e1f5eb; }
+.badge.key-expired { color: #825100; background: #fff0d1; }
+.keys-table tr.inactive th, .keys-table tr.inactive td { color: var(--muted); }
+.keys-table .row-action { text-align: right; }
+.keys-table button { min-height: 38px; padding: 6px 14px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 760px) {
+  .identity { margin: 4px 0 0; padding: 9px 12px; }
+  .key-form form { grid-template-columns: 1fr; gap: 16px; }
+  .keys-table .row-action { flex-basis: 100%; text-align: left; }
+  .keys-table .row-action:empty { display: none; }
+}

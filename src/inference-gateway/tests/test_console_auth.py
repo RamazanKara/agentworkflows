@@ -287,6 +287,26 @@ def test_state_mismatch_browser_binding_replay_and_expiry(oidc):
     assert fixture["exchange_count"] == 1
 
 
+def test_browser_callback_failures_return_to_the_console(oidc):
+    client, _, _, fixture, start = oidc
+    html = {"accept": "text/html,application/xhtml+xml"}
+    params = start()
+    response = client.get(
+        "/v1/auth/callback", params={**params, "state": "wrong"}, headers=html, follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/console/?signin_error=expired"
+    params = start()
+    response = client.get(
+        "/v1/auth/callback", params={**params, "error": "access_denied"}, headers=html, follow_redirects=False
+    )
+    assert response.headers["location"] == "/console/?signin_error=declined"
+    fixture["claims"] = {"team": "unknown"}
+    response = client.get("/v1/auth/callback", params=start(), headers=html, follow_redirects=False)
+    assert response.headers["location"] == "/console/?signin_error=rejected"
+    assert not client.cookies.get(SESSION_COOKIE)
+
+
 @pytest.mark.parametrize("claims", [
     {"iss": "https://wrong.example"}, {"aud": "other"}, {"exp": 1}, {"nonce": "wrong"},
     {"sub": ""}, {"iat": "invalid"}, {"exp": "9999999999"}, {"nbf": 9999999999},
@@ -307,6 +327,15 @@ def test_required_id_token_claims(oidc, field):
     client, _, _, fixture, start = oidc
     fixture["omit"] = [field]
     assert client.get("/v1/auth/callback", params=start(), follow_redirects=False).status_code == 401
+
+
+def test_browser_sees_unavailable_when_signing_keys_are_down(oidc):
+    client, _, _, fixture, start = oidc
+    fixture["jwks_status"] = 503
+    response = client.get(
+        "/v1/auth/callback", params=start(), headers={"accept": "text/html"}, follow_redirects=False
+    )
+    assert response.headers["location"] == "/console/?signin_error=unavailable"
 
 
 @pytest.mark.parametrize("failure", ["signature", "algorithm", "jwks"])

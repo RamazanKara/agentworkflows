@@ -35,7 +35,7 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${baseURL}/console/`);
   await expect(page).toHaveTitle(/AgentWorkflows/);
-  await page.getByLabel('Team credential').fill('local-development-only');
+  await page.getByLabel('API key', { exact: true }).fill('local-development-only');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('navigation')).toBeVisible();
   await page.waitForTimeout(1800);
