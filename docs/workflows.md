@@ -240,6 +240,10 @@ to the browser, and a nonce. ID tokens must pass signature, issuer, audience, ex
 issued-at, subject, nonce, and authorized-party checks. Tokens and the client secret are
 never sent to browser storage. Keep all replicas on the same Redis and auth configuration.
 
+Sessions and approval receipts record a display name: the managed key's name, or the ID
+token's `name` (else `email`) claim. The console shows it in the account card and on each
+Approval step.
+
 `GET /v1/auth/config` publicly describes available sign-in methods without secrets.
 `GET /v1/auth/login` starts OIDC; `GET /v1/auth/callback` completes it.
 `POST /v1/auth/session` with `{"key":"..."}` creates the same session from an API key
