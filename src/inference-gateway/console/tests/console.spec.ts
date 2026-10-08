@@ -640,8 +640,8 @@ for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
     await login(page);
     await page.getByRole('link', { name: surface, exact: true }).click();
     await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('125');
-    await page.getByLabel('default monthly budget (USD)', { exact: true }).fill('40');
-    await page.getByLabel('Research · Budget (USD)', { exact: true }).fill('3');
+    await page.getByLabel('Project default monthly budget (USD)', { exact: true }).fill('40');
+    await page.getByLabel('Research · Budget per run (USD)', { exact: true }).fill('3');
     const request = page.waitForRequest(value => value.url().endsWith('/v1/team/settings') && value.method() === 'PATCH');
     await page.getByRole('button', { name: 'Save settings' }).click();
     expect((await request).postDataJSON()).toEqual({ fields: { cost_limit_usd: 125, 'project_budgets.default': 40, 'workflows.ResearchWorkflow.cost_limit_usd': 3 } });
@@ -657,10 +657,12 @@ for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
 test('admin saves approval rules and selects an existing alias route', async ({ page }) => {
   await login(page);
   await page.getByRole('link', { name: 'Team settings', exact: true }).click();
-  await page.getByLabel('Research · Require approval', { exact: true }).uncheck();
   await page.getByLabel('Research · Approval threshold (USD)', { exact: true }).fill('0.75');
+  await page.getByLabel('Research · Require approval', { exact: true }).uncheck();
+  // With approval off, the threshold no longer applies and cannot be edited.
+  await expect(page.getByLabel('Research · Approval threshold (USD)', { exact: true })).toBeDisabled();
   await page.getByLabel('Research · Approver role', { exact: true }).selectOption('admin');
-  await page.getByLabel('Research · Allowed providers', { exact: true }).selectOption(['anthropic']);
+  await page.getByRole('group', { name: 'Research · Allowed providers' }).getByLabel('OpenAI', { exact: true }).uncheck();
   await page.getByLabel('research model route', { exact: true }).selectOption('demo-anthropic');
   const request = page.waitForRequest(value => value.method() === 'PATCH');
   await page.getByRole('button', { name: 'Save settings' }).click();
@@ -704,13 +706,13 @@ test('reset removes only one override and retains other unsaved edits', async ({
   await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('100');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toContainText('Settings saved.');
-  await page.getByLabel('default monthly budget (USD)', { exact: true }).fill('20');
+  await page.getByLabel('Project default monthly budget (USD)', { exact: true }).fill('20');
   const request = page.waitForRequest(value => value.method() === 'DELETE');
   await page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' }).click();
   expect((await request).url()).toContain('/v1/team/settings/cost_limit_usd');
   expect((await request).headers()['if-match']).toBe('1');
   await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('50');
-  await expect(page.getByLabel('default monthly budget (USD)', { exact: true })).toHaveValue('20');
+  await expect(page.getByLabel('Project default monthly budget (USD)', { exact: true })).toHaveValue('20');
   await expect(page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toContainText('Settings saved.');
@@ -724,7 +726,7 @@ for (const role of ['builder', 'approver', 'viewer']) {
     for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
       await page.getByRole('link', { name: surface, exact: true }).click();
       await expect(page.getByText('Read-only. Your team admin can change these settings.')).toBeVisible();
-      await expect(page.getByText('Team monthly budget (USD)', { exact: true })).toBeVisible();
+      await expect(page.getByText('Team monthly budget', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Save settings' })).toHaveCount(0);
       await expect(page.getByRole('spinbutton')).toHaveCount(0);
     }

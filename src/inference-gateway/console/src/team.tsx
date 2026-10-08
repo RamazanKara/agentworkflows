@@ -97,7 +97,7 @@ export function Costs({ session }: { session: Session }) {
 }
 
 export function Providers({ session }: { session: Session }) {
-  if (session.team.role !== 'admin') return <><PageHeader title="Providers & budgets" subtitle="Your team’s effective policy."/><SettingsPanel session={session}/></>;
+  if (session.team.role !== 'admin') return <><PageHeader title="Providers & budgets" subtitle="Your team’s spending limits."/><SettingsPanel session={session} budgetsOnly/></>;
   return <ProviderSettings session={session}/>;
 }
 
@@ -170,6 +170,7 @@ function ProviderSettings({ session }: { session: Session }) {
       <p>Store provider keys in the gateway’s environment or Kubernetes Secrets. New model routes, prices and network access are configured by your operator. Choose among existing routes below.</p>
       <p className="setup-links"><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href={routes}>Cloud routes and prices</a></p>
     </section>}
-    <SettingsPanel session={session} onSaved={() => setRevision(v => v + 1)}/>
+    <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
+    <p className="muted">Approval rules and model routes are in <a href="#team">Team settings</a>.</p>
   </>;
 }

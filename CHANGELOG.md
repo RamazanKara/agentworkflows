@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add Redis-backed team settings with YAML defaults, revision-checked admin APIs,
+  field resets and chained change receipts. Apply monthly team/project budgets,
+  workflow limits and approval rules, provider allowances and existing model alias
+  selections without restarting the gateway. Add console editors and read-only
+  views; keep provider keys in environment variables or Kubernetes Secrets.
+- Console: Team settings groups budgets, workflow approval rules and model routes into panels with one card per workflow, marks changed values with their policy default and a reset, and keeps a save bar on screen while edits are unsaved. Costs and Providers & budgets show the same budgets as a compact table.
+- Console tests pin the browser locale and time zone, so date assertions pass on every machine.
+
 ## v0.5.1 - 2026-10-08
 
 - Console: opening the console lands on Approvals when drafts wait, then Workflow runs, and on Get started for a new team.
@@ -7,12 +17,6 @@
 - Console: Providers & budgets gives one Helm block that stores every missing OpenAI and Anthropic key and runs a single `helm upgrade`; command lines fit a phone screen, and the key column is called "Environment variable".
 - Console: approval cards use the draft's first line as the title without repeating it in the preview; revoked keys show their revoke date.
 - Console: clearer empty states for runs, approvals and costs, model IDs no longer repeat the provider name, and hover colors apply only on devices that hover.
-
-- Add Redis-backed team settings with YAML defaults, revision-checked admin APIs,
-  field resets and chained change receipts. Apply monthly team/project budgets,
-  workflow limits and approval rules, provider allowances and existing model alias
-  selections without restarting the gateway. Add console editors and read-only
-  views; keep provider keys in environment variables or Kubernetes Secrets.
 
 ## v0.5.0 - 2026-10-08
 
