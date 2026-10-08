@@ -798,6 +798,8 @@
       
         
       
+        
+      
     
     
     
@@ -858,6 +860,34 @@
     
   
     Durable workflows and teams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../team-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Team settings
   
 
     
@@ -1963,6 +1993,10 @@
 a wholesale rewrite is detectable, and to forward the audit stream to a SIEM for long-term,
 independent retention.</p>
 <h2 id="what-the-audit-events-are">What the audit events are<a class="headerlink" href="#what-the-audit-events-are" title="Permanent link">&para;</a></h2>
+<p>Team setting saves and resets emit <code>team_settings_changed</code> on the gateway's
+existing chain. Each event names the authenticated actor, revision and touched
+fields' before/after values and sources. Provider credentials are never included.
+The verifier accepts these events alongside inference and workflow receipts.</p>
 <p>Every sandbox-bound gateway request emits one redacted audit event (<code>event: inference_request</code>;
 batch calls emit <code>event: batch_request</code>). Three more event types share the same chain: an
 <code>agent_action</code> receipt for what a workspace did beyond calling a model (denied egress, tool

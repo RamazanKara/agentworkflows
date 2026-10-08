@@ -798,6 +798,8 @@
       
         
       
+        
+      
     
     
     
@@ -858,6 +860,34 @@
     
   
     Durable workflows and teams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../team-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Team settings
   
 
     
@@ -2045,9 +2075,29 @@ kubectl -n budget exec deploy/budget-redis -- redis-cli ping
 <p>Teams are existing sandbox identities. Add <code>projects</code>, <code>providerCredentials</code>, and
 <code>budgets.costLimitUsd</code> to the SandboxPolicySet; role-bound keys cannot raise team limits.
 Redis atomically reserves cost across eligible providers and tools. <code>agentworkflows usage</code>
-reports current-window provider totals and conservative reservations. Configure prices
+reports monthly team/project spend and conservative reservations. Configure prices
 for every route, including local models. See <a href="https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service">team operations</a>
 for examples, window semantics, retained history, and accounting limits.</p>
+<p>Team admins can change dollar budgets and per-workflow caps in the console's
+Team settings, Providers &amp; budgets, or Costs page. No gateway restart is needed.
+The YAML is the default; Redis overrides survive rollouts. See
+<a href="https://ramazankara.github.io/agentworkflows/team-settings/">team settings</a> for the
+field names, defaults and API examples.</p>
+<p>For <code>team_cost_budget_exceeded</code> or <code>project_cost_budget_exceeded</code>, inspect
+<code>GET /v1/usage</code> and <code>GET /v1/team/settings</code> before raising a limit. Team and project
+dollars now use UTC calendar months, independently of token/request windows.
+Zero denies positive-cost reservations; changing a limit does not reset counters.
+On upgrade, old fixed-window spend keys remain historical data and are not merged
+into the new month's counter. Retain the audit log for a complete history.</p>
+<p>For workflow budget rejections, the current workflow cap and the worker's requested
+run budget both apply. Repeated worker initialization uses the original requested
+limits and remains idempotent when policy changes.</p>
+<p>On a 409 from a save or reset, reload the settings and review the other admin's
+change. Do not retry with a fabricated revision. To undo a change, DELETE only the
+overridden field with the current <code>If-Match</code> revision; do not delete the Redis
+document, which would also discard its revision history. Back up the
+<code>&lt;budget-prefix&gt;:team-settings:*</code> documents with budget Redis. Settings cannot be
+edited or reliably enforced during a Redis outage; restore Redis before retrying.</p>
 
 
 
