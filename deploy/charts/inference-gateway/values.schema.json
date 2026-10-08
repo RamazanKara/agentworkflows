@@ -3,6 +3,12 @@
   "title": "inference-gateway values",
   "type": "object",
   "properties": {
+    "traceability": {
+      "type": "object",
+      "properties": {
+        "auditViewRetentionSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
     "replicaCount": { "type": "integer", "minimum": 1 },
     "deployment": {
       "type": "object",

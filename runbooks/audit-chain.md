@@ -4,6 +4,34 @@ Use this runbook to verify the gateway's tamper-evident audit hash chain, to anc
 a wholesale rewrite is detectable, and to forward the audit stream to a SIEM for long-term,
 independent retention.
 
+## Verify from the console
+
+An unrestricted team admin can use **Audit log** to filter receipts, inspect event
+JSON, verify the selected time range and export matching events as JSON Lines.
+See the [audit log guide](https://github.com/RamazanKara/agentworkflows/blob/main/docs/audit-log.md)
+for the APIs and interpretation of verification results.
+
+The view appends already chained events to
+`<SANDBOX_BUDGET_KEY_PREFIX>:audit:<team>` Redis streams. It uses the existing
+budget Redis and is off when that backend is not Redis or audit logging is disabled.
+Keep Redis persistence enabled. `AUDIT_VIEW_RETENTION_SECONDS` defaults to 90 days;
+exact stream trimming also limits each team to 100,000 events. Writes and reads
+trim old entries and inactive streams expire. No existing logs are imported.
+
+The process log format stays unchanged. A separate per-team, per-process envelope
+chain covers each event and its process/team sequence, so another team's intervening
+events need not be disclosed to verify this projection. Verification recomputes both
+hashes and checks adjacent links. Retained prefixes are reported as range boundaries,
+not breaks. This cannot prove absent tails, missing lifetimes or a wholesale rewrite;
+continue anchoring the full process logs as described below.
+
+Redis write failures log `audit view event could not be stored` without interrupting
+the original audit log. A subsequent successful append exposes an internal gap to
+the view verifier. Check gateway logs and Redis health, then use full-log evidence
+to investigate missing view events. Read failures return 503; they never count as a
+successful verification. Console exports contain original events, but a team/time
+subset may lack the other process events needed by the standalone log verifier.
+
 ## What the audit events are
 
 Team setting saves and resets emit `team_settings_changed` on the gateway's

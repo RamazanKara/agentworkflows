@@ -228,6 +228,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `traceability.auditChainStore.redisUrl` | `redis://budget-redis.budget.svc.cluster.local:6379/0` |
 | `traceability.auditChainStore.timeoutSeconds` | `0.5` |
 | `traceability.auditLogEnabled` | `true` |
+| `traceability.auditViewRetentionSeconds` | `7776000` |
 | `traceability.defaultSandboxId` | `local-lab` |
 | `workflowRecords.contentMaxBytes` | `16384` |
 | `workflowRecords.contentRetentionSeconds` | `604800` |

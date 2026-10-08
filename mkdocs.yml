@@ -106,6 +106,7 @@ nav:
   - Guides:
       - Durable workflows and teams: workflows.md
       - Team settings: team-settings.md
+      - Audit log: audit-log.md
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md
       - Install on Kubernetes: install-kubernetes.md

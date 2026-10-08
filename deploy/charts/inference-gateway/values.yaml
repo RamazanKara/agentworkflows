@@ -255,6 +255,7 @@ adminConsole:
 
 traceability:
   auditLogEnabled: true
+  auditViewRetentionSeconds: 7776000
   defaultSandboxId: local-lab
   auditChainStore:
     # Persisting the chain head lets a restarted pod open its chain with a record naming

@@ -39,7 +39,9 @@ def project_access(request: Request, project: str | None = None) -> str:
 def authorize_team_request(request: Request) -> None:
     if not request.url.path.startswith("/v1/"):
         return
-    if request.url.path == "/v1/team/settings" or request.url.path.startswith("/v1/team/settings/"):
+    if request.url.path in {"/v1/team/settings", "/v1/team/audit"} or request.url.path.startswith(
+        ("/v1/team/settings/", "/v1/team/audit/")
+    ):
         require_role(request, "admin")
     principal = request.state.principal or {}
     if principal.get("auth") == "workflow_step":
@@ -67,8 +69,10 @@ def authorize_team_request(request: Request) -> None:
 
 
 def register_team_routes(app: FastAPI) -> None:
+    from app.audit_view import register_audit_routes
     from app.team_settings import effective_team_settings, register_team_settings_routes
 
+    register_audit_routes(app)
     register_team_settings_routes(app)
 
     @app.get("/v1/team", tags=["teams"], summary="Discover your team, role, projects, and provider configuration")

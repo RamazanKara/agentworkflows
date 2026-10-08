@@ -26,6 +26,136 @@ const settings = (): TeamSettings => ({
   },
 });
 
+const auditEntry = (sequence = 1) => ({
+  id: `1791316800000-${sequence}`, chain_id: 'gateway:test', sequence, team_sequence: sequence,
+  record_hash: 'a'.repeat(64), view_prev_hash: 'b'.repeat(64), view_hash: 'c'.repeat(64),
+  event: { event: 'inference_request', ts: 1791316800, actor: 'alice', project: 'default', workflow_run_id: id,
+    record_hash: 'a'.repeat(64), detail: '<script>throw new Error("unsafe")</script>' },
+});
+
+test('audit list expands escaped JSON and links to the run', async ({ page }) => {
+  await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: [auditEntry()], next_cursor: null } }));
+  await login(page);
+  await page.getByRole('link', { name: 'Audit log', exact: true }).click();
+  await expect(page.getByRole('cell', { name: 'alice', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'inference_request', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: id.slice(0, 8) })).toHaveAttribute('href', `#run/${id}`);
+  await page.getByRole('button', { name: 'Show JSON' }).click();
+  await expect(page.locator('pre')).toHaveText(JSON.stringify(auditEntry().event, null, 2));
+  await expect(page.locator('pre script')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Hide JSON' }).click();
+  await expect(page.locator('pre')).toHaveCount(0);
+});
+
+test('audit filters and cursor pagination use the applied range', async ({ page }) => {
+  const queries: URLSearchParams[] = [];
+  await page.route('**/v1/team/audit?*', route => {
+    const params = new URL(route.request().url()).searchParams;
+    queries.push(params);
+    return route.fulfill({ json: { enabled: true, events: [auditEntry(params.has('cursor') ? 1 : 2)], next_cursor: params.has('cursor') ? null : '1791316800000-2' } });
+  });
+  await login(page, 'admin', '/console/#audit');
+  await page.getByLabel('From', { exact: true }).fill('2026-10-01T10:00');
+  await page.getByLabel('To', { exact: true }).fill('2026-10-09T10:00');
+  await page.getByLabel('Actor', { exact: true }).fill('alice');
+  await page.getByLabel('Event type').fill('inference_request');
+  await page.getByLabel('Project', { exact: true }).fill('default');
+  await page.getByLabel('Run ID', { exact: true }).fill(id);
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  await expect.poll(() => queries.at(-1)?.get('actor')).toBe('alice');
+  const filtered = queries.at(-1)!;
+  expect(Number(filtered.get('from'))).toBeGreaterThan(0);
+  expect(Number(filtered.get('to'))).toBeGreaterThan(Number(filtered.get('from')));
+  expect(filtered.get('event_type')).toBe('inference_request');
+  expect(filtered.get('project')).toBe('default');
+  expect(filtered.get('run_id')).toBe(id);
+  await page.getByRole('button', { name: 'Older events' }).click();
+  await expect.poll(() => queries.at(-1)?.get('cursor')).toBe('1791316800000-2');
+  expect(queries.at(-1)?.get('from')).toBe(filtered.get('from'));
+});
+
+for (const ok of [true, false]) {
+  test(`audit verification shows ${ok ? 'success and range boundary' : 'the first break'}`, async ({ page }) => {
+    await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: [auditEntry()], next_cursor: null } }));
+    await page.route('**/v1/team/audit/verify?*', route => {
+      expect(new URL(route.request().url()).searchParams.has('actor')).toBe(false);
+      return route.fulfill({ json: { enabled: true, ok, checked: 7,
+        first_break: ok ? null : { chain_id: 'gateway:test', sequence: 8, reason: 'record_hash_mismatch' },
+        boundaries: ok ? [{ chain_id: 'gateway:test', sequence: 2, reason: 'retained_range_start' }] : [],
+      } });
+    });
+    await login(page, 'admin', '/console/#audit');
+    await page.getByRole('button', { name: 'Verify chain' }).click();
+    await expect(page.getByRole('heading', { name: ok ? 'Chain verified' : 'Chain break found' })).toBeVisible();
+    await expect(page.getByText('7 events checked.')).toBeVisible();
+    await expect(page.getByText(ok ? /Range boundary at sequence 2/ : /First break at sequence 8.*record_hash_mismatch/)).toBeVisible();
+  });
+}
+
+test('audit export follows every filtered page and writes original events as JSON Lines', async ({ page }) => {
+  await page.route('**/v1/team/audit?*', route => {
+    const params = new URL(route.request().url()).searchParams;
+    const exporting = params.get('limit') === '200';
+    if (exporting) expect(params.get('actor')).toBe('alice');
+    return route.fulfill({ json: { enabled: true, events: [auditEntry(params.has('cursor') ? 1 : 2)],
+      next_cursor: exporting && !params.has('cursor') ? '1791316800000-2' : null,
+    } });
+  });
+  await login(page, 'admin', '/console/#audit');
+  await page.getByLabel('Actor', { exact: true }).fill('alice');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON Lines' }).click();
+  const download = await downloaded;
+  expect(download.suggestedFilename()).toBe('audit-log.jsonl');
+  const stream = await download.createReadStream();
+  let content = '';
+  for await (const chunk of stream!) content += chunk.toString();
+  expect(content.trim().split('\n').map(line => JSON.parse(line))).toEqual([auditEntry(2).event, auditEntry(1).event]);
+});
+
+test('audit disabled view explains how to enable it', async ({ page }) => {
+  await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: false, events: [], next_cursor: null,
+    message: 'Set SANDBOX_BUDGET_BACKEND=redis and AUDIT_LOG_ENABLED=true.',
+  } }));
+  await login(page, 'admin', '/console/#audit');
+  await expect(page.getByRole('heading', { name: 'Audit view is off' })).toBeVisible();
+  await expect(page.getByText(/Set SANDBOX_BUDGET_BACKEND=redis/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Verify chain' })).toBeDisabled();
+});
+
+test('leaving the audit page cancels an in-progress export', async ({ page }) => {
+  let release: () => void = () => {};
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const downloads: string[] = [];
+  page.on('download', download => downloads.push(download.suggestedFilename()));
+  await page.route('**/v1/team/audit?*', async route => {
+    if (new URL(route.request().url()).searchParams.get('limit') === '200') await pending;
+    await route.fulfill({ json: { enabled: true, events: [auditEntry()], next_cursor: null } });
+  });
+  await login(page, 'admin', '/console/#audit');
+  const request = page.waitForRequest(value => value.url().includes('/v1/team/audit?') && value.url().includes('limit=200'));
+  await page.getByRole('button', { name: 'Export JSON Lines' }).click();
+  await request;
+  const cancelled = page.waitForEvent('requestfailed', { predicate: value => value.url().includes('limit=200') });
+  await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
+  await cancelled;
+  release();
+  await expect(page.getByRole('heading', { name: 'Workflow runs', exact: true })).toBeVisible();
+  expect(downloads).toEqual([]);
+});
+
+for (const role of ['builder', 'approver', 'viewer']) {
+  test(`audit is hidden from ${role}, including direct navigation`, async ({ page }) => {
+    let requests = 0;
+    await page.route('**/v1/team/audit**', route => { requests++; return route.fulfill({ status: 403, json: {} }); });
+    await login(page, role, '/console/#audit');
+    await expect(page.getByRole('link', { name: 'Audit log', exact: true })).toHaveCount(0);
+    await expect(page.getByText('A team admin role is required to read the audit log.')).toBeVisible();
+    expect(requests).toBe(0);
+  });
+}
+
 test('schema forms render all supported field types and submit typed values', async ({ page }) => {
   await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: { FormWorkflow: {
     allowedModels: [], allowedProviders: [], tokenLimit: 1000, costLimitUsd: 1,

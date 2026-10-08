@@ -10,6 +10,9 @@
 - Console: Team settings groups budgets, workflow approval rules and model routes into panels with one card per workflow. Values that differ from team policy are marked Custom with a Reset; edits and resets wait for Save, Discard undoes both, and the save bar stays docked until the save is confirmed. Costs and Providers & budgets show the same budgets as a compact table.
 - Console: Costs labels monthly spend "This month (UTC)" and the token tile names its budget window.
 - Console tests pin the browser locale and time zone, so date assertions pass on every machine.
+- Add a retained Redis audit view for team admins, with filtered cursor APIs,
+  receipt and team-chain verification, a console audit page and JSON Lines export.
+  Preserve the existing audit log format and operator verifier.
 
 ## v0.5.1 - 2026-10-08
 

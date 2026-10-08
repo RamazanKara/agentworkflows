@@ -204,6 +204,18 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": 7776000,
+      "chart_default": 7776000,
+      "chart_value": "traceability.auditViewRetentionSeconds",
+      "description": "Seconds team audit events are retained in Redis, also bounded to 100000 events per team.",
+      "field": "audit_view_retention_seconds",
+      "name": "AUDIT_VIEW_RETENTION_SECONDS",
+      "sensitive": false,
+      "type": "integer"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": false,
       "chart_default": false,
       "chart_value": "batch.enabled",

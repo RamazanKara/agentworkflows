@@ -86,6 +86,7 @@ class Settings:
     request_timeout_seconds: float
     temporal_address: str = ""
     audit_log_enabled: bool = True
+    audit_view_retention_seconds: int = 7776000
     # Where the audit chain head is persisted so a restart continues the chain of chains
     # instead of starting an unlinked one. "memory" keeps the pre-continuity behavior and
     # is the default, because durable storage is the operator's to provide.
@@ -348,7 +349,10 @@ class Settings:
             raise ValueError("responses_redis_timeout_seconds must be greater than zero")
         if self.responses_retention_seconds <= 0:
             raise ValueError("responses_retention_seconds must be greater than zero")
-        for name in ("content_retention_seconds", "content_max_bytes", "run_record_retention_seconds"):
+        for name in (
+            "content_retention_seconds", "content_max_bytes", "run_record_retention_seconds",
+            "audit_view_retention_seconds",
+        ):
             if getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be greater than zero")
         if not self.responses_key_prefix.strip():
@@ -376,6 +380,7 @@ class Settings:
             temporal_address=os.getenv("TEMPORAL_ADDRESS", ""),
             audit_log_enabled=_bool_from_env("AUDIT_LOG_ENABLED", True),
             audit_chain_store_backend=os.getenv("AUDIT_CHAIN_STORE_BACKEND", "memory").strip().lower(),
+            audit_view_retention_seconds=_positive_int_from_env("AUDIT_VIEW_RETENTION_SECONDS", 7776000),
             audit_chain_store_path=os.getenv(
                 "AUDIT_CHAIN_STORE_PATH", "/var/lib/inference-gateway/audit-chain-head.json"
             ),

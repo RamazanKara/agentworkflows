@@ -48,6 +48,9 @@ def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
     state.audit_prev_hash = event["record_hash"]
     state.audit_chain_count = getattr(state, "audit_chain_count", 0) + 1
     request.state.audit_event = event
+    from app.audit_view import append_audit_view
+
+    append_audit_view(request, event)
 
 
 def advance_chain(previous: str, event: dict[str, Any]) -> tuple[str, str]:

@@ -2,6 +2,7 @@ import base64
 import hmac
 import json
 from fnmatch import fnmatchcase
+from time import time
 
 from app.budget import REDIS_SETTLE_SCRIPT, REDIS_USAGE_SCRIPT
 from app.settings import Settings
@@ -76,6 +77,9 @@ class FakeRuntimeClient:
 class FakeRedisBudgetStore:
     def __init__(self):
         self.data = {}
+        self.streams = {}
+        self.stream_expires = {}
+        self.stream_counter = 0
 
     def get(self, key):
         return self.data.get(key)
@@ -92,7 +96,45 @@ class FakeRedisBudgetStore:
     def ping(self):
         return True
 
+    def xtrim(self, key, *, minid, approximate):
+        assert approximate is False
+        rows = self.streams.get(key, [])
+        retained = [row for row in rows if tuple(map(int, row[0].split("-"))) >= tuple(map(int, minid.split("-")))]
+        self.streams[key] = retained
+        return len(rows) - len(retained)
+
+    def xrange(self, key, min="-", max="+", count=None):
+        def included(value, bound, lower):
+            if bound in {"-", "+"}:
+                return True
+            value = tuple(map(int, value.split("-")))
+            limit = tuple(map(int, bound.lstrip("(").split("-")))
+            return (value > limit if lower else value < limit) if bound.startswith("(") else (
+                value >= limit if lower else value <= limit
+            )
+
+        rows = [
+            row for row in self.streams.get(key, []) if included(row[0], min, True) and included(row[0], max, False)
+        ]
+        return rows[:count]
+
+    def xrevrange(self, key, max="+", min="-", count=None):
+        return list(reversed(self.xrange(key, min=min, max=max)))[:count]
+
     def eval(self, script, numkeys, key, *args):
+        from app.audit_view import APPEND
+
+        if script == APPEND:
+            raw, maximum, retention = args
+            now = getattr(self, "now", time())
+            self.stream_counter += 1
+            stream_id = f"{int(now * 1000)}-{self.stream_counter}"
+            rows = self.streams.setdefault(key, [])
+            rows.append((stream_id, {"entry": raw}))
+            self.streams[key] = rows[-maximum:]
+            self.xtrim(key, minid=f"{max(0, int(now - retention) * 1000)}-0", approximate=False)
+            self.stream_expires[key] = retention
+            return stream_id
         if key.endswith(":schema-version"):
             from app.state_migrations import SCHEMA_VERSION
 
