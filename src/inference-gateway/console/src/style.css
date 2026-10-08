@@ -221,3 +221,27 @@ details[open] summary { margin-bottom: 12px; }
   .keys-table .row-action:empty { display: none; }
 }
 pre.step-content { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Run form generated from a workflow's input schema, and captured step content. */
+.form-panel .field { margin-bottom: 20px; }
+.form-panel .field > label { margin-bottom: 7px; }
+.form-panel .field > small { margin-top: 6px; }
+.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+label.check { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0; }
+label.check input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--teal); }
+button.link { background: none; border: 0; color: #006f65; padding: 4px 0; min-height: 32px; font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 4px; margin-top: 4px; }
+button.link:hover { background: none; color: #034b43; }
+.more-options { margin: 4px 0 20px; padding-top: 10px; }
+.more-options > div { padding-top: 10px; }
+.ceiling { font-size: 14px; margin: 4px 0 20px; }
+.step-preview { margin: 0 0 4px; padding: 14px 18px; border-left: 3px solid #8fb7a8; background: #f6faf7; color: #22332e; white-space: pre-wrap; overflow-wrap: anywhere; }
+.step h4 { font-size: 14px; margin: 18px 0 8px; }
+.transcript { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.transcript li { display: grid; gap: 6px; }
+.transcript pre { margin: 0; max-height: 300px; }
+.speaker { justify-self: start; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 30px; background: #edf1ef; color: #3f5049; }
+.speaker.user { background: #e4f1fb; color: #24577e; }
+.speaker.assistant { background: #e1f5eb; color: #08634e; }
+@media (max-width: 760px) {
+  .field-row { grid-template-columns: 1fr; }
+  .step-preview { padding: 12px 14px; }
+}
