@@ -1,0 +1,3165 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
+      
+      
+      
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/0.5.0/workflows/">
+      
+      
+        <link rel="prev" href="../scope-and-non-goals/">
+      
+      
+        <link rel="next" href="../client-examples/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Durable workflows and teams - AgentWorkflows</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#durable-agent-workflows" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AgentWorkflows
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Durable workflows and teams
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RamazanKara/agentworkflows
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quickstart/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quickstart-typescript/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  TypeScript quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../templates/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Templates
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../concepts/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../sdk-reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../runbooks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Advanced operations
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AgentWorkflows
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RamazanKara/agentworkflows
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart-typescript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow essentials
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decision-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Is it a fit?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scope-and-non-goals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope and non-goals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows and teams
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows and teams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#try-research-draft-approval-publish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Try research → draft → approval → publish
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Web console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-forms-and-step-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow forms and step content
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#teams-projects-and-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Teams, projects, and roles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Teams, projects, and roles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#members-and-api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Members and API keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#company-sign-in-oidc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Company sign-in (OIDC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authenticated-workflow-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authenticated workflow API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-and-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers and notifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operate-the-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operate the service
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-your-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write your workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approve-tools-and-budgets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approve tools and budgets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bring-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring your agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-accounting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run accounting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment and recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Call the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install-kubernetes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI and Python SDK
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature-inventory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature inventory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cost-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../version-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Version matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../runbooks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced operations
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local lab (kind)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../customer-handoff-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customer cluster handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../regulated-offline-tenant-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Restricted-egress tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gpu-coding-agent-tenant-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU coding-agent tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-sandbox-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent-sandbox integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../model-selection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Self-hosted model selection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../capacity-sizing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capacity and sizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks-and-evals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks and evals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../owasp-llm-top-10-mapping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OWASP LLM Top 10 mapping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai-governance-crosswalk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI governance crosswalk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidence and strict validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../repository-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upstream references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#try-research-draft-approval-publish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Try research → draft → approval → publish
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web console
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Web console">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-forms-and-step-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow forms and step content
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#teams-projects-and-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Teams, projects, and roles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Teams, projects, and roles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#members-and-api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Members and API keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#company-sign-in-oidc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Company sign-in (OIDC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authenticated-workflow-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authenticated workflow API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-and-notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers and notifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operate-the-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operate the service
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-your-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write your workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#approve-tools-and-budgets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approve tools and budgets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bring-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring your agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mcp-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workflow-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-accounting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run accounting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment and recovery
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/workflows.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="durable-agent-workflows">Durable agent workflows<a class="headerlink" href="#durable-agent-workflows" title="Permanent link">&para;</a></h1>
+<p>AgentWorkflows uses <a href="https://docs.temporal.io/develop/python">Temporal</a> to persist workflow
+history, schedule activities, retry failures, and wait for signals. The Python SDK sends
+every model and tool activity through the governed gateway. Provider credentials stay on
+the gateway; each worker uses one team's bound gateway key.</p>
+<h2 id="try-research-draft-approval-publish">Try research → draft → approval → publish<a class="headerlink" href="#try-research-draft-approval-publish" title="Permanent link">&para;</a></h2>
+<p>Follow the <a href="../quickstart/">Quickstart</a> for a complete fake or real-cloud run with human
+approval and verified receipts. It includes Bash and Windows commands, SDK installation,
+scaffolding, and cleanup. The <a href="../templates/">template gallery</a> adds PR review, support triage,
+weekly reports, incident summaries and document Q&amp;A, with instructions for running your edits.</p>
+<p><code>approve --reject</code> finishes without publishing. Approval expires after seven days.
+The API records the authenticated key name or verified JWT subject; clients cannot supply
+a reviewer name. A Temporal update accepts one decision for the waiting draft. Early or
+conflicting decisions return <code>409 approval_not_waiting</code>. Retrying the same identity's
+decision is idempotent, including after a lost response. Run IDs identify exact executions.</p>
+<p>The fake research draft deliberately falls back from OpenAI to Anthropic. Both tools are
+local fixtures. <code>make compose-smoke</code> additionally kills and replaces the worker while
+approval waits, then verifies no repeated completed model calls. See <a href="../local-evaluation/">local evaluation</a>.</p>
+<h2 id="web-console">Web console<a class="headerlink" href="#web-console" title="Permanent link">&para;</a></h2>
+<p>After <code>make compose-up</code>, open <a href="http://127.0.0.1:8080/console">http://127.0.0.1:8080/console</a>:</p>
+<ol>
+<li>Sign in with <code>local-development-only</code> (demo admin). Keep the local fake providers on
+   <strong>Get started</strong>; no cloud key or paid call is needed.</li>
+<li>Choose <strong>Run workflow</strong>, select <strong>Research</strong>, enter a topic (or select <strong>Use the example</strong>),
+   and select <strong>Start run</strong>. Optional inputs such as the model and budgets sit under
+   <strong>More options</strong>. The run's detail page refreshes while the workflow is active.</li>
+<li>Open <strong>Approvals</strong>, read the draft, then <strong>Approve</strong> or <strong>Reject</strong>. Approval allows
+   the configured publish tool to run; rejection finishes without publishing.</li>
+<li>Open the run from <strong>Workflow runs</strong>. Model steps preview their answer; expand
+   <strong>Prompt and response</strong> (model steps) or <strong>Arguments and result</strong> (tool steps) to read the
+   captured content with redaction/truncation notes. <strong>Receipt</strong> and <strong>Step logs</strong> show
+   provider/model, usage, cost, routing attempts, and fingerprints without captured text.</li>
+<li>Open <strong>Costs</strong> for current-window team, provider, and workflow costs. <strong>Providers &amp; budgets</strong>
+   shows admins key presence and limits, with a copyable fragment and links for configuring
+   real providers through the existing reviewed policy and gateway Secret deployment.</li>
+</ol>
+<p>Use project, workflow, and status filters to find runs. <strong>Load more</strong> advances through older
+index pages, including pages with no matches. The approvals inbox walks every page of every
+available project. Expired Temporal executions are omitted from lists; direct inspection
+reports that the run is unavailable. Terminal Redis run records expire after 30 days by
+default; reading a run does not extend its retention.</p>
+<p>Sign-in exchanges a team API key or signed JWT for a server-side Redis session. Reloading
+restores the workspace; <strong>Sign out</strong> invalidates the session on every replica.
+<strong>Switch account</strong> replaces the active session after verifying another credential.
+The browser retains an HttpOnly session cookie, never the API key or JWT.
+When OIDC is configured, <strong>Sign in with your company account</strong> comes first; if the provider
+declines or the account maps to no team, the console explains why instead of showing an error page.
+Use <code>demo-builder</code>, <code>demo-approver</code>, <code>demo-viewer</code>, or <code>demo-other-team</code> to explore roles.</p>
+<p>The gateway image includes the built console; no Node server or extra container runs in
+production. Compose enables it. For a standalone gateway Helm release, set
+<code>adminConsole.enabled=true</code>; the umbrella chart uses <code>inference-gateway.adminConsole.enabled=true</code>.
+Keep the existing team auth, Redis, workflow worker, TLS ingress, and Temporal settings.
+The same gateway host serves <code>/console/</code> and <code>/v1/</code>; no cross-origin API setting is needed.</p>
+<p>Run <code>make compose-smoke</code> for browser checks as well as gateway/worker recovery checks.
+It requires Node.js 24/npm and installs Chromium on first use. Linux hosts missing browser
+libraries can run <code>cd src/inference-gateway/console &amp;&amp; npm ci &amp;&amp; npx playwright install --with-deps chromium</code>.
+CI installs those libraries before validation. Keyboard users can use <strong>Skip to content</strong>,
+standard Tab/Enter navigation, and native disclosure controls. Tables scroll within their
+panels on small screens.</p>
+<p>Step logs here are gateway event/routing records, not worker stdout or full Temporal history.
+Receipt hashes must still be checked against the retained audit export and head anchors.
+Provider keys and budget edits remain reviewed deployment configuration; key presence does
+not prove live provider acceptance.</p>
+<h3 id="workflow-forms-and-step-content">Workflow forms and step content<a class="headerlink" href="#workflow-forms-and-step-content" title="Permanent link">&para;</a></h3>
+<p>Set <code>inputSchema</code> on a workflow in the <code>SandboxPolicySet</code>. <code>GET /v1/workflow-policies</code>
+returns it to the console, which renders text fields, longer text areas, numbers,
+checkboxes, enum selects, and string arrays with one item per line. Required fields come
+first and the rest sit under <strong>More options</strong>; a string property named <code>model</code> becomes a
+list of the workflow's allowed models. Workflows without a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
+string, number, integer, boolean, or array-of-string properties, optional <code>enum</code>,
+<code>required</code>, <code>description</code>, <code>default</code>, and <code>examples</code>. <code>additionalProperties: false</code>
+rejects unknown fields. Nested objects and schema references are not supported.
+The templates retain their nonempty text and budget checks with <code>minLength</code>, <code>pattern</code>,
+<code>minimum</code>, <code>maximum</code>, and <code>exclusiveMinimum</code> constraints.
+Defaults prefill the console; examples are hints. The gateway validates submitted input
+without inserting defaults or coercing types. Invalid input returns HTTP 422 before
+starting Temporal, with <code>detail.reason: workflow_input_invalid</code> and
+<code>detail.fields: [{field: "input.topic", message: "Field is required."}]</code>.</p>
+<p>The Python <code>@input_schema({...})</code> decorator and TypeScript <code>withInputSchema(schema, workflow)</code>
+attach schema metadata to workflow code. Copy that schema into the reviewed workflow
+policy; workers cannot override the gateway's policy. <code>agentworkflows init</code> includes
+the declaration in <code>workflow.py</code> and writes <code>input-schema.json</code> for that purpose.</p>
+<p><code>captureContent</code> can be <code>none</code>, <code>redacted</code>, or <code>full</code> at the team level or on a workflow.
+An explicit workflow setting overrides the team default, including <code>none</code>. Absent both,
+capture is off. Compose's demo team defaults to <code>redacted</code>. Both SDKs' governed model and
+tool activities capture automatically through the gateway, after admission and output
+checks. <code>redacted</code> additionally applies the gateway's configured secret/PII and blocked-term
+redactors to the stored text; <code>full</code> stores the admitted request and guarded result as-is.
+Neither mode bypasses DLP. Each input/output field is limited to <code>CONTENT_MAX_BYTES</code>
+(default 16,384 UTF-8 bytes), after redaction.</p>
+<p>Run timeline steps expose <code>content: {input, output, truncated: {input, output}, redaction}</code>.
+Input and output are text (structured values are JSON text); an unfinished/failed call can
+have a null output. A retried step shows its latest captured attempt. Content is separate
+from receipts and expires after <code>CONTENT_RETENTION_SECONDS</code> (default seven days).
+Missing content is <code>null</code> with <code>content_reason: capture_off</code> or <code>expired</code>. The same team,
+project, and role checks that protect run details protect content; all four read roles
+can inspect it. See the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/data-retention.md">retention runbook</a>
+for TTL migration and Temporal history handling.</p>
+<h2 id="teams-projects-and-roles">Teams, projects, and roles<a class="headerlink" href="#teams-projects-and-roles" title="Permanent link">&para;</a></h2>
+<p>A <strong>team is the existing sandbox ID</strong>. Projects group and restrict run access. Operators
+bootstrap team policies and an admin with <code>SANDBOX_POLICY_PATH</code> and <code>API_KEY_RECORDS_PATH</code>
+or verified identity-provider claims. Admins then issue and revoke member keys in
+<strong>Members &amp; keys</strong>, without editing YAML or restarting the gateway.
+Managed teams require authentication, <code>SANDBOX_BUDGET_ENABLED=true</code>,
+<code>SANDBOX_BUDGET_BACKEND=redis</code>, and <code>AUDIT_LOG_ENABLED=true</code>; Compose sets these already.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Read runs/reports</th>
+<th>Start, cancel, retry, call models</th>
+<th>Approve/reject</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>admin</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>builder</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td>approver</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>viewer</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>The public Compose keys are <code>local-development-only</code> (admin), <code>demo-builder</code>,
+<code>demo-approver</code>, <code>demo-viewer</code>, and <code>demo-worker</code>. Use randomly generated keys outside
+the trial. Keep a bootstrap admin record and add a policy for each team:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Entry under records in key-records.yaml; store only the random key's SHA-256 digest.</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alice</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">sha256</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">REPLACE_WITH_SHA256_OF_RANDOM_KEY</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">sandbox</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">briefing</span><span class="w">  </span><span class="c1"># omit to grant this role across the team's projects</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Entry under spec.policies in the existing SandboxPolicySet.</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">projects</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">briefing</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">engineering</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">providerCredentials</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">openai</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">RESEARCH_OPENAI_KEY</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">anthropic</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">RESEARCH_ANTHROPIC_KEY</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">budgets</span><span class="p">:</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">estimatedTokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200000</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="c1"># Copy reviewed tools/workflows from deploy/compose/sandbox-policy.yaml,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="c1"># then replace model IDs and allowedEgress with approved destinations.</span>
+</code></pre></div>
+<p><code>providerCredentials</code> names gateway environment variables/Secret references, never keys.
+Each route, including fallback and streaming, selects the bound team's provider key;
+a missing provider mapping fails closed for managed teams. <code>agentworkflows team</code> shows
+available projects and provider names without exposing secrets. Project-bound credentials
+cannot read or control another project's runs. Identity comes from a verified sandbox
+binding, never a caller-supplied team/project header. Existing signed JWTs can supply <code>role</code>
+and optional <code>project</code> claims with a nonempty <code>sub</code>; configure <code>JWT_TENANT_CLAIM</code> and control claim issuance.
+Legacy unbound keys cannot use the team run API. Enabling projects requires roles on the
+team's existing credentials. Team policies remain declarative; membership keys are managed
+in the console, CLI, or team key API.</p>
+<h3 id="members-and-api-keys">Members and API keys<a class="headerlink" href="#members-and-api-keys" title="Permanent link">&para;</a></h3>
+<p>Admins can list, create, update, and revoke keys for their own team. Project-bound admins
+can only manage keys in that project. The console lists name, role, project, last use,
+expiry, and revocation status. Creation displays the new <code>aw_</code> key once, with a copy button;
+save it securely before leaving the page. The store retains only its SHA-256 digest and
+metadata, including creator and timestamps. Last use is written at most once per minute.
+Every create, update, and revoke produces a hash-chained audit receipt.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>list
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>alice<span class="w"> </span>--role<span class="w"> </span>builder<span class="w"> </span>--project<span class="w"> </span>briefing
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>update<span class="w"> </span>KEY_ID<span class="w"> </span>--role<span class="w"> </span>viewer<span class="w"> </span>--expires-at<span class="w"> </span><span class="m">2027</span>-01-01T00:00:00Z
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>revoke<span class="w"> </span>KEY_ID
+</code></pre></div>
+<p><code>GET/POST /v1/team/keys</code> list/create; <code>PATCH/DELETE /v1/team/keys/{key_id}</code> update/revoke.
+POST accepts <code>name</code>, <code>role</code> (default <code>viewer</code>), optional <code>project</code>, and optional <code>expires_at</code>.
+PATCH accepts those same fields; <code>null</code> clears project or expiry. Expiry accepts epoch seconds
+or an ISO-8601 timestamp with a timezone. DELETE retains a revoked record. Revocation,
+expiry, and role changes apply on the next request on every replica, including key-backed
+browser sessions. An admin cannot revoke or demote the key authenticating their request.
+File-based bootstrap credentials remain managed through the existing configuration.</p>
+<p>The managed store uses the existing budget Redis client and key prefix, with schema version 2;
+enable Redis persistence and back up this state along with the existing runs and budgets.
+There is no managed-key feature flag. Existing flat hashes, key-record files, and JWT/JWKS
+automation remain supported. The flat allowlist and file are checked before the managed
+store, then JWT verification; a duplicate file record still enforces its binding and expiry
+even when its digest is also flat-listed.</p>
+<h3 id="company-sign-in-oidc">Company sign-in (OIDC)<a class="headerlink" href="#company-sign-in-oidc" title="Permanent link">&para;</a></h3>
+<p>Set <code>ADMIN_CONSOLE_ENABLED=true</code> and <code>SANDBOX_BUDGET_BACKEND=redis</code>. Register an
+authorization-code OIDC application with the exact gateway callback URL and configure:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>OIDC_ISSUER=https://company.okta.com/oauth2/default
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>OIDC_CLIENT_ID=your-client-id
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>OIDC_CLIENT_SECRET=your-client-secret
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>OIDC_REDIRECT_URL=https://agents.example.com/v1/auth/callback
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>OIDC_SCOPES=openid profile email
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>OIDC_TEAM_CLAIM=team
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>OIDC_ROLE_CLAIM=role
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>OIDC_PROJECT_CLAIM=project
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>OIDC_DEFAULT_ROLE=viewer
+</code></pre></div>
+<p>Source the client secret from your deployment's secret store. Omit it for a registered
+public client. The gateway discovers authorization, token, and JWKS endpoints from the
+issuer; it supports <code>client_secret_basic</code> and <code>client_secret_post</code> for confidential clients.
+OIDC is disabled when its settings are absent. <code>OIDC_TEAM_CLAIM</code> defaults to
+<code>JWT_TENANT_CLAIM</code>; the role/project defaults are <code>role</code>/<code>project</code>. Claims are top-level
+strings. The team must name an existing sandbox policy, and any project must belong to it.
+A missing role uses <code>OIDC_DEFAULT_ROLE</code>; an invalid supplied role is rejected. Only the
+identity provider's administrators should be able to set membership claims.</p>
+<p>In Helm, use <code>auth.oidc</code> for these settings and <code>auth.oidc.existingSecret.name/key</code> for
+the client secret. <code>adminConsole.cookieSecure</code> defaults to true. The umbrella chart nests
+these values under <code>inference-gateway</code>. Allow HTTPS egress to the provider's discovery,
+token and JWKS endpoints in your existing network policy.</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Configuration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://developer.okta.com/docs/guides/customize-tokens-returned-from-okta/">Okta</a></td>
+<td>Use your authorization server's issuer, register the redirect URL, and emit <code>team</code>, <code>role</code>, and optional <code>project</code> in the <strong>ID token</strong>, including them for the requested scopes.</td>
+</tr>
+<tr>
+<td><a href="https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc">Microsoft Entra</a></td>
+<td>Use the tenant-specific issuer <code>https://login.microsoftonline.com/TENANT_UUID/v2.0</code>, register a Web redirect, and map <code>OIDC_TEAM_CLAIM=tid</code> to a policy whose sandbox ID is that tenant UUID. Missing roles default to viewer. For other roles, emit a single string custom claim; the <code>roles</code> array is not a scalar role claim.</td>
+</tr>
+<tr>
+<td><a href="https://developers.google.com/identity/openid-connect/openid-connect">Google</a></td>
+<td>Use issuer <code>https://accounts.google.com</code> and an OAuth web client with the exact redirect URL. Direct Google ID tokens do not provide the gateway's team/role/project claims, and the dotted <code>hd</code> domain is not a valid sandbox ID. Use an OIDC broker that emits controlled membership claims, or keep team API-key sessions.</td>
+</tr>
+</tbody>
+</table>
+<p>The flow uses <a href="https://www.rfc-editor.org/rfc/rfc7636">PKCE S256</a>, single-use state bound
+to the browser, and a nonce. ID tokens must pass signature, issuer, audience, expiry,
+issued-at, subject, nonce, and authorized-party checks. Tokens and the client secret are
+never sent to browser storage. Keep all replicas on the same Redis and auth configuration.</p>
+<p>Sessions and approval receipts record a display name: the managed key's name, or the ID
+token's <code>name</code> (else <code>email</code>) claim. The console shows it in the account card and on each
+Approval step.</p>
+<p><code>GET /v1/auth/config</code> publicly describes available sign-in methods without secrets.
+<code>GET /v1/auth/login</code> starts OIDC; <code>GET /v1/auth/callback</code> completes it.
+<code>POST /v1/auth/session</code> with <code>{"key":"..."}</code> creates the same session from an API key
+or existing JWT. <code>GET /v1/auth/session</code> restores it and returns the CSRF token;
+<code>POST /v1/auth/logout</code> invalidates it. Browser sign-in is enabled by the console or OIDC
+configuration and requires Redis. Sessions slide for 12 hours with an absolute seven-day
+limit; pasted JWT sessions also stop at the JWT expiry. OIDC claim changes take effect on
+the next sign-in. Logout ends the gateway session, not the provider's own login session.</p>
+<p>Cookies are HttpOnly (session), Secure, and SameSite=Lax. The separate CSRF cookie must
+match both the session's token and <code>X-CSRF-Token</code> on non-GET cookie-authenticated requests.
+The console sends credentials and that header automatically. Bearer and <code>X-API-Key</code>
+automation do not require CSRF. Serve the console and gateway on the same HTTPS origin.
+For HTTP localhost only, set <code>SESSION_COOKIE_SECURE=false</code>; Compose already does so and
+<code>local-development-only</code> continues to work. The demo adds no identity-provider container;
+connect an existing provider using the settings above.</p>
+<p>Use one trusted worker per team with a bound builder key carrying <code>workflows:execute</code>.
+Set <code>TEMPORAL_TASK_QUEUE=research-team-workflows</code>; the API selects that queue from the
+verified team. Human credentials do not carry the worker scope. In Helm, set <code>worker.team</code>
+and <code>worker.existingSecret</code>. Workers and Temporal operators are trusted: end users must
+not receive direct Temporal access or worker keys.</p>
+<h2 id="authenticated-workflow-api">Authenticated workflow API<a class="headerlink" href="#authenticated-workflow-api" title="Permanent link">&para;</a></h2>
+<p>The CLI uses these endpoints with <code>Authorization: Bearer &lt;team-key&gt;</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Method and path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /v1/team</code></td>
+<td>Discover role, projects, providers, and spend limit</td>
+</tr>
+<tr>
+<td><code>GET /v1/workflow-policies</code></td>
+<td>Discover approved workflow types, limits, capture mode, and input schemas</td>
+</tr>
+<tr>
+<td><code>POST /v1/workflow-runs</code></td>
+<td>Start with <code>workflow</code>, JSON <code>input</code>, optional <code>project</code> and UUID <code>request_id</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/workflow-runs?project=briefing&amp;offset=0&amp;limit=20&amp;status=awaiting_approval</code></td>
+<td>Page through project runs; optional <code>status</code> and <code>workflow</code> filters</td>
+</tr>
+<tr>
+<td><code>GET /v1/workflow-runs/{run_id}</code></td>
+<td>Status, draft, budget, step timeline with receipt IDs</td>
+</tr>
+<tr>
+<td><code>POST /v1/workflow-runs/{run_id}/cancel</code></td>
+<td>Request cancellation of this exact execution</td>
+</tr>
+<tr>
+<td><code>POST /v1/workflow-runs/{run_id}/retry</code></td>
+<td>Start a fresh execution after failure/cancellation</td>
+</tr>
+<tr>
+<td><code>POST /v1/workflow-runs/{run_id}/approve</code></td>
+<td>Submit <code>{"approved":true}</code> or <code>false</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/usage</code></td>
+<td>Current-window team/project usage, provider costs, and <code>spend.workflows</code> costs</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://127.0.0.1:8080/v1/workflow-runs<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">'Authorization: Bearer demo-builder'</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">'Content-Type: application/json'</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"workflow":"ResearchWorkflow","input":{"topic":"Evaluate team agents"},"project":"default"}'</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>cancel<span class="w"> </span>RUN_ID
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>retry<span class="w"> </span>FAILED_RUN_ID
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>agentworkflows<span class="w"> </span>usage
+</code></pre></div>
+<p>Retry accepts failed, canceled, terminated, or timed-out runs. It starts a new execution
+and run budget; team spend is retained. Repeating retry on a failed run returns the same
+replacement. Review side effects first: tools may execute again. Cancellation cannot undo
+already-sent actions. <code>runs list</code> returns <code>next_offset</code>; pass it as <code>--offset</code> for the next page.
+<code>runs start</code> defaults to <code>ResearchWorkflow</code>; use <code>runs start YourWorkflow --input '&lt;JSON&gt;'
+--project engineering</code> for another registered workflow. Input is its single argument.</p>
+<p>Supply a stable UUID <code>request_id</code> when retrying an ambiguous start. The CLI prints a retry
+ID with start errors. Reusing that ID with different input returns a conflict.
+<code>PUT /v1/workflow-runs/{run_id}</code> remains the worker's immutable budget initialization.
+The Python <code>GatewayClient</code> exposes <code>team</code>, <code>start_run</code>, <code>runs</code>, <code>run</code>, <code>cancel_run</code>,
+<code>retry_run</code>, and <code>approve_run</code> with the same semantics.
+Custom workflows expose a <code>status</code> query returning <code>stage</code> for progress and, when they
+support approvals, a <code>review(approved, reviewer)</code> update returning whether the waiting
+decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.</p>
+<h2 id="triggers-and-notifications">Triggers and notifications<a class="headerlink" href="#triggers-and-notifications" title="Permanent link">&para;</a></h2>
+<p>Open <strong>Triggers</strong> in the console to see cron expressions, upcoming times, signed webhook
+endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
+viewers and approvers can inspect them. Existing runs continue when a trigger is paused.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>list
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>pause<span class="w"> </span>DailyReportWorkflow<span class="w"> </span>daily
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>resume<span class="w"> </span>DailyReportWorkflow<span class="w"> </span>daily
+</code></pre></div>
+<p>Merge trigger definitions into each workflow in the existing <code>SandboxPolicySet</code>. Keep
+its provider/model/tool/egress policy and budgets. For example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">workflows</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">DailyReportWorkflow</span><span class="p">:</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">demo-openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">http</span><span class="p p-Indicator">:</span><span class="nv">//cloud-fake</span><span class="p p-Indicator">:</span><span class="nv">8000</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">triggers</span><span class="p">:</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="nt">daily</span><span class="p">:</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cron</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">"0</span><span class="nv"> </span><span class="s">9</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*"</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="nt">input</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">topic</span><span class="p">:</span><span class="w"> </span><span class="nv">Agent operations</span><span class="p p-Indicator">}</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="nt">GitHubIssueTriageWorkflow</span><span class="p">:</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">demo-openai</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">http</span><span class="p p-Indicator">:</span><span class="nv">//cloud-fake</span><span class="p p-Indicator">:</span><span class="nv">8000</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">    </span><span class="nt">triggers</span><span class="p">:</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">      </span><span class="nt">github</span><span class="p">:</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">        </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">webhook</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">        </span><span class="nt">project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">engineering</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="nt">webhookSecretEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_WEBHOOK_SECRET</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="nt">notifications</span><span class="p">:</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">  </span><span class="nt">consoleUrl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://agents.example.com/console/</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">  </span><span class="nt">slackWebhookEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_SLACK_WEBHOOK</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span><span class="nt">webhookEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_OUTGOING_WEBHOOK</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">  </span><span class="nt">budgetThreshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="w">  </span><span class="nt">smtp</span><span class="p">:</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">smtp.example.com</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">587</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">    </span><span class="nt">startTls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="w">    </span><span class="nt">usernameEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_SMTP_USERNAME</span>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="w">    </span><span class="nt">passwordEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_SMTP_PASSWORD</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">    </span><span class="nt">sender</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">workflows@example.com</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">    </span><span class="nt">recipients</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team@example.com</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>Store secrets in the gateway environment/Secret deployment. Use a separate randomly
+generated webhook secret of at least 32 characters for each team. Webhook destination
+variables hold full HTTP(S) URLs; values and recipient addresses are never put in receipts.
+Only configure destinations your team is authorized to notify. Omit unused channels.
+SMTP authentication requires TLS; only the local fake uses unauthenticated plaintext SMTP.
+Set <code>consoleUrl</code> to the externally reachable console address, including any path prefix.
+Notification links carry no credentials: recipients sign in normally.</p>
+<p>Recreate the gateway after configuration changes. It reconciles
+<a href="https://docs.temporal.io/develop/python/workflows/schedules">Temporal Schedules</a>, never a
+custom cron scheduler. Expressions use UTC, overlap policy is <strong>SKIP</strong>, and catch-up is
+limited to five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
+the schedule action open until the target run ends. Each launch goes through the same
+governed start API. Redis persists interactive pauses across restarts; <code>paused: true</code> in
+configuration prevents console/CLI resumption until the admin changes the configuration.
+Removing a cron trigger removes its managed schedule on the next reconciliation. Schedule
+errors appear in the console; check Temporal and the gateway log for invalid expressions.</p>
+<p>For an inbound webhook, POST the <strong>exact JSON bytes</strong> to the endpoint shown in Triggers.
+Send <code>X-AW-Timestamp</code> (Unix seconds, within five minutes), <code>X-AW-Delivery</code> (a unique ID using
+letters, digits, underscores or hyphens, up to 128 characters) and <code>X-AW-Signature</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span><span class="o">,</span><span class="w"> </span><span class="nn">hmac</span><span class="o">,</span><span class="w"> </span><span class="nn">json</span><span class="o">,</span><span class="w"> </span><span class="nn">os</span><span class="o">,</span><span class="w"> </span><span class="nn">time</span><span class="o">,</span><span class="w"> </span><span class="nn">urllib.request</span><span class="o">,</span><span class="w"> </span><span class="nn">uuid</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">path</span> <span class="o">=</span> <span class="s2">"/v1/hooks/demo/GitHubIssueTriageWorkflow/github"</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">body</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"action"</span><span class="p">:</span> <span class="s2">"opened"</span><span class="p">,</span> <span class="s2">"issue"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="s2">"number"</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span> <span class="s2">"title"</span><span class="p">:</span> <span class="s2">"Sign-in regression"</span><span class="p">,</span> <span class="s2">"body"</span><span class="p">:</span> <span class="s2">"Please investigate."</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}})</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">stamp</span><span class="p">,</span> <span class="n">delivery</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())),</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">signed</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stamp</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">delivery</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">."</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span> <span class="o">+</span> <span class="n">body</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="n">signature</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"TEAM_WEBHOOK_SECRET"</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">signed</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">request</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span> <span class="o">+</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">body</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="s2">"Content-Type"</span><span class="p">:</span> <span class="s2">"application/json"</span><span class="p">,</span> <span class="s2">"X-AW-Timestamp"</span><span class="p">:</span> <span class="n">stamp</span><span class="p">,</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="s2">"X-AW-Delivery"</span><span class="p">:</span> <span class="n">delivery</span><span class="p">,</span> <span class="s2">"X-AW-Signature"</span><span class="p">:</span> <span class="s2">"sha256="</span> <span class="o">+</span> <span class="n">signature</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="p">})</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="nb">print</span><span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+</code></pre></div>
+<p>Compose uses the public fake value <code>compose-webhook-secret-not-for-production</code> for this
+example. The original JSON becomes the workflow input; it is not stored in receipts.
+For GitHub, configure the shown endpoint as the repository webhook URL, use JSON content,
+select Issues events, and set its secret to the team's webhook secret. Native GitHub
+<code>X-Hub-Signature-256</code> plus <code>X-GitHub-Delivery</code> are also accepted. GitHub does not sign a
+timestamp or delivery ID, so the gateway persists the signed body fingerprint across
+the team: changing the delivery ID or destination cannot replay an accepted payload.
+Identical GitHub payload bytes are treated as retries. No GitHub credential or live GitHub
+write is used by the triage example.</p>
+<p>Completed delivery IDs return <code>409 webhook_replayed</code>; concurrent delivery and ambiguous
+Temporal failures use the same deterministic run ID. After a <code>503</code>, retry with the same
+delivery ID/body and a fresh timestamp/signature. Changed input for that ID is refused.
+Keep Redis trigger state, run start intents and Temporal history together in backups.
+Deleting that state removes the replay guarantee. A paused trigger returns <code>409 trigger_paused</code>.</p>
+<p>Notifications cover console-managed runs: waiting approval, failure (including execution
+timeout), and reaching the configured fraction of either the run token or USD limit.
+The existing run monitor checks roughly every 30 seconds; SDK approval events are persisted
+so a quick review is not missed. Accounting includes conservative outstanding reservations.
+Budget crossings are also persisted at reservation/settlement, even if usage subsequently falls.
+Custom workflows should inherit <code>ApprovalWorkflow</code> (or expose the existing <code>status</code> query).
+Already-running histories remain replay-compatible via a Temporal patch marker.</p>
+<p>Each channel has persistent per-run/event delivery state and a replica-safe lease. Attempts
+retry up to five times with exponential backoff, without blocking approval. Every attempt
+and outcome appears in the run timeline; <code>retrying</code> or <code>failed</code> means inspect the destination
+and gateway configuration. Successful deliveries are deduplicated across restarts. Delivery
+is <strong>at least once</strong>, not exactly once: a crash after sending but before recording success
+can duplicate a message. Outgoing webhooks carry a stable <code>Idempotency-Key</code> and JSON <code>id</code>;
+SMTP uses a stable Message-ID. Notifications contain IDs, event type and a console link,
+not drafts, prompts or raw failure details. Approvals remain in the console/API.</p>
+<p>The Compose trial includes both workflows and <code>notification-fake</code>, a Slack/webhook sink
+and SMTP catcher. View its inbox at <code>http://127.0.0.1:8025/</code> (override the published port
+with <code>AGENTWORKFLOWS_INBOX_PORT</code>). <code>make compose-smoke</code> backfills a daily schedule through
+Temporal, posts a signed issue payload, checks pause/replay protection, exercises approval
+and failure delivery to all three channels, and verifies the receipt chain. It uses no
+real credentials. Both examples return reviewed content without publishing to external services.</p>
+<h2 id="operate-the-service">Operate the service<a class="headerlink" href="#operate-the-service" title="Permanent link">&para;</a></h2>
+<p><code>agentworkflows usage</code> aggregates providers and tools for the bound team or project.
+<code>spend</code> shows the UTC-aligned cost window, limit, and reserved-plus-spent USD. Its length
+uses <code>SANDBOX_BUDGET_WINDOW_SECONDS</code> (default 86400); zero means lifetime accounting.
+Workflow cost rows accumulate from this version onward, in the same window as provider
+costs. They count governed model/tool calls, not run starts, and exclude standalone calls.
+Project-bound credentials see only their project's rows. Earlier windows are not backfilled.
+Token/request budgets retain their existing window semantics. Spend reservations are
+atomic in the existing Redis, covering eligible fallbacks before a call. Managed-team
+calls retry through the caller or Temporal so each attempt has a budget and receipt.
+Unused fallback capacity is refunded; measured usage replaces the successful
+attempt's reservation. Failed/unknown attempts remain conservatively charged. Configure
+prices for every route, including local models; tools charge per attempt. These are
+configured-price estimates, not provider invoices or billing guarantees.</p>
+<p>Persist Redis with AOF and no eviction. Run metadata, timeline indices, and cost windows
+survive gateway/worker restarts; back up Redis alongside Temporal PostgreSQL. Historical
+cost keys remain available for operator export under <code>...:&lt;team&gt;:cost:&lt;window-start&gt;</code>;
+the API reports the current window. Retain run metadata/timeline keys with Temporal history
+and audit evidence. Expired Temporal executions return 404; retained receipts remain in
+the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
+Temporal; restrict access and retention for both stores.</p>
+<p>The <strong>AgentWorkflows Team Operations</strong> Grafana dashboard sits beside existing dashboards
+in <code>deploy/observability/dashboards</code>: throughput, failures, run states, approvals waiting,
+and shared spend. State/spend gauges refresh every 30 seconds; queries use <code>max</code> across
+replicas to avoid double counting. Alerts cover stalled throughput, failed runs, approvals
+waiting 30 minutes, spend above 80%, and stale collection. The existing Kubernetes
+observability deployment loads them; Compose does not install Grafana.</p>
+<p>The timeline is a convenience index of gateway receipts; write failures are logged and
+may leave gaps. Verify the separately retained audit export and external head anchors.
+Hashes establish linkage within retained chains; they do not prove unreported tool activity,
+model correctness, or that a release was signed/published.</p>
+<h2 id="write-your-workflow">Write your workflow<a class="headerlink" href="#write-your-workflow" title="Permanent link">&para;</a></h2>
+<p>Use Temporal's decorators and the SDK's call methods. Do not perform model, network,
+or tool I/O directly in workflow code; replay must remain deterministic.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">temporalio</span><span class="w"> </span><span class="kn">import</span> <span class="n">workflow</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.workflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">Budget</span><span class="p">,</span> <span class="n">WorkflowGateway</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nd">@workflow</span><span class="o">.</span><span class="n">defn</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Briefing</span><span class="p">:</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="nd">@workflow</span><span class="o">.</span><span class="n">run</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="n">gateway</span> <span class="o">=</span> <span class="n">WorkflowGateway</span><span class="p">(</span><span class="n">Budget</span><span class="p">(</span><span class="n">token_limit</span><span class="o">=</span><span class="mi">4000</span><span class="p">,</span> <span class="n">cost_limit_usd</span><span class="o">=</span><span class="mf">2.0</span><span class="p">))</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">gateway</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"research"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">topic</span><span class="p">})</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="k">return</span> <span class="k">await</span> <span class="n">gateway</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>            <span class="sa">f</span><span class="s2">"Summarize with citations: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>            <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>            <span class="n">max_tokens</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        <span class="p">)</span>
+</code></pre></div>
+<p>Run it from a separate <code>worker.py</code> entry point (keep network I/O outside workflow modules):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.worker</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_worker</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">workflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Briefing</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">run_worker</span><span class="p">([</span><span class="n">Briefing</span><span class="p">])</span>
+</code></pre></div>
+<p>Set <code>AGENTWORKFLOWS_TEAM=research-team</code>, its worker gateway key, and the gateway/Temporal
+addresses. Register <code>Briefing</code> in the team workflow policy, then start with
+<code>agentworkflows runs start Briefing --input '"your topic"' --project briefing</code>.
+Use <code>ApprovalWorkflow</code> and <code>await self.approval(draft)</code> for the standard reviewed-draft
+flow. The <a href="../templates/">template guide</a> shows the complete code and how to replace a worker.
+Native Temporal workers and <code>GatewayActivities.call</code> remain available for advanced agent
+registrations. Cancel through <code>agentworkflows runs cancel RUN_ID</code>; cancellation cannot
+undo a tool action already sent.</p>
+<p>Defaults are five activity attempts with exponential backoff (1 second initially, capped
+at 30 seconds), three minutes per attempt, and fifteen minutes including retries and queue
+wait. Pass Temporal's <code>RetryPolicy</code> and <code>timedelta</code> values to <code>WorkflowGateway</code> when the
+workload needs different timeouts. HTTP requests time out after 120 seconds. Policy, DLP,
+and run-budget refusals are non-retryable; transient gateway failures honor <code>Retry-After</code>.</p>
+<h2 id="approve-tools-and-budgets">Approve tools and budgets<a class="headerlink" href="#approve-tools-and-budgets" title="Permanent link">&para;</a></h2>
+<p>Add tools to the existing <code>SandboxPolicySet</code>, mounted through <code>SANDBOX_POLICY_PATH</code> (Helm:
+<code>sandboxPolicy.policy.policies</code>). The absence of a tool denies its execution. Clients send
+a tool name and JSON arguments; only the administrator can set the destination URL:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platform.ai/v1alpha1</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SandboxPolicySet</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">policies</span><span class="p">:</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">      </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-cloud-model</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">      </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">        </span><span class="nt">research</span><span class="p">:</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://search.example.com/research</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">          </span><span class="nt">costUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">          </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SEARCH_TOOL_TOKEN</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">        </span><span class="nt">publish</span><span class="p">:</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://cms.example.com/briefings</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">          </span><span class="nt">costUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">          </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CMS_TOOL_TOKEN</span>
+</code></pre></div>
+<p>Tool endpoints accept POST JSON and return JSON. <code>credentialEnv</code> names a gateway-side
+environment variable forwarded as bearer authentication; Helm can inject its Secret via
+<code>providerCredentials</code>. Tools receive a stable <code>Idempotency-Key</code> derived from team, Temporal
+run ID, and activity ID. A tool with side effects <strong>must persist and honor this key</strong>.
+URLs are fixed and redirects are refused. Input size, secret detection, output DLP, sandbox
+budgets, and receipts use the existing gateway controls. A tool's <code>dataClassification</code>
+defaults to <code>internal</code>; explicitly approve a higher classification only for eligible tools.
+<code>GET /v1/tools</code> lists the caller's approved names.
+For Kubernetes, permit tool destinations through the gateway's existing approved egress
+policy or internal egress proxy, just as for cloud model endpoints.</p>
+<h2 id="bring-your-agent">Bring your agent<a class="headerlink" href="#bring-your-agent" title="Permanent link">&para;</a></h2>
+<p>With the Compose stack running, run all four examples in its existing worker:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--no-deps<span class="w"> </span>workflow-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>python<span class="w"> </span>-m<span class="w"> </span>agentworkflows.examples.frameworks<span class="w"> </span><span class="s2">"How should we evaluate team agents?"</span>
+</code></pre></div>
+<p>The result includes the run ID and answers from plain OpenAI and Anthropic clients,
+OpenAI Agents SDK, and LangGraph. The first agent calls <code>team.search</code> through MCP.
+Open Temporal at <a href="http://localhost:8233">http://localhost:8233</a> and inspect that run; use its ID with
+<code>GET /v1/workflow-runs/{run_id}</code> for usage. <code>make compose-smoke</code> checks these calls,
+policy refusals, DLP, and their receipts. No cloud credentials are needed.</p>
+<p>For your own worker, install <code>python -m pip install './sdk/python[frameworks]'</code>.
+Register your async agent function with the existing activity:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows.activities</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayActivities</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">briefing</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">sources</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="s2">"team.search"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">"topic"</span><span class="p">]})</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">context</span><span class="o">.</span><span class="n">openai</span><span class="p">()</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>        <span class="n">model</span><span class="o">=</span><span class="s2">"demo-openai"</span><span class="p">,</span> <span class="n">max_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Summarize: </span><span class="si">{</span><span class="n">sources</span><span class="si">}</span><span class="s2">"</span><span class="p">}],</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="p">)</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="n">activities</span> <span class="o">=</span> <span class="n">GatewayActivities</span><span class="p">(</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    <span class="s2">"http://localhost:8080"</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"AGENTWORKFLOWS_API_KEY"</span><span class="p">],</span> <span class="n">agents</span><span class="o">=</span><span class="p">{</span><span class="s2">"briefing"</span><span class="p">:</span> <span class="n">briefing</span><span class="p">},</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="p">)</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c1"># Register activities.call on your Temporal worker, as above.</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="c1"># Inside your workflow:</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="c1"># answer = await WorkflowGateway().agent("briefing", {"topic": topic})</span>
+</code></pre></div>
+<p><code>context.openai()</code> and <code>context.anthropic()</code> configure the official async clients with
+the gateway URL, team authentication, run/step headers, and no nested HTTP retries.
+Use <code>context.agents_model(model)</code> with the Agents SDK's <code>Agent</code> and <code>Runner.run</code>;
+set <code>RunConfig(tracing_disabled=True)</code> to keep prompts out of external tracing.
+In LangGraph, use <code>context.openai()</code> in your graph nodes and <code>graph.ainvoke(...)</code>.
+The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/frameworks.py">complete examples</a>
+show all four, including a governed Agents SDK function tool.</p>
+<p>Each model/tool request gets its own step suffix and receipt. The activity result is
+durable; a crash before completion can replay the <strong>whole agent loop</strong> and charge new
+calls. Break long loops into separate workflow steps when finer recovery is needed.
+Streaming, Responses, and background model APIs are not workflow step transports here;
+use non-streaming Chat Completions or Anthropic Messages. Standalone gateway API support
+is unchanged. The optional frameworks are pinned in the worker/test locks.</p>
+<p>Framework callbacks run as trusted worker code. Route every side-effecting tool through
+<code>context.tool</code>; arbitrary local function tools and direct network clients are not intercepted.
+Use <a href="../agent-sandbox-integration/#container-workflow-steps">container steps</a> for code execution.
+Do not enable external LangSmith tracing with sensitive activity data.</p>
+<h2 id="mcp-tools">MCP tools<a class="headerlink" href="#mcp-tools" title="Permanent link">&para;</a></h2>
+<p>Register a server once under the team's existing <code>SandboxPolicySet</code> entry:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">sandboxId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">research-team</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">mcpServers</span><span class="p">:</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">team</span><span class="p">:</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://tools.example.com/mcp</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="nt">credentialEnv</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TEAM_MCP_TOKEN</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">      </span><span class="nt">search</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.01</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">      </span><span class="nt">publish</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.02</span>
+</code></pre></div>
+<p>The map explicitly approves remote tool names and their cost in USD per attempt. Clients
+call <code>await gateway.tool("team.search", {"query": topic})</code> in workflow code or
+<code>await context.tool(...)</code> in an agent callback. <code>GET /v1/tools</code> discovers team tools;
+add run/step headers to see only that workflow's allowed tools. Credentials and server URLs
+never come from agent arguments. Add the server's origin to the workflow's <code>allowedEgress</code>.</p>
+<p>The gateway negotiates MCP <strong>2025-03-26 Streamable HTTP</strong>, initializes a session, invokes
+<code>tools/call</code>, and closes the session. Both JSON and SSE responses are bounded by the gateway
+body limit. Legacy SSE/stdio servers, resources, prompts, sampling, and server-initiated
+requests are not supported. The registered allowlist is authoritative; discovery from an
+untrusted server cannot grant another tool. The gateway does not execute model-returned
+tool instructions automatically. See the <a href="https://modelcontextprotocol.io/specification/2025-03-26/basic/transports">MCP transport specification</a>.</p>
+<p>Nested JSON arguments use the existing input size, blocked-term, and secret policies before
+any server contact. Set <code>PROMPT_SECRET_MODE=block</code> (the Compose default) to prevent disclosure;
+<code>redact</code> rewrites matching arguments. Output follows the existing output DLP policy. Denied,
+successful, and failed calls receive run-linked tool receipts, with argument fingerprints
+rather than raw arguments. MCP errors and <code>isError</code> results are failures, never successful
+results. Failed/ambiguous attempts retain their cost. For side effects, the server <strong>must</strong>
+persist and honor <code>Idempotency-Key</code>; MCP itself does not promise idempotent execution.</p>
+<h2 id="workflow-policy">Workflow policy<a class="headerlink" href="#workflow-policy" title="Permanent link">&para;</a></h2>
+<p>Define policy under the same team entry, keyed by the registered Temporal workflow type:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">workflows</span><span class="p">:</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">Briefing</span><span class="p">:</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">approved-anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">allowedTools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team.search</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.openai.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.anthropic.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//tools.example.com</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="nt">tokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</code></pre></div>
+<p>Use canonical gateway model IDs, provider names from the model catalog, and exact URL origins
+(scheme, hostname, and optional port; no paths or wildcards). An empty allowlist denies that
+capability. The existing team model/tool rules still apply. Every fallback must satisfy the
+workflow's provider, model, and egress lists. Container direct egress is restricted to DNS
+and the gateway; <code>allowedEgress</code> governs the gateway's upstream model/tool connections.</p>
+<p><code>GET /v1/workflow-policies</code> shows the authenticated team's policies and approved container
+agents. The SDK sends Temporal's workflow type when initializing the run. Once a team defines
+workflow policies, unknown workflow types are refused. Existing teams without a <code>workflows</code>
+map retain Milestone 2 behavior. Limits requested by the SDK are capped by configured limits;
+the run's effective budget and workflow binding cannot change on retry. Current allowlists
+are checked on every call; removing a bound policy revokes access. After changing budget caps,
+start a reviewed new run rather than changing an existing run's limits.</p>
+<p>Workers and team keys are trusted to select the correct workflow and run IDs. Restrict who
+can submit code to those workers; these headers are correlation, not proof of Temporal identity.
+Container step credentials cannot change their team/run binding or initialize another run.</p>
+<h2 id="run-accounting">Run accounting<a class="headerlink" href="#run-accounting" title="Permanent link">&para;</a></h2>
+<p>Each run defaults to 10,000 tokens and $5 estimated cost. Limits are initialized atomically
+and cannot be raised by a retry. They are scoped to the authenticated team and Temporal run
+UUID; <code>GET /v1/workflow-runs/{run_id}</code> returns only that team's accounting. Every attempted
+provider route reserves estimated input plus maximum output at its higher token price.
+Reported usage settles that reservation; missing usage and failed/ambiguous attempts keep
+the conservative charge. Fallbacks and activity retries reserve separately. Tool attempts
+charge their configured <code>costUsd</code>, including failed attempts. A refused reservation prevents
+the downstream call. Configure both input and output prices on <strong>every</strong> eligible model.</p>
+<p>These are estimates, not billing guarantees: input token estimates can differ from provider
+usage; an actual overrun is charged and blocks later calls. The SDK's run limit supplements
+the existing team budgets. It does not grant models, tools, or credentials.</p>
+<h2 id="deployment-and-recovery">Deployment and recovery<a class="headerlink" href="#deployment-and-recovery" title="Permanent link">&para;</a></h2>
+<p>Compose installs Temporal with its own PostgreSQL volume, UI, a worker, and persistent Redis
+for gateway budget counters. Ports bind only to loopback: gateway 8080, Temporal 7233, UI
+8233. The fixture stack has public development passwords and is for evaluation.</p>
+<p>For Kubernetes, <code>deploy/charts/workflows</code> depends on the pinned
+<a href="https://github.com/temporalio/helm-charts">official Temporal chart</a>. It includes a dedicated
+PostgreSQL StatefulSet and the example worker. Local and customer Argo CD applications
+install it in <code>workflows</code>; the gateway accepts that namespace. Before syncing, create the
+<code>temporal-postgres-auth</code> Secret (<code>password</code>) and <code>workflow-gateway-key</code> Secret (<code>api-key</code>)
+in that namespace through your secret manager. The worker key must bind to the intended
+team. Configure the gateway's cloud routes and team tool policy first.</p>
+<p>To evaluate the chart directly against an existing gateway:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
+</code></pre></div>
+<p>Build <code>sdk/python/Dockerfile</code> with the repository root as context for your worker image;
+set <code>worker.image</code> to an image reachable by the cluster. Replace the example workflow with
+your registered workflows. The bundled Postgres and Redis are single-instance reference
+stores: provision backups and tested restores, storage classes, and availability before
+team production use. Redis needs AOF persistence and no eviction; run counters have no
+window/TTL. Retain them for the run's entire lifetime, including resets; remove the team's
+<code>agentworkflows:sandbox-budget:workflow:&lt;team&gt;:&lt;run-id&gt;</code> key only after replay/reset is no
+longer permitted. Back up both PostgreSQL history and Redis accounting.</p>
+<p>Temporal replays recorded activity results after a worker crash without calling the model
+again. Activities whose completion was <strong>not recorded</strong> can run again, including the window
+between a provider answering and Temporal acknowledging completion. There is no claim of
+exactly-once cloud inference. Unknown attempts remain charged; idempotent tools prevent
+duplicate publications. Version workflow code using Temporal's deployment/patching rules
+before changing the command sequence of running workflows.</p>
+<p>Temporal history contains workflow inputs and activity results. Gateway DLP protects the
+provider/tool boundary and receipts, not already-written Temporal inputs. Restrict history
+access and retention; use Temporal payload encryption for sensitive history. Keep API keys
+in worker/gateway environments. Production Temporal and its UI require authentication,
+authorization, and TLS. The gateway verifies approval identities; direct Temporal clients
+can bypass that check and must be restricted to operators and workers. Use separate Temporal
+namespaces/deployments for stronger trust boundaries, and restrict signals and updates.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Next action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Run stays queued</td>
+<td>Check worker logs, task queue, namespace, and <code>TEMPORAL_ADDRESS</code></td>
+</tr>
+<tr>
+<td><code>workflow_store_required</code></td>
+<td>Set <code>SANDBOX_BUDGET_BACKEND=redis</code>, configure its URL, and enable persistence</td>
+</tr>
+<tr>
+<td><code>workflow_price_missing</code></td>
+<td>Add input/output prices to that model and every fallback</td>
+</tr>
+<tr>
+<td><code>workflow_*_budget_exceeded</code></td>
+<td>Inspect the run's usage; start a new reviewed run with an appropriate budget</td>
+</tr>
+<tr>
+<td><code>tool_not_allowed</code></td>
+<td>Inspect <code>GET /v1/tools</code> and the bound team's sandbox policy</td>
+</tr>
+<tr>
+<td><code>workflow_not_allowed</code> / <code>workflow_model_denied</code></td>
+<td>Inspect <code>GET /v1/workflow-policies</code>; use the registered workflow type and an allowed canonical model/provider</td>
+</tr>
+<tr>
+<td><code>workflow_egress_denied</code></td>
+<td>Add the reviewed tool server origin to that workflow's <code>allowedEgress</code></td>
+</tr>
+<tr>
+<td><code>mcp_protocol_unsupported</code></td>
+<td>Use Streamable HTTP with MCP 2025-03-26 tool support</td>
+</tr>
+<tr>
+<td><code>workspace_busy</code> / <code>agent_failed</code></td>
+<td>Wait for the previous step to finish, or inspect the workspace before explicitly starting another run</td>
+</tr>
+<tr>
+<td>Approval cannot be submitted</td>
+<td>Wait for <code>awaiting_approval</code>; use an approver/admin key and the exact run ID</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../scope-and-non-goals/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Scope and non-goals">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Scope and non-goals
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../client-examples/" class="md-footer__link md-footer__link--next" aria-label="Next: Call the API">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Call the API
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Maintained by fluentorbit as project steward. Licensed under Apache-2.0.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.footer", "content.code.copy", "content.tabs.link", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
