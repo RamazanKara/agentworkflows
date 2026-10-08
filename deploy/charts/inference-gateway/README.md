@@ -120,6 +120,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `concurrency.maxConcurrentRequests` | `0` |
 | `cost.currency` | `USD` |
 | `cost.usdPer1kTokens` | `0` |
+| `deployment.create` | `true` |
 | `guardrails.blockedContentTerms` | `[]` |
 | `guardrails.outputGuardrail.enabled` | `false` |
 | `guardrails.outputGuardrail.mode` | `redact` |

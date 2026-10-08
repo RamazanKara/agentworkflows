@@ -1,34 +1,107 @@
-# Umbrella toggles. Each key matches a subchart name; set enabled to include it in the release.
-# Ollama + budget Redis + gateway + RAG form the default CPU-only local stack. vLLM (GPU) and the
-# Qdrant vector store are opt-in. Per-component values are set under the subchart's own key, e.g.
-#   inference-gateway:
-#     replicaCount: 2
-# See each subchart's values.yaml for the full option set. Run `helm dependency update` first.
-#
-# The defaults below make the single-command dev/demo bring-up actually work on a bare
-# single-namespace cluster:
-#   - namespace.create is off everywhere (install with `helm install --create-namespace`);
-#     the per-chart defaults would otherwise render one duplicate Namespace per subchart.
-#   - fullnameOverride pins the Service names so the components find each other in the
-#     release namespace (the gateway URLs below match them).
-#   - CRD-dependent extras (ServiceMonitors, KEDA ScaledObjects) are off so the render
-#     applies without prometheus-operator or KEDA installed.
-#   - The per-chart NetworkPolicies are off: their namespace-scoped rules describe the
-#     GitOps multi-namespace layout, not a single-namespace release.
-# The GitOps path (deploy/clusters/*) keeps the multi-namespace layout and all controls;
-# coding-agent workspaces are tenant-scoped (deploy/charts/agent-workspace) and are not
-# part of this stack-level install.
+# Single-namespace cloud install; deploy/clusters/* retains its separate GitOps defaults.
+# Supply provider Secrets in the release namespace, each with an api-key entry.
+providers:
+  openai:
+    existingSecret: ""
+  anthropic:
+    existingSecret: ""
+
+# Missing bootstrap Secrets are generated; lookup preserves them on helm upgrade.
+bootstrapAdmin:
+  existingSecret: agentworkflows-admin
+
+workflows:
+  enabled: true
+  temporal:
+    web:
+      enabled: false
+  postgres:
+    existingSecret: temporal-postgres-auth
+  worker:
+    team: default
+    gatewayUrl: http://inference-gateway:8080
+    existingSecret: workflow-gateway-key
 
 inference-gateway:
   enabled: true
   fullnameOverride: inference-gateway
+  deployment:
+    create: false
+  workflows:
+    temporalAddress: temporal-frontend:7233
   adminConsole:
     enabled: true
+    cookieSecure: false
   namespace:
     create: false
   runtime:
+    modelId: research
+    allowedModels: [research, anthropic]
     ollamaBaseUrl: http://ollama:11434
     vllmBaseUrl: http://vllm:8000
+  routing:
+    policy:
+      enabled: true
+      models:
+        - id: research
+          aliases: [demo-openai]
+          backend: openai
+          connection:
+            baseUrl: https://api.openai.com/v1
+            model: gpt-4.1-mini
+            credentialEnv: OPENAI_API_KEY
+          pricing:
+            inputUsdPer1kTokens: 0.0004
+            outputUsdPer1kTokens: 0.0016
+        - id: anthropic
+          backend: anthropic
+          connection:
+            baseUrl: https://api.anthropic.com/v1
+            model: claude-haiku-4-5-20251001
+            credentialEnv: ANTHROPIC_API_KEY
+          pricing:
+            inputUsdPer1kTokens: 0.001
+            outputUsdPer1kTokens: 0.005
+  sandboxPolicy:
+    policy:
+      enabled: true
+      policies:
+        - sandboxId: default
+          projects: [default]
+          providerCredentials:
+            openai: OPENAI_API_KEY
+            anthropic: ANTHROPIC_API_KEY
+          budgets:
+            estimatedTokenLimit: 200000
+            costLimitUsd: 50
+          tools:
+            research:
+              url: http://research-tools:8000/research
+              costUsd: 0
+            publish:
+              url: http://research-tools:8000/publish
+              costUsd: 0
+          workflows:
+            ResearchWorkflow:
+              allowedProviders: [openai, anthropic]
+              allowedModels: [research, anthropic]
+              allowedTools: [research, publish]
+              allowedEgress: [http://research-tools:8000, https://api.openai.com, https://api.anthropic.com]
+              tokenLimit: 10000
+              costLimitUsd: 5
+  auth:
+    enabled: true
+    keyRecords:
+      existingSecret:
+        name: agentworkflows-key-records
+        key: key-records.json
+  receipts:
+    enabled: true
+  traceability:
+    defaultSandboxId: default
+    auditChainStore:
+      backend: redis
+      redisUrl: redis://budget-redis:6379/0
   budget:
     backend: redis
     redisUrl: redis://budget-redis:6379/0
@@ -42,7 +115,7 @@ inference-gateway:
     enabled: false
 
 rag-service:
-  enabled: true
+  enabled: false
   fullnameOverride: rag-service
   namespace:
     create: false
@@ -52,7 +125,7 @@ rag-service:
     enabled: false
 
 ollama:
-  enabled: true
+  enabled: false
   fullnameOverride: ollama
   namespace:
     create: false

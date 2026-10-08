@@ -92,7 +92,8 @@ require fresh evidence for AgentWorkflows. See [evidence and validation](docs/pr
 ## Deploy and operate
 
 Start with the [five-minute quickstart](docs/quickstart.md). For Kubernetes, use the
-[customer deployment guide](deploy/clusters/customer/README.md) and review identity,
+[one-namespace Helm install](docs/install-kubernetes.md) or the
+[GitOps customer deployment guide](deploy/clusters/customer/README.md) and review identity,
 secrets, ingress, storage, observability, and backups before production use. The umbrella
 chart is `deploy/charts/agentworkflows`; release CI is configured to publish it at
 `oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows`.

@@ -20,7 +20,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
     python3 -m venv .venv
     source .venv/bin/activate
     python -m pip install ./sdk/python
-    docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker temporal-ui
+    docker compose -f deploy/compose/compose.yaml up -d --wait --no-build workflow-worker temporal-ui
     export AGENTWORKFLOWS_API_KEY=local-development-only
     ```
 
@@ -32,7 +32,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
     python -m venv .venv
     $env:Path = "$PWD\.venv\Scripts;$env:Path"
     python -m pip install ./sdk/python
-    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker temporal-ui
+    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait --no-build workflow-worker temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'local-development-only'
     ```
 

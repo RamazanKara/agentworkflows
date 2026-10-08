@@ -4,6 +4,12 @@
   "type": "object",
   "properties": {
     "replicaCount": { "type": "integer", "minimum": 1 },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" }
+      }
+    },
     "service": {
       "type": "object",
       "properties": {

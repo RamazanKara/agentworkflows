@@ -2,6 +2,11 @@
 
 ## v0.5.0 - unreleased
 
+- Make the umbrella Helm chart cloud-first: include Temporal/PostgreSQL and the worker,
+  generate persistent bootstrap credentials, and ship a default team, cloud routes and
+  Research example tools. Add the Kubernetes install guide; keep GitOps defaults unchanged.
+- Keep the gateway console ready for provider setup when cloud keys are missing, while
+  inference still fails closed; show Helm Secret setup hints in Providers & budgets.
 - Capture opt-in redacted/full model and tool step input/output separately from receipts,
   with per-field size limits, Redis TTLs, and expandable console details.
 - Declare workflow input schemas in both SDKs and policy, generate console forms, validate

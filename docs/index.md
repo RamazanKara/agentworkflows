@@ -63,7 +63,7 @@ its backups, upgrades and monitoring yourself. See the [side-by-side decision gu
 | Add retrieval or hardened workspaces | [RAG](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/rag-service.md), [agent-sandbox](agent-sandbox-integration.md) |
 | Add self-hosted models | [Model selection](model-selection.md) |
 | Review current support and planned work | [Feature inventory](feature-inventory.md), [scope](scope-and-non-goals.md), [roadmap](https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md) |
-| Deploy and operate | [Production readiness](production-readiness.md), [runbooks](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/README.md) |
+| Deploy and operate | [Install on Kubernetes](install-kubernetes.md), [production readiness](production-readiness.md), [runbooks](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/README.md) |
 | Contribute | [Developer workflow](development.md), [repository map](repository-map.md) |
 
 ## Understand the receipts

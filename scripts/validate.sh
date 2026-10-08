@@ -42,8 +42,9 @@ log "running Python lint, format, and type checks"
 
 log "linting and rendering local Helm charts"
 helm dependency update deploy/charts/workflows
+helm dependency update deploy/charts/agentworkflows
 rendered_manifests=()
-for chart in deploy/charts/agent-workspace deploy/charts/budget-redis deploy/charts/inference-gateway deploy/charts/ollama deploy/charts/qdrant-vector-store deploy/charts/rag-service deploy/charts/vllm deploy/charts/workflows; do
+for chart in deploy/charts/agentworkflows deploy/charts/agent-workspace deploy/charts/budget-redis deploy/charts/inference-gateway deploy/charts/ollama deploy/charts/qdrant-vector-store deploy/charts/rag-service deploy/charts/vllm deploy/charts/workflows; do
   helm lint "$chart"
   rendered="/tmp/$(basename "$chart")-rendered.yaml"
   helm template "validate-$(basename "$chart")" "$chart" >"$rendered"
@@ -67,9 +68,19 @@ for chart in deploy/charts/agent-workspace deploy/charts/budget-redis deploy/cha
   done
 done
 
+for scenario in providers.openai.existingSecret=openai-api-key workflows.enabled=false; do
+  rendered="/tmp/agentworkflows-${scenario%%=*}-rendered.yaml"
+  helm template aw deploy/charts/agentworkflows --namespace aw --set "$scenario" >"$rendered"
+  rendered_manifests+=("$rendered")
+done
+
 log "checking YAML syntax with Python"
 src/inference-gateway/.venv/bin/python - <<'PY'
+import base64
+import hashlib
+import json
 from pathlib import Path
+
 import yaml
 
 errors = []
@@ -88,6 +99,39 @@ for path in list(Path(".").rglob("*.yaml")) + list(Path(".").rglob("*.yml")):
         errors.append(f"{path}: {exc}")
 if errors:
     raise SystemExit("\n".join(errors))
+
+for scenario in ("agentworkflows", "agentworkflows-providers.openai.existingSecret", "agentworkflows-workflows.enabled"):
+    resources = {
+        (doc["kind"], doc["metadata"]["name"]): doc
+        for doc in yaml.safe_load_all(Path(f"/tmp/{scenario}-rendered.yaml").read_text())
+        if doc
+    }
+    gateway = resources[("Deployment", "inference-gateway")]
+    env = {item["name"]: item for item in gateway["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert not any(kind in {"Namespace", "ServiceMonitor", "ScaledObject"} for kind, _ in resources)
+    for component in ("ollama", "vllm", "rag-service", "qdrant-vector-store"):
+        assert ("Service", component) not in resources
+    workflows = scenario != "agentworkflows-workflows.enabled"
+    assert (("Deployment", "workflow-worker") in resources) == workflows
+    assert (("StatefulSet", "temporal-postgres") in resources) == workflows
+    assert ("TEMPORAL_ADDRESS" in env) == workflows
+    if workflows:
+        assert env["TEMPORAL_ADDRESS"]["value"] == "temporal-frontend:7233"
+    if "providers.openai" in scenario:
+        assert env["OPENAI_API_KEY"]["valueFrom"]["secretKeyRef"] == {"name": "openai-api-key", "key": "api-key"}
+    else:
+        assert "OPENAI_API_KEY" not in env
+    records = json.loads(resources[("Secret", "agentworkflows-key-records")]["stringData"]["key-records.json"])["records"]
+    assert len(records) == (2 if workflows else 1)
+    for record, name in zip(records, ("agentworkflows-admin", "workflow-gateway-key")[:len(records)], strict=True):
+        key = base64.b64decode(resources[("Secret", name)]["data"]["api-key"])
+        assert record["sha256"] == hashlib.sha256(key).hexdigest()
+        assert record["sandbox"] == "default"
+    assert records[0]["role"] == "admin"
+    if workflows:
+        assert records[1]["role"] == "builder" and "workflows:execute" in records[1]["scopes"]
+        assert records[0]["sha256"] != records[1]["sha256"]
+print("umbrella chart wiring ok (3 renders)")
 print("yaml ok")
 PY
 

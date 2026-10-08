@@ -1,11 +1,19 @@
-AgentWorkflows installed via the umbrella chart.
+AgentWorkflows is installed in namespace {{ .Release.Namespace }}.
+{{ if index .Values "inference-gateway" "enabled" }}
+Read your bootstrap admin key (keep it private):
+  kubectl get secret {{ .Values.bootstrapAdmin.existingSecret }} -n {{ .Release.Namespace }} -o jsonpath='{.data.api-key}' | base64 -d; echo
 
-Enabled components (set <name>.enabled=false to omit):
-{{- range $name, $cfg := .Values }}
-{{- if kindIs "map" $cfg }}
-  - {{ $name }}: {{ if $cfg.enabled }}enabled{{ else }}disabled{{ end }}
-{{- end }}
-{{- end }}
+Open the console:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/inference-gateway 8080:8080
+  http://127.0.0.1:8080/console/
 
-Run `helm dependency update deploy/charts/agentworkflows` before install to vendor the subcharts.
-GitOps (Argo CD) remains the recommended path for production multi-namespace installs.
+Sign in with the admin key. Providers & budgets shows missing provider credentials.
+Create a provider Secret with an api-key entry, then upgrade with
+  --set providers.openai.existingSecret=openai-api-key
+or
+  --set providers.anthropic.existingSecret=anthropic-api-key
+See docs/install-kubernetes.md for commands and HTTPS/OIDC setup.
+{{ end }}
+The Research example uses synthetic research/publication tools and real cloud model calls.
+Existing generated credentials are preserved by lookup on upgrades; save them with database backups.
+GitOps (deploy/clusters/*) keeps its separate multi-namespace configuration.

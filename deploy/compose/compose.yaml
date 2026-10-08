@@ -118,7 +118,6 @@ services:
 
   cloud-fake:
     image: *gateway-image
-    pull_policy: never
     command: ["python", "/fixtures/cloud-fake.py"]
     volumes:
       - ./cloud-fake.py:/fixtures/cloud-fake.py:ro
@@ -128,7 +127,6 @@ services:
 
   notification-fake:
     image: *gateway-image
-    pull_policy: never
     command: ["python", "/fixtures/notification-fake.py"]
     volumes:
       - ./notification-fake.py:/fixtures/notification-fake.py:ro
