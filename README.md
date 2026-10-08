@@ -61,7 +61,8 @@ that a Compose trial establishes production readiness.
 
 | Capability | How to use it |
 | --- | --- |
-| Team web console | [Console walkthrough](docs/workflows.md#web-console); sign in, switch identities, filter runs, approve work, and inspect receipts and costs |
+| Team web console | [Console walkthrough](docs/workflows.md#web-console); start runs from forms, approve drafts, read each step's prompt and answer, and inspect receipts and costs |
+| Company sign-in, members and API keys | [Company sign-in (OIDC)](docs/workflows.md#company-sign-in-oidc) with Okta, Entra or another OIDC provider; [members and keys](docs/workflows.md#members-and-api-keys) created, expired and revoked in the console or CLI |
 | Governed cloud providers and ordered fallback | [Provider configuration](docs/client-examples.md); provider credentials stay on the server |
 | Durable agent workflows and human approvals | [Temporal workflow SDK and walkthrough](docs/workflows.md); retry, pause, and resume with per-run token/cost budgets |
 | Automatic starts and team notifications | [Triggers and notifications](docs/workflows.md#triggers-and-notifications): Temporal schedules, signed webhooks, console/CLI pause controls, and Slack/webhook/SMTP alerts |
