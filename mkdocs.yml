@@ -102,34 +102,35 @@ nav:
       - FAQ: faq.md
       - Architecture: architecture.md
       - Security overview: security-overview.md
-      - Threat model: threat-model.md
-      - Agent-sandbox integration: agent-sandbox-integration.md
-      - OWASP LLM Top 10 mapping: owasp-llm-top-10-mapping.md
-      - AI governance crosswalk: ai-governance-crosswalk.md
       - Scope and non-goals: scope-and-non-goals.md
-      - Architecture decisions: adr/README.md
   - Guides:
       - Durable workflows and teams: workflows.md
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md
-      - Local lab and operations: getting-started.md
-      - Customer cluster handoff: customer-handoff-example.md
-      - Restricted-egress tenant: regulated-offline-tenant-example.md
-      - GPU coding-agent tenant: gpu-coding-agent-tenant-example.md
+      - Production readiness: production-readiness.md
       - Developer workflow: development.md
-      - Runbooks: runbooks/README.md
   - Reference:
       - CLI and Python SDK: sdk-reference.md
       - Feature inventory: feature-inventory.md
-      - Repository map: repository-map.md
-      - Model selection: model-selection.md
-      - Production readiness: production-readiness.md
-      - Evidence and strict validation: proof.md
-      - Benchmarks and evals: benchmarks-and-evals.md
-      - Capacity and sizing: capacity-sizing.md
       - Cost model: cost-model.md
-      - Version matrix: version-matrix.md
-      - Release verification: release-verification.md
       - Distribution: distribution.md
+      - Release verification: release-verification.md
+      - Version matrix: version-matrix.md
       - Glossary: glossary.md
+  - Advanced operations:
+      - Runbooks: runbooks/README.md
+      - Local lab (kind): getting-started.md
+      - Customer cluster handoff: customer-handoff-example.md
+      - Restricted-egress tenant: regulated-offline-tenant-example.md
+      - GPU coding-agent tenant: gpu-coding-agent-tenant-example.md
+      - Agent-sandbox integration: agent-sandbox-integration.md
+      - Self-hosted model selection: model-selection.md
+      - Capacity and sizing: capacity-sizing.md
+      - Benchmarks and evals: benchmarks-and-evals.md
+      - Threat model: threat-model.md
+      - OWASP LLM Top 10 mapping: owasp-llm-top-10-mapping.md
+      - AI governance crosswalk: ai-governance-crosswalk.md
+      - Evidence and strict validation: proof.md
+      - Repository map: repository-map.md
+      - Architecture decisions: adr/README.md
       - Upstream references: references.md
