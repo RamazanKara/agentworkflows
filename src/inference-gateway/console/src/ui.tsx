@@ -44,8 +44,10 @@ export function Refresh({ onClick }: { onClick: () => void }) {
   return <button className="secondary refresh" onClick={onClick} aria-label="Refresh"><Icon name="refresh"/><span>Refresh</span></button>;
 }
 // A single-line value (webhook URL, new secret) that scrolls instead of wrapping, with a copy button.
+// URLs wrap only after a slash, so a path never breaks mid-word.
 export function CopyField({ value, label: name, onCopied }: { value: string; label: string; onCopied?: (ok: boolean) => void }) {
-  return <div className="copy-field"><code aria-label={name}>{value}</code><button type="button" className="secondary" onClick={async () => {
+  const parts = value.split(/(?<=\/)/);
+  return <div className="copy-field"><code aria-label={name}>{parts.map((part, i) => <span key={i}>{part}{i < parts.length - 1 && <wbr/>}</span>)}</code><button type="button" className="secondary" onClick={async () => {
     try { await navigator.clipboard.writeText(value); onCopied?.(true); } catch { onCopied?.(false); }
   }}><Icon name="copy"/>Copy</button></div>;
 }

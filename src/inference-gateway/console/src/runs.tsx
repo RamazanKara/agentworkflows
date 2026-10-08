@@ -39,10 +39,10 @@ export function Runs({ session }: { session: Session }) {
     <PageHeader title="Workflow runs" subtitle="Runs in your projects, newest first."><Refresh onClick={() => setRevision(v => v + 1)}/>{canBuild(session) && <a className="button" href="#new">Run workflow</a>}</PageHeader>
     <Metrics compact items={[
       ['Runs shown', number(rows.length)], ['Awaiting approval', number(rows.filter(r => status(r) === 'awaiting_approval').length)],
-      ['Spend (shown runs)', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
+      ['Cost of these runs', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
     ]}/>
     <button className="secondary filter-toggle" aria-expanded={filters} aria-controls="run-filters" onClick={() => setFilters(value => !value)}>
-      {filters ? 'Hide filters' : `Filters${[filter, workflow].filter(Boolean).length ? ` (${[filter, workflow].filter(Boolean).length})` : ''}`}</button>
+      {filters ? 'Hide filters' : ['Filters', project, filter && label(filter), workflow && workflowName(workflow)].filter(Boolean).join(' · ')}</button>
     <div id="run-filters" className={filters ? 'filters panel' : 'filters panel collapsed'}>
       <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
       <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
@@ -96,7 +96,7 @@ export function StartRun({ session }: { session: Session }) {
           <div className="field"><label htmlFor="run-project">Project</label><select id="run-project" value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></div>
         </div>
         {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema} models={policy.allowedModels} onMore={setMore}/> : <div className="field"><label htmlFor="run-input">Workflow input (JSON)</label><textarea id="run-input" required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></div>}
-        {policy && !more && <p className="muted ceiling">Each run can use up to {number(policy.tokenLimit)} tokens and {money(policy.costLimitUsd)}.</p>}
+        {policy && !more && <p className="muted ceiling">Each run can use up to <span className="nowrap">{number(policy.tokenLimit)} tokens</span> and <span className="nowrap">{money(policy.costLimitUsd)}.</span></p>}
         <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to workflow runs</a></div>
         {error && request.current && <p className="muted">Retry here with unchanged input to reuse request ID <code>{request.current.id}</code>.</p>}
       </form>}
@@ -164,7 +164,7 @@ function SchemaField({ name, property, required, models }: { name: string; prope
   </div>;
 }
 
-function Review({ session, run, onDone, title = 'Review the draft', meta }: { session: Session; run: Run; onDone: () => void; title?: string; meta?: ReactNode }) {
+function Review({ session, run, onDone, title = 'Review the draft', eyebrow, meta }: { session: Session; run: Run; onDone: () => void; title?: string; eyebrow?: string; meta?: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -176,7 +176,7 @@ function Review({ session, run, onDone, title = 'Review the draft', meta }: { se
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
   }
-  return <section className="review panel"><h2>{title}</h2>{meta}
+  return <section className="review panel">{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{meta}
     <pre className="draft">{run.progress?.draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}</pre>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
     {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">An approver or admin must review this draft. Use Switch account to sign in as one.</p>}
@@ -212,8 +212,8 @@ export function Approvals({ session }: { session: Session }) {
     {busy && <Loading/>}
     {!busy && !error && !rows.length && <Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a href="#runs">Explore workflow runs</a></Empty>}
     {rows.map(run => <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
-      title={[workflowName(run.workflow), firstLine(run.progress?.draft)].filter(Boolean).join(' · ')}
-      meta={<p className="muted review-meta">{run.project} · Started {date(run.created_at)} · {money(run.budget.cost_usd)} · <a href={`#run/${run.run_id}`}>Open run</a></p>}/>)}
+      eyebrow={workflowName(run.workflow)} title={firstLine(run.progress?.draft) || 'Review the draft'}
+      meta={<p className="muted review-meta"><span>Project {run.project}</span><span>Started <span className="nowrap">{date(run.created_at)}</span></span><span>{money(run.budget.cost_usd)} so far</span><a href={`#run/${run.run_id}`}>Open run</a></p>}/>)}
   </>;
 }
 
@@ -242,15 +242,14 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
   }
   const running = run?.status === 'running';
   return <><a className="back" href="#runs">Back to workflow runs</a><PageHeader title={run ? workflowName(run.workflow) : 'Run detail'}>
-      {!running && <Refresh onClick={() => setRevision(v => v + 1)}/>}
       {running && canBuild(session) && !confirmCancel && <button className="danger" onClick={() => setConfirmCancel(true)}>Cancel run</button>}
     </PageHeader>
     <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status" className="status">{notice || copied}</p>
     {!run && !result.error && <Loading/>}
     {run && <><div className="run-meta"><Badge value={status(run)}/><span>Project {run.project}</span><span>Started {date(run.created_at)}</span>
-        <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="icon" aria-label="Copy run ID" onClick={async () => {
+        <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="copy-id" aria-label="Copy run ID" onClick={async () => {
           try { await navigator.clipboard.writeText(run.run_id); setCopied('Run ID copied.'); } catch { setCopied(`Run ID: ${run.run_id}`); }
-        }}><Icon name="copy"/></button></span></div>
+        }}><Icon name="copy"/>Copy ID</button></span></div>
       {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" onClick={() => setConfirmCancel(false)}>Keep running</button></div></div>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
       <Metrics items={[[ 'Tokens', `${number(run.budget.tokens)} of ${number(run.budget.token_limit)}` ], ['Cost', `${money(run.budget.cost_usd)} of ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
@@ -276,7 +275,7 @@ const who = (principal: Record<string, unknown> | undefined) => String(principal
 function ApprovalStep({ step }: { step: Step }) {
   const approved = step.receipt.approved === true;
   return <article className="panel step"><div className="section-heading"><h3>Approval</h3><Badge value={approved ? 'succeeded' : 'failed'} text={approved ? 'Approved' : 'Rejected'}/></div>
-    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong> · {date(step.timestamp)}</p>
+    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong> · <span className="nowrap">{date(step.timestamp)}</span></p>
     <Receipt step={step}/>
   </article>;
 }
@@ -311,7 +310,8 @@ function StepCard({ step }: { step: Step }) {
   const answer = step.content?.output ? preview(step.content.output) : '';
   return <article className="panel step"><div className="section-heading"><h3>{stepTitle(step)}</h3>{step.status_code && step.status_code >= 400 ? <Badge value="failed"/> : <Badge value="succeeded"/>}</div>
     <p className="muted">{date(step.timestamp)} · {number(step.duration_ms)} ms</p>
-    {(step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider ? providerName(step.provider) : '—'}</dd></div><div><dt>{tool ? 'Tool' : 'Model'}</dt><dd>{(tool ? step.tool : step.model) || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
+    {tool ? <dl className="step-facts"><div><dt>Tool</dt><dd>{step.tool || '—'}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>
+      : (step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider ? providerName(step.provider) : '—'}</dd></div><div><dt>Model</dt><dd>{step.model || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
     {failed.length > 0 && <p className="callout">{failed.map(a => providerName(a.provider || '')).join(', ')} failed, so {providerName(step.provider)} served this step.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${providerName(failed[0].provider || '')} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
     {answer && !open && <blockquote className="step-preview">{answer}</blockquote>}
     <details onToggle={e => setOpen(e.currentTarget.open)}><summary>{tool ? 'Arguments and result' : 'Prompt and response'}</summary>
@@ -361,7 +361,7 @@ function Notifications({ steps }: { steps: Step[] }) {
       <strong>{channelName[String(step.receipt.channel)] || String(step.receipt.channel || 'Channel')}</strong>
       <span>{notificationEvent[String(step.receipt.notification_event)] || label(String(step.receipt.notification_event || 'event'))}</span>
       <span className="muted">{label(String(step.receipt.outcome || 'recorded'))}</span></li>)}</ul>
-    <details><summary>{steps.length} receipts</summary>{steps.map(step => <Receipt key={step.receipt_id} step={step}/>)}</details>
+    <details><summary>{steps.length === 1 ? '1 receipt' : `${steps.length} receipts`}</summary>{steps.map(step => <Receipt key={step.receipt_id} step={step}/>)}</details>
   </article>;
 }
 
