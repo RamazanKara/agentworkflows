@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, date, label, money, number, shortId, status, useData, workflowName, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { api, date, label, money, number, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
 import { Badge, Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
@@ -87,10 +87,12 @@ export function StartRun({ session }: { session: Session }) {
         } catch (error) { setError((error as Error).message); }
         finally { setBusy(false); }
       }}>
-        <label>Workflow<select value={selected} onChange={e => { setWorkflow(e.target.value); setInput('{}'); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></label>
-        <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
-        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema}/> : <label>Workflow input (JSON)<textarea required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></label>}
-        {policy && <p className="muted">Policy ceiling: {number(policy.tokenLimit)} tokens · {money(policy.costLimitUsd)} per run. The workflow can use a lower limit.</p>}
+        <div className="field-row">
+          <div className="field"><label htmlFor="run-workflow">Workflow</label><select id="run-workflow" value={selected} onChange={e => { setWorkflow(e.target.value); setInput('{}'); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></div>
+          <div className="field"><label htmlFor="run-project">Project</label><select id="run-project" value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></div>
+        </div>
+        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema} models={policy.allowedModels}/> : <div className="field"><label htmlFor="run-input">Workflow input (JSON)</label><textarea id="run-input" required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></div>}
+        {policy && <p className="muted ceiling">Each run can use up to {number(policy.tokenLimit)} tokens and {money(policy.costLimitUsd)}.</p>}
         <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to runs</a></div>
         {error && request.current && <p className="muted">Retry here with unchanged input to reuse request ID <code>{request.current.id}</code>.</p>}
       </form>}
@@ -113,26 +115,48 @@ function schemaInput(schema: InputSchema, form: FormData): Record<string, unknow
   return input;
 }
 
-function SchemaFields({ schema }: { schema: InputSchema }) {
-  return <>{schema.description && <p>{schema.description}</p>}{Object.entries(schema.properties).map(([name, property]) => {
-    const required = schema.required?.includes(name);
-    const common = { name: `input.${name}`, required, 'aria-describedby': property.description ? `description-${name}` : undefined };
-    const value = property.default;
-    const example = property.examples?.[0];
-    const text = (v: unknown) => Array.isArray(v) ? v.join('\n') : v === undefined ? '' : String(v);
-    const multiline = [value, ...(property.examples || [])].some(v => typeof v === 'string' && (v.length > 80 || v.includes('\n')));
-    return <div key={name}>
-      <label>{label(name)}
-        {property.enum ? <select {...common} defaultValue={value === undefined ? '' : String(property.enum.findIndex(v => JSON.stringify(v) === JSON.stringify(value)))}>
-          <option value="">Choose a value</option>{property.enum.map((v, i) => <option key={i} value={i}>{text(v)}</option>)}
-        </select> : property.type === 'boolean' ? <input name={common.name} aria-describedby={common['aria-describedby']} type="checkbox" defaultChecked={value === true}/>
-          : property.type === 'array' || multiline ? <textarea {...common} minLength={property.minLength} defaultValue={text(value)} placeholder={text(example)} rows={4}/>
-          : <input {...common} type={['number', 'integer'].includes(property.type) ? 'number' : 'text'} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} minLength={property.minLength} pattern={property.pattern} defaultValue={text(value)} placeholder={text(example)}/>}
-      </label>
-      {property.description && <p className="muted" id={`description-${name}`}>{property.description}</p>}
-      {property.type === 'array' && <p className="muted">One item per line.</p>}
-    </div>;
-  })}</>;
+// Field names become labels: cost_limit_usd → "Cost limit USD", incident_id → "Incident ID".
+const fieldLabel = (name: string, property: InputProperty) => property.title || name.split('_')
+  .map((word, i) => /^(id|usd|url|api|qa|pr)$/i.test(word) ? word.toUpperCase() : i ? word : word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+const fieldText = (value: unknown) => Array.isArray(value) ? value.join('\n') : value === undefined ? '' : String(value);
+
+function SchemaFields({ schema, models }: { schema: InputSchema; models: string[] }) {
+  const entries = Object.entries(schema.properties);
+  const primary = entries.filter(([name]) => schema.required?.includes(name));
+  const more = primary.length ? entries.filter(([name]) => !schema.required?.includes(name)) : [];
+  const field = ([name, property]: [string, InputProperty]) => <SchemaField key={name} name={name} property={property} required={Boolean(schema.required?.includes(name))} models={models}/>;
+  return <>{schema.description && <p className="muted">{schema.description}</p>}
+    {(primary.length ? primary : entries).map(field)}
+    {more.length > 0 && <details className="more-options"><summary>More options</summary><div>{more.map(field)}</div></details>}
+  </>;
+}
+
+function SchemaField({ name, property, required, models }: { name: string; property: InputProperty; required: boolean; models: string[] }) {
+  const id = `field-${name}`;
+  const value = property.default;
+  const example = property.examples?.[0];
+  const help = [property.description && `${id}-help`, property.type === 'array' && `${id}-lines`].filter(Boolean).join(' ') || undefined;
+  const common = { id, name: `input.${name}`, required, 'aria-describedby': help };
+  const multiline = [value, ...(property.examples || [])].some(v => typeof v === 'string' && (v.length > 80 || v.includes('\n')));
+  const modelChoice = name === 'model' && property.type === 'string' && !property.enum && models.length > 0;
+  const control = property.type === 'boolean'
+    ? <label className="check"><input name={common.name} aria-describedby={help} type="checkbox" defaultChecked={value === true}/>{fieldLabel(name, property)}</label>
+    : property.enum ? <select {...common} defaultValue={value === undefined ? '' : String(property.enum.findIndex(v => JSON.stringify(v) === JSON.stringify(value)))}>
+      <option value="">Choose…</option>{property.enum.map((v, i) => <option key={i} value={i}>{fieldText(v)}</option>)}
+    </select>
+    : modelChoice ? <select {...common} defaultValue={models.includes(String(value)) ? String(value) : models[0]}>{models.map(model => <option key={model}>{model}</option>)}</select>
+    : property.type === 'array' || multiline ? <textarea {...common} minLength={property.minLength} defaultValue={fieldText(value)} placeholder={fieldText(example)} rows={multiline ? 6 : 4} spellCheck={!multiline}/>
+    : <input {...common} type={['number', 'integer'].includes(property.type) ? 'number' : 'text'} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} minLength={property.minLength} pattern={property.pattern} defaultValue={fieldText(value)} placeholder={fieldText(example)}/>;
+  return <div className="field">
+    {property.type !== 'boolean' && <label htmlFor={id}>{fieldLabel(name, property)}</label>}
+    {control}
+    {property.description && <small id={`${id}-help`}>{property.description}</small>}
+    {property.type === 'array' && <small id={`${id}-lines`}>One item per line.</small>}
+    {example !== undefined && value === undefined && property.type !== 'boolean' && !property.enum && <button type="button" className="link" onClick={() => {
+      const element = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (element) { element.value = fieldText(example); element.focus(); }
+    }}>Use the example</button>}
+  </div>;
 }
 
 function Review({ session, run, onDone }: { session: Session; run: Run; onDone: () => void }) {
@@ -261,18 +285,37 @@ function StepCard({ step }: { step: Step }) {
     <p className="muted">{date(step.timestamp)} · {number(step.duration_ms)} ms</p>
     {(step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider || '—'}</dd></div><div><dt>Model / tool</dt><dd>{step.tool || step.model || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
     {failed.length > 0 && <p className="callout">{failed.map(a => a.provider).join(', ')} failed, so {step.provider} served this step.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${failed[0].provider} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
-    <details><summary>Input and output</summary>
+    {step.content?.output && preview(step.content.output) && <blockquote className="step-preview">{preview(step.content.output)}</blockquote>}
+    <details><summary>{step.tool || step.action === 'tool_call' ? 'Arguments and result' : 'Prompt and response'}</summary>
       {step.content ? <>
         <p className="muted">{step.content.redaction === 'redacted' ? 'Gateway redaction applied.' : 'Full capture after gateway admission and output checks.'}</p>
-        <h4>Input</h4><pre className="step-content">{step.content.input ?? 'No input recorded.'}</pre>
+        <h4>{step.tool || step.action === 'tool_call' ? 'Arguments' : 'Prompt'}</h4><Content text={step.content.input} empty="No input recorded."/>
         {step.content.truncated.input && <p className="muted">Input truncated at the capture size limit.</p>}
-        <h4>Output</h4><pre className="step-content">{step.content.output ?? 'No output recorded.'}</pre>
+        <h4>{step.tool || step.action === 'tool_call' ? 'Result' : 'Response'}</h4><Content text={step.content.output} empty="No output recorded."/>
         {step.content.truncated.output && <p className="muted">Output truncated at the capture size limit.</p>}
       </> : <p className="muted">{step.content_reason === 'expired' ? 'Captured content expired.' : 'Content capture is off for this step.'}</p>}
     </details>
     <Receipt step={step}/>
     <details><summary>Step logs</summary><p>Gateway event and routing attempts. Worker output stays in the operator’s logs.</p><pre>{JSON.stringify({ timestamp: step.timestamp, action: step.action, status_code: step.status_code, duration_ms: step.duration_ms, attempts: step.attempts, reason: step.receipt?.reason }, null, 2)}</pre></details>
   </article>;
+}
+
+const parsed = (text: string): unknown => { try { return JSON.parse(text); } catch { return undefined; } };
+const messageText = (content: unknown) => typeof content === 'string' ? content
+  : Array.isArray(content) ? content.map(part => (part as { text?: string }).text ?? JSON.stringify(part)).join('\n') : JSON.stringify(content, null, 2);
+// Previews show prose answers; structured tool results stay in the expandable section.
+const preview = (text: string) => { const value = parsed(text); const plain = typeof value === 'string' ? value : value === undefined ? text : ''; return plain.length > 280 ? plain.slice(0, 280).trimEnd() + '…' : plain; };
+
+// Model prompts arrive as message arrays; show them as a short transcript instead of raw JSON.
+function Content({ text, empty }: { text: string | null; empty: string }) {
+  if (text == null) return <pre className="step-content">{empty}</pre>;
+  const value = parsed(text);
+  if (Array.isArray(value) && value.length && value.every(m => m && typeof m === 'object' && 'role' in m)) {
+    return <ol className="transcript">{(value as { role: string; content: unknown }[]).map((message, i) => <li key={i}>
+      <span className={`speaker ${message.role}`}>{label(String(message.role))}</span><pre className="step-content">{messageText(message.content)}</pre>
+    </li>)}</ol>;
+  }
+  return <pre className="step-content">{typeof value === 'string' ? value : value !== null && typeof value === 'object' ? JSON.stringify(value, null, 2) : text}</pre>;
 }
 
 const channelName: Record<string, string> = { slack: 'Slack', webhook: 'Webhook', email: 'Email' };

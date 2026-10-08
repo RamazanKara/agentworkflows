@@ -39,6 +39,8 @@ test('schema forms render all supported field types and submit typed values', as
   await page.getByRole('button', { name: 'Start run' }).click();
   expect(submissions).toHaveLength(0);
   await page.getByLabel('Title', { exact: true }).fill('Form test');
+  await expect(page.getByLabel('Price', { exact: true })).toBeHidden();
+  await page.getByText('More options', { exact: true }).click();
   await expect(page.getByLabel('Body', { exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');
   await page.getByLabel('Body', { exact: true }).fill('<script>untrusted</script>\nSecond line');
   await page.getByLabel('Count', { exact: true }).fill('3');
@@ -84,7 +86,7 @@ for (const mode of ['redacted', 'full', 'capture_off', 'expired']) {
     } }));
     await login(page, 'viewer');
     await page.goto(`/console/#run/${id}`);
-    await page.getByText('Input and output', { exact: true }).click();
+    await page.getByText('Prompt and response', { exact: true }).click();
     if (content) {
       await expect(page.locator('.step-content').first()).toHaveText(content.input);
       await expect(page.locator('.step-content').last()).toHaveText(content.output);
@@ -149,6 +151,21 @@ test.beforeEach(async ({ page }) => {
     else return route.fulfill({ status: 404, json: {} });
     return route.fulfill({ json: body });
   });
+});
+
+test('model prompts read as a transcript and the answer is previewed on the step', async ({ page }) => {
+  const original = run();
+  const messages = [{ role: 'system', content: 'You are a careful analyst.' }, { role: 'user', content: [{ type: 'text', text: 'Compare <b>two</b> vendors.' }] }];
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: {
+    ...original, timeline: [{ ...original.timeline[0], content: { input: JSON.stringify(messages), output: '"Vendor A wins on cost."', redaction: 'redacted', truncated: { input: false, output: false } } }],
+  } }));
+  await login(page, 'viewer');
+  await page.goto(`/console/#run/${id}`);
+  await expect(page.locator('.step-preview')).toHaveText('Vendor A wins on cost.');
+  await page.getByText('Prompt and response', { exact: true }).click();
+  await expect(page.locator('.transcript .speaker')).toHaveText(['System', 'User']);
+  await expect(page.locator('.transcript pre').last()).toHaveText('Compare <b>two</b> vendors.');
+  await expect(page.locator('.step-content').last()).toHaveText('Vendor A wins on cost.');
 });
 
 test('triggers show schedules and signed endpoints; pause and resume are accessible', async ({ page }) => {

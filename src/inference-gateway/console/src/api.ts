@@ -13,6 +13,7 @@ export type Session = { csrfToken: string; team: Team; id: number };
 export type BrowserSession = { csrf_token: string; principal: { key_id?: string }; sandbox_id: string };
 export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
 export type InputProperty = {
+  title?: string;
   type: 'string' | 'number' | 'integer' | 'boolean' | 'array';
   description?: string; default?: string | number | boolean | string[];
   examples?: (string | number | boolean | string[])[];
