@@ -22,13 +22,13 @@ const eventNames: Record<string, string> = {
 const eventName = (type: string) => eventNames[type] || label(type);
 // Plain words for the verifier's reason codes; the code itself stays visible for runbooks.
 const reasons: Record<string, string> = {
-  event_metadata_mismatch: 'the stored event does not match its metadata', record_hash_mismatch: 'the event no longer matches its hash',
-  record_prev_hash_not_genesis: 'the first event does not start the chain', view_hash_mismatch: 'the team record no longer matches its hash',
-  sequence_gap_or_reordered: 'an event is missing or out of order', broken_view_link: 'the link to the previous team event is broken',
-  broken_record_link: 'the link to the previous event is broken', view_prev_hash_not_genesis: 'the first team event does not start the chain',
-  malformed_event: 'an event could not be read',
+  event_metadata_mismatch: 'The stored event does not match its metadata', record_hash_mismatch: 'The event no longer matches its stored hash',
+  record_prev_hash_not_genesis: 'The first event does not start the chain', view_hash_mismatch: 'The team record no longer matches its stored hash',
+  sequence_gap_or_reordered: 'An event is missing or out of order', broken_view_link: 'The link to the previous team event is broken',
+  broken_record_link: 'The link to the previous event is broken', view_prev_hash_not_genesis: 'The first team event does not start the chain',
+  malformed_event: 'An event could not be read',
 };
-const reason = (code: string) => reasons[code] || label(code).toLowerCase();
+const reason = (code: string) => reasons[code] || label(code);
 // The actor filter matches the event's actor or the principal's subject or key ID; a managed key also carries its name.
 const actor = (event: AuditEvent) => {
   const id = event.actor || event.principal?.sub || event.principal?.key_id;
@@ -58,11 +58,13 @@ const details = (event: AuditEvent): ReactNode => {
 };
 const fields = [['from', 'From', 'datetime-local', ''], ['to', 'To', 'datetime-local', ''], ['event_type', 'Event type', 'text', ''],
   ['actor', 'Actor', 'text', 'Key ID, worker or user ID'], ['project', 'Project', 'text', 'Any project'], ['run_id', 'Run ID', 'text', 'Full run ID']] as const;
-function Json({ id, value }: { id: string; value: unknown }) {
-  const lines = JSON.stringify(value, null, 2).split('\n');
-  return <pre className="json event-json" id={id}>{lines.map((line, index) => {
-    const indent = line.length - line.trimStart().length + 2;
-    return <span key={index} style={{ paddingLeft: `${indent}ch`, textIndent: `-${indent}ch` }}>{line}{index < lines.length - 1 && '\n'}</span>;
+// Wrapped lines hang two steps in, under their own text rather than beside a child key, and prefer breaking after _ . - : /.
+function Lines({ id, text }: { id?: string; text: string }) {
+  const lines = text.split('\n');
+  return <pre className="json hanging" id={id}>{lines.map((line, index) => {
+    const indent = line.length - line.trimStart().length + 4;
+    return <span key={index} style={{ paddingLeft: `${indent}ch`, textIndent: `-${indent}ch` }}>
+      {line.split(/(?<=[_.\-:/])/).map((part, at) => <Fragment key={at}>{at > 0 && <wbr/>}{part}</Fragment>)}{index < lines.length - 1 && '\n'}</span>;
   })}</pre>;
 }
 const snapshot = () => new URLSearchParams({ to: String(Date.now() / 1000) }).toString();
@@ -181,7 +183,7 @@ function AuditViewer({ session }: { session: Session }) {
     {!page && !error && <Loading/>}
     {off && <section className="setup panel"><h2>Audit log is turned off</h2>
       <p className="muted">Ask your gateway operator to add these settings and turn on Redis persistence, then refresh this page.</p>
-      <pre className="json wrap">{enableSettings}</pre>
+      <Lines text={enableSettings}/>
       <div className="actions"><button className="secondary" onClick={() => void copyText(enableSettings, 'Settings copied.', setCopied)}><Icon name="copy"/>Copy settings</button><span role="status">{copied}</span></div>
       <p className="setup-links"><a href={docs}>How to turn on the audit log</a></p>
     </section>}
@@ -191,13 +193,13 @@ function AuditViewer({ session }: { session: Session }) {
           <h2>{verification.ok ? 'Chain verified' : 'Chain break found'}</h2>
           {broken ? <>
             <p>{verification.checked - 1} {verification.checked === 2 ? 'event' : 'events'} passed before the break.</p>
-            <p>First break at sequence {broken.sequence} in {broken.chain_id}: {reason(broken.reason)} ({broken.reason}).
-              {brokenIndex > 0 ? ` This event and the ${brokenIndex} newer ${brokenIndex === 1 ? 'event' : 'events'} above it can’t be trusted.` : brokenIndex === 0 ? ' This event can’t be trusted.' : ' This event and every newer one can’t be trusted.'}</p>
+            <p>First break at event {broken.sequence} in chain {broken.chain_id}. {reason(broken.reason)}.
+              {brokenIndex > 0 ? ` This event and the ${brokenIndex}\u00a0newer ${brokenIndex === 1 ? 'event' : 'events'} above it can’t be trusted.` : brokenIndex === 0 ? ' This event can’t be trusted.' : ' This event and every newer one can’t be trusted.'}</p>
             <p>Export this range now and tell your gateway operator.</p>
             {page.events.some(isBroken) && <button className="link" onClick={showBroken}>Show the event</button>}
           </> : <p>{verification.checked} {verification.checked === 1 ? 'event' : 'events'} checked. None were changed, removed or reordered.</p>}
           {verification.boundaries.map(boundary => <p className="muted" key={`${boundary.chain_id}:${boundary.sequence}`}>This check starts at event {boundary.sequence} in chain {boundary.chain_id}. {boundary.reason === 'time_range' ? 'Earlier events are outside the selected time range.' : 'Older events were removed by retention, so they aren’t included.'}</p>)}
-          <p className="muted">{checkedAt(Date.now() / 1000)}</p>
+          <p className="muted">{broken && `Reason: ${broken.reason} · `}{checkedAt(Date.now() / 1000)}</p>
         </>}
       </section>}
       {page.events.length ? <section className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Audit events table"><table className="stack audit-table">
@@ -210,8 +212,8 @@ function AuditViewer({ session }: { session: Session }) {
             <td data-label="Project" className={entry.event.project ? undefined : 'empty-cell'}>{entry.event.project || '—'}</td>
             <td data-label="Run" className={entry.event.workflow_run_id ? undefined : 'empty-cell'}>{entry.event.workflow_run_id ? <a className="run-link" href={`#run/${encodeURIComponent(entry.event.workflow_run_id)}`}><code>{shortId(entry.event.workflow_run_id)}</code></a> : '—'}</td>
             <td className="row-action"><button className="link" aria-expanded={open} aria-controls={`event-${entry.id}`} onClick={() => setExpanded(open ? undefined : entry.id)}>{open ? 'Hide JSON' : 'Show JSON'}</button></td></tr>
-          {open && <tr className="json-row"><td colSpan={6}>
-            <Json id={`event-${entry.id}`} value={entry.event}/>
+          {open && <tr className={isBroken(entry) ? 'json-row broken' : 'json-row'}><td colSpan={6}>
+            <Lines id={`event-${entry.id}`} text={JSON.stringify(entry.event, null, 2)}/>
             <div className="actions"><button className="secondary" onClick={() => void copyText(JSON.stringify(entry.event, null, 2), 'Event copied.', setCopied)}><Icon name="copy"/>Copy JSON</button><span role="status">{copied}</span></div>
           </td></tr>}
         </Fragment>; })}</tbody>

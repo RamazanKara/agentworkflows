@@ -456,8 +456,10 @@ html { scroll-padding-bottom: 120px; }
 .audit-table .json-row pre { margin: 0 0 12px; max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
 .audit-table tr.broken td { background: #fff7f6; }
 .audit-table tr.broken td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
-pre.json.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
-.event-json > span { display: block; word-break: break-all; }
+pre.json.hanging { white-space: pre-wrap; }
+pre.json.hanging > span { display: block; overflow-wrap: anywhere; }
+.event-name .badge { padding: 1px 8px; line-height: 18px; }
+.audit-table tr.json-row.broken td { background: #fff7f6; box-shadow: inset 4px 0 0 #b3261e; }
 .badge.unverified { color: #5c5f5e; background: #eef0ef; }
 .event-name { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
 .audit-filters input, .audit-filters select { height: 46px; }
@@ -491,6 +493,8 @@ pre.json.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
   .stack.audit-table .json-row pre { font-size: 12px; padding: 12px 14px; }
   .stack.audit-table tr.broken { background: #fff7f6; box-shadow: inset 4px 0 0 #b3261e; }
   .stack.audit-table tr.broken td { background: none; box-shadow: none; }
+  .stack.audit-table tr.json-row.broken { background: #fff7f6; box-shadow: inset 4px 0 0 #b3261e; }
+  .stack.audit-table tr.json-row.broken td { background: none; box-shadow: none; }
   .stack.audit-table a.run-link { display: inline-flex; align-items: center; min-height: 44px; margin: -11px 0; }
   .table-footer > span.muted { display: block; margin: 0 0 10px; }
 }

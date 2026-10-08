@@ -88,7 +88,7 @@ for (const ok of [true, false]) {
     await page.getByRole('button', { name: 'Verify chain' }).click();
     await expect(page.getByRole('heading', { name: ok ? 'Chain verified' : 'Chain break found' })).toBeVisible();
     await expect(page.getByText(ok ? '7 events checked. None were changed' : '6 events passed before the break.')).toBeVisible();
-    await expect(page.getByText(ok ? /This check starts at event 2 in chain gateway:test/ : /First break at sequence 8.*record_hash_mismatch/)).toBeVisible();
+    await expect(page.getByText(ok ? /This check starts at event 2 in chain gateway:test/ : /First break at event 8 in chain gateway:test\. The event no longer matches its stored hash/)).toBeVisible();
   });
 }
 
