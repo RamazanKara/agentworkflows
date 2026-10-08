@@ -82,6 +82,8 @@ markdown_extensions:
 # pattern to the docs root so runbooks/README.md (the Runbooks nav page) is not excluded.
 exclude_docs: |
   /README.md
+  /codex/
+  /PRODUCT-GAPS.md
 
 validation:
   nav:
