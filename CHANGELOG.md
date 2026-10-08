@@ -7,7 +7,8 @@
   workflow limits and approval rules, provider allowances and existing model alias
   selections without restarting the gateway. Add console editors and read-only
   views; keep provider keys in environment variables or Kubernetes Secrets.
-- Console: Team settings groups budgets, workflow approval rules and model routes into panels with one card per workflow, marks changed values with their policy default and a reset, and keeps a save bar on screen while edits are unsaved. Costs and Providers & budgets show the same budgets as a compact table.
+- Console: Team settings groups budgets, workflow approval rules and model routes into panels with one card per workflow. Values that differ from team policy are marked Custom with a Reset; edits and resets wait for Save, Discard undoes both, and the save bar stays docked until the save is confirmed. Costs and Providers & budgets show the same budgets as a compact table.
+- Console: Costs labels monthly spend "This month (UTC)" and the token tile names its budget window.
 - Console tests pin the browser locale and time zone, so date assertions pass on every machine.
 
 ## v0.5.1 - 2026-10-08

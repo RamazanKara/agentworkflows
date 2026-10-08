@@ -57,7 +57,7 @@ export type Usage = {
     providers: Record<string, CostRow>; workflows: Record<string, CostRow>; accounting: string;
   };
 };
-export type Budget = { usage: { estimated_tokens: number }; limits: { estimated_tokens: number } };
+export type Budget = { usage: { estimated_tokens: number }; limits: { estimated_tokens: number }; window_seconds?: number };
 export type Models = { data: { id: string; owned_by: string; simulated?: boolean }[] };
 export type SettingValue = number | string | boolean | string[] | null;
 export type SettingField = { value: SettingValue; source: 'policy' | 'override'; policy_default: SettingValue };

@@ -663,7 +663,7 @@ test('admin saves approval rules and selects an existing alias route', async ({ 
   await expect(page.getByLabel('Research · Approval threshold (USD)', { exact: true })).toBeDisabled();
   await page.getByLabel('Research · Approver role', { exact: true }).selectOption('admin');
   await page.getByRole('group', { name: 'Research · Allowed providers' }).getByLabel('OpenAI', { exact: true }).uncheck();
-  await page.getByLabel('research model route', { exact: true }).selectOption('demo-anthropic');
+  await page.getByLabel('Model for research', { exact: true }).selectOption('demo-anthropic');
   const request = page.waitForRequest(value => value.method() === 'PATCH');
   await page.getByRole('button', { name: 'Save settings' }).click();
   expect((await request).postDataJSON().fields).toEqual({
@@ -673,7 +673,7 @@ test('admin saves approval rules and selects an existing alias route', async ({ 
   });
   await expect(page.getByRole('status')).toContainText('Settings saved.');
   await page.reload();
-  await expect(page.getByLabel('research model route', { exact: true })).toHaveValue('demo-anthropic');
+  await expect(page.getByLabel('Model for research', { exact: true })).toHaveValue('demo-anthropic');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -700,22 +700,31 @@ test('a stale settings revision requires reloading before another save', async (
   await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('99');
 });
 
-test('reset removes only one override and retains other unsaved edits', async ({ page }) => {
+test('reset waits for Save, Discard undoes it, and Save sends it before other edits', async ({ page }) => {
+  const sent: string[] = [];
+  page.on('request', request => { if (['PATCH', 'DELETE'].includes(request.method())) sent.push(`${request.method()} ${new URL(request.url()).pathname} ${request.headers()['if-match']}`); });
   await login(page);
   await page.getByRole('link', { name: 'Team settings', exact: true }).click();
-  await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('100');
+  const budget = page.getByLabel('Team monthly budget (USD)', { exact: true });
+  const reset = page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' });
+  await budget.fill('100');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toContainText('Settings saved.');
+  await reset.click();
+  await expect(budget).toHaveValue('50');
+  await expect(page.getByRole('status')).toHaveText('1 unsaved change');
+  await page.getByRole('button', { name: 'Discard' }).click();
+  await expect(budget).toHaveValue('100');
+  expect(sent).toEqual(['PATCH /v1/team/settings 0']);
+  await reset.click();
+  await expect(reset).toHaveCount(0);
   await page.getByLabel('Project default monthly budget (USD)', { exact: true }).fill('20');
-  const request = page.waitForRequest(value => value.method() === 'DELETE');
-  await page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' }).click();
-  expect((await request).url()).toContain('/v1/team/settings/cost_limit_usd');
-  expect((await request).headers()['if-match']).toBe('1');
-  await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toHaveValue('50');
-  await expect(page.getByLabel('Project default monthly budget (USD)', { exact: true })).toHaveValue('20');
-  await expect(page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' })).toHaveCount(0);
+  await expect(page.getByRole('status')).toHaveText('2 unsaved changes');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toContainText('Settings saved.');
+  expect(sent).toEqual(['PATCH /v1/team/settings 0', 'DELETE /v1/team/settings/cost_limit_usd 1', 'PATCH /v1/team/settings 2']);
+  await expect(budget).toHaveValue('50');
+  await expect(page.getByLabel('Project default monthly budget (USD)', { exact: true })).toHaveValue('20');
 });
 
 for (const role of ['builder', 'approver', 'viewer']) {

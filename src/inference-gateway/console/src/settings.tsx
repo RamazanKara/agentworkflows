@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api, date, label as titleCase, money, number, providerName, useData, workflowName, type ApiError, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
 import { ErrorMessage, Loading, PageHeader } from './ui';
 
@@ -9,15 +9,18 @@ const workflowFields: Record<string, [string, Kind]> = {
   approval_required: ['Require approval', 'flag'], approval_threshold_usd: ['Approval threshold', 'usd'],
   approver_role: ['Approver role', 'role'], allowed_providers: ['Allowed providers', 'providers'],
 };
+// A workflow card reads in three rows: limits, the approval rule, then providers.
+const cardRows = [['cost_limit_usd', 'token_limit'], ['approval_required', 'approval_threshold_usd', 'approver_role'], ['allowed_providers']];
 const workflowOf = (field: string) => field.startsWith('workflows.') ? field.slice(10, field.lastIndexOf('.')) : '';
+const leaf = (field: string) => field.slice(field.lastIndexOf('.') + 1);
 const kind = (field: string): Kind => field.startsWith('model_routes.') ? 'route'
-  : workflowOf(field) ? workflowFields[field.slice(field.lastIndexOf('.') + 1)]?.[1] ?? 'usd' : 'usd';
+  : workflowOf(field) ? workflowFields[leaf(field)]?.[1] ?? 'usd' : 'usd';
 // What a person reads next to the control; the accessible name adds the workflow and the unit.
 const visible = (field: string) => field === 'cost_limit_usd' ? 'Team monthly budget'
   : field.startsWith('project_budgets.') ? `Project ${field.slice(16)} monthly budget`
   : field.startsWith('model_routes.') ? field.slice(13)
-  : workflowFields[field.slice(field.lastIndexOf('.') + 1)]?.[0] ?? field;
-const accessible = (field: string) => field.startsWith('model_routes.') ? `${field.slice(13)} model route`
+  : workflowFields[leaf(field)]?.[0] ?? field;
+const accessible = (field: string) => field.startsWith('model_routes.') ? `Model for ${field.slice(13)}`
   : `${workflowOf(field) ? `${workflowName(workflowOf(field))} · ` : ''}${visible(field)}${kind(field) === 'usd' ? ' (USD)' : ''}`;
 const format = (field: string, value: SettingValue) => value === null || value === '' ? 'No limit'
   : Array.isArray(value) ? value.map(providerName).join(', ') || 'Team policy'
@@ -25,6 +28,12 @@ const format = (field: string, value: SettingValue) => value === null || value =
   : kind(field) === 'usd' ? money(Number(value)) : kind(field) === 'tokens' ? `${number(Number(value))} tokens`
   : kind(field) === 'role' ? titleCase(String(value)) : String(value);
 const budgetField = (field: string) => field === 'cost_limit_usd' || field.startsWith('project_budgets.') || /\.(cost_limit_usd|token_limit)$/.test(field);
+// An emptied input and a stored "no limit" are the same value.
+const normal = (value: SettingValue) => Array.isArray(value) ? [...value].sort() : value === '' ? null : value;
+const same = (a: SettingValue, b: SettingValue) => JSON.stringify(normal(a)) === JSON.stringify(normal(b));
+const RouteName = ({ field }: { field: string }) => <>Model for <code className="alias">{visible(field)}</code></>;
+const Custom = () => <span className="badge custom" title="Differs from team policy">Custom</span>;
+const Unsaved = () => <span className="badge unsaved">Unsaved</span>;
 
 type Groups = { team: string[]; workflows: [string, string[]][]; routes: string[] };
 function group(fields: string[], budgetsOnly: boolean): Groups {
@@ -33,9 +42,10 @@ function group(fields: string[], budgetsOnly: boolean): Groups {
   for (const field of shown.filter(workflowOf)) workflows.set(workflowOf(field), [...workflows.get(workflowOf(field)) || [], field]);
   // Budget first, then tokens and approval, in the order of workflowFields.
   const order = Object.keys(workflowFields);
-  for (const names of workflows.values()) names.sort((a, b) => order.indexOf(a.slice(a.lastIndexOf('.') + 1)) - order.indexOf(b.slice(b.lastIndexOf('.') + 1)));
+  for (const names of workflows.values()) names.sort((a, b) => order.indexOf(leaf(a)) - order.indexOf(leaf(b)));
   return { team: shown.filter(field => field === 'cost_limit_usd' || field.startsWith('project_budgets.')), workflows: [...workflows], routes: shown.filter(field => field.startsWith('model_routes.')) };
 }
+const rows = (fields: string[]) => cardRows.map(row => fields.filter(field => row.includes(leaf(field)))).filter(row => row.length > 0);
 
 export function TeamConfiguration({ session }: { session: Session }) {
   return <><PageHeader title="Team settings" subtitle="Budgets, approval rules and model routes. Changes apply to the next request; no restart."/><SettingsPanel session={session}/></>;
@@ -51,48 +61,87 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
   const result = useData<TeamSettings>(session.csrfToken, '/v1/team/settings', revision);
   const [saved, setSaved] = useState<TeamSettings>();
   const settings = saved || result.data;
+  // Edits and resets both wait for Save, so Discard undoes either.
   const [draft, setDraft] = useState<Record<string, SettingValue>>({});
+  const [resets, setResets] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState('');
-  const changes = Object.keys(draft).length;
-  const reload = () => { setDraft({}); setSaved(undefined); setError(''); setErrors({}); setConflict(false); setMessage(''); setRevision(v => v + 1); };
-  const submit = async (field?: string) => {
-    if (!settings) return;
-    setBusy(true); setError(''); setErrors({}); setMessage('');
+  const [justSaved, setJustSaved] = useState(false);
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = window.setTimeout(() => setJustSaved(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [justSaved]);
+  const groups = settings && group(Object.keys(settings.fields), budgetsOnly);
+  const ordered = groups ? [...groups.team, ...groups.workflows.flatMap(([, names]) => names), ...groups.routes] : [];
+  const pending = ordered.filter(name => name in draft || resets.includes(name));
+  const changes = pending.length;
+  const discard = () => { setDraft({}); setResets([]); setErrors({}); setError(''); };
+  const reload = () => { discard(); setSaved(undefined); setConflict(false); setJustSaved(false); setRevision(v => v + 1); };
+  const current = (name: string) => name in draft ? draft[name] : resets.includes(name) ? settings!.fields[name].policy_default : settings!.fields[name]?.value;
+  const change = (name: string, next: SettingValue) => {
+    setJustSaved(false);
+    setResets(previous => previous.filter(item => item !== name));
+    setDraft(previous => {
+      const { [name]: _, ...rest } = previous;
+      return same(next, settings!.fields[name].value) ? rest : { ...rest, [name]: next };
+    });
+  };
+  const reset = (name: string) => {
+    setJustSaved(false);
+    setDraft(previous => { const { [name]: _, ...rest } = previous; return rest; });
+    if (settings!.fields[name].source === 'override') setResets(previous => [...previous.filter(item => item !== name), name]);
+  };
+  const showFirstChange = () => {
+    const element = document.getElementById(`setting-${pending[0]}`);
+    const details = element?.closest('details');
+    if (details) details.open = true;
+    const target = element?.matches('input, select') ? element : element?.querySelector<HTMLElement>('input');
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: 'center' });
+  };
+  const save = async () => {
+    if (!settings || !changes) return;
+    setBusy(true); setError(''); setErrors({}); setJustSaved(false);
+    let latest = settings;
+    let remaining = resets;
     try {
-      const updated = await api<TeamSettings>(session.csrfToken, '/v1/team/settings' + (field ? `/${encodeURIComponent(field)}` : ''), {
-        method: field ? 'DELETE' : 'PATCH', headers: { 'If-Match': String(settings.revision) },
-        ...(field ? {} : { body: JSON.stringify({ fields: draft }) }),
+      for (const name of resets) {
+        latest = await api<TeamSettings>(session.csrfToken, `/v1/team/settings/${encodeURIComponent(name)}`, { method: 'DELETE', headers: { 'If-Match': String(latest.revision) } });
+        remaining = remaining.filter(item => item !== name);
+      }
+      if (Object.keys(draft).length) latest = await api<TeamSettings>(session.csrfToken, '/v1/team/settings', {
+        method: 'PATCH', headers: { 'If-Match': String(latest.revision) }, body: JSON.stringify({ fields: draft }),
       });
-      setSaved(updated);
-      setDraft(previous => field ? Object.fromEntries(Object.entries(previous).filter(([name]) => name !== field)) : {});
-      setMessage(field ? `${accessible(field)} reset to policy default.` : 'Settings saved.');
+      setSaved(latest); setDraft({}); setResets([]); setJustSaved(true);
       onSaved?.();
     } catch (value) {
+      // Resets that went through stay saved; the rest stay pending with the edits.
+      if (latest !== settings) setSaved(latest);
+      setResets(remaining);
       const failure = value as ApiError;
       setConflict(failure.status === 409);
       setError(failure.status === 409 ? 'Settings changed since you opened this page. Reload and review the latest values before saving again.' : failure.message);
       setErrors(Object.fromEntries((failure.fields || []).map(item => [item.field, item.message])));
     } finally { setBusy(false); }
   };
-  const groups = settings && group(Object.keys(settings.fields), budgetsOnly);
   // Offer the team's providers plus any a workflow already allows; local backends appear only when in use.
   const offered = (state: SettingField) => settings!.providers.filter(provider => session.team.providers.includes(provider)
     || [state.value, state.policy_default].some(value => Array.isArray(value) && value.includes(provider)));
-  const field = (name: string) => <SettingControl key={name} field={name} state={settings!.fields[name]} value={name in draft ? draft[name] : settings!.fields[name].value}
-    pending={name in draft} error={errors[name]} providers={offered(settings!.fields[name])}
+  const field = (name: string) => <SettingControl key={name} field={name} state={settings!.fields[name]} value={current(name)}
+    pending={pending.includes(name)} resetting={resets.includes(name)} error={errors[name]} providers={offered(settings!.fields[name])}
     choices={name.startsWith('model_routes.') ? settings!.routes : name.endsWith('.approver_role') ? settings!.approver_roles : undefined}
-    disabled={name.endsWith('.approval_threshold_usd') && (draft[name.replace(/threshold_usd$/, 'required')] ?? settings!.fields[name.replace(/threshold_usd$/, 'required')]?.value) === false}
-    onChange={next => setDraft(previous => ({ ...previous, [name]: next }))} onReset={() => void submit(name)}/>;
+    disabled={name.endsWith('.approval_threshold_usd') && current(name.replace(/threshold_usd$/, 'required')) === false}
+    onChange={next => change(name, next)} onReset={() => reset(name)}/>;
+  const docked = changes > 0 || justSaved || Boolean(error);
   return <section className={budgetsOnly ? 'settings budgets-only' : 'settings'} aria-labelledby={budgetsOnly ? 'budgets-heading' : undefined}>
     {budgetsOnly && <h2 id="budgets-heading">Budgets</h2>}
-    <ErrorMessage message={error || result.error}/>
-    {(conflict || result.error) && <button className="secondary" type="button" disabled={busy} onClick={reload}>Reload settings</button>}
+    <ErrorMessage message={result.error}/>
+    {result.error && <button className="secondary" type="button" onClick={reload}>Reload settings</button>}
     {!settings && !result.error && <Loading/>}
-    {settings && groups && <form onSubmit={event => { event.preventDefault(); void submit(); }}>
+    {settings && groups && <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="plain" disabled={busy || conflict}>
         {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">
           <div className="setting-grid">{groups.team.map(field)}</div>
@@ -105,34 +154,37 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
           </SettingsGroup>
           : <SettingsGroup nested={false} title="Workflows" note="Approval rules apply at each workflow’s review step.">
             {groups.workflows.map(([workflow, fields]) => <WorkflowCard key={workflow} workflow={workflow} open={groups.workflows.length <= 2}
-              changed={fields.some(name => name in draft || settings.fields[name].source === 'override')}
-              summary={summary(workflow, name => name in draft ? draft[name] : settings.fields[name]?.value)}>
-              <div className="setting-grid">{fields.map(field)}</div>
+              custom={fields.some(name => settings.fields[name].source === 'override')} unsaved={fields.some(name => pending.includes(name))}
+              summary={summary(workflow, current)}>
+              {rows(fields).map(row => <div className="setting-grid card-row" key={row[0]}>{row.map(field)}</div>)}
             </WorkflowCard>)}
           </SettingsGroup>)}
         {groups.routes.length > 0 && <SettingsGroup nested={false} title="Model routes" note="Choose which approved model each alias calls. New routes and prices are added by your operator.">
           <div className="setting-grid">{groups.routes.map(field)}</div>
         </SettingsGroup>}
-        <div className={changes ? 'save-bar dirty' : 'save-bar'}>
-          <p>{changes ? `${changes} unsaved ${changes === 1 ? 'change' : 'changes'}` : settings.updated_at ? `Last changed by ${settings.updated_by} · ${date(settings.updated_at)}` : 'Using your team policy. Nothing changed here yet.'}</p>
-          {changes > 0 && <button type="button" className="secondary" onClick={() => { setDraft({}); setErrors({}); setMessage(''); }}>Discard</button>}
-          <button type="submit" disabled={!changes}>{busy ? 'Saving…' : 'Save settings'}</button>
-        </div>
       </fieldset>
+      <div className={docked ? 'save-bar docked' : 'save-bar'}>
+        {error && <div className="save-error"><ErrorMessage message={error}/>{conflict && <button className="secondary" type="button" onClick={reload}>Reload settings</button>}</div>}
+        <p role="status">{changes ? <button type="button" className="link" onClick={showFirstChange}>{changes} unsaved {changes === 1 ? 'change' : 'changes'}</button>
+          : justSaved ? 'Settings saved. They apply to the next request.'
+          : settings.updated_at ? `Last changed by ${settings.updated_by} · ${date(settings.updated_at)}` : 'Using your team policy. Nothing changed here yet.'}</p>
+        {changes > 0 && <button type="button" className="secondary" disabled={busy} onClick={discard}>Discard</button>}
+        <button type="submit" disabled={!changes || busy || conflict}>{busy ? 'Saving…' : 'Save settings'}</button>
+      </div>
     </form>}
-    <p role="status" className="status">{message}</p>
   </section>;
 }
 
-// "$5.00 per run · runs from $0.50 approved by admins · OpenAI, Anthropic"
+// ["$5.00 per run", "Approval from $0.50 by admins", "OpenAI, Anthropic"]
 function summary(workflow: string, value: (field: string) => SettingValue) {
   const key = (name: string) => `workflows.${workflow}.${name}`;
+  const budget = value(key('cost_limit_usd'));
   const threshold = Number(value(key('approval_threshold_usd')) || 0);
-  const approvers = `${String(value(key('approver_role')) || 'approver')}s`;
-  const approval = value(key('approval_required')) === false ? 'no approval step'
-    : threshold > 0 ? `runs from ${money(threshold)} approved by ${approvers}` : `every run approved by ${approvers}`;
-  return [value(key('cost_limit_usd')) != null && `${format(key('cost_limit_usd'), value(key('cost_limit_usd')))} per run`, approval,
-    format(key('allowed_providers'), value(key('allowed_providers')) ?? [])].filter(Boolean).join(' · ');
+  const admins = value(key('approver_role')) === 'admin' ? ' by admins' : '';
+  const providers = value(key('allowed_providers'));
+  return [budget === null || budget === '' || budget === undefined ? 'No run budget' : `${money(Number(budget))} per run`,
+    value(key('approval_required')) === false ? 'No approval' : threshold > 0 ? `Approval from ${money(threshold)}${admins}` : `Approval on every run${admins}`,
+    Array.isArray(providers) ? providers.map(providerName).join(', ') : ''].filter(Boolean);
 }
 
 // Groups are page sections on Team settings and subsections where Budgets is embedded in another page.
@@ -140,39 +192,45 @@ function SettingsGroup({ title, note, nested, children }: { title: string; note:
   return <section className="panel settings-group">{nested ? <h3>{title}</h3> : <h2>{title}</h2>}<p className="muted">{note}</p>{children}</section>;
 }
 
-function WorkflowCard({ workflow, summary: text, changed, open, children }: { workflow: string; summary: string; changed: boolean; open: boolean; children: ReactNode }) {
-  return <details className="workflow-card" open={open}><summary><span className="workflow-card-title">{workflowName(workflow)}{changed && <span className="badge override">Changed</span>}</span><small>{text}</small></summary>{children}</details>;
+function WorkflowCard({ workflow, summary: parts, custom, unsaved, open, children }: { workflow: string; summary: string[]; custom: boolean; unsaved: boolean; open: boolean; children: ReactNode }) {
+  // Each part keeps to one line; lines break only between parts.
+  return <details className="workflow-card" open={open}><summary>
+    <span className="workflow-card-title">{workflowName(workflow)}{unsaved ? <Unsaved/> : custom && <Custom/>}</span>
+    <small>{parts.map((part, index) => <span key={index}><span className="nowrap">{part}{index < parts.length - 1 && ' ·'}</span>{' '}</span>)}</small>
+  </summary>{children}</details>;
 }
 
-function SettingControl({ field, state, value, pending, error, providers, choices, disabled, onChange, onReset }: {
-  field: string; state: SettingField; value: SettingValue; pending: boolean; error?: string; providers: string[]; choices?: string[]; disabled: boolean;
+function SettingControl({ field, state, value, pending, resetting, error, providers, choices, disabled, onChange, onReset }: {
+  field: string; state: SettingField; value: SettingValue; pending: boolean; resetting: boolean; error?: string; providers: string[]; choices?: string[]; disabled: boolean;
   onChange: (value: SettingValue) => void; onReset: () => void;
 }) {
   const id = `setting-${field}`;
   const type = kind(field);
   const prefix = workflowOf(field) ? `${workflowName(workflowOf(field))} · ` : '';
-  const name = <>{prefix && <span className="visually-hidden">{prefix}</span>}{type === 'route' ? <code>{visible(field)}</code> : visible(field)}{type === 'usd' && <span className="visually-hidden"> (USD)</span>}{type === 'route' && <span className="visually-hidden"> model route</span>}</>;
-  // Values from the policy need no note; changed values show the policy default and a way back to it.
-  const meta = state.source === 'override'
-    ? <p className="setting-meta"><span className="badge override">Changed</span><span>Policy default {format(field, state.policy_default)}</span><button className="link" type="button" onClick={onReset} aria-label={`Reset ${accessible(field)} to policy default`}>Reset</button></p>
-    : pending ? <p className="setting-meta"><span>Policy default {format(field, state.policy_default)}</span></p> : null;
+  const name = <>{prefix && <span className="visually-hidden">{prefix}</span>}{type === 'route' ? <RouteName field={field}/> : visible(field)}{type === 'usd' && <span className="visually-hidden"> (USD)</span>}</>;
+  // Policy values need no note; custom or unsaved values show the policy value and a way back to it.
+  const meta = pending || state.source === 'override' ? <p className="setting-meta">
+    {pending ? <Unsaved/> : <Custom/>}
+    <span>{resetting ? 'Back to team policy' : `Team policy: ${format(field, state.policy_default)}`}</span>
+    {!resetting && <button className="link" type="button" onClick={onReset} aria-label={`Reset ${accessible(field)} to policy default`}>Reset</button>}
+  </p> : null;
   const described = [error && `${id}-error`, field.endsWith('.approval_threshold_usd') && `${id}-help`].filter(Boolean).join(' ') || undefined;
   let control: ReactNode;
   if (type === 'flag') control = <label className="check"><input id={id} type="checkbox" checked={value === true} onChange={event => onChange(event.target.checked)}/>{name}</label>;
-  else if (type === 'providers') control = <fieldset className="choices"><legend>{name}</legend>{providers.map(provider => <label className="check" key={provider}>
+  else if (type === 'providers') control = <fieldset className="choices" id={id}><legend>{name}</legend>{providers.map(provider => <label className="check" key={provider}>
     <input type="checkbox" checked={Array.isArray(value) && value.includes(provider)} onChange={event => onChange(event.target.checked
       ? [...(Array.isArray(value) ? value : []), provider] : (Array.isArray(value) ? value : []).filter(item => item !== provider))}/>{providerName(provider)}</label>)}</fieldset>;
   else if (choices) control = <><label htmlFor={id}>{name}</label><select id={id} value={String(value)} onChange={event => onChange(event.target.value)}>
     {choices.map(option => <option key={option} value={option}>{type === 'role' ? titleCase(option) : option}</option>)}</select></>;
   else {
     const input = <input id={id} type="number" inputMode="decimal" min="0" max={type === 'tokens' ? 1000000000 : 1000000} step={type === 'tokens' ? 1 : 'any'} placeholder="No limit"
-      value={value === null ? '' : String(value)} required={pending} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
+      value={value === null ? '' : String(value)} required={pending && !resetting} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
       onChange={event => onChange(event.target.value === '' ? '' : Number(event.target.value))}/>;
     control = <><label htmlFor={id}>{name}</label>{type === 'usd' ? <div className="prefixed"><span aria-hidden="true">$</span>{input}</div> : input}</>;
   }
   return <div className={['setting', pending && 'pending', type === 'flag' && 'flag'].filter(Boolean).join(' ')}>
     {control}
-    {field.endsWith('.approval_threshold_usd') && <small id={`${id}-help`}>{disabled ? 'Approval is off for this workflow.' : 'Runs that spent less at the review step skip approval. $0 means every run.'}</small>}
+    {field.endsWith('.approval_threshold_usd') && <small id={`${id}-help`}>{disabled ? 'Approval is off for this workflow.' : 'Runs that have spent less than this by the review step skip approval. $0 means every run needs approval.'}</small>}
     {meta}
     {error && <p className="error" id={`${id}-error`}>{error}</p>}
   </div>;
@@ -192,16 +250,27 @@ function ReadOnlySettings({ session, budgetsOnly }: { session: Session; budgetsO
     for (const [field, value] of Object.entries(values)) fields[`workflows.${name}.${field}`] = value;
   }
   const groups = group(Object.keys(fields), budgetsOnly);
-  const list = (names: string[]) => <dl className="setting-list">{names.map(field => <div key={field}><dt>{field.startsWith('model_routes.') ? <code>{visible(field)}</code> : visible(field)}</dt><dd>{format(field, fields[field])}</dd></div>)}</dl>;
+  const term = (field: string) => field.startsWith('model_routes.') ? <RouteName field={field}/> : field.endsWith('.approval_required') ? 'Approval' : visible(field);
+  const list = (names: string[], className = 'setting-list') => <dl className={className}>{names.map(field => <div key={field}><dt>{term(field)}</dt><dd>{format(field, fields[field])}</dd></div>)}</dl>;
+  // With approval off, the threshold and approver say nothing.
+  const shown = (workflow: string, names: string[]) => fields[`workflows.${workflow}.approval_required`] === false ? names.filter(name => !/\.(approval_threshold_usd|approver_role)$/.test(name)) : names;
   return <section className={budgetsOnly ? 'settings budgets-only' : 'settings'}>
     {budgetsOnly && <h2>Budgets</h2>}
     <p className="callout">Read-only. Your team admin can change these settings.</p>
     <ErrorMessage message={team.error || policies.error}/>
     {!team.data && !team.error && <Loading/>}
     {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">{list(groups.team)}</SettingsGroup>}
-    {groups.workflows.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Run budgets' : 'Workflows'} note={budgetsOnly ? 'Each run of a workflow stays within these limits.' : 'Approval rules apply at each workflow’s review step.'}>
-      {groups.workflows.map(([workflow, names]) => <div className="setting-row" key={workflow}><h4>{workflowName(workflow)}</h4>{list(names)}</div>)}
-    </SettingsGroup>}
+    {groups.workflows.length > 0 && (budgetsOnly
+      ? <SettingsGroup nested title="Run budgets" note="Each run of a workflow stays within these limits.">
+        <table className="stack numeric"><thead><tr><th>Workflow</th><th className="num">Budget per run</th><th className="num">Token limit per run</th></tr></thead>
+          <tbody>{groups.workflows.map(([workflow]) => <tr key={workflow}><th scope="row">{workflowName(workflow)}</th>
+            <td className="num" data-label="Budget per run">{format(`workflows.${workflow}.cost_limit_usd`, fields[`workflows.${workflow}.cost_limit_usd`] ?? null)}</td>
+            <td className="num" data-label="Token limit per run">{format(`workflows.${workflow}.token_limit`, fields[`workflows.${workflow}.token_limit`] ?? null)}</td></tr>)}</tbody></table>
+      </SettingsGroup>
+      : <SettingsGroup nested={false} title="Workflows" note="Approval rules apply at each workflow’s review step.">
+        {groups.workflows.map(([workflow, names]) => <WorkflowCard key={workflow} workflow={workflow} open={false} custom={false} unsaved={false}
+          summary={summary(workflow, name => fields[name])}>{list(shown(workflow, names), 'setting-list card-list')}</WorkflowCard>)}
+      </SettingsGroup>)}
     {groups.routes.length > 0 && <SettingsGroup nested={budgetsOnly} title="Model routes" note="Which approved model each alias calls.">{list(groups.routes)}</SettingsGroup>}
   </section>;
 }

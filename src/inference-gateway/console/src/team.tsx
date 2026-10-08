@@ -57,6 +57,8 @@ function CostTable({ title, rows }: { title: string; rows: Record<string, CostRo
 
 // Budgets reset on fixed UTC windows; a one-day window reads as "today".
 const scope = (seconds?: number) => seconds === 86400 ? 'today' : seconds === 3600 ? 'this hour' : 'this window';
+// Token budgets run in fixed windows from first use: "24-hour window", "7-day window".
+const tokenWindow = (seconds?: number) => !seconds ? 'this window' : `this ${seconds <= 172800 ? `${Math.round(seconds / 3600)}-hour` : `${Math.round(seconds / 86400)}-day`} window`;
 
 function Usage({ value, limit }: { value: number; limit: number }) {
   return <span className="usage-bar" role="img" aria-label={`${Math.round(Math.min(value / limit, 1) * 100)}% used`}><span style={{ width: `${Math.min(value / limit, 1) * 100}%` }}/></span>;
@@ -70,7 +72,7 @@ function SpendTiles({ usage, budget }: { usage?: Usage; budget?: Budget }) {
   const period = spend?.period === 'month' ? 'this month' : scope(spend?.window_seconds);
   return <Metrics items={[
     [`Spent ${period}`, spent == null ? '—' : <>{money(spent)}{spend?.cost_limit_usd != null ? <> <small className="inline">of {money(spend.cost_limit_usd)}</small>{spend.cost_limit_usd > 0 && <Usage value={spent} limit={spend.cost_limit_usd}/>}</> : <small>No team limit</small>}{held >= 0.005 && <small>Includes {money(held)} held for running work</small>}</>],
-    ['Tokens this window', budget ? <>{number(budget.usage.estimated_tokens)}{budget.limits.estimated_tokens ? <> <small className="inline">of {number(budget.limits.estimated_tokens)}</small><Usage value={budget.usage.estimated_tokens} limit={budget.limits.estimated_tokens}/></> : <small>No token limit</small>}</> : '—'],
+    [`Tokens in ${tokenWindow(budget?.window_seconds)}`, budget ? <>{number(budget.usage.estimated_tokens)}{budget.limits.estimated_tokens ? <> <small className="inline">of {number(budget.limits.estimated_tokens)}</small><Usage value={budget.usage.estimated_tokens} limit={budget.limits.estimated_tokens}/></> : <small>No token limit</small>}</> : '—'],
   ]}/>;
 }
 
@@ -83,7 +85,7 @@ export function Costs({ session }: { session: Session }) {
     <ErrorMessage message={result.error} retry={() => setRevision(v => v + 1)}/>
     {!result.data && !result.error && <Loading/>}
     {spend && <>
-      <p className="scope">{spend.window_seconds === 86400 ? 'Today (UTC)' : spend.window_seconds ? `Since ${date(spend.window_start)}` : 'Since the gateway started'}{spend.project && ` · Project ${spend.project}`}</p>
+      <p className="scope">{spend.period === 'month' ? 'This month (UTC)' : spend.window_seconds === 86400 ? 'Today (UTC)' : spend.window_seconds ? `Since ${date(spend.window_start)}` : 'Since the gateway started'}{spend.project && ` · Project ${spend.project}`}</p>
       <SpendTiles usage={result.data} budget={budget.data}/>
       {spend.project && <p className="callout">This sign-in is limited to one project. Team-wide spend is hidden; the tables cover your project only.</p>}
       {Object.keys(spend.providers).length || Object.keys(spend.workflows || {}).length ? <>
@@ -167,7 +169,7 @@ function ProviderSettings({ session }: { session: Session }) {
       </>}
       <p className="setup-links">{helm.length > 0 && <><a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Kubernetes install guide</a> · </>}<a href={`${guide}#teams-projects-and-roles`}>Secret instructions</a>{manual.length > 0 && !routed && <> · <a href={routes}>Cloud routes and prices</a></>}</p>
     </section> : <section className="setup panel"><h2>Provider keys</h2>
-      <p>Store provider keys in the gateway’s environment or Kubernetes Secrets. New model routes, prices and network access are configured by your operator. Choose among existing routes below.</p>
+      <p>Store provider keys in the gateway’s environment or Kubernetes Secrets. New model routes, prices and network access are configured by your operator. Model routes are chosen in <a href="#team">Team settings</a>.</p>
       <p className="setup-links"><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href={routes}>Cloud routes and prices</a></p>
     </section>}
     <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
