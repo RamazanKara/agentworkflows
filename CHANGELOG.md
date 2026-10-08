@@ -18,6 +18,13 @@
   cookie sessions for OIDC and pasted API credentials, session restore, logout, and CSRF.
 - Add the console's Members & keys page and `agentworkflows keys list|create|update|revoke`.
   Keep the local Compose credential working with localhost cookie settings.
+- Redesign the console for phones and first use: a compact phone menu, run forms with
+  required fields first and optional ones under More options, model answers previewed on
+  each step, prompts shown as a transcript, an Approval step that names the reviewer,
+  readable trigger schedules, copyable webhook URLs and run IDs, and spend shown as Spent,
+  Team limit and Tokens with usage bars.
+- Record the person's display name on browser sessions and receipts: the managed key's
+  name, or the `name`/`email` claim from company sign-in.
 
 ## v0.4.0 - 2026-10-08
 
