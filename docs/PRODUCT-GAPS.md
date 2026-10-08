@@ -20,6 +20,6 @@ layer around it is thin: identity, membership, configuration and install are YAM
 Deliberately not planned: hosted SaaS, billing and plans (self-hosted product; see
 [scope](scope-and-non-goals.md)), a visual workflow builder (workflows are code by design).
 
-v0.5.0 ships when 1–7 are done and the console passes the screenshot gate on 2024 phones and desktop.
+Status: 1–7 shipped in v0.5.0 (2026-10-08) after the console passed the screenshot gate on 2024 phones and desktop. 8–10 are next.
 
 Codex job prompts live in `docs/codex/` (not published on the docs site).

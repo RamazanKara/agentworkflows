@@ -12,9 +12,10 @@ spend; platform engineers control shared model and tool access. Connect OpenAI, 
 Azure OpenAI, AWS Bedrock and Vertex Gemini through one governed API. Self-hosted Ollama
 and vLLM models are optional add-ons. You operate the service and own your integrations.
 
-Version **0.4.0** adds a TypeScript workflow SDK and a clearer console: readable run timelines,
-grouped notification receipts, explained provider fallback costs, and phone-friendly layouts.
-Releases now publish signed images, Helm charts and both SDKs on every version tag.
+Version **0.5.0** makes it a product a team can adopt: company sign-in (OIDC), members and
+API keys managed in the console, run forms generated from each workflow's inputs, each step's
+prompt and answer on the run page, a redesigned console for phones and desktop, and a
+[one-command Helm install](docs/install-kubernetes.md) that includes Temporal and the worker.
 
 ## Your first approved workflow in five minutes
 
@@ -102,10 +103,10 @@ To generate a GitOps overlay for a release after it has been published:
 
 ```bash
 make customer-overlay CUSTOMER_REPO_URL=https://github.com/<you>/<fork>.git \
-  CUSTOMER_REVISION=v0.4.0 CUSTOMER_GPU_PROFILE=nvidia
+  CUSTOMER_REVISION=v0.5.0 CUSTOMER_GPU_PROFILE=nvidia
 ```
 
-The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.4.0
+The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.5.0
 is ready for evaluation; this repository does not yet provide a hosted service.
 
 | Task | Start here |

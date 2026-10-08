@@ -1,6 +1,6 @@
 # Version and compatibility matrix
 
-This page records the versions AgentWorkflows is **pinned to** for the `v0.4.0`
+This page records the versions AgentWorkflows is **pinned to** for the `v0.5.0`
 source version. No tag or published release is implied. It is a compatibility reference,
 not a support SLA: the tables list what the platform ships
 and what CI exercises, so you can reproduce a known-good state and reason about drift. Newer or
@@ -15,8 +15,8 @@ Kubernetes distribution, ingress, storage, secrets, and GPU stack), that is call
 
 | Item | Version | Source |
 | --- | --- | --- |
-| AgentWorkflows | `v0.4.0` | [README.md](https://github.com/RamazanKara/agentworkflows/blob/main/README.md) |
-| Helm chart version (all first-party charts) | `0.4.0` | `deploy/charts/*/Chart.yaml` |
+| AgentWorkflows | `v0.5.0` | [README.md](https://github.com/RamazanKara/agentworkflows/blob/main/README.md) |
+| Helm chart version (all first-party charts) | `0.5.0` | `deploy/charts/*/Chart.yaml` |
 | `kubeVersion` constraint (all charts) | `>=1.25.0` | `deploy/charts/*/Chart.yaml` |
 
 Maturity is a reference implementation and customer lab; a production handoff still requires current
@@ -32,14 +32,14 @@ and an immutable manifest-list digest in `values.yaml`.
 
 | Component | Chart `appVersion` | Image | Tag | Notes |
 | --- | --- | --- | --- | --- |
-| Inference gateway | `0.4.0` | `ghcr.io/ramazankara/agentworkflows/inference-gateway` | `v0.4.0` | First-party; release CI pins the published digest. |
-| RAG service | `0.4.0` | `ghcr.io/ramazankara/agentworkflows/rag-service` | `v0.4.0` | First-party; release CI pins the published digest. |
+| Inference gateway | `0.5.0` | `ghcr.io/ramazankara/agentworkflows/inference-gateway` | `v0.5.0` | First-party; release CI pins the published digest. |
+| RAG service | `0.5.0` | `ghcr.io/ramazankara/agentworkflows/rag-service` | `v0.5.0` | First-party; release CI pins the published digest. |
 | Ollama runtime | `0.24.0` | `ollama/ollama` | `0.24.0` | Optional self-hosted LLM runtime; digest-pinned. |
 | vLLM runtime | `0.22.0` | `vllm/vllm-openai` | `v0.22.0` | GPU/production-style OpenAI-compatible runtime; digest-pinned. |
 | Qdrant vector store | `1.18.1` | `qdrant/qdrant` | `v1.18.1` | Optional vector-RAG profile; single-instance; digest-pinned. |
 | Budget Redis | `8.0` | `redis` | `8.0-alpine` | Shared sandbox budget accounting store; digest-pinned. |
-| Agent workspace | `0.4.0` | (namespace/RBAC template, no image) | n/a | Tenant namespace scaffold; no workload image of its own. |
-| Platform (umbrella) | `0.4.0` | (aggregates the charts above) | n/a | Single-command dev/demo bring-up; GitOps remains recommended for multi-namespace installs. |
+| Agent workspace | `0.5.0` | (namespace/RBAC template, no image) | n/a | Tenant namespace scaffold; no workload image of its own. |
+| Platform (umbrella) | `0.5.0` | (aggregates the charts above) | n/a | Single-command dev/demo bring-up; GitOps remains recommended for multi-namespace installs. |
 
 The first-party service container images are built on `python:3.14-alpine`
 (`src/inference-gateway/Dockerfile`, `src/rag-service/Dockerfile`), digest-pinned in the Dockerfiles.

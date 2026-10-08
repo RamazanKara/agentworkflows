@@ -87,7 +87,7 @@ async def call_mcp_tool(
             {
                 "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": {},
-                "clientInfo": {"name": "agentworkflows", "version": "0.4.0"},
+                "clientInfo": {"name": "agentworkflows", "version": "0.5.0"},
             },
         )
         if initialized.get("protocolVersion") != PROTOCOL_VERSION or "tools" not in initialized.get("capabilities", {}):

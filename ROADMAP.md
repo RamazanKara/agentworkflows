@@ -2,9 +2,10 @@
 
 AgentWorkflows is the agent workflow platform for teams: governed cloud providers, durable
 agent workflows, human approvals, team budgets, and receipts for model and tool calls.
-Version 0.4.0 adds the TypeScript SDK, a clearer console and published release artifacts.
-The v0.2.0 tag includes milestones 1–7, v0.3.0 delivers milestones 8–9, and v0.4.0
-delivers milestone 10.
+Version 0.5.0 adds company sign-in, members and keys in the console, schema-generated run
+forms, step content on the run page and a one-command Helm install. The v0.2.0 tag includes
+milestones 1–7, v0.3.0 delivers milestones 8–9, v0.4.0 delivers milestone 10, and v0.5.0
+delivers milestone 11.
 
 ## Milestone 1: governed cloud providers — delivered in 0.2.0
 
@@ -94,7 +95,7 @@ See the [template gallery](docs/templates.md) and [decision guide](docs/decision
 - Readable run timelines, explained fallback costs, result summaries and phone layouts.
 - Tag-only release workflow publishing signed images and charts plus both SDKs.
 
-## Milestone 11: a product teams can adopt — in progress for 0.5.0
+## Milestone 11: a product teams can adopt — delivered in 0.5.0
 
 - Company sign-in (OIDC) with persistent browser sessions; members and API keys managed
   in the console, CLI and API instead of YAML.
