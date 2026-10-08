@@ -39,7 +39,7 @@ CONTRACTS = {
     "inference-gateway": ServiceContract(
         service_dir=ROOT / "src/inference-gateway",
         title="AgentWorkflows Inference Gateway",
-        version="0.5.0",
+        version="0.5.1",
         snapshot=ROOT / "platform/api-contracts/inference-gateway.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -239,7 +239,7 @@ CONTRACTS = {
     "rag-service": ServiceContract(
         service_dir=ROOT / "src/rag-service",
         title="AgentWorkflows RAG Service",
-        version="0.5.0",
+        version="0.5.1",
         snapshot=ROOT / "platform/api-contracts/rag-service.openapi.json",
         routes={
             "/healthz": RouteContract("get"),

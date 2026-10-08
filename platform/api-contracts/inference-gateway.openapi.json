@@ -1226,7 +1226,7 @@
   "info": {
     "description": "OpenAI-compatible private inference gateway with sandbox traceability, admission controls, budget enforcement, redacted audit events, and runtime routing to Ollama or vLLM.",
     "title": "AgentWorkflows Inference Gateway",
-    "version": "0.5.0"
+    "version": "0.5.1"
   },
   "openapi": "3.1.0",
   "paths": {

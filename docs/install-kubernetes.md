@@ -10,7 +10,7 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 - Kubernetes, `kubectl`, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.
 - Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.
-- A checkout of the release: `git clone --branch v0.5.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git`.
+- A checkout of the release: `git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git`.
 
 Prepare the local chart's dependencies once, in this order:
 

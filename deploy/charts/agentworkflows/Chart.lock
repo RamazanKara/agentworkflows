@@ -1,24 +1,24 @@
 dependencies:
 - name: workflows
   repository: file://../workflows
-  version: 0.5.0
+  version: 0.5.1
 - name: inference-gateway
   repository: file://../inference-gateway
-  version: 0.5.0
+  version: 0.5.1
 - name: rag-service
   repository: file://../rag-service
-  version: 0.5.0
+  version: 0.5.1
 - name: ollama
   repository: file://../ollama
-  version: 0.5.0
+  version: 0.5.1
 - name: budget-redis
   repository: file://../budget-redis
-  version: 0.5.0
+  version: 0.5.1
 - name: qdrant-vector-store
   repository: file://../qdrant-vector-store
-  version: 0.5.0
+  version: 0.5.1
 - name: vllm
   repository: file://../vllm
-  version: 0.5.0
-digest: sha256:af76ff8dcf1558037fe3e52fbfa52a2c8ba6491da5311f863473c3a36247fc2e
+  version: 0.5.1
+digest: sha256:895b74cf6d52d58df8db69525880aa4ce3e7ed33615d453a121322b262dda9cc
 generated: "2026-10-08T15:26:17.2679729+02:00"

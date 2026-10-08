@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.1 - 2026-10-08
 
 - Console: opening the console lands on Approvals when drafts wait, then Workflow runs, and on Get started for a new team.
 - Console: Get started and the run form warn when a workflow uses a provider whose key is missing, even if other keys are present.

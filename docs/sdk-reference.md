@@ -1,7 +1,7 @@
 # CLI and Python SDK reference
 
 Install the released SDK in a virtual environment with
-`python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.0/agentworkflows-0.5.0-py3-none-any.whl`
+`python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-0.5.1-py3-none-any.whl`
 (or `python -m pip install ./sdk/python` from a checkout). `agentworkflows --help` and each subcommand's `--help` work without a key.
 The equivalent module entry point is `python -m agentworkflows.cli`.
 

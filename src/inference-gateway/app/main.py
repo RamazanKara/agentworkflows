@@ -72,7 +72,7 @@ from app.tracing import configure_tracing, trace_request
 from app.workflow_api import bind_workflow, register_workflow_routes
 from app.workflow_credentials import bind_step_credential
 
-SERVICE_VERSION = "0.5.0"
+SERVICE_VERSION = "0.5.1"
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "

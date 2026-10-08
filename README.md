@@ -103,10 +103,10 @@ To generate a GitOps overlay for a release after it has been published:
 
 ```bash
 make customer-overlay CUSTOMER_REPO_URL=https://github.com/<you>/<fork>.git \
-  CUSTOMER_REVISION=v0.5.0 CUSTOMER_GPU_PROFILE=nvidia
+  CUSTOMER_REVISION=v0.5.1 CUSTOMER_GPU_PROFILE=nvidia
 ```
 
-The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.5.0
+The GPU profile applies only to the optional self-hosted deployment. AgentWorkflows 0.5.1
 is ready for evaluation; this repository does not yet provide a hosted service.
 
 | Task | Start here |
