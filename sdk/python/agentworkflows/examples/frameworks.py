@@ -18,7 +18,9 @@ class BriefingState(TypedDict):
     {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "description": "Runs one topic through the OpenAI, Anthropic, Agents SDK and LangGraph agents.",
+        "description": (
+            "Sends one topic to four agents built with the OpenAI SDK, Anthropic SDK, OpenAI Agents SDK and LangGraph."
+        ),
         "properties": {
             "topic": {
                 "type": "string",
