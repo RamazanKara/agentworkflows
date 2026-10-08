@@ -10,12 +10,20 @@ providers:
 bootstrapAdmin:
   existingSecret: agentworkflows-admin
 
+# Isolates the gateway and bundled Redis in this namespace. See the install guide for CIDRs.
+networkPolicy:
+  enabled: false
+  ingressControllerNamespace: ingress-nginx
+  # Explicit provider/OIDC/external Redis destination CIDRs and TCP ports; no public egress by default.
+  externalEgress: []
+
 workflows:
   enabled: true
   temporal:
     web:
       enabled: false
   postgres:
+    enabled: true
     existingSecret: temporal-postgres-auth
   worker:
     team: default
@@ -25,6 +33,31 @@ workflows:
 inference-gateway:
   enabled: true
   fullnameOverride: inference-gateway
+  replicaCount: 1
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  antiAffinity:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    host: ""
+    tls:
+      enabled: false
+      secretName: ""
+  redis:
+    existingSecret:
+      name: ""
+      key: url
   deployment:
     create: false
   workflows:
@@ -91,6 +124,18 @@ inference-gateway:
               costLimitUsd: 5
   auth:
     enabled: true
+    oidc:
+      issuer: ""
+      clientId: ""
+      existingSecret:
+        name: ""
+        key: oidc-client-secret
+      redirectUrl: ""
+      scopes: openid profile email
+      teamClaim: ""
+      roleClaim: role
+      projectClaim: project
+      defaultRole: viewer
     keyRecords:
       existingSecret:
         name: agentworkflows-key-records

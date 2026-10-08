@@ -1,4 +1,6 @@
 postgres:
+  # Disable for external PostgreSQL; configure both temporal.server.config.persistence.datastores.
+  enabled: true
   image: postgres:16-alpine
   existingSecret: temporal-postgres-auth
   storage: 10Gi

@@ -33,6 +33,17 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      {{- if .Values.antiAffinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "inference-gateway.selectorLabels" . | nindent 20 }}
+      {{- end }}
       {{- if .Values.topologySpread.enabled }}
       topologySpreadConstraints:
         - maxSkew: {{ .Values.topologySpread.maxSkew }}
@@ -141,7 +152,7 @@ spec:
             - name: RESPONSE_CACHE_BACKEND
               value: {{ .Values.responseCache.backend | quote }}
             - name: RESPONSE_CACHE_REDIS_URL
-              value: {{ .Values.responseCache.redisUrl | quote }}
+              {{- include "inference-gateway.redisUrl" (dict "secret" .Values.redis.existingSecret "url" .Values.responseCache.redisUrl) | nindent 14 }}
             - name: RESPONSE_CACHE_REDIS_TIMEOUT_SECONDS
               value: {{ .Values.responseCache.redisTimeoutSeconds | quote }}
             - name: RESPONSE_CACHE_KEY_PREFIX
@@ -175,7 +186,7 @@ spec:
             - name: SANDBOX_BUDGET_WINDOW_SECONDS
               value: {{ .Values.budget.windowSeconds | quote }}
             - name: SANDBOX_BUDGET_REDIS_URL
-              value: {{ .Values.budget.redisUrl | quote }}
+              {{- include "inference-gateway.redisUrl" (dict "secret" .Values.redis.existingSecret "url" .Values.budget.redisUrl) | nindent 14 }}
             - name: SANDBOX_BUDGET_REDIS_TIMEOUT_SECONDS
               value: {{ .Values.budget.redisTimeoutSeconds | quote }}
             - name: SANDBOX_BUDGET_KEY_PREFIX
@@ -189,7 +200,7 @@ spec:
             - name: AUDIT_CHAIN_STORE_PATH
               value: {{ .Values.traceability.auditChainStore.path | quote }}
             - name: AUDIT_CHAIN_STORE_REDIS_URL
-              value: {{ .Values.traceability.auditChainStore.redisUrl | quote }}
+              {{- include "inference-gateway.redisUrl" (dict "secret" .Values.redis.existingSecret "url" .Values.traceability.auditChainStore.redisUrl) | nindent 14 }}
             - name: AUDIT_CHAIN_STORE_KEY
               value: {{ .Values.traceability.auditChainStore.key | quote }}
             - name: AUDIT_CHAIN_STORE_TIMEOUT_SECONDS
@@ -234,7 +245,11 @@ spec:
               value: {{ .Values.auth.oidc.clientSecret | quote }}
               {{- end }}
             - name: OIDC_REDIRECT_URL
+              {{- if and .Values.auth.oidc.issuer (not .Values.auth.oidc.redirectUrl) .Values.ingress.enabled .Values.ingress.tls.enabled }}
+              value: {{ printf "https://%s/v1/auth/callback" .Values.ingress.host | quote }}
+              {{- else }}
               value: {{ .Values.auth.oidc.redirectUrl | quote }}
+              {{- end }}
             - name: OIDC_SCOPES
               value: {{ .Values.auth.oidc.scopes | quote }}
             - name: OIDC_TEAM_CLAIM
@@ -246,7 +261,7 @@ spec:
             - name: OIDC_DEFAULT_ROLE
               value: {{ .Values.auth.oidc.defaultRole | quote }}
             - name: SESSION_COOKIE_SECURE
-              value: {{ .Values.adminConsole.cookieSecure | quote }}
+              value: {{ or .Values.adminConsole.cookieSecure (and .Values.ingress.enabled .Values.ingress.tls.enabled) | quote }}
             - name: API_KEY_SHA256S
               {{- if .Values.auth.existingSecret.name }}
               valueFrom:
@@ -294,7 +309,7 @@ spec:
             - name: BATCH_STORE_BACKEND
               value: {{ .Values.batch.store.backend | quote }}
             - name: BATCH_REDIS_URL
-              value: {{ .Values.batch.store.redisUrl | quote }}
+              {{- include "inference-gateway.redisUrl" (dict "secret" .Values.redis.existingSecret "url" .Values.batch.store.redisUrl) | nindent 14 }}
             - name: BATCH_REDIS_TIMEOUT_SECONDS
               value: {{ .Values.batch.store.redisTimeoutSeconds | quote }}
             - name: BATCH_KEY_PREFIX
@@ -312,7 +327,7 @@ spec:
             - name: RESPONSES_STORE_BACKEND
               value: {{ .Values.responses.store.backend | quote }}
             - name: RESPONSES_REDIS_URL
-              value: {{ .Values.responses.store.redisUrl | quote }}
+              {{- include "inference-gateway.redisUrl" (dict "secret" .Values.redis.existingSecret "url" .Values.responses.store.redisUrl) | nindent 14 }}
             - name: RESPONSES_REDIS_TIMEOUT_SECONDS
               value: {{ .Values.responses.store.redisTimeoutSeconds | quote }}
             - name: RESPONSES_KEY_PREFIX

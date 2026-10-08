@@ -48,3 +48,14 @@ e.g. {{ include "inference-gateway.image" .Values.image }}.
 {{- default "default" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "inference-gateway.redisUrl" -}}
+{{- if .secret.name -}}
+valueFrom:
+  secretKeyRef:
+    name: {{ .secret.name | quote }}
+    key: {{ .secret.key | quote }}
+{{- else -}}
+value: {{ .url | quote }}
+{{- end -}}
+{{- end -}}

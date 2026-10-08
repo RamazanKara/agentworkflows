@@ -110,6 +110,7 @@ nav:
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md
       - Install on Kubernetes: install-kubernetes.md
+      - Kubernetes production checklist: kubernetes-production-checklist.md
       - Production readiness: production-readiness.md
       - Developer workflow: development.md
   - Reference:

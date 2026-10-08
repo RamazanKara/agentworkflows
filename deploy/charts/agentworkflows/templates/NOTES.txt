@@ -4,10 +4,15 @@ Read your bootstrap admin key (keep it private):
   kubectl get secret {{ .Values.bootstrapAdmin.existingSecret }} -n {{ .Release.Namespace }} -o jsonpath='{.data.api-key}' | base64 -d; echo
 
 Open the console:
+{{ if index .Values "inference-gateway" "ingress" "enabled" }}
+  http{{ if index .Values "inference-gateway" "ingress" "tls" "enabled" }}s{{ end }}://{{ index .Values "inference-gateway" "ingress" "host" }}/console/
+{{ else }}
   kubectl port-forward -n {{ .Release.Namespace }} svc/inference-gateway 8080:8080
   http://127.0.0.1:8080/console/
+{{ end }}
 
-Sign in with the admin key. Providers & budgets shows missing provider credentials.
+Sign in with the admin key or your company account when OIDC is configured.
+Providers & budgets shows missing provider credentials.
 Create a provider Secret with an api-key entry, then upgrade with
   --set providers.openai.existingSecret=openai-api-key
 or

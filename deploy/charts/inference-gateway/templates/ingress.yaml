@@ -1,5 +1,5 @@
 {{- if .Values.ingress.enabled }}
-# Optional Ingress for the OpenAI-compatible gateway API. Disabled by default so the
+# Optional Ingress for the gateway API and console. Disabled by default so the
 # local lab keeps its zero-dependency port-forward access; enable and set a host (and TLS)
 # for cluster-external clients. The gateway NetworkPolicy must also permit traffic from the
 # ingress controller namespace.

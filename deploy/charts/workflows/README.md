@@ -7,6 +7,7 @@ Temporal execution, dedicated PostgreSQL, and a governed Python workflow worker.
 
 | Value | Default |
 | --- | --- |
+| `postgres.enabled` | `true` |
 | `postgres.existingSecret` | `temporal-postgres-auth` |
 | `postgres.image` | `postgres:16-alpine` |
 | `postgres.storage` | `10Gi` |

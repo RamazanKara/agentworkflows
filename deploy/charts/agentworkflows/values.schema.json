@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "agentworkflows values",
+  "type": "object",
+  "properties": {
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "ingressControllerNamespace": { "type": "string", "minLength": 1 },
+        "externalEgress": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cidr", "port"],
+            "properties": {
+              "cidr": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F:.]+/[0-9]+$",
+                "not": { "pattern": "/0$" }
+              },
+              "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+            }
+          }
+        }
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "properties": {
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

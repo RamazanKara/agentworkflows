@@ -1,6 +1,10 @@
 replicaCount: 1
 terminationGracePeriodSeconds: 210
 
+# Prefer separate nodes for gateway replicas while allowing rolling updates on small clusters.
+antiAffinity:
+  enabled: false
+
 # The umbrella renders this same Deployment with its provider and workflow wiring.
 deployment:
   create: true
@@ -8,6 +12,13 @@ deployment:
 workflows:
   # Set when workflow operations are enabled; readiness checks Temporal as well as Redis.
   temporalAddress: ""
+
+# One authenticated redis(s) URL for all Redis stores; key prefixes keep their data separate.
+# Empty preserves the individual store URLs below. Also used by the batch processor.
+redis:
+  existingSecret:
+    name: ""
+    key: url
 
 image:
   repository: ghcr.io/ramazankara/agentworkflows/inference-gateway
@@ -251,6 +262,7 @@ workflowRecords:
 # Enable alongside managed team policies, Redis accounting, and Temporal workers.
 adminConsole:
   enabled: false
+  # TLS ingress always forces Secure cookies, even when this is false for port-forwarding.
   cookieSecure: true
 
 traceability:
@@ -316,6 +328,7 @@ auth:
     existingSecret:
       name: ""
       key: oidc-client-secret
+    # Empty derives https://<ingress.host>/v1/auth/callback when OIDC and TLS ingress are enabled.
     redirectUrl: ""
     scopes: openid profile email
     teamClaim: ""

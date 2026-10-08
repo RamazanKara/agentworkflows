@@ -47,6 +47,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `admission.maxRequestBodyBytes` | `1048576` |
 | `admission.maxToolChars` | `32768` |
 | `admission.maxTools` | `64` |
+| `antiAffinity.enabled` | `false` |
 | `auth.apiKeyHashes` | `[]` |
 | `auth.apiKeyHeader` | `X-API-Key` |
 | `auth.enabled` | `false` |
@@ -170,6 +171,8 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `rateLimit.windowSeconds` | `60` |
 | `receipts.enabled` | `false` |
 | `receipts.maxFieldChars` | `256` |
+| `redis.existingSecret.key` | `url` |
+| `redis.existingSecret.name` | `""` |
 | `replicaCount` | `1` |
 | `resources.limits.cpu` | `500m` |
 | `resources.limits.memory` | `512Mi` |

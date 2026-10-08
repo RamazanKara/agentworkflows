@@ -1,0 +1,114 @@
+{{- if and .Values.networkPolicy.enabled (index .Values "inference-gateway" "enabled") }}
+{{- $gateway := index .Subcharts "inference-gateway" }}
+{{- if or $gateway.Values.networkPolicy.enabled (index .Values "budget-redis" "networkPolicy" "enabled") }}
+{{- fail "use the umbrella networkPolicy instead of the component NetworkPolicies" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "inference-gateway.fullname" $gateway }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "inference-gateway.selectorLabels" $gateway | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.ingressControllerNamespace | quote }}
+        {{- if .Values.workflows.enabled }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: workflow-worker
+        {{- end }}
+        {{- if and $gateway.Values.batch.enabled $gateway.Values.batch.worker.enabled }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "inference-gateway.name" $gateway }}-batch-processor
+              app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: http
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    {{- if index .Values "budget-redis" "enabled" }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "budget-redis.selectorLabels" (index .Subcharts "budget-redis") | nindent 14 }}
+      ports:
+        - {protocol: TCP, port: 6379}
+    {{- end }}
+    {{- if .Values.workflows.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: temporal
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: frontend
+      ports:
+        - {protocol: TCP, port: 7233}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: research-tools
+      ports:
+        - {protocol: TCP, port: 8000}
+    {{- end }}
+    {{- range $name, $port := dict "ollama" 11434 "vllm" 8000 }}
+    {{- if index $.Values $name "enabled" }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $name }}
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+      ports:
+        - {protocol: TCP, port: {{ $port }}}
+    {{- end }}
+    {{- end }}
+    {{- range .Values.networkPolicy.externalEgress }}
+    - to:
+        - ipBlock:
+            cidr: {{ .cidr | quote }}
+      ports:
+        - protocol: TCP
+          port: {{ .port }}
+    {{- end }}
+{{- if index .Values "budget-redis" "enabled" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "budget-redis.fullname" (index .Subcharts "budget-redis") }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "budget-redis.selectorLabels" (index .Subcharts "budget-redis") | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "inference-gateway.selectorLabels" $gateway | nindent 14 }}
+        {{- if and $gateway.Values.batch.enabled $gateway.Values.batch.worker.enabled }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "inference-gateway.name" $gateway }}-batch-processor
+              app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- end }}
+      ports:
+        - {protocol: TCP, port: 6379}
+  egress: []
+{{- end }}
+{{- end }}

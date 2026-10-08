@@ -6,6 +6,10 @@
   and TypeScript SDKs. Add `settings show|set|reset` and `audit list|verify|export`
   to the Python CLI, including filtered cursor paging, JSON Lines export and
   actionable settings conflicts and validation errors; preserve the keys commands.
+- Add opt-in umbrella-chart TLS ingress with Secure cookies, OIDC callback derivation,
+  gateway HA controls, single-namespace NetworkPolicies and Secret-backed external
+  Redis/PostgreSQL configuration. Document production operations and kind verification;
+  keep the default localhost demo install and bundled datastores.
 - Add Redis-backed team settings with YAML defaults, revision-checked admin APIs,
   field resets and chained change receipts. Apply monthly team/project budgets,
   workflow limits and approval rules, provider allowances and existing model alias

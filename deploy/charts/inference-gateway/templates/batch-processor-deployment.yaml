@@ -76,7 +76,7 @@ spec:
             - name: BATCH_STORE_BACKEND
               value: {{ .Values.batch.store.backend | quote }}
             - name: BATCH_REDIS_URL
-              value: {{ .Values.batch.store.redisUrl | quote }}
+              {{- include "inference-gateway.redisUrl" (dict "secret" .Values.redis.existingSecret "url" .Values.batch.store.redisUrl) | nindent 14 }}
             - name: BATCH_REDIS_TIMEOUT_SECONDS
               value: {{ .Values.batch.store.redisTimeoutSeconds | quote }}
             - name: BATCH_KEY_PREFIX

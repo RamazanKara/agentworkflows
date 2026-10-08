@@ -10,6 +10,77 @@
       }
     },
     "replicaCount": { "type": "integer", "minimum": 1 },
+    "antiAffinity": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "key": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "host": { "type": "string" },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "tls": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "secretName": { "type": "string" }
+          }
+        }
+      },
+      "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+      "then": {
+        "properties": {
+          "host": { "minLength": 1, "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$" },
+          "tls": {
+            "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+            "then": { "properties": { "secretName": { "minLength": 1 } }, "required": ["secretName"] }
+          }
+        },
+        "required": ["host"]
+      }
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "oidc": {
+          "type": "object",
+          "properties": {
+            "issuer": { "type": "string" },
+            "clientId": { "type": "string" },
+            "clientSecret": { "type": "string" },
+            "existingSecret": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "key": { "type": "string", "minLength": 1 }
+              }
+            },
+            "redirectUrl": { "type": "string" },
+            "scopes": { "type": "string", "pattern": "(^| )openid( |$)" },
+            "teamClaim": { "type": "string" },
+            "roleClaim": { "type": "string" },
+            "projectClaim": { "type": "string" },
+            "defaultRole": { "enum": ["admin", "builder", "approver", "viewer"] }
+          }
+        }
+      }
+    },
     "deployment": {
       "type": "object",
       "properties": {
