@@ -238,4 +238,4 @@ def test_scaffold_pins_the_packaged_sdk_version() -> None:
     from agentworkflows import scaffold
 
     pyproject = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
-    assert scaffold.SDK_VERSION == pyproject["project"]["version"]
+    assert pyproject["project"]["version"] == scaffold.SDK_VERSION
