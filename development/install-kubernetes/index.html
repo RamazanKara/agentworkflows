@@ -2086,7 +2086,7 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 <li>Kubernetes, <code>kubectl</code>, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.</li>
 <li>Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.</li>
-<li>A checkout containing this chart. Until v0.5.0 is published, use <code>main</code>, not the v0.4.0 chart.</li>
+<li>A checkout of the release: <code>git clone --branch v0.5.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git</code>.</li>
 </ul>
 <p>Prepare the local chart's dependencies once, in this order:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
@@ -2104,12 +2104,6 @@ these Secrets to supply your own credentials. For different names, set
 <code>workflows.postgres.existingSecret</code> (and both Temporal SQL datastore <code>existingSecret</code>
 values), <code>workflows.worker.existingSecret</code>, or <code>bootstrapAdmin.existingSecret</code>.
 Gateway key records contain hashes; the worker has execution scope and cannot approve.</p>
-<p><strong>Image compatibility during v0.5.0 development:</strong> chart defaults still reference the
-published v0.4.0 gateway and worker. The v0.4.0 gateway requires credentials for every
-cloud backend in its readiness check. Credential-free startup and the console's Helm
-Secret hints require a gateway image built from the updated source; select it with
-<code>inference-gateway.image.repository</code> and <code>inference-gateway.image.tag</code>. OIDC also
-requires the updated gateway. Static chart rendering does not verify these image behaviors.</p>
 <h2 id="sign-in">Sign in<a class="headerlink" href="#sign-in" title="Permanent link">&para;</a></h2>
 <p>Read the bootstrap admin key and keep it private:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>agentworkflows-admin<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.api-key}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
@@ -2117,8 +2111,8 @@ requires the updated gateway. Static chart rendering does not verify these image
 </code></pre></div>
 <p>Open <a href="http://127.0.0.1:8080/console/">http://127.0.0.1:8080/console/</a> and paste that key. The console uses the <code>default</code>
 team and project. In another terminal, <code>curl -fsS http://127.0.0.1:8080/readyz</code> checks
-Redis and Temporal. With the updated gateway, missing provider credentials leave the
-console available; <strong>Providers &amp; budgets</strong> identifies the missing key and Secret setup.
+Redis and Temporal. Missing provider credentials leave the console
+available; <strong>Providers &amp; budgets</strong> identifies the missing key and Secret setup.
 Inference still rejects requests until a provider key is configured.</p>
 <h2 id="add-a-provider-key">Add a provider key<a class="headerlink" href="#add-a-provider-key" title="Permanent link">&para;</a></h2>
 <p>Create a Secret in the same namespace. This Bash example reads the key without echoing it:</p>
