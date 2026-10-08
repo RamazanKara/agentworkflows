@@ -13,7 +13,7 @@ const costs = { cost_usd: .0432, tokens: 63, calls: 2 };
 
 async function login(page: Page, token = 'admin') {
   await page.goto('/console/');
-  await page.getByLabel('Team credential').fill(token);
+  await page.getByLabel('API key', { exact: true }).fill(token);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('navigation')).toBeVisible();
 }
@@ -126,22 +126,22 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   await expect(page.getByRole('row', { name: 'Research 2 63 $0.04' })).toBeVisible();
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual([0, 0, 'aw_csrf=csrf-fixture']);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByLabel('Team credential')).toHaveValue('');
+  await expect(page.getByLabel('API key', { exact: true })).toHaveValue('');
   expect(errors).toEqual([]);
 });
 
 test('invalid auth and expiry give a clear recovery path', async ({ page }) => {
   await page.goto('/console/');
-  await page.getByLabel('Team credential').fill('invalid');
+  await page.getByLabel('API key', { exact: true }).fill('invalid');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Invalid credential');
-  await page.getByLabel('Team credential').fill('admin');
+  await page.getByLabel('API key', { exact: true }).fill('admin');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('navigation')).toBeVisible();
   await page.route('**/v1/usage', route => route.fulfill({ status: 401, json: {} }));
   await page.getByRole('link', { name: 'Costs', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Your session expired');
-  await expect(page.getByLabel('Team credential')).toHaveValue('');
+  await expect(page.getByLabel('API key', { exact: true })).toHaveValue('');
 });
 
 test('template inputs are ready to run and completed results are readable', async ({ page }) => {
@@ -224,7 +224,7 @@ test('conflicting approval is actionable, viewer cannot decide or configure', as
   await page.getByRole('button', { name: 'Approve', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('no undecided draft');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await page.getByLabel('Team credential').fill('viewer');
+  await page.getByLabel('API key', { exact: true }).fill('viewer');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Providers & budgets', exact: true })).toHaveCount(0);
@@ -235,19 +235,19 @@ test('conflicting approval is actionable, viewer cannot decide or configure', as
 test('team switching clears prior team data and reload restores the active session', async ({ page }) => {
   await login(page);
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
-  await page.getByRole('button', { name: 'Switch identity' }).click();
-  await page.getByLabel('Team credential').fill('other');
+  await page.getByRole('button', { name: 'Switch account' }).click();
+  await page.getByLabel('API key', { exact: true }).fill('other');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Your first workflow starts here' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Research' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Switch identity' }).click();
-  await page.getByLabel('Team credential').fill('admin');
+  await page.getByRole('button', { name: 'Switch account' }).click();
+  await page.getByLabel('API key', { exact: true }).fill('admin');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Research' })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('navigation')).toBeVisible();
-  await expect(page.getByLabel('Team credential')).toHaveCount(0);
-  await expect(page.getByLabel('Team / identity', { exact: true })).toHaveText('demo / admin');
+  await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Signed in as' })).toHaveText(/demo\s*Admin/);
 });
 
 test('mobile navigation, keyboard skip link and bounded table scrolling', async ({ page }) => {
@@ -315,7 +315,7 @@ test('session restores after reload without retaining the API key', async ({ pag
   await page.reload();
   expect((await restored).method()).toBe('GET');
   await expect(page.getByRole('navigation')).toBeVisible();
-  await expect(page.getByLabel('Team credential')).toHaveCount(0);
+  await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
   const cookies = await page.context().cookies();
   expect(cookies.find(cookie => cookie.name === 'aw_session')?.httpOnly).toBe(true);
@@ -324,16 +324,16 @@ test('session restores after reload without retaining the API key', async ({ pag
 
 test('OIDC sign-in button is shown only when configured', async ({ page }) => {
   await page.goto('/console/');
-  await expect(page.getByLabel('Team credential')).toBeVisible();
+  await expect(page.getByLabel('API key', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in with', exact: false })).toHaveCount(0);
   await page.route('**/v1/auth/config', route => route.fulfill({ json: {
     api_key: true, oidc: { enabled: true, provider_name: 'Company', login_url: '/v1/auth/login' },
   } }));
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Sign in with Company' })).toBeVisible();
-  await expect(page.getByLabel('Team credential')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in with your company account' })).toBeVisible();
+  await expect(page.getByLabel('API key', { exact: true })).toBeVisible();
   await page.route('**/v1/auth/login', route => route.fulfill({ contentType: 'text/html', body: '<p>Company sign-in</p>' }));
-  await page.getByRole('button', { name: 'Sign in with Company' }).click();
+  await page.getByRole('button', { name: 'Sign in with your company account' }).click();
   await expect(page).toHaveURL(/\/v1\/auth\/login$/);
 });
 
@@ -364,7 +364,7 @@ test('creating a key shows the secret once and copies it', async ({ page, contex
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(page.getByLabel('New API key')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('row', { name: /Alice.*builder.*All.*Never.*Never.*Active.*Revoke/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Alice.*Builder.*All.*Never.*Never.*Active.*Revoke/ })).toBeVisible();
   await expect(page.getByText(secret, { exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
 });
@@ -408,5 +408,12 @@ test('a stale session can be replaced after reload using its CSRF cookie', async
   const request = page.waitForRequest(value => value.url().endsWith('/v1/auth/session') && value.method() === 'POST');
   await login(page);
   expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
-  await expect(page.getByLabel('Team / identity', { exact: true })).toHaveText('demo / admin');
+  await expect(page.getByRole('region', { name: 'Signed in as' })).toHaveText(/demo\s*Admin/);
+});
+
+test('company sign-in failures return as a readable message and a clean URL', async ({ page }) => {
+  await page.goto('/console/?signin_error=rejected#runs');
+  await expect(page.getByRole('alert')).toContainText('not linked to a team');
+  await expect(page).toHaveURL(/\/console\/#runs$/);
+  await expect(page.getByLabel('API key', { exact: true })).toBeVisible();
 });

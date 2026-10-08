@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function signIn(page: Page, credential: string) {
   await page.goto('/console/');
-  await page.getByLabel('Team credential').fill(credential);
+  await page.getByLabel('API key', { exact: true }).fill(credential);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('navigation')).toBeVisible();
 }
@@ -51,8 +51,8 @@ test('Compose first run, approval, receipts, provider budgets, costs and team is
   await expect(page.getByText('Key present', { exact: true })).toHaveCount(5);
   await page.getByRole('link', { name: 'Costs', exact: true }).click();
   await expect(page.getByRole('region', { name: 'By workflow table' })).toContainText('Research');
-  await page.getByRole('button', { name: 'Switch identity' }).click();
-  await page.getByLabel('Team credential').fill('demo-other-team');
+  await page.getByRole('button', { name: 'Switch account' }).click();
+  await page.getByLabel('API key', { exact: true }).fill('demo-other-team');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.goto(runUrl);
   await expect(page.getByRole('alert')).toContainText('in your team');
