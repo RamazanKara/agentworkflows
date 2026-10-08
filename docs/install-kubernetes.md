@@ -10,7 +10,7 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 - Kubernetes, `kubectl`, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.
 - Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.
-- A checkout containing this chart. Until v0.5.0 is published, use `main`, not the v0.4.0 chart.
+- A checkout of the release: `git clone --branch v0.5.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git`.
 
 Prepare the local chart's dependencies once, in this order:
 
@@ -36,13 +36,6 @@ these Secrets to supply your own credentials. For different names, set
 values), `workflows.worker.existingSecret`, or `bootstrapAdmin.existingSecret`.
 Gateway key records contain hashes; the worker has execution scope and cannot approve.
 
-**Image compatibility during v0.5.0 development:** chart defaults still reference the
-published v0.4.0 gateway and worker. The v0.4.0 gateway requires credentials for every
-cloud backend in its readiness check. Credential-free startup and the console's Helm
-Secret hints require a gateway image built from the updated source; select it with
-`inference-gateway.image.repository` and `inference-gateway.image.tag`. OIDC also
-requires the updated gateway. Static chart rendering does not verify these image behaviors.
-
 ## Sign in
 
 Read the bootstrap admin key and keep it private:
@@ -54,8 +47,8 @@ kubectl port-forward -n aw svc/inference-gateway 8080:8080
 
 Open <http://127.0.0.1:8080/console/> and paste that key. The console uses the `default`
 team and project. In another terminal, `curl -fsS http://127.0.0.1:8080/readyz` checks
-Redis and Temporal. With the updated gateway, missing provider credentials leave the
-console available; **Providers & budgets** identifies the missing key and Secret setup.
+Redis and Temporal. Missing provider credentials leave the console
+available; **Providers & budgets** identifies the missing key and Secret setup.
 Inference still rejects requests until a provider key is configured.
 
 ## Add a provider key

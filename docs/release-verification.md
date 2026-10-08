@@ -5,7 +5,7 @@ Use this checklist before trusting a public release in a customer-owned cluster.
 Set the release and repository once:
 
 ```bash
-export RELEASE=v0.4.0
+export RELEASE=v0.5.0
 export REPOSITORY=RamazanKara/agentworkflows
 export IMAGE_REPO=ghcr.io/ramazankara/agentworkflows
 export RELEASE_IDENTITY="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$RELEASE"

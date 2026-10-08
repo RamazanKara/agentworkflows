@@ -19,7 +19,7 @@ name: agentworkflows
 # Published, signed release images are pulled by default, so a first run needs no local build.
 # `docker compose build` (or `make compose-up`) builds from this checkout under the same names instead.
 # Bump the default tag with each release.
-x-gateway-image: &gateway-image ghcr.io/ramazankara/agentworkflows/inference-gateway:${AGENTWORKFLOWS_VERSION:-v0.4.0}
+x-gateway-image: &gateway-image ghcr.io/ramazankara/agentworkflows/inference-gateway:${AGENTWORKFLOWS_VERSION:-v0.5.0}
 
 services:
   ollama:
@@ -209,7 +209,7 @@ services:
     build:
       context: ../..
       dockerfile: sdk/python/Dockerfile
-    image: ghcr.io/ramazankara/agentworkflows/workflow-worker:${AGENTWORKFLOWS_VERSION:-v0.4.0}
+    image: ghcr.io/ramazankara/agentworkflows/workflow-worker:${AGENTWORKFLOWS_VERSION:-v0.5.0}
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       AGENTWORKFLOWS_URL: http://inference-gateway:8080
@@ -236,7 +236,7 @@ services:
   rag-service:
     build:
       context: ../../src/rag-service
-    image: ghcr.io/ramazankara/agentworkflows/rag-service:${AGENTWORKFLOWS_VERSION:-v0.4.0}
+    image: ghcr.io/ramazankara/agentworkflows/rag-service:${AGENTWORKFLOWS_VERSION:-v0.5.0}
     ports:
       - "127.0.0.1:${AGENTWORKFLOWS_RAG_PORT:-8090}:8080"
     volumes:

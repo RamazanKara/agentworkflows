@@ -26,7 +26,7 @@ explains queries, signals and updates, including approval patterns. The integrat
 comparison is a design judgment, not a benchmark or a claim that these components lack
 governance. Compare [implemented features](feature-inventory.md) against your actual requirements.
 
-## Is 0.4.0 a fit?
+## Is 0.5.0 a fit?
 
 | Your need | Current support |
 | --- | --- |
