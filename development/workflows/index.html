@@ -2291,12 +2291,14 @@ approval waits, then verifies no repeated completed model calls. See <a href="..
 <ol>
 <li>Sign in with <code>local-development-only</code> (demo admin). Keep the local fake providers on
    <strong>Get started</strong>; no cloud key or paid call is needed.</li>
-<li>Choose <strong>Run workflow</strong>, select <code>ResearchWorkflow</code>, fill in its schema-generated form, and
-   select <strong>Start run</strong>. Its detail page refreshes while the workflow is active.</li>
+<li>Choose <strong>Run workflow</strong>, select <strong>Research</strong>, enter a topic (or select <strong>Use the example</strong>),
+   and select <strong>Start run</strong>. Optional inputs such as the model and budgets sit under
+   <strong>More options</strong>. The run's detail page refreshes while the workflow is active.</li>
 <li>Open <strong>Approvals</strong>, read the draft, then <strong>Approve</strong> or <strong>Reject</strong>. Approval allows
    the configured publish tool to run; rejection finishes without publishing.</li>
-<li>Open the run from <strong>Workflow runs</strong>. Expand <strong>Input and output</strong> to read each model/tool
-   step's captured content and redaction/truncation notes. <strong>Receipt</strong> and <strong>Step logs</strong> show
+<li>Open the run from <strong>Workflow runs</strong>. Model steps preview their answer; expand
+   <strong>Prompt and response</strong> (model steps) or <strong>Arguments and result</strong> (tool steps) to read the
+   captured content with redaction/truncation notes. <strong>Receipt</strong> and <strong>Step logs</strong> show
    provider/model, usage, cost, routing attempts, and fingerprints without captured text.</li>
 <li>Open <strong>Costs</strong> for current-window team, provider, and workflow costs. <strong>Providers &amp; budgets</strong>
    shows admins key presence and limits, with a copyable fragment and links for configuring
@@ -2332,8 +2334,9 @@ not prove live provider acceptance.</p>
 <h3 id="workflow-forms-and-step-content">Workflow forms and step content<a class="headerlink" href="#workflow-forms-and-step-content" title="Permanent link">&para;</a></h3>
 <p>Set <code>inputSchema</code> on a workflow in the <code>SandboxPolicySet</code>. <code>GET /v1/workflow-policies</code>
 returns it to the console, which renders text fields, longer text areas, numbers,
-checkboxes, enum selects, and string arrays with one item per line. Workflows without
-a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
+checkboxes, enum selects, and string arrays with one item per line. Required fields come
+first and the rest sit under <strong>More options</strong>; a string property named <code>model</code> becomes a
+list of the workflow's allowed models. Workflows without a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
 string, number, integer, boolean, or array-of-string properties, optional <code>enum</code>,
 <code>required</code>, <code>description</code>, <code>default</code>, and <code>examples</code>. <code>additionalProperties: false</code>
 rejects unknown fields. Nested objects and schema references are not supported.

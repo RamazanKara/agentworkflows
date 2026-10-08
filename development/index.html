@@ -1978,8 +1978,9 @@
 <p>AgentWorkflows is self-managed: Python and TypeScript workflow SDKs, a model gateway and a team web console.
 Temporal keeps runs durable; the gateway controls model and tool access and records usage
 and receipts. Start, inspect, approve, cancel and retry runs through the console or CLI.
-In v0.3.0, cron schedules and signed webhooks can start work, with notifications for waiting approvals,
-failures and budget thresholds.</p>
+Cron schedules and signed webhooks can start work, with notifications for waiting approvals,
+failures and budget thresholds. People sign in with their company account (OIDC) or an API key,
+and admins add members and manage keys in the console.</p>
 <p>It is for <strong>developers</strong> turning agent scripts into repeatable jobs, <strong>team leads</strong> reviewing
 drafts and spend, and <strong>platform engineers</strong> managing shared provider access. Built-in routes
 cover OpenAI, Anthropic, Azure OpenAI, AWS Bedrock and Vertex Gemini; Ollama and vLLM are optional.
@@ -2034,8 +2035,8 @@ state and messages for review flows. AgentWorkflows itself uses Temporal.</p>
 per-run budgets, an approval console, triggers, notifications and linked receipts. Choose it
 if that shared workflow fits your team and saves integration work. Choose your own assembly
 if you need broader provider support, already operate those systems, or want full control
-over the application UX. This young project has a narrower API surface and still needs
-production identity, backups and operations. See the <a href="decision-guide/">side-by-side decision guide</a>.</p>
+over the application UX. This young project has a narrower API surface, and you still run
+its backups, upgrades and monitoring yourself. See the <a href="decision-guide/">side-by-side decision guide</a>.</p>
 <h2 id="find-a-capability">Find a capability<a class="headerlink" href="#find-a-capability" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2052,6 +2053,10 @@ production identity, backups and operations. See the <a href="decision-guide/">s
 <tr>
 <td>Run durable workflows with human approvals</td>
 <td><a href="workflows/">Workflow walkthrough</a></td>
+</tr>
+<tr>
+<td>Sign in with your company account and manage members and API keys</td>
+<td><a href="workflows/#company-sign-in-oidc">Company sign-in</a>, <a href="workflows/#members-and-api-keys">members and keys</a></td>
 </tr>
 <tr>
 <td>Set team roles, projects, provider keys, and budgets</td>
