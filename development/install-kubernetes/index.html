@@ -16,7 +16,7 @@
         <link rel="prev" href="../local-evaluation/">
       
       
-        <link rel="next" href="../production-readiness/">
+        <link rel="next" href="../kubernetes-production-checklist/">
       
       
         
@@ -810,6 +810,8 @@
       
         
       
+        
+      
     
     
     
@@ -1109,10 +1111,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#enable-oidc" class="md-nav__link">
+  <a href="#tls-ingress" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable OIDC
+        TLS ingress
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oidc-company-sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OIDC company sign-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gateway-availability-and-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gateway availability and resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network isolation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External Redis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-postgresql-for-temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External PostgreSQL for Temporal
       
     </span>
   </a>
@@ -1124,6 +1181,17 @@
     <span class="md-ellipsis">
       
         Upgrade
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify-the-optional-settings-on-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify the optional settings on kind
       
     </span>
   </a>
@@ -1145,6 +1213,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kubernetes-production-checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kubernetes production checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2079,10 +2175,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#enable-oidc" class="md-nav__link">
+  <a href="#tls-ingress" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable OIDC
+        TLS ingress
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#oidc-company-sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OIDC company sign-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gateway-availability-and-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gateway availability and resources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network isolation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-redis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External Redis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#external-postgresql-for-temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External PostgreSQL for Temporal
       
     </span>
   </a>
@@ -2094,6 +2245,17 @@
     <span class="md-ellipsis">
       
         Upgrade
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify-the-optional-settings-on-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify the optional settings on kind
       
     </span>
   </a>
@@ -2208,12 +2370,201 @@ routes under <code>inference-gateway.routing.policy.models</code> and team/workf
 are synthetic; no document is published externally. Model calls are real and paid.
 Replace the tool URLs with your integrations when adapting the workflow. The default
 ceilings are 10,000 tokens / $5 per run and 200,000 tokens / $50 per team budget window.</p>
-<h2 id="enable-oidc">Enable OIDC<a class="headerlink" href="#enable-oidc" title="Permanent link">&para;</a></h2>
-<p>Follow <a href="../workflows/#company-sign-in-oidc">Company sign-in (OIDC)</a> for registration,
-claims and Secret configuration. Nest its Helm values under <code>inference-gateway.auth.oidc</code>.
-Set <code>teamClaim</code> to a claim containing <code>default</code>, configure the exact HTTPS callback URL,
-and set <code>inference-gateway.adminConsole.cookieSecure=true</code> for HTTPS. The umbrella uses
-<code>false</code> for localhost port-forwarding; switch it before exposing the console through TLS ingress.</p>
+<h2 id="tls-ingress">TLS ingress<a class="headerlink" href="#tls-ingress" title="Permanent link">&para;</a></h2>
+<p>Ingress, OIDC, gateway HA and the umbrella NetworkPolicy are opt-in. Keep the following
+values files with your deployment configuration; the commands below update an existing
+<code>aw</code> installation and preserve its other values. Use <code>helm install ... -f FILE</code> for a
+fresh installation. Review the <a href="../kubernetes-production-checklist/">Kubernetes production checklist</a>
+before exposing the service.</p>
+<p>Use an installed ingress controller, point your DNS host at it, and create a TLS Secret
+in <code>aw</code> from your certificate and private key:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>tls<span class="w"> </span>agents-tls<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--cert<span class="o">=</span>fullchain.pem<span class="w"> </span>--key<span class="o">=</span>privkey.pem
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>tls-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s">inference-gateway:</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="s">  ingress:</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">    enabled: true</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">    className: nginx</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">    host: agents.example.com</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">    annotations:</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">    tls:</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">      enabled: true</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">      secretName: agents-tls</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s">YAML</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>curl<span class="w"> </span>-fsS<span class="w"> </span>https://agents.example.com/readyz
+</code></pre></div>
+<p>Replace the host, class and controller-specific annotations. The <code>/</code> prefix serves both
+the API and <code>/console/</code>; the metrics port is not exposed. TLS ingress automatically sets
+<code>SESSION_COOKIE_SECURE=true</code>, overriding <code>inference-gateway.adminConsole.cookieSecure=false</code>.
+The default port-forward install keeps HTTP localhost sessions working. After enabling
+TLS, use the HTTPS console; HTTP port-forwarding no longer supports its Secure cookies.</p>
+<p>For cert-manager, omit the <code>kubectl create secret tls</code> command and add
+<code>cert-manager.io/cluster-issuer: letsencrypt</code> to <code>ingress.annotations</code> in the file above.
+<code>secretName</code> is still required: cert-manager writes the issued certificate there. Supply
+your own ClusterIssuer and verify issuance before signing in. The equivalent command is:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--set-string<span class="w"> </span><span class="s1">'inference-gateway.ingress.annotations.cert-manager\.io/cluster-issuer=letsencrypt'</span><span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>If TLS terminates outside this chart's Ingress, explicitly set
+<code>inference-gateway.adminConsole.cookieSecure=true</code>.</p>
+<h2 id="oidc-company-sign-in">OIDC company sign-in<a class="headerlink" href="#oidc-company-sign-in" title="Permanent link">&para;</a></h2>
+<p>Register an authorization-code application with the exact callback
+<code>https://agents.example.com/v1/auth/callback</code>. Configure an identity-provider-controlled
+string claim <code>team</code> containing <code>default</code> for this installation; role and project claims
+must also be scalar strings. See <a href="../workflows/#company-sign-in-oidc">Company sign-in</a>
+for supported roles and provider examples. Use the TLS values above, then:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'OIDC client secret: '</span><span class="w"> </span>OIDC_SECRET<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$OIDC_SECRET</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>agents-oidc<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span>oidc-client-secret<span class="o">=</span>/dev/stdin
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">unset</span><span class="w"> </span>OIDC_SECRET
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>oidc-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="s">inference-gateway:</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="s">  auth:</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="s">    oidc:</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="s">      issuer: https://identity.example.com</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="s">      clientId: agentworkflows</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="s">      existingSecret:</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="s">        name: agents-oidc</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="s">        key: oidc-client-secret</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="s">      scopes: openid profile email</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="s">      teamClaim: team</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="s">      roleClaim: role</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="s">      projectClaim: project</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="s">      defaultRole: viewer</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="s">YAML</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>-f<span class="w"> </span>oidc-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>curl<span class="w"> </span>-fsS<span class="w"> </span>https://agents.example.com/v1/auth/config
+</code></pre></div>
+<p>An empty <code>auth.oidc.redirectUrl</code> derives the HTTPS callback from the enabled TLS ingress
+host, only when <code>issuer</code> is configured. An explicit <code>redirectUrl</code> takes precedence.
+Without chart-managed TLS ingress, supply the explicit HTTPS callback and Secure cookie
+setting yourself. Scopes must include <code>openid</code>; missing roles use <code>defaultRole</code> (viewer).
+The client secret is referenced from the existing Secret, not copied into Helm values.
+OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.</p>
+<h2 id="gateway-availability-and-resources">Gateway availability and resources<a class="headerlink" href="#gateway-availability-and-resources" title="Permanent link">&para;</a></h2>
+<p>The default is one gateway replica with requests of <code>100m</code> CPU / <code>128Mi</code> memory and
+limits of <code>500m</code> / <code>512Mi</code>, a starting point for a small team using cloud providers.
+Measure load and adjust <code>inference-gateway.resources</code>. Enable two replicas and the PDB:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>ha-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="s">inference-gateway:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="s">  replicaCount: 2</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="s">  podDisruptionBudget:</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="s">    enabled: true</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="s">    minAvailable: 1</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="s">  antiAffinity:</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="s">    enabled: true</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="s">YAML</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>ha-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>inference-gateway<span class="w"> </span>-o<span class="w"> </span>wide
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pdb<span class="w"> </span>inference-gateway<span class="w"> </span>-n<span class="w"> </span>aw
+</code></pre></div>
+<p>Use at least two schedulable nodes. Anti-affinity prefers different hostnames; it permits
+co-location when capacity is constrained, including the surge pod during a rolling update.
+Verify placement and leave capacity for that extra pod. The PDB covers voluntary
+disruptions; it does not protect against node failure or make Redis/PostgreSQL/Temporal
+highly available. Keep Redis-backed budgets and audit heads; if you enable response
+caching, Responses state or Batch, select their Redis backends too (Batch also needs S3).</p>
+<h2 id="network-isolation">Network isolation<a class="headerlink" href="#network-isolation" title="Permanent link">&para;</a></h2>
+<p>Use a CNI that enforces Kubernetes NetworkPolicy. The umbrella policy selects gateway
+pods, admits HTTP from the named ingress controller namespace and the workflow worker
+(also the Batch worker when enabled), and allows egress to CoreDNS, bundled Redis,
+Temporal frontend, Research tools and enabled Ollama/vLLM pods. Bundled Redis accepts
+only gateway/Batch-worker traffic and has no outbound connections. Other stack pods
+retain their existing networking; this is not a namespace-wide isolation policy.</p>
+<p>External egress is closed until you list destination CIDRs and TCP ports. Include your
+providers, the OIDC discovery/token/JWKS endpoints, and external Redis if used. These are
+documentation addresses; replace them with your approved destinations before applying:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>network-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="s">networkPolicy:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="s">  enabled: true</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="s">  ingressControllerNamespace: ingress-nginx</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="s">  externalEgress:</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="s">    - {cidr: 203.0.113.10/32, port: 443}  # Provider</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="s">    - {cidr: 203.0.113.20/32, port: 443}  # OIDC</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="s">    - {cidr: 192.0.2.10/32, port: 6379}  # External Redis, if used</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="s">YAML</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>network-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>networkpolicy<span class="w"> </span>-n<span class="w"> </span>aw
+</code></pre></div>
+<p>Standard NetworkPolicy cannot allow DNS names; maintain provider IP ranges or deploy
+your CNI's FQDN policy separately. There is no blanket HTTPS allow rule. Verify your CNI's
+Service/NAT behavior and adapt DNS rules for NodeLocal DNS. Policies are additive, so
+review other policies selecting these pods; keep the component <code>networkPolicy.enabled</code>
+values false. See <a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/">Kubernetes NetworkPolicy</a>.
+Metrics scraping, custom tools, notifications, OTLP collectors, RAG and other integrations
+need separately reviewed rules. The default <code>helm test</code> gateway probe is not an allowed
+client with this policy; test through the ingress controller as shown below.</p>
+<h2 id="external-redis">External Redis<a class="headerlink" href="#external-redis" title="Permanent link">&para;</a></h2>
+<p>Use a persistent Redis service supporting the gateway's Redis commands and Lua scripts;
+keep eviction disabled for durable state. Before changing an existing installation,
+back up and migrate Redis data: disabling <code>budget-redis</code> removes its chart-managed PVC.
+This setting does not copy data or turn the bundled Redis into a cluster.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'Redis URL (rediss://user:password@host:6379/0): '</span><span class="w"> </span>REDIS_URL<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$REDIS_URL</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>agents-redis<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span><span class="nv">url</span><span class="o">=</span>/dev/stdin
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">unset</span><span class="w"> </span>REDIS_URL
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>redis-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="s">budget-redis:</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="s">  enabled: false</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="s">inference-gateway:</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="s">  redis:</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="s">    existingSecret:</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="s">      name: agents-redis</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="s">      key: url</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="s">YAML</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>redis-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>The Secret holds the complete URL (percent-encode credentials); prefer <code>rediss://</code> with
+a certificate trusted by the gateway image. It replaces all five Redis URL environments:
+budgets/sessions/workflow records, audit heads, response cache, Batch and Responses state.
+The Batch processor uses the same reference. Distinct key prefixes keep stores separate
+in one logical database; preserve those prefixes and migrate all previously used databases.
+The Secret is never generated or owned by this chart. The <code>redis.existingSecret</code> setting
+also works with authenticated bundled Redis without disabling <code>budget-redis</code>.</p>
+<h2 id="external-postgresql-for-temporal">External PostgreSQL for Temporal<a class="headerlink" href="#external-postgresql-for-temporal" title="Permanent link">&para;</a></h2>
+<p>Provision <code>temporal</code> and <code>temporal_visibility</code> databases and a user that can manage their
+schemas. Back up and restore both databases before switching an existing installation;
+Helm does not migrate them. The old bundled PostgreSQL claim remains when it is disabled.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'PostgreSQL password: '</span><span class="w"> </span>POSTGRES_PASSWORD<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$POSTGRES_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>agents-postgres<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span><span class="nv">password</span><span class="o">=</span>/dev/stdin
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">unset</span><span class="w"> </span>POSTGRES_PASSWORD
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>postgres-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="s">workflows:</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="s">  postgres:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="s">    enabled: false</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="s">  temporal:</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="s">    schema:</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="s">      useHelmHooks: true</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="s">    server:</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="s">      config:</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="s">        persistence:</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="s">          datastores:</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="s">            default:</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="s">              sql: &amp;externalSql</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="s">                connectAddr: postgres.example.com:5432</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="s">                user: temporal</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="s">                databaseName: temporal</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="s">                existingSecret: agents-postgres</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="s">                secretKey: password</span>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="s">                createDatabase: false</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a><span class="s">                manageSchema: true</span>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a><span class="s">                tls:</span>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="s">                  enabled: true</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a><span class="s">                  enableHostVerification: true</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="s">                  serverName: postgres.example.com</span>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="s">            visibility:</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="s">              sql:</span>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="s">                &lt;&lt;: *externalSql</span>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="s">                databaseName: temporal_visibility</span>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a><span class="s">YAML</span>
+<a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>postgres-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>The connection and existing Secret are supplied to both Temporal datastores and the schema
+Job; no bundled PostgreSQL Service, StatefulSet or generated password Secret is rendered.
+Use a trusted CA (mount private CAs into both Temporal server and schema-job containers
+and set each SQL <code>tls.caFile</code> when needed). If your DBA manages schemas, set <code>manageSchema</code>
+false for both stores after applying the matching Temporal migrations separately.
+External database hooks can run before upgrade; the bundled database keeps hooks disabled
+so a fresh installation can create PostgreSQL first.</p>
 <h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">&para;</a></h2>
 <p>Back up PostgreSQL, Redis and the bootstrap Secrets together. Preserve the namespace,
 release name and credential Secret names. <code>lookup</code> reuses existing credentials on
@@ -2221,24 +2572,75 @@ release name and credential Secret names. <code>lookup</code> reuses existing cr
 read without being adopted. Offline <code>helm template</code> cannot look up live Secrets and
 generates new example credentials on each render; do not apply those over a running release.</p>
 <p>Keep your overrides in a values file and review new chart defaults before upgrading:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-f<span class="w"> </span>my-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-f<span class="w"> </span>my-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
 <p>To omit the bundled workflow stack, set <code>workflows.enabled=false</code>; the gateway then
 omits the Temporal readiness check. The console's workflow operations require Temporal
 and a worker. For production, review <a href="../production-readiness/">production readiness</a>,
-storage backups, identity and ingress. The umbrella disables the component NetworkPolicies
-whose rules describe the separate GitOps namespaces.</p>
+the <a href="../kubernetes-production-checklist/">Kubernetes production checklist</a>, storage backups,
+identity and ingress. The umbrella disables the component NetworkPolicies whose rules
+describe the separate GitOps namespaces.</p>
+<h2 id="verify-the-optional-settings-on-kind">Verify the optional settings on kind<a class="headerlink" href="#verify-the-optional-settings-on-kind" title="Permanent link">&para;</a></h2>
+<p>These are caller-run checks; no cluster install is part of chart render validation.
+Prepare dependencies as above. Render defaults and each file from the preceding sections:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>--strict
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>helm<span class="w"> </span>template<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>&gt;<span class="w"> </span>/tmp/aw-default.yaml
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="k">for</span><span class="w"> </span>file<span class="w"> </span><span class="k">in</span><span class="w"> </span>tls-values.yaml<span class="w"> </span>ha-values.yaml<span class="w"> </span>network-values.yaml<span class="w"> </span>redis-values.yaml<span class="w"> </span>postgres-values.yaml<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>--strict<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>helm<span class="w"> </span>template<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">"/tmp/aw-</span><span class="nv">$file</span><span class="s2">"</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="k">done</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>--strict<span class="w"> </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>-f<span class="w"> </span>oidc-values.yaml
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>helm<span class="w"> </span>template<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>-f<span class="w"> </span>oidc-values.yaml<span class="w"> </span>&gt;<span class="w"> </span>/tmp/aw-oidc.yaml
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>python3<span class="w"> </span>-m<span class="w"> </span>unittest<span class="w"> </span>discover<span class="w"> </span>-s<span class="w"> </span>scripts/tests<span class="w"> </span>-p<span class="w"> </span><span class="s1">'test_umbrella_chart.py'</span><span class="w"> </span>-v
+</code></pre></div>
+<p>For a disposable default smoke test, use the install command at the start of this guide,
+check <code>/readyz</code>, sign in with the bootstrap key and complete one Research run. Then use
+the exact upgrade commands above one feature at a time. TLS needs an installed controller,
+a trusted certificate and working host resolution; OIDC needs a real test identity provider.
+Check the browser's <code>aw_session</code> cookie is Secure, sign in, refresh, log out, and verify
+the mapped team and role. With HA, check two ready gateway pods and <code>ALLOWED DISRUPTIONS=1</code>;
+delete one gateway pod, wait for recovery and verify the existing session/run still works.
+Use a multi-node kind cluster to check anti-affinity placement.</p>
+<p>Network enforcement needs a NetworkPolicy-capable CNI; kind's default networking alone
+does not establish this. With the policy enabled, run these probes (the two denied probes
+must time out/fail; the first must succeed):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>aw-allowed<span class="w"> </span>-n<span class="w"> </span>ingress-nginx<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--image<span class="o">=</span>busybox:1.37.0<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>wget<span class="w"> </span>-T<span class="w"> </span><span class="m">5</span><span class="w"> </span>-qO-<span class="w"> </span>http://inference-gateway.aw:8080/readyz
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>kubectl<span class="w"> </span>run<span class="w"> </span>aw-denied<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--image<span class="o">=</span>busybox:1.37.0<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>wget<span class="w"> </span>-T<span class="w"> </span><span class="m">5</span><span class="w"> </span>-qO-<span class="w"> </span>http://inference-gateway:8080/readyz
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>kubectl<span class="w"> </span>run<span class="w"> </span>aw-redis-denied<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--image<span class="o">=</span>busybox:1.37.0<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span>nc<span class="w"> </span>-z<span class="w"> </span>-w<span class="w"> </span><span class="m">5</span><span class="w"> </span>budget-redis<span class="w"> </span><span class="m">6379</span>
+</code></pre></div>
+<p>Also complete a provider-backed Research run (worker, Redis, Temporal and tool traffic),
+exercise OIDC under the policy, and confirm an unlisted destination fails from a gateway
+pod. Test external Redis and PostgreSQL in a <strong>fresh namespace with restored/test data</strong>
+and the same Secret names, using their values files; confirm <code>/readyz</code>, sign-in, a complete
+run, and persistence after restarting gateway/Temporal pods. No bundled Redis resources
+or PostgreSQL Service/StatefulSet should exist there. Finally render and install the
+combined configuration with all six <code>-f</code> files, using reachable endpoints and reviewed
+CIDRs. Create the referenced Secrets in <code>aw-production-smoke</code> first, then run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>--strict<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>-f<span class="w"> </span>oidc-values.yaml<span class="w"> </span>-f<span class="w"> </span>ha-values.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>-f<span class="w"> </span>network-values.yaml<span class="w"> </span>-f<span class="w"> </span>redis-values.yaml<span class="w"> </span>-f<span class="w"> </span>postgres-values.yaml
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>helm<span class="w"> </span>template<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw-production-smoke<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>-f<span class="w"> </span>oidc-values.yaml<span class="w"> </span>-f<span class="w"> </span>ha-values.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>-f<span class="w"> </span>network-values.yaml<span class="w"> </span>-f<span class="w"> </span>redis-values.yaml<span class="w"> </span>-f<span class="w"> </span>postgres-values.yaml<span class="w"> </span>&gt;<span class="w"> </span>/tmp/aw-production.yaml
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>helm<span class="w"> </span>install<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw-production-smoke<span class="w"> </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span>-f<span class="w"> </span>oidc-values.yaml<span class="w"> </span>-f<span class="w"> </span>ha-values.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">  </span>-f<span class="w"> </span>network-values.yaml<span class="w"> </span>-f<span class="w"> </span>redis-values.yaml<span class="w"> </span>-f<span class="w"> </span>postgres-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>Rehearse the checklist's upgrade/rollback and restore steps on that installation.</p>
 <h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>aw<span class="w"> </span>-n<span class="w"> </span>aw
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>aw<span class="w"> </span>-n<span class="w"> </span>aw
 </code></pre></div>
 <p>PostgreSQL's StatefulSet claim and user-created provider Secrets remain. Helm-managed
 credentials and Redis's chart-managed claim are removed, so save backups first. For a
 disposable namespace, remove all remaining data and stop its port-forward:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>aw
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># If you created a dedicated test cluster:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>kind<span class="w"> </span>delete<span class="w"> </span>cluster<span class="w"> </span>--name<span class="w"> </span>aw
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>aw
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># If you created a dedicated test cluster:</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>kind<span class="w"> </span>delete<span class="w"> </span>cluster<span class="w"> </span>--name<span class="w"> </span>aw
 </code></pre></div>
 <p>Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
 <code>temporal-postgres-auth</code> Secret or delete the old claim before a fresh evaluation install.</p>
@@ -2296,13 +2698,13 @@ disposable namespace, remove all remaining data and stop its port-forward:</p>
         
         
           
-          <a href="../production-readiness/" class="md-footer__link md-footer__link--next" aria-label="Next: Production readiness">
+          <a href="../kubernetes-production-checklist/" class="md-footer__link md-footer__link--next" aria-label="Next: Kubernetes production checklist">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Production readiness
+                Kubernetes production checklist
               </div>
             </div>
             <div class="md-footer__button md-icon">
