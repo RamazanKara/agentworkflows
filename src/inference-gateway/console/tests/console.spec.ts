@@ -87,8 +87,8 @@ for (const ok of [true, false]) {
     await login(page, 'admin', '/console/#audit');
     await page.getByRole('button', { name: 'Verify chain' }).click();
     await expect(page.getByRole('heading', { name: ok ? 'Chain verified' : 'Chain break found' })).toBeVisible();
-    await expect(page.getByText('7 events checked.')).toBeVisible();
-    await expect(page.getByText(ok ? /Range boundary at sequence 2/ : /First break at sequence 8.*record_hash_mismatch/)).toBeVisible();
+    await expect(page.getByText(ok ? '7 events checked. None were changed' : '7 events checked before the break.')).toBeVisible();
+    await expect(page.getByText(ok ? /This check starts at event 2 in chain gateway:test/ : /First break at sequence 8.*record_hash_mismatch/)).toBeVisible();
   });
 }
 
@@ -119,8 +119,9 @@ test('audit disabled view explains how to enable it', async ({ page }) => {
     message: 'Set SANDBOX_BUDGET_BACKEND=redis and AUDIT_LOG_ENABLED=true.',
   } }));
   await login(page, 'admin', '/console/#audit');
-  await expect(page.getByRole('heading', { name: 'Audit view is off' })).toBeVisible();
-  await expect(page.getByText(/Set SANDBOX_BUDGET_BACKEND=redis/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Audit log is turned off' })).toBeVisible();
+  await expect(page.getByText(/SANDBOX_BUDGET_BACKEND=redis/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apply filters' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Verify chain' })).toBeDisabled();
 });
 
@@ -151,7 +152,7 @@ for (const role of ['builder', 'approver', 'viewer']) {
     await page.route('**/v1/team/audit**', route => { requests++; return route.fulfill({ status: 403, json: {} }); });
     await login(page, role, '/console/#audit');
     await expect(page.getByRole('link', { name: 'Audit log', exact: true })).toHaveCount(0);
-    await expect(page.getByText('A team admin role is required to read the audit log.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
     expect(requests).toBe(0);
   });
 }

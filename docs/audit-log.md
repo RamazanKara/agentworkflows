@@ -26,7 +26,7 @@ export promptly when collecting evidence.
 The view uses the existing budget Redis: set `SANDBOX_BUDGET_BACKEND=redis`,
 configure `SANDBOX_BUDGET_REDIS_URL` and enable Redis persistence. Keep
 `AUDIT_LOG_ENABLED=true`. Existing Redis-backed teams need no additional service.
-Without that configuration the page says **Audit view is off** and shows how to
+Without that configuration the page says **Audit log is turned off** and shows how to
 enable it. Redis read failures return 503 instead of an empty or verified trail.
 
 `AUDIT_VIEW_RETENTION_SECONDS` defaults to **7776000** (90 days). In Helm, use

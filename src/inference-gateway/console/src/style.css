@@ -453,7 +453,13 @@ html { scroll-padding-bottom: 120px; }
 .audit-table .row-action { text-align: right; white-space: nowrap; }
 .audit-table .row-action button.link { margin: 0; }
 .audit-table tr.open td { border-bottom-color: transparent; }
-.audit-table .json-row pre { margin: 0; max-height: 420px; overflow: auto; }
+.audit-table .json-row pre { margin: 0 0 12px; max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+.audit-table tr.broken td { background: #fff7f6; }
+.audit-table tr.broken td:first-child { box-shadow: inset 4px 0 0 #b3261e; }
+.event-name { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.audit-filters input, .audit-filters select { height: 46px; }
+.table-footer > span.muted { margin-right: 14px; font-size: 14px; }
+.verify-result button.link { margin-top: 8px; }
 .verify-result { border-left: 4px solid var(--line); padding: 18px 22px; }
 .verify-result.ok { border-left-color: var(--teal); }
 .verify-result.broken { border-left-color: #b3261e; background: #fff7f6; }
@@ -478,4 +484,10 @@ html { scroll-padding-bottom: 120px; }
   .stack.audit-table td[data-label="Time"]::before { content: none; }
   .stack.audit-table td[data-label="Actor"] small { display: inline; margin-left: 6px; }
   .stack.audit-table tr.json-row { padding-top: 0; }
+  .stack.audit-table td.empty-cell { display: none; }
+  .stack.audit-table .json-row pre { font-size: 12px; padding: 12px 14px; }
+  .stack.audit-table tr.broken { background: #fff7f6; box-shadow: inset 4px 0 0 #b3261e; }
+  .stack.audit-table tr.broken td { background: none; box-shadow: none; }
+  .stack.audit-table a.run-link { display: inline-flex; align-items: center; min-height: 44px; margin: -11px 0; }
+  .table-footer > span.muted { display: block; margin: 0 0 10px; }
 }
