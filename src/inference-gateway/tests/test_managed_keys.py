@@ -275,6 +275,14 @@ def test_managed_keys_precede_jwt_and_work_without_the_console(auth_gateway):
     assert client.post("/v1/auth/session", json={"key": key["key"]}).status_code == 404
 
 
+def test_managed_key_sessions_carry_the_key_name(auth_gateway):
+    client, _, _, _ = auth_gateway
+    key = create_key(client, role="approver")
+    session = client.post("/v1/auth/session", json={"key": key["key"]})
+    assert session.status_code == 200, session.text
+    assert session.json()["principal"]["name"] == "Alice"
+
+
 def test_additive_migration_retains_existing_state(auth_gateway):
     _, app, store, _ = auth_gateway
     prefix = app.state.settings.sandbox_budget_key_prefix

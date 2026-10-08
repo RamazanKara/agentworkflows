@@ -9,8 +9,8 @@ export type Team = {
   notifications?: { channels: string[]; budget_threshold: number };
   provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
 };
-export type Session = { csrfToken: string; team: Team; id: number };
-export type BrowserSession = { csrf_token: string; principal: { key_id?: string }; sandbox_id: string };
+export type Session = { csrfToken: string; team: Team; id: number; name?: string };
+export type BrowserSession = { csrf_token: string; principal: { key_id?: string; name?: string }; sandbox_id: string };
 export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
 export type InputProperty = {
   title?: string;
@@ -100,13 +100,24 @@ export function useData<T>(csrfToken: string, path: string, revision = 0) {
   return state;
 }
 
-export const money = (value: number | null | undefined) => value == null ? '—' : `$${value.toFixed(value !== 0 && Math.abs(value) < 0.01 ? 4 : 2)}`;
+export const money = (value: number | null | undefined) => value == null ? '—' : value > 0 && value < 0.005 ? '<$0.01' : `$${value.toFixed(2)}`;
 // ResearchWorkflow → Research, DocumentQAWorkflow → Document QA, GitHubIssueTriageWorkflow → GitHub issue triage.
 export const workflowName = (value: string) => value.replace(/Workflow$/, '').split(/(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/)
   .map((word, i) => i === 0 || /[A-Z].*[A-Z]/.test(word) ? word : word.toLowerCase()).join(' ').replace(/\bGit hub\b/i, 'GitHub') || value;
-export const shortId = (value: string) => value.slice(-8);
+export const shortId = (value: string) => value.slice(0, 8);
 export const number = (value: number | undefined) => (value ?? 0).toLocaleString();
-export const date = (value: number) => new Date(value * 1000).toLocaleString();
+// Oct 8, 12:26 PM; the year appears only when it differs from this year.
+export const date = (value: number) => {
+  const when = new Date(value * 1000);
+  return when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', ...(when.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+};
+const providerNames: Record<string, string> = {
+  openai: 'OpenAI', anthropic: 'Anthropic', 'azure-openai': 'Azure OpenAI', bedrock: 'AWS Bedrock',
+  vertex: 'Vertex Gemini', ollama: 'Ollama', vllm: 'vLLM', tool: 'Tools',
+};
+export const providerName = (value: string) => providerNames[value] || value;
+// The Compose demo routes models named demo-*; demo-only guidance appears only there.
+export const isDemo = (models?: Models) => Boolean(models?.data.some(model => model.id.startsWith('demo-')));
 export const status = (run: Run) => run.progress?.stage === 'awaiting_approval' ? 'awaiting_approval'
   : run.status === 'completed' && (run.outcome ?? (run.result as { status?: string } | undefined)?.status) === 'rejected' ? 'rejected' : run.status;
 export const label = (value: string) => value.replaceAll('_', ' ').replace(/^./, char => char.toUpperCase());

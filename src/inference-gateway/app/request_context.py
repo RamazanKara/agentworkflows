@@ -416,6 +416,9 @@ def _api_key_principal(request: Request, settings: Settings, record: KeyRecord |
         if record.role:
             principal["role"] = record.role
             principal["project"] = record.project
+        if record.name:
+            # Managed keys carry the admin-chosen label, so approvals read as a person.
+            principal["name"] = record.name
         return principal
     api_key = _api_key_from_request(request, settings) or ""
     # Non-reversible attribution identifier, not a security control and not password

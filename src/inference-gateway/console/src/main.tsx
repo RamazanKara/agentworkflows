@@ -23,7 +23,7 @@ const signinErrors: Record<string, string> = {
 const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
 function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
-  onSignIn: (csrfToken: string, team: Team) => void; cancel?: () => void; message?: string;
+  onSignIn: (csrfToken: string, team: Team, name?: string) => void; cancel?: () => void; message?: string;
   config?: AuthConfig; csrfToken: string;
 }) {
   const [token, setToken] = useState('');
@@ -47,19 +47,19 @@ function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
         const session = await api<BrowserSession>(csrfToken, '/v1/auth/session', { method: 'POST', body: JSON.stringify({ key: token.trim() }) });
         setToken('');
         const team = await api<Team>(session.csrf_token, '/v1/team');
-        onSignIn(session.csrf_token, team);
+        onSignIn(session.csrf_token, team, session.principal.name);
       }
       catch (error) { setError((error as Error).message); }
       finally { setBusy(false); }
     }}>
       <label htmlFor="credential">API key</label>
       <input id="credential" type="password" autoComplete="off" autoFocus={!sso} required value={token} onChange={e => setToken(e.target.value)} aria-describedby="credential-help"/>
-      <p id="credential-help" className="muted">Exchanged for a secure session and never stored in this browser. Signed JWTs work too.</p>
+      <p id="credential-help" className="muted">Exchanged for a secure session and never stored in this browser.</p>
       <ErrorMessage message={error}/>
       <div className="actions"><button className={sso ? 'secondary' : undefined} disabled={busy}>{busy ? 'Verifying…' : 'Sign in'}</button>{cancel && <button type="button" className="secondary" onClick={cancel}>Back to workspace</button>}</div>
     </form>
-    {local && <details className="demo-help"><summary>Trying the local Compose demo?</summary>
-      <p>Start the stack from the quickstart, then sign in with <code>local-development-only</code>. The demo uses local fake providers, with no cloud charges.</p>
+    {local && !sso && <details className="demo-help"><summary>Using the Compose demo?</summary>
+      <p>Sign in with <code>local-development-only</code>. The demo’s built-in test models need no cloud keys and cost nothing.</p>
       <p>For role testing: <code>demo-builder</code>, <code>demo-approver</code>, or <code>demo-viewer</code>.</p>
       <button className="secondary" onClick={() => setToken('local-development-only')}>Use demo key</button>
     </details>}
@@ -79,6 +79,7 @@ function App() {
     return reason ? signinErrors[reason] ?? signinErrors.unavailable : undefined;
   });
   const [route, setRoute] = useState(location.hash.slice(1) || 'start');
+  const [menu, setMenu] = useState(false);
   const sequence = useRef(0);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -87,13 +88,13 @@ function App() {
     const configuration = api<AuthConfig>('', '/v1/auth/config', options).then(setConfig);
     const restore = api<BrowserSession>('', '/v1/auth/session', options).then(async value => {
       const team = await api<Team>(value.csrf_token, '/v1/team', options);
-      if (!controller.signal.aborted) setSession({ csrfToken: value.csrf_token, team, id: ++sequence.current });
+      if (!controller.signal.aborted) setSession({ csrfToken: value.csrf_token, team, id: ++sequence.current, name: value.principal.name });
     });
     Promise.allSettled([configuration, restore]).then(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    const change = () => setRoute(location.hash.slice(1) || 'start');
+    const change = () => { setRoute(location.hash.slice(1) || 'start'); setMenu(false); };
     const expire = () => { setSession(undefined); setAdding(false); setExpired(true); };
     window.addEventListener('hashchange', change);
     window.addEventListener('aw:expired', expire);
@@ -108,26 +109,30 @@ function App() {
   if (!session || adding) return <SignIn config={config} csrfToken={session?.csrfToken || ''}
     message={expired ? 'Your session expired. Sign in again to continue.' : signinError}
     cancel={session ? () => setAdding(false) : undefined}
-    onSignIn={(csrfToken, team) => {
-      setSession({ csrfToken, team, id: ++sequence.current });
+    onSignIn={(csrfToken, team, name) => {
+      setSession({ csrfToken, team, id: ++sequence.current, name });
       setAdding(false); setExpired(false); setError('');
     }}/>;
   const active = route.startsWith('run/') || route === 'new' ? 'runs' : route;
-  return <div className="shell">
+  // Phones get a compact top bar; the menu button opens the same navigation as the desktop sidebar.
+  return <div className={menu ? 'shell menu-open' : 'shell'} onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
     <a className="skip" href="#main" onClick={e => { e.preventDefault(); main.current?.focus(); }}>Skip to content</a>
     <aside className="sidebar">
       <a href="#start" className="brand"><Icon name="brand"/><span>AgentWorkflows</span></a>
-      <section className="identity" aria-label="Signed in as"><span>{session.team.team_id}</span><span className="role">{label(session.team.role)}</span></section>
-      <nav aria-label="Main navigation">{navigation.filter(([id]) => !['providers', 'keys'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
-        <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined}><Icon name={id}/>{text}</a>)}
-      </nav>
-      <div className="session-actions">
-        <button onClick={() => setAdding(true)}><Icon name="add"/>Switch account</button>
-        <button onClick={async () => {
-          try { await api(session.csrfToken, '/v1/auth/logout', { method: 'POST' }); setSession(undefined); setExpired(false); }
-          catch (value) { setError((value as Error).message); }
-        }}><Icon name="signout"/>Sign out</button>
-        <ErrorMessage message={error}/>
+      <section className="identity" aria-label="Signed in as">{session.name && <span className="who">{session.name}</span>}<span className="team">{session.team.team_id}</span><span className="role">{label(session.team.role)}</span></section>
+      <button className="menu-button" aria-expanded={menu} aria-controls="app-menu" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu(value => !value)}><Icon name={menu ? 'close' : 'menu'}/></button>
+      <div id="app-menu" className="app-menu">
+        <nav aria-label="Main navigation">{navigation.filter(([id]) => !['providers', 'keys'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
+          <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}
+        </nav>
+        <div className="session-actions">
+          <button onClick={() => { setMenu(false); setAdding(true); }}><Icon name="swap"/>Switch account</button>
+          <button onClick={async () => {
+            try { await api(session.csrfToken, '/v1/auth/logout', { method: 'POST' }); setSession(undefined); setExpired(false); setMenu(false); }
+            catch (value) { setError((value as Error).message); }
+          }}><Icon name="signout"/>Sign out</button>
+          <ErrorMessage message={error}/>
+        </div>
       </div>
     </aside>
     <main id="main" ref={main} tabIndex={-1} key={`${session.id}:${route}`}>

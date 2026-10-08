@@ -38,8 +38,8 @@ function KeyManagement({ session }: { session: Session }) {
   const [name, setName] = useState('');
   const [role, setRole] = useState<Team['role']>('viewer');
   const [project, setProject] = useState(session.team.projects.length === 1 ? session.team.projects[0] : '');
-  const [lifetime, setLifetime] = useState(0);
-  const [created, setCreated] = useState<{ name: string; key: string }>();
+  const [lifetime, setLifetime] = useState(90);
+  const [created, setCreated] = useState<{ name: string; key: string; id: string }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -66,11 +66,11 @@ function KeyManagement({ session }: { session: Session }) {
           const value = await api<Key & { key: string }>(session.csrfToken, '/v1/team/keys', {
             method: 'POST', body: JSON.stringify({ name: name.trim(), role, project: project || null, expires_at }),
           });
-          setCreated({ name: value.name, key: value.key }); setName(''); setRevision(value => value + 1);
+          setCreated({ name: value.name, key: value.key, id: value.key_id }); setName(''); setRevision(value => value + 1);
         } catch (value) { setError((value as Error).message); }
         finally { setBusy(false); }
       }}>
-        <div className="field"><label htmlFor="key-name">Name</label><input id="key-name" required maxLength={128} placeholder="Priya, or Release bot" value={name} onChange={e => setName(e.target.value)}/></div>
+        <div className="field"><label htmlFor="key-name">Name</label><input id="key-name" required maxLength={128} placeholder="e.g. Priya Shah or Release bot" value={name} onChange={e => setName(e.target.value)}/></div>
         <div className="field"><label htmlFor="key-role">Role</label><select id="key-role" value={role} onChange={e => setRole(e.target.value as Team['role'])} aria-describedby="key-role-help">{roles.map(value => <option key={value} value={value}>{label(value)}</option>)}</select><small id="key-role-help">{roleHelp[role]}</small></div>
         <div className="field"><label htmlFor="key-project">Project</label><select id="key-project" value={project} onChange={e => setProject(e.target.value)}><option value="">All projects</option>{session.team.projects.map(value => <option key={value}>{value}</option>)}</select></div>
         <div className="field"><label htmlFor="key-expires">Expires</label><select id="key-expires" value={lifetime} onChange={e => setLifetime(Number(e.target.value))}>{lifetimes.map(([text, days]) => <option key={days} value={days}>{text === 'Never' ? text : `In ${text}`}</option>)}</select></div>
@@ -80,7 +80,7 @@ function KeyManagement({ session }: { session: Session }) {
     {!result.data && !result.error && <Loading/>}
     {result.data && (keys.length ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Team API keys"><table className="stack keys-table"><thead><tr><th>Name</th><th>Role</th><th>Project</th><th>Last used</th><th>Expires</th><th>Status</th><th><span className="visually-hidden">Action</span></th></tr></thead><tbody>{keys.map(key => {
       const current = state(key);
-      return <tr key={key.key_id} className={current === 'active' ? undefined : 'inactive'}><th scope="row">{key.name}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}</span></td><td className="row-action">{key.revoked_at == null && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
+      return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}</span></td><td className="row-action">{key.revoked_at == null && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
         if (!window.confirm(`Revoke ${key.name}? It stops working immediately.`)) return;
         setBusy(true); setError(''); setCreated(undefined);
         try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); }

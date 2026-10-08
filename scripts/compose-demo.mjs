@@ -40,17 +40,16 @@ try {
   await expect(page.getByRole('navigation')).toBeVisible();
   await page.waitForTimeout(1800);
   await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
-  await page.getByLabel('Research topic').fill('How can our team ship agents with budgets and human review?');
+  await page.getByLabel('Workflow', { exact: true }).selectOption('ResearchWorkflow');
+  await page.getByLabel('Topic', { exact: true }).fill('How can our team ship agents with budgets and human review?');
   await page.waitForTimeout(1800);
   await page.getByRole('button', { name: 'Start run' }).click();
   await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
   const runURL = page.url();
-  await expect.poll(async () => {
-    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-    return page.getByRole('heading', { name: 'Review the waiting draft' }).count();
-  }, { timeout: 90000, intervals: [1000, 2000] }).toBe(1);
+  // The run page refreshes itself while the run is active.
+  await expect(page.getByRole('heading', { name: 'Review the draft' })).toBeVisible({ timeout: 90000 });
   await page.getByRole('link', { name: 'Approvals', exact: true }).click();
-  const review = page.locator('article.approval-item').filter({
+  const review = page.locator('section.review').filter({
     has: page.locator(`a[href="${new URL(runURL).hash}"]`),
   });
   await expect(review.locator('.draft')).not.toBeEmpty();
@@ -58,13 +57,10 @@ try {
   await review.getByRole('button', { name: 'Approve', exact: true }).click();
   await expect(review).toHaveCount(0);
   await page.goto(runURL);
-  await expect.poll(async () => {
-    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-    return page.locator('.run-meta .badge').textContent();
-  }, { timeout: 60000, intervals: [1000, 2000] }).toBe('Completed');
-  await expect(page.getByText('"status": "published"', { exact: false })).toBeVisible();
+  await expect(page.locator('.run-meta .badge')).toHaveText('Completed', { timeout: 60000 });
+  await expect(page.locator('.result-summary')).toContainText('Published');
   await page.waitForTimeout(3500);
-  await page.getByText('Receipt ·', { exact: false }).first().click();
+  await page.getByText('Receipt', { exact: true }).first().click();
   await expect(page.getByText('"record_hash"', { exact: false }).first()).toBeVisible();
   await page.screenshot({ path: path.join(output, 'receipts.png') });
   await page.waitForTimeout(3500);
@@ -72,7 +68,7 @@ try {
   await expect(page.getByText('Key present', { exact: true })).toHaveCount(5);
   await page.waitForTimeout(3500);
   await page.getByRole('link', { name: 'Costs', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'By workflow table' })).toContainText('ResearchWorkflow');
+  await expect(page.getByRole('region', { name: 'By workflow table' })).toContainText('Research');
   await page.screenshot({ path: path.join(output, 'costs.png') });
   await page.waitForTimeout(3500);
   expect(errors).toEqual([]);

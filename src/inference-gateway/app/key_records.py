@@ -99,6 +99,7 @@ class KeyRecord:
     estimated_token_budget: int | None = None
     role: str | None = None
     project: str | None = None
+    name: str | None = None
 
     def is_expired(self, now: float) -> bool:
         """Return whether the key's expiry (if any) is at or before ``now`` (epoch seconds)."""

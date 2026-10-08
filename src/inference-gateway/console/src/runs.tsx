@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { api, date, label, money, number, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
-import { Badge, Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { api, date, label, money, number, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { Badge, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
 const canApprove = (session: Session) => ['admin', 'approver'].includes(session.team.role);
@@ -14,6 +14,7 @@ export function Runs({ session }: { session: Session }) {
   const [offset, setOffset] = useState<number | null>(0);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
+  const [filters, setFilters] = useState(false);
   const current = useRef<AbortController | null>(null);
   const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
   async function load(cursor: number, reset = false) {
@@ -35,12 +36,14 @@ export function Runs({ session }: { session: Session }) {
   }
   useEffect(() => { void load(0, true); return () => current.current?.abort(); }, [project, filter, workflow, revision]);
   return <>
-    <PageHeader title="Workflow runs" subtitle="Every step accounted for."><Refresh onClick={() => setRevision(v => v + 1)}/>{canBuild(session) && <a className="button" href="#new">Run workflow</a>}</PageHeader>
-    <Metrics items={[
-      ['Runs shown', number(rows.length)], ['Waiting for review', number(rows.filter(r => status(r) === 'awaiting_approval').length)],
-      ['Estimated spend', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
+    <PageHeader title="Workflow runs" subtitle="Runs in your projects, newest first."><Refresh onClick={() => setRevision(v => v + 1)}/>{canBuild(session) && <a className="button" href="#new">Run workflow</a>}</PageHeader>
+    <Metrics compact items={[
+      ['Runs shown', number(rows.length)], ['Awaiting approval', number(rows.filter(r => status(r) === 'awaiting_approval').length)],
+      ['Spend (shown runs)', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
     ]}/>
-    <div className="filters panel">
+    <button className="secondary filter-toggle" aria-expanded={filters} aria-controls="run-filters" onClick={() => setFilters(value => !value)}>
+      {filters ? 'Hide filters' : `Filters${[filter, workflow].filter(Boolean).length ? ` (${[filter, workflow].filter(Boolean).length})` : ''}`}</button>
+    <div id="run-filters" className={filters ? 'filters panel' : 'filters panel collapsed'}>
       <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
       <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label>Workflow<select value={workflow} onChange={e => setWorkflow(e.target.value)}><option value="">All workflows</option>{Object.keys(policies.data?.workflows || {}).map(w => <option key={w} value={w}>{workflowName(w)}</option>)}</select></label>
@@ -48,13 +51,13 @@ export function Runs({ session }: { session: Session }) {
     <ErrorMessage message={error || policies.error} retry={() => void load(offset ?? 0)}/>
     <div className="panel">
       {rows.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow runs table"><table className="stack runs-stack">
-        <thead><tr>{['Workflow', 'Run', 'Status', 'Started', 'Tokens', 'Cost'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+        <thead><tr>{['Workflow', 'Run', 'Status', 'Started', 'Tokens', 'Cost'].map(h => <th key={h} className={['Tokens', 'Cost'].includes(h) ? 'num' : undefined}>{h}</th>)}</tr></thead>
         <tbody>{rows.map(run => <tr key={run.run_id}><td><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a><small>{run.project}</small></td><td data-label="Run"><code title={run.run_id}>{shortId(run.run_id)}</code></td><td data-label="Status"><Badge value={status(run)}/></td><td data-label="Started">{date(run.created_at)}</td><td data-label="Tokens">{number(run.budget.tokens)}</td><td data-label="Cost">{money(run.budget.cost_usd)}</td></tr>)}</tbody>
       </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs on this page' : 'Your first workflow starts here'}><p>{offset === null ? 'Start a workflow or choose different filters.' : 'Load more to continue searching older runs.'}</p>{canBuild(session) && <a href="#new">Run a workflow</a>}</Empty>}
       {busy && <Loading/>}
       {offset !== null && !busy && <div className="table-footer"><button className="secondary" onClick={() => void load(offset)}>Load more</button></div>}
     </div>
-    <p className="muted">Configured-price estimates. Open a run to inspect its receipts.</p>
+    <p className="muted">Costs are estimates from configured prices. Open a run to see each step and its receipt.</p>
   </>;
 }
 
@@ -65,6 +68,7 @@ export function StartRun({ session }: { session: Session }) {
   const [input, setInput] = useState('{}');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [more, setMore] = useState(false);
   const request = useRef<{ fingerprint: string; id: string } | null>(null);
   const names = Object.keys(policies.data?.workflows || {});
   const selected = workflow || names[0];
@@ -88,12 +92,12 @@ export function StartRun({ session }: { session: Session }) {
         finally { setBusy(false); }
       }}>
         <div className="field-row">
-          <div className="field"><label htmlFor="run-workflow">Workflow</label><select id="run-workflow" value={selected} onChange={e => { setWorkflow(e.target.value); setInput('{}'); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></div>
+          <div className="field"><label htmlFor="run-workflow">Workflow</label><select id="run-workflow" value={selected} onChange={e => { setWorkflow(e.target.value); setInput('{}'); setMore(false); }}>{names.map(n => <option key={n} value={n}>{workflowName(n)}</option>)}</select></div>
           <div className="field"><label htmlFor="run-project">Project</label><select id="run-project" value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></div>
         </div>
-        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema} models={policy.allowedModels}/> : <div className="field"><label htmlFor="run-input">Workflow input (JSON)</label><textarea id="run-input" required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></div>}
-        {policy && <p className="muted ceiling">Each run can use up to {number(policy.tokenLimit)} tokens and {money(policy.costLimitUsd)}.</p>}
-        <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to runs</a></div>
+        {policy?.inputSchema ? <SchemaFields key={selected} schema={policy.inputSchema} models={policy.allowedModels} onMore={setMore}/> : <div className="field"><label htmlFor="run-input">Workflow input (JSON)</label><textarea id="run-input" required spellCheck={false} value={input} onChange={e => setInput(e.target.value)} rows={6}/></div>}
+        {policy && !more && <p className="muted ceiling">Each run can use up to {number(policy.tokenLimit)} tokens and {money(policy.costLimitUsd)}.</p>}
+        <div className="actions"><button disabled={busy}>{busy ? 'Starting…' : 'Start run'}</button><a href="#runs">Back to workflow runs</a></div>
         {error && request.current && <p className="muted">Retry here with unchanged input to reuse request ID <code>{request.current.id}</code>.</p>}
       </form>}
   </>;
@@ -115,19 +119,19 @@ function schemaInput(schema: InputSchema, form: FormData): Record<string, unknow
   return input;
 }
 
-// Field names become labels: cost_limit_usd → "Cost limit USD", incident_id → "Incident ID".
-const fieldLabel = (name: string, property: InputProperty) => property.title || name.split('_')
+// Field names become labels: cost_limit_usd → "Cost limit" (with a $ prefix), incident_id → "Incident ID".
+const fieldLabel = (name: string, property: InputProperty) => property.title || name.replace(/_usd$/, '').split('_')
   .map((word, i) => /^(id|usd|url|api|qa|pr)$/i.test(word) ? word.toUpperCase() : i ? word : word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 const fieldText = (value: unknown) => Array.isArray(value) ? value.join('\n') : value === undefined ? '' : String(value);
 
-function SchemaFields({ schema, models }: { schema: InputSchema; models: string[] }) {
+function SchemaFields({ schema, models, onMore }: { schema: InputSchema; models: string[]; onMore: (open: boolean) => void }) {
   const entries = Object.entries(schema.properties);
   const primary = entries.filter(([name]) => schema.required?.includes(name));
   const more = primary.length ? entries.filter(([name]) => !schema.required?.includes(name)) : [];
   const field = ([name, property]: [string, InputProperty]) => <SchemaField key={name} name={name} property={property} required={Boolean(schema.required?.includes(name))} models={models}/>;
   return <>{schema.description && <p className="muted">{schema.description}</p>}
     {(primary.length ? primary : entries).map(field)}
-    {more.length > 0 && <details className="more-options"><summary>More options</summary><div>{more.map(field)}</div></details>}
+    {more.length > 0 && <details className="more-options" onToggle={e => onMore(e.currentTarget.open)}><summary>More options</summary><div>{more.map(field)}</div></details>}
   </>;
 }
 
@@ -147,9 +151,10 @@ function SchemaField({ name, property, required, models }: { name: string; prope
     : modelChoice ? <select {...common} defaultValue={models.includes(String(value)) ? String(value) : models[0]}>{models.map(model => <option key={model}>{model}</option>)}</select>
     : property.type === 'array' || multiline ? <textarea {...common} minLength={property.minLength} defaultValue={fieldText(value)} placeholder={fieldText(example)} rows={multiline ? 6 : 4} spellCheck={!multiline}/>
     : <input {...common} type={['number', 'integer'].includes(property.type) ? 'number' : 'text'} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} minLength={property.minLength} pattern={property.pattern} defaultValue={fieldText(value)} placeholder={fieldText(example)}/>;
+  const usd = /_usd$/.test(name) && property.type === 'number';
   return <div className="field">
-    {property.type !== 'boolean' && <label htmlFor={id}>{fieldLabel(name, property)}</label>}
-    {control}
+    {property.type !== 'boolean' && <label htmlFor={id}>{fieldLabel(name, property)}{usd && <span className="visually-hidden"> in US dollars</span>}</label>}
+    {usd ? <div className="prefixed"><span aria-hidden="true">$</span>{control}</div> : control}
     {property.description && <small id={`${id}-help`}>{property.description}</small>}
     {property.type === 'array' && <small id={`${id}-lines`}>One item per line.</small>}
     {example !== undefined && value === undefined && property.type !== 'boolean' && !property.enum && <button type="button" className="link" onClick={() => {
@@ -159,7 +164,7 @@ function SchemaField({ name, property, required, models }: { name: string; prope
   </div>;
 }
 
-function Review({ session, run, onDone }: { session: Session; run: Run; onDone: () => void }) {
+function Review({ session, run, onDone, title = 'Review the draft', meta }: { session: Session; run: Run; onDone: () => void; title?: string; meta?: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -171,11 +176,10 @@ function Review({ session, run, onDone }: { session: Session; run: Run; onDone: 
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
   }
-  return <section className="review panel"><div className="section-heading"><h2>Review the waiting draft</h2><Badge value="awaiting_approval"/></div>
-    <p>Your decision applies to run <code>{run.run_id}</code>.</p>
+  return <section className="review panel"><h2>{title}</h2>{meta}
     <pre className="draft">{run.progress?.draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}</pre>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
-    {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">Recorded as your verified identity.</span></div> : <p className="callout">An approver or admin must review this draft. Use “Switch identity” to sign in with that credential.</p>}
+    {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">An approver or admin must review this draft. Use Switch account to sign in as one.</p>}
   </section>;
 }
 
@@ -203,11 +207,13 @@ export function Approvals({ session }: { session: Session }) {
     }
     void load(); return () => controller.abort();
   }, [session, revision]);
-  return <><PageHeader title="Approvals" subtitle="Review waiting work across all your available projects."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
+  return <><PageHeader title="Approvals" subtitle="Drafts waiting for a decision, across your projects."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={error} retry={() => setRevision(v => v + 1)}/>
     {busy && <Loading/>}
     {!busy && !error && !rows.length && <Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a href="#runs">Explore workflow runs</a></Empty>}
-    {rows.map(run => <article className="approval-item" key={run.run_id}><h2><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a></h2><p className="muted">{run.project} · Started {date(run.created_at)}</p><Review session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}/></article>)}
+    {rows.map(run => <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
+      title={[workflowName(run.workflow), firstLine(run.progress?.draft)].filter(Boolean).join(' · ')}
+      meta={<p className="muted review-meta">{run.project} · Started {date(run.created_at)} · {money(run.budget.cost_usd)} · <a href={`#run/${run.run_id}`}>Open run</a></p>}/>)}
   </>;
 }
 
@@ -218,6 +224,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [copied, setCopied] = useState('');
   const run = result.data;
   useEffect(() => {
     if (run?.status !== 'running') return;
@@ -233,27 +240,45 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
     } catch (error) { setActionError((error as Error).message); }
     finally { setBusy(false); }
   }
-  return <><a className="back" href="#runs">Back to workflow runs</a><PageHeader title={run ? workflowName(run.workflow) : 'Run detail'} subtitle="Follow the work, inspect the evidence."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
-    <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status">{notice}</p>
+  const running = run?.status === 'running';
+  return <><a className="back" href="#runs">Back to workflow runs</a><PageHeader title={run ? workflowName(run.workflow) : 'Run detail'}>
+      {!running && <Refresh onClick={() => setRevision(v => v + 1)}/>}
+      {running && canBuild(session) && !confirmCancel && <button className="danger" onClick={() => setConfirmCancel(true)}>Cancel run</button>}
+    </PageHeader>
+    <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status" className="status">{notice || copied}</p>
     {!run && !result.error && <Loading/>}
-    {run && <><div className="run-meta"><Badge value={status(run)}/><span>{run.project}</span><span>{date(run.created_at)}</span><code>{run.run_id}</code></div>
-      <Metrics items={[[ 'Tokens / limit', `${number(run.budget.tokens)} / ${number(run.budget.token_limit)}` ], ['Cost / limit', `${money(run.budget.cost_usd)} / ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
-      {run.progress?.message && <p className="callout">{run.progress.message}</p>}
-      {run.status === 'running' && <p className="muted">Updates every 5 seconds while this run is active.</p>}
+    {run && <><div className="run-meta"><Badge value={status(run)}/><span>Project {run.project}</span><span>Started {date(run.created_at)}</span>
+        <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="icon" aria-label="Copy run ID" onClick={async () => {
+          try { await navigator.clipboard.writeText(run.run_id); setCopied('Run ID copied.'); } catch { setCopied(`Run ID: ${run.run_id}`); }
+        }}><Icon name="copy"/></button></span></div>
+      {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" onClick={() => setConfirmCancel(false)}>Keep running</button></div></div>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
+      <Metrics items={[[ 'Tokens', `${number(run.budget.tokens)} of ${number(run.budget.token_limit)}` ], ['Cost', `${money(run.budget.cost_usd)} of ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
+      {run.progress?.message && <p className="callout">{run.progress.message}</p>}
+      {running && <p className="muted">This page updates automatically while the run is active.</p>}
       {run.result !== undefined && <Result value={run.result}/>}
-      <section><div className="section-heading"><h2>Step timeline</h2><span className="muted">Provider, usage, and evidence</span></div>
+      <section><h2>Step timeline</h2>
         {!run.timeline?.length ? <Empty title="Waiting for the first step"><p>Refresh in a moment. If the run stays queued, check its team worker and Temporal task queue.</p></Empty> :
           <ol className="timeline">{timelineGroups(run.timeline).map((group, i) => <li key={group[0].receipt_id}>
-            <span className="step-number">{i + 1}</span>{group[0].action === 'notification' ? <Notifications steps={group}/> : <StepCard step={group[0]}/>}</li>)}</ol>}
+            <span className="step-number">{i + 1}</span>{group[0].action === 'notification' ? <Notifications steps={group}/> : group[0].action === 'approval' ? <ApprovalStep step={group[0]}/> : <StepCard step={group[0]}/>}</li>)}</ol>}
         <p className="muted">Each step links to a gateway receipt. To prove nothing was changed, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">verify an audit export</a>.</p>
       </section>
-      {canBuild(session) && <div className="run-actions">
-        {run.status === 'running' && (confirmCancel ? <div className="callout"><p>Cancel this run? Already-sent model or tool actions cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" onClick={() => setConfirmCancel(false)}>Keep running</button></div></div> : <button className="secondary" onClick={() => setConfirmCancel(true)}>Cancel run</button>)}
-        {['failed', 'canceled', 'terminated', 'timed_out'].includes(run.status) && <><p>Retry starts a new run and budget. Review side effects: tools may execute again.</p><button disabled={busy} onClick={() => void act('retry')}>Retry workflow</button></>}
+      {canBuild(session) && ['failed', 'canceled', 'terminated', 'timed_out'].includes(run.status) && <div className="run-actions">
+        <p>Retry starts a new run and budget. Review side effects: tools may execute again.</p><button disabled={busy} onClick={() => void act('retry')}>Retry workflow</button>
       </div>}
     </>}
   </>;
+}
+
+const firstLine = (text?: string) => text?.split('\n').find(line => line.trim())?.trim().slice(0, 80) || '';
+const who = (principal: Record<string, unknown> | undefined) => String(principal?.name || principal?.sub || principal?.key_id || 'a reviewer');
+
+function ApprovalStep({ step }: { step: Step }) {
+  const approved = step.receipt.approved === true;
+  return <article className="panel step"><div className="section-heading"><h3>Approval</h3><Badge value={approved ? 'succeeded' : 'failed'} text={approved ? 'Approved' : 'Rejected'}/></div>
+    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong> · {date(step.timestamp)}</p>
+    <Receipt step={step}/>
+  </article>;
 }
 
 const stepTitle = (step: Step) => step.tool ? label(step.tool) : label(step.action || 'operation');
@@ -270,7 +295,7 @@ function timelineGroups(steps: Step[]) {
 }
 
 function Receipt({ step }: { step: Step }) {
-  return <details><summary>Receipt · {step.receipt_id.slice(0, 12)}</summary><p>Chain <code>{step.chain_id}</code></p><pre>{JSON.stringify(step.receipt, null, 2)}</pre></details>;
+  return <details><summary>Receipt</summary><p className="muted">Receipt <code>{step.receipt_id.slice(0, 12)}</code> · chain <code>{step.chain_id}</code></p><pre className="json">{JSON.stringify(step.receipt, null, 2)}</pre></details>;
 }
 
 function StepCard({ step }: { step: Step }) {
@@ -281,22 +306,25 @@ function StepCard({ step }: { step: Step }) {
   const served = (attempts.find(a => a.status === 'served')?.charged || null) as { tokens: number; cost_usd: number } | null;
   const tokens = served && failed.length ? served.tokens : step.tokens;
   const cost = served && failed.length ? served.cost_usd : step.cost_usd;
-  return <article className="panel step"><div className="section-heading"><h3>{stepTitle(step)}</h3><Badge value={step.status_code && step.status_code >= 400 ? 'failed' : 'recorded'}/></div>
+  const tool = Boolean(step.tool) || step.action === 'tool_call';
+  const [open, setOpen] = useState(false);
+  const answer = step.content?.output ? preview(step.content.output) : '';
+  return <article className="panel step"><div className="section-heading"><h3>{stepTitle(step)}</h3>{step.status_code && step.status_code >= 400 ? <Badge value="failed"/> : <Badge value="succeeded"/>}</div>
     <p className="muted">{date(step.timestamp)} · {number(step.duration_ms)} ms</p>
-    {(step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider || '—'}</dd></div><div><dt>Model / tool</dt><dd>{step.tool || step.model || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
-    {failed.length > 0 && <p className="callout">{failed.map(a => a.provider).join(', ')} failed, so {step.provider} served this step.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${failed[0].provider} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
-    {step.content?.output && preview(step.content.output) && <blockquote className="step-preview">{preview(step.content.output)}</blockquote>}
-    <details><summary>{step.tool || step.action === 'tool_call' ? 'Arguments and result' : 'Prompt and response'}</summary>
+    {(step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider ? providerName(step.provider) : '—'}</dd></div><div><dt>{tool ? 'Tool' : 'Model'}</dt><dd>{(tool ? step.tool : step.model) || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
+    {failed.length > 0 && <p className="callout">{failed.map(a => providerName(a.provider || '')).join(', ')} failed, so {providerName(step.provider)} served this step.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${providerName(failed[0].provider || '')} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
+    {answer && !open && <blockquote className="step-preview">{answer}</blockquote>}
+    <details onToggle={e => setOpen(e.currentTarget.open)}><summary>{tool ? 'Arguments and result' : 'Prompt and response'}</summary>
       {step.content ? <>
-        <p className="muted">{step.content.redaction === 'redacted' ? 'Gateway redaction applied.' : 'Full capture after gateway admission and output checks.'}</p>
-        <h4>{step.tool || step.action === 'tool_call' ? 'Arguments' : 'Prompt'}</h4><Content text={step.content.input} empty="No input recorded."/>
+        <p className="muted">{step.content.redaction === 'redacted' ? 'Saved with sensitive values masked.' : 'Saved in full after the gateway’s checks.'}</p>
+        <h4>{tool ? 'Arguments' : 'Prompt'}</h4><Content text={step.content.input} empty="No input recorded."/>
         {step.content.truncated.input && <p className="muted">Input truncated at the capture size limit.</p>}
-        <h4>{step.tool || step.action === 'tool_call' ? 'Result' : 'Response'}</h4><Content text={step.content.output} empty="No output recorded."/>
+        <h4>{tool ? 'Result' : 'Response'}</h4><Content text={step.content.output} empty="No output recorded."/>
         {step.content.truncated.output && <p className="muted">Output truncated at the capture size limit.</p>}
       </> : <p className="muted">{step.content_reason === 'expired' ? 'Captured content expired.' : 'Content capture is off for this step.'}</p>}
     </details>
     <Receipt step={step}/>
-    <details><summary>Step logs</summary><p>Gateway event and routing attempts. Worker output stays in the operator’s logs.</p><pre>{JSON.stringify({ timestamp: step.timestamp, action: step.action, status_code: step.status_code, duration_ms: step.duration_ms, attempts: step.attempts, reason: step.receipt?.reason }, null, 2)}</pre></details>
+    <details><summary>Step logs</summary><p>Gateway event and routing attempts. Worker output stays in the operator’s logs.</p><pre className="json">{JSON.stringify({ timestamp: step.timestamp, action: step.action, status_code: step.status_code, duration_ms: step.duration_ms, attempts: step.attempts, reason: step.receipt?.reason }, null, 2)}</pre></details>
   </article>;
 }
 
@@ -308,14 +336,15 @@ const preview = (text: string) => { const value = parsed(text); const plain = ty
 
 // Model prompts arrive as message arrays; show them as a short transcript instead of raw JSON.
 function Content({ text, empty }: { text: string | null; empty: string }) {
-  if (text == null) return <pre className="step-content">{empty}</pre>;
+  if (text == null) return <pre className="step-content prose">{empty}</pre>;
   const value = parsed(text);
   if (Array.isArray(value) && value.length && value.every(m => m && typeof m === 'object' && 'role' in m)) {
     return <ol className="transcript">{(value as { role: string; content: unknown }[]).map((message, i) => <li key={i}>
-      <span className={`speaker ${message.role}`}>{label(String(message.role))}</span><pre className="step-content">{messageText(message.content)}</pre>
+      <span className={`speaker ${message.role}`}>{label(String(message.role))}</span><pre className="step-content prose">{messageText(message.content)}</pre>
     </li>)}</ol>;
   }
-  return <pre className="step-content">{typeof value === 'string' ? value : value !== null && typeof value === 'object' ? JSON.stringify(value, null, 2) : text}</pre>;
+  return value !== null && typeof value === 'object' ? <pre className="step-content json">{JSON.stringify(value, null, 2)}</pre>
+    : <pre className="step-content prose">{typeof value === 'string' ? value : text}</pre>;
 }
 
 const channelName: Record<string, string> = { slack: 'Slack', webhook: 'Webhook', email: 'Email' };
@@ -325,7 +354,8 @@ function Notifications({ steps }: { steps: Step[] }) {
   // Each delivery writes an "attempted" receipt, then its outcome; show the latest per channel and event.
   const latest = new Map<string, Step>();
   for (const step of steps) latest.set(`${step.receipt.channel}/${step.receipt.notification_event}`, step);
-  return <article className="panel step"><div className="section-heading"><h3>Notifications</h3><Badge value="recorded"/></div>
+  const undelivered = [...latest.values()].some(step => step.receipt.outcome === 'failed');
+  return <article className="panel step"><div className="section-heading"><h3>Notifications</h3>{undelivered ? <Badge value="failed" text="Not delivered"/> : <Badge value="succeeded" text="Sent"/>}</div>
     <p className="muted">{date(steps[0].timestamp)}</p>
     <ul className="notifications">{[...latest.values()].map(step => <li key={step.receipt_id}>
       <strong>{channelName[String(step.receipt.channel)] || String(step.receipt.channel || 'Channel')}</strong>

@@ -25,28 +25,25 @@ class ResearchRequest:
         "properties": {
             "topic": {
                 "type": "string",
-                "description": "Research topic",
+                "description": "A question or subject, in a sentence.",
                 "examples": ["How should our team evaluate AI agents?"],
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "model": {
                 "type": "string",
-                "description": "Approved model ID",
                 "default": "demo-openai",
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "token_limit": {
                 "type": "integer",
-                "description": "Run token budget",
                 "default": 10000,
                 "minimum": 1,
                 "maximum": 1000000000,
             },
             "cost_limit_usd": {
                 "type": "number",
-                "description": "Run cost budget in USD",
                 "default": 5,
                 "exclusiveMinimum": 0,
                 "maximum": 1000000,

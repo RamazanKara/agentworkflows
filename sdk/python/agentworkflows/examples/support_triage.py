@@ -20,14 +20,13 @@ class SupportTriageRequest:
         "properties": {
             "ticket": {
                 "type": "string",
-                "description": "Support ticket text",
+                "description": "Paste the customer's message.",
                 "examples": ["I cannot sign in after resetting my password."],
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "model": {
                 "type": "string",
-                "description": "Approved model ID",
                 "default": "demo-openai",
                 "minLength": 1,
                 "pattern": "\\S",

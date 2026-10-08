@@ -23,14 +23,13 @@ class DocumentQARequest:
         "properties": {
             "question": {
                 "type": "string",
-                "description": "Question about the team documents",
+                "description": "A question about your team's documents.",
                 "examples": ["Who can approve a workflow, and when does approval expire?"],
                 "minLength": 1,
                 "pattern": "\\S",
             },
             "model": {
                 "type": "string",
-                "description": "Approved model ID",
                 "default": "demo-openai",
                 "minLength": 1,
                 "pattern": "\\S",

@@ -246,6 +246,13 @@ def oidc(auth_gateway, monkeypatch, signing_key):
     return client, app, store, fixture, start
 
 
+def test_oidc_session_names_the_person_from_their_id_token(oidc):
+    client, _, _, fixture, start = oidc
+    fixture["claims"] = {"name": "Alice Moreau", "email": "alice@example.com"}
+    client.get("/v1/auth/callback", params=start(), follow_redirects=False)
+    assert client.get("/v1/auth/session").json()["principal"]["name"] == "Alice Moreau"
+
+
 def test_oidc_code_pkce_nonce_session_and_public_configuration(oidc):
     client, _, store, _, start = oidc
     config = client.get("/v1/auth/config")
