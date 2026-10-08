@@ -242,8 +242,9 @@ test('a fresh Helm install says which provider Secret to add, without demo wordi
   await page.route('**/v1/models', route => route.fulfill({ json: { data: [{ id: 'research', owned_by: 'openai' }, { id: 'anthropic', owned_by: 'anthropic' }] } }));
   await login(page);
   await expect(page.getByRole('heading', { name: 'Add a provider key' })).toBeVisible();
-  await expect(page.getByText('OpenAI and Anthropic keys are missing, so runs fail until you add one.', { exact: false })).toBeVisible();
+  await expect(page.getByText('OpenAI and Anthropic keys are missing, so runs fail until you add them.', { exact: false })).toBeVisible();
   await expect(page.locator('.model-list li').first()).toContainText('researchOpenAIKey missing');
+  await expect(page.locator('.model-list li').last()).toHaveText('AnthropicKey missing');
   await expect(page.getByText('Compose demo', { exact: false })).toHaveCount(0);
   await page.getByRole('link', { name: 'Run workflow', exact: true }).first().click();
   await expect(page.locator('.note-warn')).toContainText('model calls in this run will fail');
@@ -252,7 +253,7 @@ test('a fresh Helm install says which provider Secret to add, without demo wordi
   await expect(setup.getByRole('heading', { name: 'Connect OpenAI and Anthropic' })).toBeVisible();
   const commands = await setup.locator('pre').innerText();
   for (const provider of ['openai', 'anthropic']) {
-    expect(commands).toContain(`secret generic ${provider}-api-key -n aw \\\n  --from-file=api-key=/dev/stdin`);
+    expect(commands).toContain(`secret generic ${provider}-api-key \\\n  -n aw --from-file=api-key=/dev/stdin`);
     expect(commands).toContain(`--set providers.${provider}.existingSecret=${provider}-api-key`);
   }
   expect(commands.match(/helm upgrade/g)).toHaveLength(1);

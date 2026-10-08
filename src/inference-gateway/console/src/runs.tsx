@@ -77,8 +77,8 @@ export function StartRun({ session, initial = '' }: { session: Session; initial?
   const keyless = noProviderKeys(session.team) ? [] : (policy?.allowedProviders || []).filter(provider => missingKeys(session.team).includes(provider));
   if (!canBuild(session)) return <Empty title="A builder or admin can start workflows"><p>Your {session.team.role} role can inspect runs and costs.</p><a href="#runs">View workflow runs</a></Empty>;
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
-    {noProviderKeys(session.team) && <p className="note-warn">No provider key yet, so model calls in this run will fail. <a href="#providers">Add a provider key</a> first.</p>}
-    {keyless.length > 0 && <p className="note-warn">{providerList(keyless)} {keyless.length > 1 ? 'have' : 'has'} no key yet, so this workflow’s calls there fail. <a href="#providers">Add the key</a> first.</p>}
+    {noProviderKeys(session.team) && <p className="note-warn form-width">No provider key yet, so model calls in this run will fail. <a href="#providers">Add a provider key</a> first.</p>}
+    {keyless.length > 0 && <p className="note-warn form-width">{providerList(keyless)} {keyless.length > 1 ? 'have' : 'has'} no key yet, so this workflow’s calls there fail. <a href="#providers">Add the key</a> first.</p>}
     <ErrorMessage message={error || policies.error}/>
     {!policies.data ? <Loading/> : !names.length ? <Empty title="No workflows configured"><p>Ask your team admin to register a workflow and start its worker.</p>{session.team.role === 'admin' && <a href="#providers">Open provider and budget setup</a>}</Empty> :
       <form className="panel form-panel" onSubmit={async event => {

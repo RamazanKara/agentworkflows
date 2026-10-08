@@ -239,7 +239,7 @@ h1, h2, h3 { text-wrap: balance; }
 th.num, td[data-label="Calls"], td[data-label="Tokens"], td[data-label="Cost"], td[data-label="Token limit"], td[data-label="Cost limit"] { text-align: right; }
 .metrics dd small { display: block; font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--muted); margin-top: 4px; }
 .metrics dd small.inline { display: inline; font-size: 14px; }
-.usage-bar { display: block; height: 6px; background: #e3ebe6; border-radius: 3px; margin-top: 10px; overflow: hidden; max-width: 360px; }
+.usage-bar { display: block; height: 6px; background: #e3ebe6; border-radius: 3px; margin-top: 10px; overflow: hidden; }
 .usage-bar span { display: block; height: 100%; background: var(--teal); border-radius: 3px; }
 .model-list { list-style: none; padding: 0; }
 .model-list li { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; background: white; }
@@ -342,8 +342,12 @@ table.numeric th:first-child { width: 40%; }
   a.tap, button.link { display: inline-flex; align-items: center; min-height: 44px; }
   .review-meta { column-gap: 14px; }
   .review-meta > * + *::before { content: none; }
-  .step pre.json, .setup pre.json { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .step pre.json { white-space: pre-wrap; overflow-wrap: anywhere; }
   .setup pre.json { font-size: 12px; padding: 12px 14px; }
+  /* The two long --set lines scroll sideways; a fade on the right edge says there is more. */
+  .code-scroll { position: relative; margin: 12px 0; }
+  .code-scroll pre { margin: 0; }
+  .code-scroll::after { content: ''; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 22px; border-radius: 0 4px 4px 0; background: linear-gradient(to right, rgb(241 245 242 / 0), #f1f5f2); pointer-events: none; }
   .step-facts { grid-template-columns: repeat(2, minmax(0, auto)); justify-content: start; column-gap: 32px; }
   table.numeric th:first-child { width: auto; }
 }
@@ -363,7 +367,7 @@ table.numeric th:first-child { width: 40%; }
 
 /* v0.5.1 polish: key form spacing, warning width, nested setup headings, revoke dates. */
 .key-form .field { margin-bottom: 0; }
-.note-warn { max-width: 780px; }
+.note-warn.form-width { max-width: 780px; }
 .setup h3 { margin: 22px 0 8px; font-size: 16px; }
 .keys-table td small { margin-top: 4px; }
 .panel > .empty { border-bottom: 0; }
