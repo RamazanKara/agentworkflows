@@ -15,7 +15,7 @@ export function Runs({ session }: { session: Session }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const current = useRef<AbortController | null>(null);
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.token, '/v1/workflow-policies');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
   async function load(cursor: number, reset = false) {
     current.current?.abort();
     const controller = new AbortController(); current.current = controller;
@@ -25,7 +25,7 @@ export function Runs({ session }: { session: Session }) {
       const query = new URLSearchParams({ project, offset: String(cursor), limit: '20' });
       if (filter) query.set('status', filter);
       if (workflow) query.set('workflow', workflow);
-      const result = await api<RunPage>(session.token, `/v1/workflow-runs?${query}`, { signal: controller.signal });
+      const result = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
       if (!controller.signal.aborted) {
         setRows(values => [...(reset ? [] : values), ...result.runs].filter((r, i, all) => all.findIndex(v => v.run_id === r.run_id) === i));
         setOffset(result.next_offset);
@@ -59,7 +59,7 @@ export function Runs({ session }: { session: Session }) {
 }
 
 export function StartRun({ session }: { session: Session }) {
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.token, '/v1/workflow-policies');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
   const [workflow, setWorkflow] = useState('');
   const [project, setProject] = useState(session.team.projects[0] || '');
   const [topic, setTopic] = useState('How should our team evaluate AI agents?');
@@ -91,7 +91,7 @@ export function StartRun({ session }: { session: Session }) {
           const body = { workflow: selected, project, input: value };
           const fingerprint = JSON.stringify(body);
           if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, id: crypto.randomUUID() };
-          const result = await api<{ run_id: string }>(session.token, '/v1/workflow-runs', { method: 'POST', body: JSON.stringify({ ...body, request_id: request.current.id }) });
+          const result = await api<{ run_id: string }>(session.csrfToken, '/v1/workflow-runs', { method: 'POST', body: JSON.stringify({ ...body, request_id: request.current.id }) });
           location.hash = `run/${result.run_id}`;
         } catch (error) { setError((error as Error).message); }
         finally { setBusy(false); }
@@ -117,7 +117,7 @@ function Review({ session, run, onDone }: { session: Session; run: Run; onDone: 
   async function decide(approved: boolean) {
     setBusy(true); setError('');
     try {
-      await api(session.token, `/v1/workflow-runs/${run.run_id}/approve`, { method: 'POST', body: JSON.stringify({ approved }) });
+      await api(session.csrfToken, `/v1/workflow-runs/${run.run_id}/approve`, { method: 'POST', body: JSON.stringify({ approved }) });
       setNotice(approved ? 'Approved. The workflow can continue.' : 'Rejected. The publish step will not run.'); onDone();
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
@@ -126,7 +126,7 @@ function Review({ session, run, onDone }: { session: Session; run: Run; onDone: 
     <p>Your decision applies to run <code>{run.run_id}</code>.</p>
     <pre className="draft">{run.progress?.draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}</pre>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
-    {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">Recorded as your verified identity.</span></div> : <p className="callout">An approver or admin must review this draft. Use “Add identity” to sign in with that credential.</p>}
+    {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">Recorded as your verified identity.</span></div> : <p className="callout">An approver or admin must review this draft. Use “Switch identity” to sign in with that credential.</p>}
   </section>;
 }
 
@@ -144,7 +144,7 @@ export function Approvals({ session }: { session: Session }) {
           let offset: number | null = 0;
           do {
             const query = new URLSearchParams({ project, status: 'awaiting_approval', offset: String(offset), limit: '100' });
-            const page: RunPage = await api<RunPage>(session.token, `/v1/workflow-runs?${query}`, { signal: controller.signal });
+            const page: RunPage = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
             if (controller.signal.aborted) return;
             setRows(values => [...values, ...page.runs]); offset = page.next_offset;
           } while (offset !== null);
@@ -164,7 +164,7 @@ export function Approvals({ session }: { session: Session }) {
 
 export function RunDetail({ session, runId }: { session: Session; runId: string }) {
   const [revision, setRevision] = useState(0);
-  const result = useData<Run>(session.token, `/v1/workflow-runs/${runId}`, revision);
+  const result = useData<Run>(session.csrfToken, `/v1/workflow-runs/${runId}`, revision);
   const [actionError, setActionError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -178,7 +178,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
   async function act(action: 'cancel' | 'retry') {
     setBusy(true); setActionError('');
     try {
-      const response = await api<{ run_id: string }>(session.token, `/v1/workflow-runs/${runId}/${action}`, { method: 'POST' });
+      const response = await api<{ run_id: string }>(session.csrfToken, `/v1/workflow-runs/${runId}/${action}`, { method: 'POST' });
       if (action === 'retry') location.hash = `run/${response.run_id}`;
       else { setNotice('Cancellation requested. Refresh to see the latest status.'); setConfirmCancel(false); setRevision(v => v + 1); }
     } catch (error) { setActionError((error as Error).message); }

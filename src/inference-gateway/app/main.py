@@ -28,11 +28,13 @@ from app.budget import (
 )
 from app.cache import build_response_cache
 from app.concurrency import ConcurrencyLimitMiddleware
+from app.console_auth import AUTH_PATHS, register_auth_routes
 from app.container_api import register_container_routes
 from app.governance import state_backend_unavailable_detail
 from app.inference_api import register_inference_routes
 from app.jwt_auth import JwksUnavailableError, JwtVerifier
-from app.key_records import KeyRecordSet, key_record_effective_budget_updates
+from app.key_records import KeyRecordSet
+from app.managed_keys import register_key_routes
 from app.messages_api import register_messages_routes
 from app.metrics import (
     RATE_LIMIT_FAIL_OPEN,
@@ -45,29 +47,22 @@ from app.objectstore import build_object_store
 from app.policy import ModelRoutingPolicy, SandboxPolicySet
 from app.ratelimit import build_rate_limiter
 from app.request_context import (
-    BATCH_REPLAY_SCOPE,
-    ApiKeyOutcome,
-    _api_key_principal,
-    _auth_failure_response,
+    _api_key_from_request,
     _auth_required,
-    _bind_batch_replay,
-    _bound_sandbox_id,
     _error_envelope,
     _install_openapi_contract,
     _jwks_unavailable_response,
-    _jwt_principal,
     _rate_limit_backend_unavailable_response,
     _rate_limited_response,
     _request_id_from_header,
-    _resolve_api_key,
-    _sandbox_binding_response,
     _traceparent_from_header,
-    _valid_jwt,
+    authenticate_credential,
 )
 from app.response_store import ResponseStoreError, build_response_store
 from app.responses_api import register_responses_routes
 from app.runtime_client import RuntimeClient
 from app.sandbox_api import register_sandbox_routes
+from app.sessions import SESSION_COOKIE, bind_session, refresh_cookies
 from app.settings import (
     Settings,
     validate_sandbox_id,
@@ -192,7 +187,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         resolved.sandbox_budget_enabled
         and resolved.sandbox_budget_backend == "redis"
         and resolved.audit_log_enabled
-        and (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled)
+        and (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled or resolved.oidc_issuer)
     ):
         raise ValueError(
             "Team projects require authentication, SANDBOX_BUDGET_ENABLED=true, "
@@ -202,6 +197,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.teams import authorize_team_request, register_team_routes
 
     register_team_routes(app)
+    register_key_routes(app)
+    register_auth_routes(app)
     app.state.runtime_client.policy = app.state.model_routing_policy
     # Optional richer API-key records (scopes/expiry/sandbox binding/budget). Fails closed:
     # a malformed key store raises here and stops startup rather than silently disabling
@@ -260,6 +257,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async def dispatch() -> Response:
             from app.workflow_triggers import bind_webhook
 
+            if request.url.path in AUTH_PATHS:
+                response = await call_next(request)
+                response.headers["Cache-Control"] = "no-store"
+                response.headers["Referrer-Policy"] = "no-referrer"
+                return response
+
             try:
                 webhook_credential = await bind_webhook(request)
                 step_credential = False if webhook_credential else await bind_step_credential(request)
@@ -268,69 +271,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if (
                 not step_credential
                 and not webhook_credential
-                and (resolved.api_key_auth_enabled or resolved.jwt_auth_enabled)
+                and (
+                    resolved.api_key_auth_enabled or resolved.jwt_auth_enabled or resolved.oidc_issuer
+                    or request.cookies.get(SESSION_COOKIE)
+                    or (_api_key_from_request(request, resolved) or "").startswith("aw_")
+                )
                 and _auth_required(request.url.path)
             ):
-                api_key_outcome = (
-                    _resolve_api_key(request, resolved, request.app.state.key_record_set)
-                    if resolved.api_key_auth_enabled
-                    else ApiKeyOutcome(valid=False, record=None, expired=False)
-                )
-                jwt_claims: dict[str, Any] | None = None
-                if not api_key_outcome.valid and resolved.jwt_auth_enabled:
-                    try:
-                        jwt_claims = await _valid_jwt(request, request.app.state.jwt_verifier)
-                    except JwksUnavailableError:
-                        # Issuer JWKS is unreachable: this is a 503 (retry later),
-                        # not a 401 token rejection.
-                        return _jwks_unavailable_response(request)
-                if not api_key_outcome.valid and jwt_claims is None:
-                    # A presented key that matched a record but is expired is a distinct,
-                    # more actionable rejection than an unrecognized key - never fall
-                    # through to accepting it as unbound.
-                    reason = "api_key_expired" if api_key_outcome.expired else "invalid_or_missing_api_key"
-                    return _auth_failure_response(request, reason)
-                # Propagate the authenticated principal so the audit trail records who
-                # called, not just the (client-asserted) sandbox header.
-                if api_key_outcome.valid:
-                    record = api_key_outcome.record
-                    request.state.principal = _api_key_principal(request, resolved, record)
-                    if record is not None:
-                        # A record with a sandbox binding is enforced exactly like the JWT
-                        # tenant claim: a mismatched X-Sandbox-ID is rejected; a missing one
-                        # adopts the bound sandbox. This closes the cross-tenant read on
-                        # /v1/usage and /v1/sandbox/budget for API-key callers.
-                        if record.sandbox is not None:
-                            explicit = request.headers.get("x-sandbox-id")
-                            if explicit is not None and validate_sandbox_id(explicit) != record.sandbox:
-                                return _sandbox_binding_response(request, "sandbox_identity_mismatch")
-                            request.state.sandbox_id = record.sandbox
-                            request.state.sandbox_bound = True
-                        # Fold per-key budget overrides into the request's effective settings
-                        # via the same mechanism the sandbox policy set uses.
-                        if record.has_budget_override():
-                            request.state.key_budget_updates = key_record_effective_budget_updates(record)
-                        # The batch worker's key: acts for a tenant only while that tenant
-                        # has a running batch, and the receipt names the batch's submitter.
-                        if BATCH_REPLAY_SCOPE in record.scopes:
-                            replay_error = await _bind_batch_replay(request)
-                            if replay_error is not None:
-                                return replay_error
-                elif jwt_claims is not None:
-                    request.state.principal = _jwt_principal(jwt_claims)
-                    # Bind the sandbox to the verified tenant claim when configured,
-                    # so per-sandbox budget/policy/attribution cannot be spoofed via
-                    # the X-Sandbox-ID header.
-                    if resolved.jwt_tenant_claim:
-                        try:
-                            bound = _bound_sandbox_id(jwt_claims, resolved.jwt_tenant_claim)
-                        except ValueError:
-                            return _sandbox_binding_response(request, "sandbox_claim_invalid")
-                        explicit = request.headers.get("x-sandbox-id")
-                        if explicit is not None and validate_sandbox_id(explicit) != bound:
-                            return _sandbox_binding_response(request, "sandbox_identity_mismatch")
-                        request.state.sandbox_id = bound
-                        request.state.sandbox_bound = True
+                try:
+                    if _api_key_from_request(request, resolved):
+                        auth_error = await authenticate_credential(request)
+                    elif request.cookies.get(SESSION_COOKIE) and (
+                        resolved.admin_console_enabled or resolved.oidc_issuer
+                    ):
+                        auth_error = await bind_session(request)
+                    else:
+                        auth_error = await authenticate_credential(request)
+                except JwksUnavailableError:
+                    return _jwks_unavailable_response(request)
+                except StarletteHTTPException as exc:
+                    return JSONResponse(
+                        status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail)
+                    )
+                if auth_error is not None:
+                    return auth_error
 
             try:
                 authorize_team_request(request)
@@ -379,6 +343,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     content={"detail": "Workflow steps support chat, messages, tools, and container agents."},
                 )
             response = await call_next(request)
+            refresh_cookies(request, response)
             if request.url.path.startswith("/console"):
                 response.headers["Content-Security-Policy"] = (
                     "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "

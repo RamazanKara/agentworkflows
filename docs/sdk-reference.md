@@ -18,6 +18,10 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `models` | Discover model IDs available to your credential |
 | `chat "PROMPT" --model MODEL` | Governed model call; omit model for the gateway default |
 | `team` | Your team, role, projects, and configured providers |
+| `keys list` | List your team's managed API keys (admin only) |
+| `keys create --name NAME --role builder --project PROJECT` | Issue a key; role defaults to viewer, project is optional; plaintext is printed once |
+| `keys update KEY_ID --name NAME --role viewer --expires-at TIMESTAMP` | Change selected metadata; unspecified fields stay unchanged |
+| `keys revoke KEY_ID` | Revoke immediately on all replicas, including sessions using the key |
 | `usage` | Usage, estimated spend, provider and workflow breakdowns |
 | `runs start [WORKFLOW] --input '@input.json'` | Start a workflow (default ResearchWorkflow); input can also be inline JSON |
 | `runs list --project PROJECT --offset OFFSET` | List runs; both options are optional; use returned next_offset for pagination |
@@ -31,6 +35,13 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 `runs start` also accepts `--project` and `--request-id UUID`. If a start response is lost,
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
+
+Key creation and updates accept `--expires-at` as ISO-8601 with a timezone, for example
+`2027-01-01T00:00:00Z`. On updates, `--expires-at ''` clears expiry and `--project ''`
+clears a project binding. Commands return JSON; keep the `key_id` for future changes and
+save a newly created `key` securely, since list/update cannot recover it. Keys are scoped
+to the authenticated admin's team and project access. You cannot revoke or demote your
+current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.
 
 The [template gallery](templates.md) includes input fields, expected results and adaptation

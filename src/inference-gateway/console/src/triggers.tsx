@@ -13,12 +13,12 @@ export function Triggers({ session }: { session: Session }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const result = useData<{ triggers: Trigger[] }>(session.token, '/v1/workflow-triggers', revision);
+  const result = useData<{ triggers: Trigger[] }>(session.csrfToken, '/v1/workflow-triggers', revision);
   const canEdit = ['admin', 'builder'].includes(session.team.role);
   async function toggle(trigger: Trigger) {
     setBusy(`${trigger.workflow}/${trigger.name}`); setError(''); setMessage('');
     try {
-      await api(session.token, `/v1/workflow-triggers/${encodeURIComponent(trigger.workflow)}/${encodeURIComponent(trigger.name)}`, {
+      await api(session.csrfToken, `/v1/workflow-triggers/${encodeURIComponent(trigger.workflow)}/${encodeURIComponent(trigger.name)}`, {
         method: 'PATCH', body: JSON.stringify({ paused: !trigger.paused }),
       });
       setMessage(`${trigger.name} ${trigger.paused ? 'resumed' : 'paused'}. Existing runs continue.`);

@@ -19,9 +19,31 @@ async function login(page: Page, token = 'admin') {
 }
 
 test.beforeEach(async ({ page }) => {
+  let identity = '';
   await page.route('**/v1/**', async route => {
     const url = new URL(route.request().url());
-    const token = route.request().headers().authorization?.replace('Bearer ', '') || '';
+    if (url.pathname === '/v1/auth/config') return route.fulfill({ json: { api_key: true, jwt: true, oidc: { enabled: false } } });
+    if (url.pathname === '/v1/auth/session') {
+      if (route.request().method() === 'POST') {
+        const key = route.request().postDataJSON().key;
+        if (key === 'invalid') return route.fulfill({ status: 401, json: { detail: { message: 'Invalid credential. Ask your team admin for a valid key.' } } });
+        identity = key;
+        await page.context().addCookies([
+          { name: 'aw_session', value: 'opaque-session', url: 'http://127.0.0.1:4175', httpOnly: true, sameSite: 'Lax' },
+          { name: 'aw_csrf', value: 'csrf-fixture', url: 'http://127.0.0.1:4175', sameSite: 'Lax' },
+        ]);
+      }
+      return route.fulfill(identity ? { json: { csrf_token: 'csrf-fixture', principal: { key_id: identity } } } : { status: 401, json: {} });
+    }
+    if (url.pathname === '/v1/auth/logout') {
+      expect(route.request().headers()['x-csrf-token']).toBe('csrf-fixture');
+      identity = '';
+      await page.context().clearCookies();
+      return route.fulfill({ json: { signed_out: true } });
+    }
+    expect(route.request().headers().authorization).toBeUndefined();
+    if (route.request().method() !== 'GET') expect(route.request().headers()['x-csrf-token']).toBe('csrf-fixture');
+    const token = identity;
     const team = token === 'other' ? 'other' : 'demo';
     const role = token === 'other' ? 'viewer' : token;
     if (token === 'invalid') return route.fulfill({ status: 401, json: { detail: { message: 'Invalid credential. Ask your team admin for a valid key.' } } });
@@ -102,7 +124,7 @@ test('sign in, all main pages, receipts, costs and sign out without persisted cr
   await page.getByRole('link', { name: 'Costs', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'By workflow' })).toBeVisible();
   await expect(page.getByRole('row', { name: 'Research 2 63 $0.04' })).toBeVisible();
-  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual([0, 0, '']);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual([0, 0, 'aw_csrf=csrf-fixture']);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Team credential')).toHaveValue('');
   expect(errors).toEqual([]);
@@ -210,18 +232,22 @@ test('conflicting approval is actionable, viewer cannot decide or configure', as
   await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
 });
 
-test('team switching clears prior team data and reload clears identities', async ({ page }) => {
+test('team switching clears prior team data and reload restores the active session', async ({ page }) => {
   await login(page);
   await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
-  await page.getByRole('button', { name: 'Add identity' }).click();
+  await page.getByRole('button', { name: 'Switch identity' }).click();
   await page.getByLabel('Team credential').fill('other');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Your first workflow starts here' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Research' })).toHaveCount(0);
-  await page.getByLabel('Team / identity', { exact: true }).selectOption({ label: 'demo / admin' });
+  await page.getByRole('button', { name: 'Switch identity' }).click();
+  await page.getByLabel('Team credential').fill('admin');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Research' })).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel('Team credential')).toBeVisible();
+  await expect(page.getByRole('navigation')).toBeVisible();
+  await expect(page.getByLabel('Team credential')).toHaveCount(0);
+  await expect(page.getByLabel('Team / identity', { exact: true })).toHaveText('demo / admin');
 });
 
 test('mobile navigation, keyboard skip link and bounded table scrolling', async ({ page }) => {
@@ -281,4 +307,106 @@ test('rejected runs read as rejected in the run list, with a readable result', a
   await expect(page.locator('.runs-stack .badge')).toHaveText('Rejected');
   await page.getByRole('link', { name: 'Research', exact: true }).click();
   await expect(page.getByText('Rejected by approver. Nothing was published.')).toBeVisible();
+});
+
+test('session restores after reload without retaining the API key', async ({ page }) => {
+  await login(page);
+  const restored = page.waitForRequest('**/v1/auth/session');
+  await page.reload();
+  expect((await restored).method()).toBe('GET');
+  await expect(page.getByRole('navigation')).toBeVisible();
+  await expect(page.getByLabel('Team credential')).toHaveCount(0);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+  const cookies = await page.context().cookies();
+  expect(cookies.find(cookie => cookie.name === 'aw_session')?.httpOnly).toBe(true);
+  expect(cookies.every(cookie => cookie.value !== 'admin')).toBe(true);
+});
+
+test('OIDC sign-in button is shown only when configured', async ({ page }) => {
+  await page.goto('/console/');
+  await expect(page.getByLabel('Team credential')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in with', exact: false })).toHaveCount(0);
+  await page.route('**/v1/auth/config', route => route.fulfill({ json: {
+    api_key: true, oidc: { enabled: true, provider_name: 'Company', login_url: '/v1/auth/login' },
+  } }));
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Sign in with Company' })).toBeVisible();
+  await expect(page.getByLabel('Team credential')).toBeVisible();
+  await page.route('**/v1/auth/login', route => route.fulfill({ contentType: 'text/html', body: '<p>Company sign-in</p>' }));
+  await page.getByRole('button', { name: 'Sign in with Company' }).click();
+  await expect(page).toHaveURL(/\/v1\/auth\/login$/);
+});
+
+test('creating a key shows the secret once and copies it', async ({ page, context }) => {
+  const secret = 'aw_' + 'a'.repeat(40);
+  const keys: Record<string, unknown>[] = [];
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.route('**/v1/team/keys', route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().headers()['x-csrf-token']).toBe('csrf-fixture');
+      expect(route.request().headers().authorization).toBeUndefined();
+      keys.push({ key_id: 'key-1', ...route.request().postDataJSON(), last_used_at: null, revoked_at: null });
+      return route.fulfill({ status: 201, json: { ...keys[0], key: secret } });
+    }
+    return route.fulfill({ json: { keys } });
+  });
+  await login(page);
+  await page.getByRole('link', { name: 'Members & keys', exact: true }).click();
+  await page.getByLabel('Name', { exact: true }).fill('Alice');
+  await page.getByLabel('Role', { exact: true }).selectOption('builder');
+  await page.getByRole('button', { name: 'Create key', exact: true }).click();
+  await expect(page.getByLabel('New API key')).toHaveText(secret);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Copy key' }).click();
+  await expect(page.getByRole('status')).toContainText('Key copied');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(secret);
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.getByLabel('New API key')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('row', { name: /Alice.*builder.*All.*Never.*Never.*Active.*Revoke/ })).toBeVisible();
+  await expect(page.getByText(secret, { exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+});
+
+test('revoking a key requires confirmation and updates its status', async ({ page }) => {
+  let revoked = false;
+  let deletes = 0;
+  await page.route('**/v1/team/keys**', route => {
+    if (route.request().method() === 'DELETE') {
+      expect(route.request().headers()['x-csrf-token']).toBe('csrf-fixture');
+      revoked = true; deletes++;
+      return route.fulfill({ json: {} });
+    }
+    return route.fulfill({ json: { keys: [{ key_id: 'key-1', name: 'Alice', role: 'viewer', project: null, last_used_at: null, expires_at: null, revoked_at: revoked ? 1791316800 : null }] } });
+  });
+  await login(page);
+  await page.getByRole('link', { name: 'Members & keys', exact: true }).click();
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('button', { name: 'Revoke Alice' }).click();
+  expect(deletes).toBe(0);
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Revoke Alice' }).click();
+  await expect(page.getByRole('cell', { name: 'Revoked', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Revoke Alice' })).toHaveCount(0);
+  expect(deletes).toBe(1);
+});
+
+test('viewers cannot open key management', async ({ page }) => {
+  await login(page, 'viewer');
+  await expect(page.getByRole('link', { name: 'Members & keys' })).toHaveCount(0);
+  await page.goto('/console/#keys');
+  await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create key' })).toHaveCount(0);
+});
+
+test('a stale session can be replaced after reload using its CSRF cookie', async ({ page }) => {
+  await page.context().addCookies([
+    { name: 'aw_session', value: 'revoked-session', url: 'http://127.0.0.1:4175', httpOnly: true },
+    { name: 'aw_csrf', value: 'csrf-fixture', url: 'http://127.0.0.1:4175' },
+  ]);
+  const request = page.waitForRequest(value => value.url().endsWith('/v1/auth/session') && value.method() === 'POST');
+  await login(page);
+  expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
+  await expect(page.getByLabel('Team / identity', { exact: true })).toHaveText('demo / admin');
 });

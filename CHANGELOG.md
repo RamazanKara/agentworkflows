@@ -5,6 +5,13 @@
 - Start the Compose quickstart without building: the stack pulls the signed release images.
 - Install the SDKs from GitHub releases: `agentworkflows init` pins the release wheel, and the
   TypeScript SDK installs from the release tarball.
+- Add Redis-managed team API keys with admin APIs, one-time secret display, expiry,
+  last use, immediate revocation across replicas, and audit receipts. Existing flat
+  hashes, key-record files, and JWT/JWKS credentials remain supported.
+- Add optional company OIDC sign-in with PKCE, state and nonce validation, plus Redis
+  cookie sessions for OIDC and pasted API credentials, session restore, logout, and CSRF.
+- Add the console's Members & keys page and `agentworkflows keys list|create|update|revoke`.
+  Keep the local Compose credential working with localhost cookie settings.
 
 ## v0.4.0 - 2026-10-08
 

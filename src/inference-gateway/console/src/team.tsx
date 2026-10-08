@@ -5,8 +5,8 @@ import { Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
 
 export function GetStarted({ session }: { session: Session }) {
-  const models = useData<Models>(session.token, '/v1/models');
-  const runs = useData<RunPage>(session.token, `/v1/workflow-runs?${new URLSearchParams({ project: session.team.projects[0] || '', limit: '1' })}`);
+  const models = useData<Models>(session.csrfToken, '/v1/models');
+  const runs = useData<RunPage>(session.csrfToken, `/v1/workflow-runs?${new URLSearchParams({ project: session.team.projects[0] || '', limit: '1' })}`);
   const last = runs.data?.runs[0];
   const builder = ['admin', 'builder'].includes(session.team.role);
   return <><PageHeader title="Your first governed workflow" subtitle="From a provider to a reviewed result, with evidence at every step."/>
@@ -41,7 +41,7 @@ function CostTable({ title, rows }: { title: string; rows: Record<string, CostRo
 
 export function Costs({ session }: { session: Session }) {
   const [revision, setRevision] = useState(0);
-  const result = useData<Usage>(session.token, '/v1/usage', revision);
+  const result = useData<Usage>(session.csrfToken, '/v1/usage', revision);
   const spend = result.data?.spend;
   return <><PageHeader title="Costs" subtitle={`Understand where ${session.team.team_id} spends, across providers and workflows.`}><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={result.error} retry={() => setRevision(v => v + 1)}/>
@@ -65,10 +65,10 @@ export function Providers({ session }: { session: Session }) {
 function ProviderSettings({ session }: { session: Session }) {
   const [revision, setRevision] = useState(0);
   const [copied, setCopied] = useState('');
-  const team = useData<Team>(session.token, '/v1/team', revision);
-  const budget = useData<Budget>(session.token, '/v1/sandbox/budget', revision);
-  const usage = useData<Usage>(session.token, '/v1/usage', revision);
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.token, '/v1/workflow-policies', revision);
+  const team = useData<Team>(session.csrfToken, '/v1/team', revision);
+  const budget = useData<Budget>(session.csrfToken, '/v1/sandbox/budget', revision);
+  const usage = useData<Usage>(session.csrfToken, '/v1/usage', revision);
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', revision);
   const settings = team.data;
   const snippet = `# Merge into this team's existing SandboxPolicySet entry.\nsandboxId: ${JSON.stringify(session.team.team_id)}\nproviderCredentials:\n  openai: TEAM_OPENAI_KEY\nbudgets:\n  estimatedTokenLimit: ${budget.data?.limits.estimated_tokens || 200000}\n  costLimitUsd: ${settings?.cost_limit_usd || 25}`;
   return <><PageHeader title="Providers & budgets" subtitle="One governed gateway. Your team’s keys, models, and spending limits."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>

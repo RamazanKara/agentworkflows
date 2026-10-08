@@ -43,10 +43,11 @@ index pages, including pages with no matches. The approvals inbox walks every pa
 available project. Expired Temporal executions are omitted from lists; direct inspection
 reports that the run is unavailable.
 
-**Add team / identity** verifies another team key or signed JWT before adding it to the
-switcher. Each selection uses that credential's server-verified team, role, and project
-access; a browser header cannot grant membership. Credentials live only in memory and are
-cleared on reload/sign-out. There is no separate password store or membership editor.
+Sign-in exchanges a team API key or signed JWT for a server-side Redis session. Reloading
+restores the workspace; **Sign out** invalidates the session on every replica.
+**Switch identity** replaces the active session after verifying another credential.
+The browser retains an HttpOnly session cookie, never the API key or JWT.
+When OIDC is configured, **Sign in with your provider** uses the company account instead.
 Use `demo-builder`, `demo-approver`, `demo-viewer`, or `demo-other-team` to explore roles.
 
 The gateway image includes the built console; no Node server or extra container runs in
@@ -70,8 +71,9 @@ not prove live provider acceptance.
 ## Teams, projects, and roles
 
 A **team is the existing sandbox ID**. Projects group and restrict run access. Operators
-review the existing `API_KEY_RECORDS_PATH` and `SANDBOX_POLICY_PATH` files, then recreate
-the gateway. The console and CLI use the same authenticated workflow API.
+bootstrap team policies and an admin with `SANDBOX_POLICY_PATH` and `API_KEY_RECORDS_PATH`
+or verified identity-provider claims. Admins then issue and revoke member keys in
+**Members & keys**, without editing YAML or restarting the gateway.
 Managed teams require authentication, `SANDBOX_BUDGET_ENABLED=true`,
 `SANDBOX_BUDGET_BACKEND=redis`, and `AUDIT_LOG_ENABLED=true`; Compose sets these already.
 
@@ -84,14 +86,14 @@ Managed teams require authentication, `SANDBOX_BUDGET_ENABLED=true`,
 
 The public Compose keys are `local-development-only` (admin), `demo-builder`,
 `demo-approver`, `demo-viewer`, and `demo-worker`. Use randomly generated keys outside
-the trial. Add a team policy and a key record for each member:
+the trial. Keep a bootstrap admin record and add a policy for each team:
 
 ```yaml
 # Entry under records in key-records.yaml; store only the random key's SHA-256 digest.
 - name: alice
   sha256: REPLACE_WITH_SHA256_OF_RANDOM_KEY
   sandbox: research-team
-  role: builder
+  role: admin
   project: briefing  # omit to grant this role across the team's projects
 ```
 
@@ -117,7 +119,98 @@ cannot read or control another project's runs. Identity comes from a verified sa
 binding, never a caller-supplied team/project header. Existing signed JWTs can supply `role`
 and optional `project` claims with a nonempty `sub`; configure `JWT_TENANT_CLAIM` and control claim issuance.
 Legacy unbound keys cannot use the team run API. Enabling projects requires roles on the
-team's existing credentials. Team onboarding remains declarative; there is no membership UI.
+team's existing credentials. Team policies remain declarative; membership keys are managed
+in the console, CLI, or team key API.
+
+### Members and API keys
+
+Admins can list, create, update, and revoke keys for their own team. Project-bound admins
+can only manage keys in that project. The console lists name, role, project, last use,
+expiry, and revocation status. Creation displays the new `aw_` key once, with a copy button;
+save it securely before leaving the page. The store retains only its SHA-256 digest and
+metadata, including creator and timestamps. Last use is written at most once per minute.
+Every create, update, and revoke produces a hash-chained audit receipt.
+
+```bash
+agentworkflows keys list
+agentworkflows keys create --name alice --role builder --project briefing
+agentworkflows keys update KEY_ID --role viewer --expires-at 2027-01-01T00:00:00Z
+agentworkflows keys revoke KEY_ID
+```
+
+`GET/POST /v1/team/keys` list/create; `PATCH/DELETE /v1/team/keys/{key_id}` update/revoke.
+POST accepts `name`, `role` (default `viewer`), optional `project`, and optional `expires_at`.
+PATCH accepts those same fields; `null` clears project or expiry. Expiry accepts epoch seconds
+or an ISO-8601 timestamp with a timezone. DELETE retains a revoked record. Revocation,
+expiry, and role changes apply on the next request on every replica, including key-backed
+browser sessions. An admin cannot revoke or demote the key authenticating their request.
+File-based bootstrap credentials remain managed through the existing configuration.
+
+The managed store uses the existing budget Redis client and key prefix, with schema version 2;
+enable Redis persistence and back up this state along with the existing runs and budgets.
+There is no managed-key feature flag. Existing flat hashes, key-record files, and JWT/JWKS
+automation remain supported. The flat allowlist and file are checked before the managed
+store, then JWT verification; a duplicate file record still enforces its binding and expiry
+even when its digest is also flat-listed.
+
+### Company sign-in (OIDC)
+
+Set `ADMIN_CONSOLE_ENABLED=true` and `SANDBOX_BUDGET_BACKEND=redis`. Register an
+authorization-code OIDC application with the exact gateway callback URL and configure:
+
+```text
+OIDC_ISSUER=https://company.okta.com/oauth2/default
+OIDC_CLIENT_ID=your-client-id
+OIDC_CLIENT_SECRET=your-client-secret
+OIDC_REDIRECT_URL=https://agents.example.com/v1/auth/callback
+OIDC_SCOPES=openid profile email
+OIDC_TEAM_CLAIM=team
+OIDC_ROLE_CLAIM=role
+OIDC_PROJECT_CLAIM=project
+OIDC_DEFAULT_ROLE=viewer
+```
+
+Source the client secret from your deployment's secret store. Omit it for a registered
+public client. The gateway discovers authorization, token, and JWKS endpoints from the
+issuer; it supports `client_secret_basic` and `client_secret_post` for confidential clients.
+OIDC is disabled when its settings are absent. `OIDC_TEAM_CLAIM` defaults to
+`JWT_TENANT_CLAIM`; the role/project defaults are `role`/`project`. Claims are top-level
+strings. The team must name an existing sandbox policy, and any project must belong to it.
+A missing role uses `OIDC_DEFAULT_ROLE`; an invalid supplied role is rejected. Only the
+identity provider's administrators should be able to set membership claims.
+
+In Helm, use `auth.oidc` for these settings and `auth.oidc.existingSecret.name/key` for
+the client secret. `adminConsole.cookieSecure` defaults to true. The umbrella chart nests
+these values under `inference-gateway`. Allow HTTPS egress to the provider's discovery,
+token and JWKS endpoints in your existing network policy.
+
+| Provider | Configuration |
+| --- | --- |
+| [Okta](https://developer.okta.com/docs/guides/customize-tokens-returned-from-okta/) | Use your authorization server's issuer, register the redirect URL, and emit `team`, `role`, and optional `project` in the **ID token**, including them for the requested scopes. |
+| [Microsoft Entra](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc) | Use the tenant-specific issuer `https://login.microsoftonline.com/TENANT_UUID/v2.0`, register a Web redirect, and map `OIDC_TEAM_CLAIM=tid` to a policy whose sandbox ID is that tenant UUID. Missing roles default to viewer. For other roles, emit a single string custom claim; the `roles` array is not a scalar role claim. |
+| [Google](https://developers.google.com/identity/openid-connect/openid-connect) | Use issuer `https://accounts.google.com` and an OAuth web client with the exact redirect URL. Direct Google ID tokens do not provide the gateway's team/role/project claims, and the dotted `hd` domain is not a valid sandbox ID. Use an OIDC broker that emits controlled membership claims, or keep team API-key sessions. |
+
+The flow uses [PKCE S256](https://www.rfc-editor.org/rfc/rfc7636), single-use state bound
+to the browser, and a nonce. ID tokens must pass signature, issuer, audience, expiry,
+issued-at, subject, nonce, and authorized-party checks. Tokens and the client secret are
+never sent to browser storage. Keep all replicas on the same Redis and auth configuration.
+
+`GET /v1/auth/config` publicly describes available sign-in methods without secrets.
+`GET /v1/auth/login` starts OIDC; `GET /v1/auth/callback` completes it.
+`POST /v1/auth/session` with `{"key":"..."}` creates the same session from an API key
+or existing JWT. `GET /v1/auth/session` restores it and returns the CSRF token;
+`POST /v1/auth/logout` invalidates it. Browser sign-in is enabled by the console or OIDC
+configuration and requires Redis. Sessions slide for 12 hours with an absolute seven-day
+limit; pasted JWT sessions also stop at the JWT expiry. OIDC claim changes take effect on
+the next sign-in. Logout ends the gateway session, not the provider's own login session.
+
+Cookies are HttpOnly (session), Secure, and SameSite=Lax. The separate CSRF cookie must
+match both the session's token and `X-CSRF-Token` on non-GET cookie-authenticated requests.
+The console sends credentials and that header automatically. Bearer and `X-API-Key`
+automation do not require CSRF. Serve the console and gateway on the same HTTPS origin.
+For HTTP localhost only, set `SESSION_COOKIE_SECURE=false`; Compose already does so and
+`local-development-only` continues to work. The demo adds no identity-provider container;
+connect an existing provider using the settings above.
 
 Use one trusted worker per team with a bound builder key carrying `workflows:execute`.
 Set `TEMPORAL_TASK_QUEUE=research-team-workflows`; the API selects that queue from the

@@ -9,7 +9,9 @@ export type Team = {
   notifications?: { channels: string[]; budget_threshold: number };
   provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
 };
-export type Session = { token: string; team: Team; id: number };
+export type Session = { csrfToken: string; team: Team; id: number };
+export type BrowserSession = { csrf_token: string; principal: { key_id?: string }; sandbox_id: string };
+export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
 export type Policy = { allowedModels: string[]; allowedProviders: string[]; tokenLimit: number; costLimitUsd: number };
 export type Step = {
   step_id: string; action: string; provider: string; model: string; tool: string;
@@ -38,12 +40,13 @@ export type Usage = {
 export type Budget = { usage: { estimated_tokens: number }; limits: { estimated_tokens: number } };
 export type Models = { data: { id: string; owned_by: string }[] };
 
-export async function api<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {
+export async function api<T>(csrfToken: string, path: string, init: RequestInit = {}): Promise<T> {
+  const csrf = csrfToken || document.cookie.split('; ').find(value => value.startsWith('aw_csrf='))?.slice(8) || '';
   let response: Response;
   try {
     response = await fetch(path, {
-      ...init, cache: 'no-store', credentials: 'omit',
-      headers: { Authorization: `Bearer ${token}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+      ...init, cache: 'no-store', credentials: 'include',
+      headers: { ...(csrf && init.method && init.method !== 'GET' ? { 'X-CSRF-Token': csrf } : {}), ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
     });
   } catch (error) {
     if (init.signal?.aborted) throw error;
@@ -51,7 +54,7 @@ export async function api<T>(token: string, path: string, init: RequestInit = {}
   }
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401 && path !== '/v1/team') window.dispatchEvent(new Event('aw:expired'));
+    if (response.status === 401 && !path.startsWith('/v1/auth/')) window.dispatchEvent(new Event('aw:expired'));
     const detail = body.error?.message || body.detail?.message || (typeof body.detail === 'string' ? body.detail : '');
     const advice: Record<number, string> = {
       401: 'Credential expired or invalid. Sign in with a valid team API key or JWT.',
@@ -66,17 +69,17 @@ export async function api<T>(token: string, path: string, init: RequestInit = {}
   return body as T;
 }
 
-export function useData<T>(token: string, path: string, revision = 0) {
+export function useData<T>(csrfToken: string, path: string, revision = 0) {
   const [state, setState] = useState<{ data?: T; error?: string }>({});
   useEffect(() => {
     const controller = new AbortController();
     setState(previous => ({ data: previous.data }));
-    api<T>(token, path, { signal: controller.signal }).then(
+    api<T>(csrfToken, path, { signal: controller.signal }).then(
       data => { if (!controller.signal.aborted) setState({ data }); },
       error => { if (!controller.signal.aborted) setState({ error: error.message }); },
     );
     return () => controller.abort();
-  }, [token, path, revision]);
+  }, [csrfToken, path, revision]);
   return state;
 }
 

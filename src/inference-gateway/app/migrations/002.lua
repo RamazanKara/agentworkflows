@@ -1,8 +1,8 @@
 local version = redis.call('GET', KEYS[1])
 if version == '2' then return 2 end
-if version and version ~= '0' and version ~= '1' then
+if version ~= '1' then
   return redis.error_reply('Unsupported gateway schema; use the matching image or restore a pre-upgrade backup')
 end
--- 0.2.0 had no version marker. Adopt its existing keys without resetting accounting or TTLs.
-redis.call('SET', KEYS[1], '1')
-return 1
+-- Managed keys, login transactions, and sessions use new keys under the existing prefix.
+redis.call('SET', KEYS[1], '2')
+return 2

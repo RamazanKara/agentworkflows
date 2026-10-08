@@ -33,6 +33,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 
 | Value | Default |
 | --- | --- |
+| `adminConsole.cookieSecure` | `true` |
 | `adminConsole.enabled` | `false` |
 | `admission.allowStreaming` | `true` |
 | `admission.extraForwardedParams` | `[]` |
@@ -62,6 +63,17 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `auth.keyRecords.existingSecret.name` | `""` |
 | `auth.keyRecords.mountPath` | `/etc/agentworkflows/auth` |
 | `auth.keyRecordsPath` | `""` |
+| `auth.oidc.clientId` | `""` |
+| `auth.oidc.clientSecret` | `""` |
+| `auth.oidc.defaultRole` | `viewer` |
+| `auth.oidc.existingSecret.key` | `oidc-client-secret` |
+| `auth.oidc.existingSecret.name` | `""` |
+| `auth.oidc.issuer` | `""` |
+| `auth.oidc.projectClaim` | `project` |
+| `auth.oidc.redirectUrl` | `""` |
+| `auth.oidc.roleClaim` | `role` |
+| `auth.oidc.scopes` | `openid profile email` |
+| `auth.oidc.teamClaim` | `""` |
 | `batch.completionWindow` | `24h` |
 | `batch.enabled` | `false` |
 | `batch.maxFileBytes` | `104857600` |
