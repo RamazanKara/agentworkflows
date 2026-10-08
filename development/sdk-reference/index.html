@@ -2137,6 +2137,30 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 <td>Revoke immediately on all replicas, including sessions using the key</td>
 </tr>
 <tr>
+<td><code>settings show</code></td>
+<td>Effective team settings, policy defaults and revision (unrestricted admin only)</td>
+</tr>
+<tr>
+<td><code>settings set --fields '{"cost_limit_usd":100}' --revision 0</code></td>
+<td>Atomically override supplied fields; <code>--fields @settings.json</code> also works</td>
+</tr>
+<tr>
+<td><code>settings reset FIELD --revision 1</code></td>
+<td>Remove one override and restore its policy default</td>
+</tr>
+<tr>
+<td><code>audit list --limit 50 --cursor CURSOR</code></td>
+<td>One page of retained team receipts, newest first; cursor is optional</td>
+</tr>
+<tr>
+<td><code>audit verify --from UNIX_SECONDS --to UNIX_SECONDS</code></td>
+<td>Verify every team event in the selected time range; both bounds are optional</td>
+</tr>
+<tr>
+<td><code>audit export --output audit-log.jsonl</code></td>
+<td>Follow all cursor pages and write original events as JSON Lines; omit output or use <code>-</code> for stdout</td>
+</tr>
+<tr>
 <td><code>usage</code></td>
 <td>Usage, estimated spend, provider and workflow breakdowns</td>
 </tr>
@@ -2184,6 +2208,28 @@ save a newly created <code>key</code> securely, since list/update cannot recover
 to the authenticated admin's team and project access. You cannot revoke or demote your
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.</p>
+<p>Settings and audit SDK methods and CLI commands are available from this checkout
+(v0.6.0 in progress); they are not in the v0.5.1 wheel above. Both require an
+unrestricted team admin credential. Run <code>settings show</code> before changing settings,
+review the values, and pass its <code>revision</code> to <code>set</code> or <code>reset</code>. <code>--fields</code> is a
+non-empty JSON object of field names to values, without an outer <code>fields</code> wrapper.
+Only supplied fields change. A 409 means another writer changed the settings:
+reload, review and reapply with the new revision. The CLI never refreshes the
+revision or resubmits a stale change automatically. A 422 reports invalid fields;
+the entire patch is rejected. See <a href="../team-settings/">team settings</a> for field names
+and accepted values.</p>
+<p><code>audit list</code> and <code>audit export</code> accept <code>--from</code>, <code>--to</code> (inclusive Unix seconds),
+<code>--event-type</code>, <code>--actor</code>, <code>--project</code>, <code>--run-id</code>, <code>--cursor</code>, and <code>--limit</code> (1–200,
+default 50 per page). Pass the list result's <code>next_cursor</code> to read older events.
+Export follows cursors until exhausted and captures the current time as <code>--to</code>
+when omitted, keeping it fixed throughout the export. File output is UTF-8.
+Verification accepts only time bounds and checks all team events in that range,
+including events hidden by other filters. <code>audit verify</code> prints the full result
+and exits <strong>1</strong> for a broken chain or disabled view; <code>audit export</code> also exits <strong>1</strong>
+when disabled. A disabled <code>audit list</code> returns its <code>enabled: false</code> JSON response.
+Failed exports exit nonzero and may leave partial output. Retention continues
+during paging; these exports are not complete process logs for the operator
+verifier. See <a href="../audit-log/">audit log</a> for boundaries and verification limits.</p>
 <p>The <a href="../templates/">template gallery</a> includes input fields, expected results and adaptation
 steps for every starter. Install from this checkout to get its current template set.
 Scaffolds include <code>input-schema.json</code> and a schema declaration in <code>workflow.py</code>. Copy the
@@ -2290,6 +2336,77 @@ never receipt bodies. Terminal run records default to 30-day retention.</p>
 <p>Use <code>GatewayClient(base_url, api_key=...)</code> as a context manager for authenticated calls.
 Its <code>start_run</code>, <code>runs</code>, <code>run</code>, <code>approve_run</code>, <code>cancel_run</code>, and <code>retry_run</code> methods mirror
 the CLI. <a href="../client-examples/">Client examples</a> cover model calls and compatible framework SDKs.</p>
+<p>The admin methods return typed dictionaries, with request/response types available
+from <code>agentworkflows.types</code> (<code>ManagedKey</code>, <code>CreatedKey</code>, <code>KeyOptions</code>, <code>KeyUpdate</code>,
+<code>KeyList</code>, <code>Role</code>, <code>TeamSettings</code>, <code>TeamSetting</code>, <code>TeamSettingValue</code>, <code>AuditFilters</code>,
+<code>AuditEntry</code>, <code>AuditPage</code>, <code>AuditPosition</code>, and <code>AuditVerification</code>). Responses retain
+the API's field names and timestamps in Unix seconds; key <strong>input</strong> expiry uses an
+ISO-8601 string with a timezone.</p>
+<table>
+<thead>
+<tr>
+<th>Client method</th>
+<th>Result / behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_keys()</code></td>
+<td><code>KeyList</code>, including expired and revoked managed keys</td>
+</tr>
+<tr>
+<td><code>create_key(name, role="viewer", project=..., expires_at=...)</code></td>
+<td><code>CreatedKey</code>; plaintext <code>key</code> appears only in this response; options are optional</td>
+</tr>
+<tr>
+<td><code>update_key(key_id, name=..., role=..., project=..., expires_at=...)</code></td>
+<td><code>ManagedKey</code>; only supplied fields change; <code>None</code> clears project or expiry</td>
+</tr>
+<tr>
+<td><code>revoke_key(key_id)</code></td>
+<td>Revoked <code>ManagedKey</code>; the current key cannot revoke itself</td>
+</tr>
+<tr>
+<td><code>team_settings()</code></td>
+<td><code>TeamSettings</code>: revision, update metadata, fields with value/source/policy_default, and available routes/providers/approver_roles</td>
+</tr>
+<tr>
+<td><code>update_team_settings(fields, revision=...)</code></td>
+<td>Atomically apply the field/value map and return <code>TeamSettings</code>; revision or quoted ETag is sent as <code>If-Match</code></td>
+</tr>
+<tr>
+<td><code>reset_team_setting(field, revision=...)</code></td>
+<td>Reset one field to policy and return <code>TeamSettings</code></td>
+</tr>
+<tr>
+<td><code>audit(**filters)</code></td>
+<td>One <code>AuditPage</code> with envelopes, original events and <code>next_cursor</code></td>
+</tr>
+<tr>
+<td><code>verify_audit(from_time=..., to=...)</code></td>
+<td><code>AuditVerification</code> with <code>ok</code>, <code>checked</code>, <code>first_break</code> and <code>boundaries</code>; <code>ok</code> is <code>None</code> when disabled</td>
+</tr>
+<tr>
+<td><code>export_audit(**filters)</code></td>
+<td>Iterator of newline-terminated JSON strings, one original event per line across all pages; disabled views raise <code>RuntimeError</code></td>
+</tr>
+</tbody>
+</table>
+<p>Audit filter names are <code>from_time</code>, <code>to</code>, <code>event_type</code>, <code>actor</code>, <code>project</code>, <code>run_id</code>,
+<code>cursor</code>, and <code>limit</code>. Both time bounds are inclusive Unix seconds. All filters
+are optional; <code>limit</code> defaults to 50 on the gateway and cannot exceed 200.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_ADMIN_KEY"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">team_settings</span><span class="p">()</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">saved</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">update_team_settings</span><span class="p">({</span><span class="s2">"cost_limit_usd"</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">gateway</span><span class="o">.</span><span class="n">reset_team_setting</span><span class="p">(</span><span class="s2">"cost_limit_usd"</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">saved</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"audit-log.jsonl"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n">output</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_audit</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="s2">"team_settings_changed"</span><span class="p">))</span>
+</code></pre></div>
+<p>Admin mutations do not retry ambiguous HTTP failures or read timeouts. Settings
+conflicts and validation failures surface as <code>GatewayError</code> with the original
+status and structured detail; settings field errors are in <code>detail["fields"]</code>.</p>
 <p><code>GatewayError</code> exposes <code>status_code</code>, <code>reason</code>, <code>request_id</code>, and <code>detail</code>. Validation errors
 identify the invalid fields. CLI output includes a recovery action and request ID without
 printing your credential. <code>GatewayRetryAfterError.retry_after</code> reports when the server asks
@@ -2328,6 +2445,22 @@ before a start intent or Temporal execution is created; defaults are not inserte
 <tr>
 <td><code>workflow_start_conflict</code></td>
 <td>Use the original input for that request ID, or a new ID for a different run</td>
+</tr>
+<tr>
+<td><code>team_settings_conflict</code> (409)</td>
+<td>Reload with <code>settings show</code>, review and retry with its revision</td>
+</tr>
+<tr>
+<td><code>team_settings_invalid</code> (422)</td>
+<td>Correct the named fields using <code>settings show</code> and the team settings reference</td>
+</tr>
+<tr>
+<td><code>audit_range_invalid</code> (422)</td>
+<td>Use inclusive Unix timestamps with <code>from</code> at or before <code>to</code></td>
+</tr>
+<tr>
+<td><code>audit_view_unavailable</code> (503)</td>
+<td>Restore the audit Redis backend before retrying; an export may be partial</td>
 </tr>
 <tr>
 <td><code>workflow_run_missing</code></td>

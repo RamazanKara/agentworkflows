@@ -599,6 +599,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#team-administration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team administration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-and-stop" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2052,6 +2063,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#team-administration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team administration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-and-stop" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2237,20 +2259,115 @@ argument with Temporal's <code>retry</code>, <code>startToCloseTimeout</code>, <
 without retries; transient gateway failures retry, honoring <code>Retry-After</code>.
 Approval expires after seven days.
 Worker credentials and HTTP clients must never be imported into a workflow module.</p>
-<p>The client methods are <code>startRun</code>, <code>runs</code>, <code>run</code>, <code>approveRun</code>, <code>cancelRun</code>,
+<p>The workflow client methods are <code>startRun</code>, <code>runs</code>, <code>run</code>, <code>approveRun</code>, <code>cancelRun</code>,
 <code>retryRun</code>, <code>triggers</code>, and <code>pauseTrigger</code>. Use <code>{ paused: false }</code> to resume a
 trigger and <code>{ project, offset }</code> to page through runs. JSON response fields retain
 the API's snake_case names. This SDK covers governed model/tool workflows and the
-workflow API; Python's framework adapters and container runner remain Python APIs.</p>
+workflow and team administration APIs; Python's framework adapters and container runner remain Python APIs.</p>
 <p><code>GatewayError</code> exposes <code>statusCode</code>, <code>reason</code>, <code>requestId</code>, and <code>detail</code>.
 <code>GatewayTransportError</code> gives a redacted connection failure.
 <code>GatewayRetryAfterError.retryAfter</code> is a delay in seconds above the client's retry
 cap (30 seconds by default). Read requests and idempotent starts retry twice;
-approval, cancel, retry-run, and trigger mutations are not automatically repeated.
+approval, cancel, retry-run, trigger, key and settings mutations are not automatically repeated.
 Keep a <code>requestId</code> and reuse it with identical input after an ambiguous start.
 Inside workflows, gateway failures arrive as Temporal <code>ActivityFailure</code> with an
 <code>ApplicationFailure</code> cause whose <code>type</code> is the gateway reason. See the Python
 <a href="../sdk-reference/#gateway-client-and-errors">error recovery table</a> for the shared reasons.</p>
+<h2 id="team-administration">Team administration<a class="headerlink" href="#team-administration" title="Permanent link">&para;</a></h2>
+<p>The admin methods below are available from this checkout (v0.6.0 in progress),
+not the v0.5.1 release tarball above. Use an admin key; settings and audit require
+a credential without a project restriction.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Typed result / behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>listKeys()</code></td>
+<td><code>KeyList</code>, including revoked and expired keys</td>
+</tr>
+<tr>
+<td><code>createKey(name, { role, project, expires_at })</code></td>
+<td><code>CreatedKey</code>; save the one-time plaintext <code>key</code>; options are optional and role defaults to viewer</td>
+</tr>
+<tr>
+<td><code>updateKey(keyId, { name, role, project, expires_at })</code></td>
+<td><code>ManagedKey</code>; omitted fields stay unchanged; <code>null</code> clears project or expiry</td>
+</tr>
+<tr>
+<td><code>revokeKey(keyId)</code></td>
+<td>Revoked <code>ManagedKey</code>; the current key cannot revoke itself</td>
+</tr>
+<tr>
+<td><code>teamSettings()</code></td>
+<td><code>TeamSettings</code>: revision, update metadata, effective fields with value/source/policy_default and available route/provider/approver choices</td>
+</tr>
+<tr>
+<td><code>updateTeamSettings(fields, { revision })</code></td>
+<td>Atomically apply a field/value map and return <code>TeamSettings</code></td>
+</tr>
+<tr>
+<td><code>resetTeamSetting(field, { revision })</code></td>
+<td>Remove one override and return <code>TeamSettings</code></td>
+</tr>
+<tr>
+<td><code>audit({ from, to, eventType, actor, project, runId, cursor, limit })</code></td>
+<td>One newest-first <code>AuditPage</code> with original events, chain metadata and <code>next_cursor</code>; all options optional</td>
+</tr>
+<tr>
+<td><code>verifyAudit({ from, to })</code></td>
+<td><code>AuditVerification</code>: enabled, ok, checked, first_break and boundaries; <code>ok</code> is null when disabled</td>
+</tr>
+<tr>
+<td><code>exportAudit(filters)</code></td>
+<td>Async generator of newline-terminated JSON strings, one original event per line, following all matching cursor pages</td>
+</tr>
+</tbody>
+</table>
+<p>The package exports the request/response types <code>Role</code>, <code>KeyOptions</code>, <code>KeyUpdate</code>,
+<code>ManagedKey</code>, <code>CreatedKey</code>, <code>KeyList</code>, <code>TeamSettingValue</code>, <code>TeamSetting</code>,
+<code>TeamSettings</code>, <code>AuditRange</code>, <code>AuditFilters</code>, <code>AuditEntry</code>, <code>AuditPage</code>,
+<code>AuditPosition</code>, and <code>AuditVerification</code>. Key input expiry is an ISO-8601 string
+with a timezone. Response timestamps are Unix seconds.</p>
+<p>Read and review settings before writing. Pass the returned integer revision (or
+a quoted ETag string) to either mutation; the SDK sends it as <code>If-Match</code>. A stale
+write throws <code>GatewayError</code> with <code>statusCode: 409</code> and
+<code>reason: 'team_settings_conflict'</code>. Reload, review and reapply; the SDK does not
+refresh the revision or retry the change. A 422 rejects the whole patch and
+retains <code>detail.fields</code> entries containing <code>field</code> and <code>message</code>. See
+<a href="../team-settings/">team settings</a> for field names and limits.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">open</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:fs/promises'</span><span class="p">;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">admin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.AGENTWORKFLOWS_API_KEY</span><span class="p">,</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">});</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="kd">const</span><span class="w"> </span><span class="nx">settings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">teamSettings</span><span class="p">();</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="kd">const</span><span class="w"> </span><span class="nx">saved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">updateTeamSettings</span><span class="p">({</span><span class="w"> </span><span class="nx">cost_limit_usd</span><span class="o">:</span><span class="w"> </span><span class="kt">100</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">resetTeamSetting</span><span class="p">(</span><span class="s1">'cost_limit_usd'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">saved.revision</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="kd">const</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">open</span><span class="p">(</span><span class="s1">'audit-log.jsonl'</span><span class="p">,</span><span class="w"> </span><span class="s1">'w'</span><span class="p">);</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">exportAudit</span><span class="p">({</span><span class="w"> </span><span class="nx">eventType</span><span class="o">:</span><span class="w"> </span><span class="s1">'team_settings_changed'</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="p">}</span>
+</code></pre></div>
+<p>Audit times are inclusive Unix seconds. List/export filters match exactly;
+<code>limit</code> is the page size (default 50, maximum 200). Supply the previous page's
+<code>next_cursor</code> as <code>cursor</code> for older events. Export fixes <code>to</code> at the start time
+when omitted and preserves all filters across pages. Verification accepts only
+time bounds and includes events hidden by other filters. Check <code>enabled</code> on list
+and verification results; a disabled view has <code>ok: null</code>, and export throws an
+<code>Error</code> with the gateway's message. Gateway read failures propagate and can leave
+partial output. Retention continues during paging; these team exports are not
+complete process logs for the operator verifier. See <a href="../audit-log/">audit log</a>
+for range boundaries and what verification proves.</p>
 <h2 id="verify-and-stop">Verify and stop<a class="headerlink" href="#verify-and-stop" title="Permanent link">&para;</a></h2>
 <p>From <code>sdk/typescript</code>, run <code>npm run build</code>, <code>npm run lint</code>, and <code>npm test</code>. Vitest
 uses at most two workers. The equivalent repository target is <code>make test-typescript</code>.
@@ -2267,11 +2384,11 @@ remove this disposable trial's containers and volumes from the repository root:<
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Bash (Linux/macOS)</label><label for="__tabbed_2_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
 </code></pre></div>
 </div>
 </div>
