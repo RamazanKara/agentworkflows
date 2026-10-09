@@ -10,12 +10,23 @@ make test-typescript test-console
 ```
 
 Build Helm dependencies, then run `helm lint` and `helm template` for the charts
-being shipped. The console suite captures fixture-based screens at 393 and 1440
+being shipped. The console suite captures fixture-based screens at 360, 393 and 1440
 CSS pixels in `.out/console-v0.6.0/`; inspect them yourself after the tests pass.
 To repeat only those captures after a console build, run
 `npm test -- --grep 'release console layouts'` from `src/inference-gateway/console`.
-These cover Get started, provider setup, costs, step JSON, settings and audit;
-the separate Compose smoke test exercises the live gateway.
+These cover Get started, provider setup, costs, members and keys, step JSON,
+settings, audit and the phone menu. Inspect chips, links, command wrapping and
+horizontal step-JSON scrolling at both phone widths. Setup variants show zero
+usage while keys are missing. The connected insights team has one Research run
+awaiting approval: three calls and receipts, 4,200 tokens and $0.06, matching the
+step sums and cost tables. These are synthetic UI fixtures; the separate Compose
+smoke test exercises the live gateway.
+
+On native Windows without WSL, run the console's `npm run build` and `npm test`,
+the TypeScript SDK's `npm run build`, `npm run lint` and `npm test`, and Python
+Ruff, SDK tests and contract scripts from their installed environments. The Bash
+gates still need a Linux caller: `make lint test-gateway test-scripts`. Screenshot
+tests do not verify live providers, Redis, Temporal or PostgreSQL integration.
 
 Set the release and repository once:
 

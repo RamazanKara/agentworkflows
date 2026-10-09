@@ -2,6 +2,16 @@
 
 ## v0.6.0 - Unreleased
 
+- Add an opt-in PostgreSQL gateway store for run metadata, receipts and terminal
+  snapshots, audit events, team settings and managed-key metadata, with migrations,
+  retention and readiness checks. Redis remains required for live budgets, sessions,
+  captured content and coordination; the bundled PostgreSQL server is for development.
+- Console: show every model route name and its available key state on Get started,
+  matching Team settings. Keep workflow summaries together, use teal tabular step
+  numbers, tighten workflow cards, widen phone step content and wrap provider setup
+  commands. Clarify missing-key warnings and seed the token window explicitly.
+- Release screenshots cover 360, 393 and 1440 px with realistic setup and connected-team
+  fixtures. Costs, token totals, calls, receipts and worker-key usage share one run.
 - Add stable cursor paging for run history and approvals, including equal timestamps,
   expired records and empty filtered pages. Keep legacy offsets compatible and bind
   cursors to the authenticated team, project and filters.

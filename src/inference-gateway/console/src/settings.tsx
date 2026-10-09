@@ -199,7 +199,7 @@ function WorkflowCard({ workflow, summary: parts, custom, unsaved, open, childre
   // Each part keeps to one line; lines break only between parts.
   return <details className="workflow-card" open={open}><summary>
     <span className="workflow-card-title">{workflowName(workflow)}{unsaved ? <Unsaved/> : custom && <Custom/>}</span>
-    <small>{parts.map((part, index) => <span key={index}><span className="nowrap">{index > 0 && '· '}{part}</span>{' '}</span>)}</small>
+    <small>{parts.map((part, index) => <span key={index}>{index > 0 && ' ·\u00a0'}{part.replaceAll(' ', '\u00a0')}</span>)}</small>
   </summary>{children}</details>;
 }
 

@@ -264,7 +264,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
       <section><h2>Step timeline</h2>
         {!run.timeline?.length ? <Empty title="Waiting for the first step"><p>Refresh in a moment. If the run stays queued, check its team worker and Temporal task queue.</p></Empty> :
           <ol className="timeline">{timelineGroups(run.timeline).map((group, i) => <li key={group[0].receipt_id}>
-            <span className="step-number">{i + 1}</span>{group[0].action === 'notification' ? <Notifications steps={group}/> : group[0].action === 'approval' ? <ApprovalStep step={group[0]}/> : <StepCard step={group[0]}/>}</li>)}</ol>}
+            <span className="step-number">{String(i + 1).padStart(2, '0')}</span>{group[0].action === 'notification' ? <Notifications steps={group}/> : group[0].action === 'approval' ? <ApprovalStep step={group[0]}/> : <StepCard step={group[0]}/>}</li>)}</ol>}
         <p className="muted">Each step links to a gateway receipt. To prove nothing was changed, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">verify an audit export</a>.</p>
       </section>
       {canBuild(session) && ['failed', 'canceled', 'terminated', 'timed_out'].includes(run.status) && <div className="run-actions">

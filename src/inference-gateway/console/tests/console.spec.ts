@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import type { TeamSettings } from '../src/api';
+import { createHash } from 'node:crypto';
+import type { CostRow, Run, TeamSettings } from '../src/api';
 
 const id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb';
 const run = (overrides = {}) => ({
@@ -305,7 +306,7 @@ test.beforeEach(async ({ page }) => {
     if (url.pathname === '/v1/team') body = { team_id: team, role, projects: ['default', 'engineering'], providers: ['openai'], cost_limit_usd: 50, ...(role === 'admin' ? { provider_configuration: { openai: { configured: true, environment_variable: 'TEAM_OPENAI_KEY' } } } : {}) };
     else if (url.pathname === '/v1/workflow-policies') body = policies;
     else if (url.pathname === '/v1/models') body = { data: [{ id: 'demo-openai' }] };
-    else if (url.pathname === '/v1/sandbox/budget') body = { usage: { estimated_tokens: 63 }, limits: { estimated_tokens: 200000 } };
+    else if (url.pathname === '/v1/sandbox/budget') body = { usage: { estimated_tokens: 63 }, limits: { estimated_tokens: 200000 }, window_seconds: 86400 };
     else if (url.pathname === '/v1/usage') body = { estimated_cost: .0432, spend: { project: null, window_start: 1791316800, window_seconds: 86400, cost_limit_usd: 50, reserved_and_spent_usd: .0432, providers: { anthropic: costs }, workflows: { ResearchWorkflow: costs }, accounting: 'Configured prices, not provider invoices.' } };
     else if (url.pathname === '/v1/workflow-runs' && route.request().method() === 'POST') body = { run_id: id };
     else if (url.pathname === '/v1/workflow-runs') body = { runs: team === 'other' || url.searchParams.get('project') === 'engineering' || url.searchParams.get('status') === 'failed' ? [] : [run()], next_cursor: null };
@@ -331,24 +332,76 @@ test('model prompts read as a transcript and the answer is previewed on the step
   await expect(page.locator('.step-content').last()).toHaveText('Vendor A wins on cost.');
 });
 
-for (const width of [393, 1440]) {
+for (const width of [360, 393, 1440]) {
   test(`release console layouts at ${width}px`, async ({ page }) => {
     test.setTimeout(60000);
-    await page.setViewportSize({ width, height: width === 393 ? 852 : 1000 });
+    await page.setViewportSize({ width, height: width < 760 ? 852 : 1000 });
+    await page.clock.setFixedTime(new Date('2026-10-09T10:00:00Z'));
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
     const capture = async (name: string) => {
+      await expect(page.locator('main .loading')).toHaveCount(0);
+      await expect(page.locator('main')).not.toContainText(/aaaaaaaa|demo-openai|demo-anthropic/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       await page.screenshot({ path: `../../../.out/console-v0.6.0/${width}-${name}.png`, fullPage: true });
     };
+    const runId = '7e2b941c-65af-4d83-9c12-34b08f6ea725';
+    const started = Date.parse('2026-10-09T09:40:00Z') / 1000;
+    const models = [{ id: 'gpt-4.1-mini', owned_by: 'openai' }, { id: 'claude-haiku-4-5', owned_by: 'anthropic' }];
+    const draft = '# Briefing: Agent workflow evaluation\n\nStart with a small set of representative tasks. Compare answer quality, cost and review effort before expanding access.';
+    const timeline = [
+      { step_id: 'research', action: 'tool_call', provider: 'tool', model: '', tool: 'research', tokens: 0, cost_usd: .01, duration_ms: 320,
+        input: JSON.stringify({ topic: 'Agent workflow evaluation' }),
+        output: JSON.stringify({ sources: [{ title: 'Evaluation guide', url: 'https://example.com/research/agent-workflows/evaluation-and-human-approvals' }] }) },
+      { step_id: 'analyze', action: 'model_call', provider: 'openai', model: models[0].id, tool: '', tokens: 1800, cost_usd: .02, duration_ms: 1420,
+        input: JSON.stringify([{ role: 'user', content: 'Compare practical ways to evaluate agent workflows for our team.' }]),
+        output: 'Track task completion, answer quality, cost per run and the time reviewers spend correcting drafts.' },
+      { step_id: 'draft', action: 'model_call', provider: 'anthropic', model: models[1].id, tool: '', tokens: 2400, cost_usd: .03, duration_ms: 1860,
+        input: JSON.stringify([{ role: 'user', content: 'Draft a short briefing from the evaluation findings for human review.' }]), output: draft },
+    ].map(({ input, output, ...step }, index) => {
+      const receipt = { event: step.tool ? 'agent_action' : 'inference_request', ts: started + index * 4 + 2,
+        action_type: step.action, provider: step.provider, model: step.model, workflow_step_id: step.step_id,
+        workflow_run_id: runId, project: 'default', principal: { key_id: 'key-research-worker', name: 'Research worker' },
+        tokens: step.tokens, cost_usd: step.cost_usd };
+      const hash = createHash('sha256').update(JSON.stringify(receipt)).digest('hex');
+      return { ...step, timestamp: receipt.ts, status_code: 200, attempts: [], chain_id: 'gateway:insights', receipt_id: hash,
+        receipt: { ...receipt, record_hash: hash }, content: { input, output, redaction: 'redacted' as const, truncated: { input: false, output: false } } };
+    });
+    const totals = { calls: timeline.length, tokens: timeline.reduce((sum, step) => sum + step.tokens, 0), cost_usd: timeline.reduce((sum, step) => sum + step.cost_usd, 0) };
+    const providers = Object.fromEntries(timeline.map(step => [step.provider, { calls: 1, tokens: step.tokens, cost_usd: step.cost_usd }])) satisfies Record<string, CostRow>;
+    const activeRun: Run = { run_id: runId, workflow: 'ResearchWorkflow', project: 'default', created_at: started, status: 'running',
+      progress: { stage: 'awaiting_approval', draft }, budget: { ...totals, token_limit: 10000, cost_limit_usd: 5 }, timeline };
+    const teamSettings = settings();
+    teamSettings.routes = models.map(model => model.id);
+    teamSettings.fields['model_routes.research'] = { value: models[0].id, policy_default: models[0].id, source: 'policy' };
     let openaiConfigured = false;
+    let anthropicConfigured = false;
+    let recorded = false;
     await page.route('**/v1/team', route => route.fulfill({ json: {
-      team_id: 'demo', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
-      provider_configuration: { openai: { configured: openaiConfigured, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: false, environment_variable: 'ANTHROPIC_API_KEY' } },
+      team_id: 'insights', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
+      provider_configuration: { openai: { configured: openaiConfigured, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: anthropicConfigured, environment_variable: 'ANTHROPIC_API_KEY' } },
     } }));
-    await page.route('**/v1/models', route => route.fulfill({ json: { data: [
-      { id: 'openai', owned_by: 'openai' }, { id: 'claude-sonnet', owned_by: 'anthropic' },
+    await page.route('**/v1/models', route => route.fulfill({ json: { data: models } }));
+    await page.route('**/v1/team/settings', route => route.fulfill({ json: teamSettings }));
+    await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: { ResearchWorkflow: {
+      ...policies.workflows.ResearchWorkflow, allowedModels: models.map(model => model.id),
+      inputSchema: { type: 'object', properties: { topic: { type: 'string', default: 'Agent workflow evaluation' }, model: { type: 'string', default: models[0].id } }, required: ['topic'] },
+    } } } }));
+    await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: recorded ? [activeRun] : [], next_cursor: null } }));
+    await page.route(`**/v1/workflow-runs/${runId}`, route => route.fulfill({ json: activeRun }));
+    await page.route('**/v1/sandbox/budget', route => route.fulfill({ json: { usage: { estimated_tokens: recorded ? totals.tokens : 0 }, limits: { estimated_tokens: 200000 }, window_seconds: 86400 } }));
+    await page.route('**/v1/usage', route => route.fulfill({ json: { estimated_cost: recorded ? totals.cost_usd : 0, spend: {
+      period: 'month', project: null, window_start: Date.parse('2026-10-01T00:00:00Z') / 1000, window_seconds: 2678400,
+      cost_limit_usd: 50, reserved_and_spent_usd: recorded ? totals.cost_usd : 0, providers: recorded ? providers : {}, workflows: recorded ? { ResearchWorkflow: totals } : {},
+    } } }));
+    await page.route('**/v1/team/keys', route => route.fulfill({ json: { keys: [
+      { key_id: 'admin', name: 'Maya Chen', role: 'admin', project: null, created_at: started - 86400, last_used_at: started + 1200, expires_at: null, revoked_at: null },
+      { key_id: 'key-research-worker', name: 'Research worker', role: 'builder', project: 'default', created_at: started - 3600, last_used_at: timeline.at(-1)!.timestamp, expires_at: started + 90 * 86400, revoked_at: null },
     ] } }));
-    await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [], next_cursor: null } }));
+    await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: timeline.map((step, index) => ({
+      id: `${step.timestamp * 1000}-0`, chain_id: step.chain_id, sequence: index + 1, event: step.receipt,
+    })).reverse(), next_cursor: null } }));
     await login(page);
     const labels = page.locator('.model-list li > span.muted');
     await expect(labels).toHaveText(['OpenAI', 'Anthropic']);
@@ -356,46 +409,88 @@ for (const width of [393, 1440]) {
       const style = getComputedStyle(node); return [style.color, style.fontSize, style.fontWeight];
     }));
     expect(styles[0]).toEqual(styles[1]);
+    await expect(page.locator('.model-list code')).toHaveText(models.map(model => model.id));
+    await expect(page.locator('.model-list .badge')).toHaveText(['Key missing', 'Key missing']);
+    if (width < 760) {
+      const menu = await page.getByRole('button', { name: 'Open menu' }).boundingBox();
+      const brand = await page.locator('.sidebar .brand').boundingBox();
+      expect(Math.abs(menu!.y + menu!.height / 2 - brand!.y - brand!.height / 2)).toBeLessThanOrEqual(1);
+    }
+    const numberStyle = await page.locator('.onboarding-number').first().evaluate(node => {
+      const style = getComputedStyle(node); return [style.fontFamily, style.fontVariantNumeric, style.color, style.fontWeight];
+    });
     await capture('get-started');
-    openaiConfigured = true;
-    await page.reload();
-    await expect(page.locator('.onboarding .note-warn a')).toHaveCSS('white-space', 'nowrap');
-    await capture('get-started-key-warning');
-    openaiConfigured = false;
     await page.goto('/console/#providers');
     const helm = page.locator('.setup pre');
     await expect(helm).toContainText('# Release and namespace are "aw", as in\n# the install guide. Change if needed.');
-    expect(await page.locator('.usage-bar > span').first().evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThanOrEqual(4);
+    await expect(page.getByText('Tokens in this 24-hour window', { exact: true })).toBeVisible();
+    if (width < 760) {
+      await expect(helm).toHaveCSS('white-space', 'pre-wrap');
+      expect(await helm.evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight)).toBe(true);
+      for (const provider of ['openai', 'anthropic']) await expect(helm).toContainText(`existingSecret=${provider}-api-key`);
+    }
     await capture('providers');
+    openaiConfigured = true;
+    await page.goto('/console/#start');
+    await page.reload();
+    await expect(page.locator('.model-list .badge')).toHaveText(['Ready', 'Key missing']);
+    await expect(page.locator('.onboarding .note-warn a')).toHaveCSS('white-space', 'nowrap');
+    await capture('get-started-key-warning');
+    anthropicConfigured = true;
+    recorded = true;
+    await page.reload();
+    await expect(page.locator('.model-list .badge')).toHaveText(['Ready', 'Ready']);
+    await capture('get-started-ready');
+    if (width < 760) {
+      await page.getByRole('button', { name: 'Open menu' }).click();
+      await expect(page.getByRole('navigation').getByRole('link')).toHaveCount(9);
+      await capture('navigation');
+      await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
+    }
+    await page.goto('/console/#providers');
+    await expect(page.getByText('Key present', { exact: true })).toHaveCount(2);
+    expect(await page.locator('.usage-bar > span').first().evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThanOrEqual(4);
+    await capture('providers-ready');
     await page.goto('/console/#costs');
     await expect(page.getByRole('heading', { name: 'By provider' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'By workflow table' }).locator('tbody td')).toHaveText(['3', '4,200', '$0.06']);
+    await expect(page.getByText('Tokens in this 24-hour window', { exact: true })).toBeVisible();
     await capture('costs');
-    const original = run();
-    await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: {
-      ...original, status: 'completed', progress: undefined, result: { status: 'published', publication: 'Research briefing' },
-      timeline: [{ ...original.timeline[0], action: 'tool_exec', tool: 'research', content: {
-        input: JSON.stringify({ topic: 'Agent workflow evaluation' }),
-        output: JSON.stringify({ sources: [{ title: 'Evaluation guide', url: 'https://example.com/research/agent-workflows/evaluation-and-human-approvals' }] }),
-        redaction: 'redacted', truncated: { input: false, output: false },
-      } }],
-    } }));
-    await page.goto(`/console/#run/${id}`);
+    await page.goto('/console/#keys');
+    await expect(page.getByRole('rowheader', { name: 'Maya Chen You' })).toBeVisible();
+    await capture('members-keys');
+    await page.goto(`/console/#run/${runId}`);
+    await expect(page.locator('.metrics dd')).toHaveText(['4,200 of 10,000', '$0.06 of $5.00', '3']);
+    await expect(page.locator('.step-number')).toHaveText(['01', '02', '03']);
+    expect(await page.locator('.step-number').first().evaluate(node => {
+      const style = getComputedStyle(node); return [style.fontFamily, style.fontVariantNumeric, style.color, style.fontWeight];
+    })).toEqual(numberStyle);
     await page.getByText('Arguments and result', { exact: true }).click();
     const json = page.locator('.step-content.json').last();
     await expect(json).toHaveCSS('white-space', 'pre');
     await expect(json).toHaveCSS('overflow-wrap', 'normal');
-    if (width === 393) {
+    if (width < 760) {
       expect(await json.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
       expect(await json.locator('..').evaluate(node => getComputedStyle(node, '::after').backgroundImage)).toContain('linear-gradient');
+      const input = page.locator('.step-content.json').first();
+      expect(await input.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+      await json.evaluate(node => { node.scrollLeft = node.scrollWidth; });
+      expect(await json.evaluate(node => node.scrollLeft + node.clientWidth >= node.scrollWidth - 1)).toBe(true);
+      await json.evaluate(node => { node.scrollLeft = 0; });
     }
     await capture('run-detail');
     await page.goto('/console/#team');
     await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Model for research')).toHaveValue(models[0].id);
+    await expect(page.getByLabel('Model for research').locator('option')).toHaveText(['gpt-4.1-mini · OpenAI', 'claude-haiku-4-5 · Anthropic']);
+    expect(await page.locator('.workflow-card > summary small').innerText()).toBe('$5.00\u00a0per\u00a0run ·\u00a0Approval\u00a0on\u00a0every\u00a0run ·\u00a0OpenAI,\u00a0Anthropic');
     await capture('team-settings');
-    await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: [auditEntry()], next_cursor: null } }));
     await page.goto('/console/#audit');
-    await expect(page.locator('.audit-table').getByText('Model call', { exact: true })).toBeVisible();
+    await expect(page.locator('.audit-table').getByText('Model call', { exact: true })).toHaveCount(2);
+    await expect(page.locator('.audit-table').getByText('Agent action', { exact: true })).toHaveCount(1);
     await capture('audit');
+    expect(errors).toEqual([]);
   });
 }
 
@@ -475,7 +570,7 @@ test('a fresh Helm install says which provider Secret to add, without demo wordi
   await expect(page.getByRole('heading', { name: 'Add a provider key' })).toBeVisible();
   await expect(page.getByText('OpenAI and Anthropic keys are missing, so runs fail until you add them.', { exact: false })).toBeVisible();
   await expect(page.locator('.model-list li').first()).toContainText('researchOpenAIKey missing');
-  await expect(page.locator('.model-list li').last()).toHaveText('AnthropicKey missing');
+  await expect(page.locator('.model-list li').last()).toHaveText('anthropicAnthropicKey missing');
   await expect(page.getByText('Compose demo', { exact: false })).toHaveCount(0);
   await page.getByRole('link', { name: 'Run workflow', exact: true }).first().click();
   await expect(page.locator('.note-warn')).toContainText('model calls in this run will fail');
@@ -819,7 +914,7 @@ test('a workflow that needs a provider without a key warns before it runs', asyn
   await page.route('**/v1/team', route => route.fulfill({ json: { team_id: 'demo', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
     provider_configuration: { openai: { configured: true, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: false, environment_variable: 'ANTHROPIC_API_KEY' } } } }));
   await login(page);
-  await expect(page.locator('.onboarding .note-warn')).toHaveText('The example uses Anthropic, which has no key yet, so its calls there fail. Add the key first.');
+  await expect(page.locator('.onboarding .note-warn')).toHaveText('The example uses Anthropic, which has no key yet, so those steps will fail. Add the key first.');
   await page.getByRole('link', { name: 'Run workflow', exact: true }).first().click();
   await expect(page.locator('.note-warn')).toHaveText('Anthropic has no key yet, so this workflow’s calls there fail. Add the key first.');
   await page.getByLabel('Workflow', { exact: true }).selectOption('CustomWorkflow');

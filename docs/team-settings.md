@@ -1,10 +1,16 @@
 # Team settings
 
 Team admins can change budgets, approval rules, allowed providers and model alias
-selections in **Team settings** or **Providers & budgets** in the console. **Costs**
-also includes the budget editor. Other roles see effective values without editing
+selections in **Team settings** in the console. **Providers & budgets** and **Costs**
+include the budget editor. Other roles see effective values without editing
 controls. Provider API keys stay in Kubernetes Secrets or gateway environment
 variables; this API does not accept credentials, connection URLs or new routes.
+
+Model choices use the same route IDs and provider names shown in **Get started**.
+For admins, **Ready** means the provider key is configured (or the route is
+simulated), and **Key missing** means it still needs a key. This is a configuration
+check, not a live provider test. Costs and Providers name the configured token
+window separately from the UTC calendar-month spending budget.
 
 ## Defaults and overrides
 
