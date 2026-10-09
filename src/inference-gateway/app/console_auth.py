@@ -17,6 +17,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.jwks import JwksCache, JwksUnavailableError, JwtAuthError, JwtConfig, JwtVerifierCore
+from app.oidc_access import access_policy_digest, group_role
 from app.request_context import _jwt_principal, authenticate_credential
 from app.sessions import (
     CSRF_COOKIE,
@@ -107,14 +108,15 @@ async def oidc_identity(request: Request, token: str, nonce: str) -> None:
         if (multiple or "azp" in claims) and claims.get("azp") != settings.oidc_client_id:
             raise JwtAuthError("authorized party mismatch")
         team = claims.get(settings.oidc_team_claim or settings.jwt_tenant_claim)
-        role = claims.get(settings.oidc_role_claim, settings.oidc_default_role)
-        project = claims.get(settings.oidc_project_claim)
-        if (
-            not isinstance(team, str) or not isinstance(role, str)
-            or role not in {"admin", "builder", "approver", "viewer"}
-        ):
-            raise JwtAuthError("invalid membership claims")
+        if not isinstance(team, str):
+            raise JwtAuthError("invalid team claim")
         team = validate_sandbox_id(team)
+        role = claims.get(settings.oidc_role_claim, settings.oidc_default_role)
+        if settings.oidc_group_role_mappings:
+            role = group_role(settings, team, claims)
+        project = claims.get(settings.oidc_project_claim)
+        if not isinstance(role, str) or role not in {"admin", "builder", "approver", "viewer"}:
+            raise JwtAuthError("invalid membership claims")
         if project is not None:
             if not isinstance(project, str):
                 raise JwtAuthError("invalid project claim")
@@ -135,6 +137,10 @@ async def oidc_identity(request: Request, token: str, nonce: str) -> None:
         request.state.principal["name"] = display.strip()[:128]
     request.state.sandbox_id = team
     request.state.sandbox_bound = True
+    request.state.oidc_policy_digest = access_policy_digest(settings, team)
+    # Group membership is a sign-in snapshot; require a fresh ID token when it expires.
+    if settings.oidc_group_role_mappings:
+        request.state.credential_expires_at = claims["exp"]
 
 
 def register_auth_routes(app: FastAPI) -> None:

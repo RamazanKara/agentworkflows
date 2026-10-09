@@ -16,6 +16,11 @@ export type Team = {
 export type Session = { csrfToken: string; team: Team; id: number; name?: string; keyId?: string };
 export type BrowserSession = { csrf_token: string; principal: { key_id?: string; name?: string }; sandbox_id: string };
 export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
+export type TeamSSO = {
+  team_id: string; enabled: boolean; provider_name: string | null; role_source: 'groups' | 'claim';
+  team_claim: string; project_claim: string; role_claim: string | null; default_role: Team['role'] | null;
+  groups_claim: string | null; group_role_mappings: Record<string, Team['role']>;
+};
 export type InputProperty = {
   title?: string;
   type: 'string' | 'number' | 'integer' | 'boolean' | 'array';

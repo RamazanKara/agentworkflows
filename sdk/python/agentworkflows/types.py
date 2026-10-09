@@ -7,6 +7,19 @@ TeamSettingValue = str | int | float | bool | list[str] | None
 CaptureMode = Literal["none", "redacted", "full"]
 
 
+class TeamSSO(TypedDict):
+    team_id: str
+    enabled: bool
+    provider_name: str | None
+    role_source: Literal["groups", "claim"]
+    team_claim: str
+    project_claim: str
+    role_claim: str | None
+    default_role: Role | None
+    groups_claim: str | None
+    group_role_mappings: dict[str, Role]
+
+
 class SpendAlert(TypedDict):
     id: str
     level: Literal["soft", "hard"]

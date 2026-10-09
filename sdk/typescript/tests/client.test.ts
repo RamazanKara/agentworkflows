@@ -9,6 +9,20 @@ const ok = (body = {}) => new Response(JSON.stringify(body), { status: 200 });
 beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); vi.mocked(setTimeout).mockClear(); });
 afterEach(() => vi.unstubAllGlobals());
 
+it('reads typed team SSO policy and preserves authorization errors', async () => {
+  const policy = {
+    team_id: 'team', enabled: true, provider_name: 'idp.example', role_source: 'groups',
+    team_claim: 'team', project_claim: 'project', role_claim: null, default_role: null,
+    groups_claim: 'groups', group_role_mappings: { Reviewers: 'approver' },
+  };
+  fetchMock.mockResolvedValueOnce(ok(policy))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Admin required' }), { status: 403 }));
+  expect(await client.teamSSO()).toEqual(policy);
+  expect(fetchMock.mock.calls[0][0]).toBe('http://gateway.test/v1/team/sso');
+  expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ Authorization: 'Bearer fixture-key' });
+  await expect(client.teamSSO()).rejects.toMatchObject({ statusCode: 403 });
+});
+
 it('exports monthly CSV through authenticated retry and error handling', async () => {
   const csv = 'name,cost_usd\r\n"Grüße, team",0.000000001\r\n';
   fetchMock.mockResolvedValueOnce(new Response('{}', { status: 503 }))

@@ -1593,6 +1593,111 @@
         "title": "StartRun",
         "type": "object"
       },
+      "TeamSSO": {
+        "properties": {
+          "default_role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "builder",
+                  "approver",
+                  "viewer"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Role"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "group_role_mappings": {
+            "additionalProperties": {
+              "enum": [
+                "admin",
+                "builder",
+                "approver",
+                "viewer"
+              ],
+              "type": "string"
+            },
+            "title": "Group Role Mappings",
+            "type": "object"
+          },
+          "groups_claim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groups Claim"
+          },
+          "project_claim": {
+            "title": "Project Claim",
+            "type": "string"
+          },
+          "provider_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Name"
+          },
+          "role_claim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Claim"
+          },
+          "role_source": {
+            "enum": [
+              "groups",
+              "claim"
+            ],
+            "title": "Role Source",
+            "type": "string"
+          },
+          "team_claim": {
+            "title": "Team Claim",
+            "type": "string"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "enabled",
+          "provider_name",
+          "role_source",
+          "team_claim",
+          "project_claim",
+          "role_claim",
+          "default_role",
+          "groups_claim",
+          "group_role_mappings"
+        ],
+        "title": "TeamSSO",
+        "type": "object"
+      },
       "TeamSettingsPatch": {
         "additionalProperties": false,
         "properties": {
@@ -1789,7 +1894,7 @@
   "info": {
     "description": "OpenAI-compatible private inference gateway with sandbox traceability, admission controls, budget enforcement, redacted audit events, and runtime routing to Ollama or vLLM.",
     "title": "AgentWorkflows Inference Gateway",
-    "version": "0.7.0"
+    "version": "0.8.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4088,6 +4193,38 @@
           }
         ],
         "summary": "Read monthly limits, reservations and spend alerts",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/sso": {
+      "get": {
+        "operationId": "team_sso_v1_team_sso_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamSSO"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Inspect this team's company sign-in policy (unrestricted admin only)",
         "tags": [
           "teams"
         ]

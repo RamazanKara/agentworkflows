@@ -4,7 +4,7 @@ import { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './e
 import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
-  ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, WorkflowRun,
+  ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
 } from './types';
 
 export interface ClientOptions {
@@ -66,6 +66,11 @@ export class GatewayClient {
   /** Read effective values, policy defaults and the current revision (unrestricted admin only). */
   teamSettings(): Promise<TeamSettings> {
     return this.request('GET', '/v1/team/settings');
+  }
+
+  /** Inspect this team's company sign-in policy (unrestricted admin only). */
+  teamSSO(): Promise<TeamSSO> {
+    return this.request('GET', '/v1/team/sso');
   }
 
   /** Monthly limits and alerts; requires an unrestricted team credential. */

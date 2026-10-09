@@ -218,7 +218,7 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     assert "@input_schema(" in (target / "workflow.py").read_text()
     assert "worker.py" in (target / "README.md").read_text()
     assert f"templates/#{template}" in (target / "README.md").read_text()
-    assert "releases/download/v0.7.0/agentworkflows-0.7.0-py3-none-any.whl" in (target / "requirements.txt").read_text()
+    assert "releases/download/v0.8.0/agentworkflows-0.8.0-py3-none-any.whl" in (target / "requirements.txt").read_text()
     assert "--input '@input.json'" in capsys.readouterr().out
     before = {p.name: p.read_bytes() for p in target.iterdir()}
     with pytest.raises(SystemExit) as exc:

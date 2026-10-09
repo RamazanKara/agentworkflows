@@ -49,3 +49,25 @@ Both paths share existing storage and authorization. No new service or Helm swit
 is needed. One-click/versioned template installation, multi-approver escalation,
 per-workflow secrets and SSO group mapping remain open. Broader SDK parity and live
 OpenTelemetry/deployment acceptance remain integration work. There is no hosted SaaS.
+
+## v0.8.0: company group access for teams (unreleased)
+
+Selected scope: **SSO group-to-role mapping and access inspection**. Team onboarding
+already has OIDC, scoped roles and sessions, but requires the identity provider to
+emit a gateway-specific scalar role. Mapping existing company groups removes that
+adoption step while keeping policy under the deployment operator's control.
+
+The gateway now accepts validated, team-scoped group mappings through Helm or
+environment configuration. Exactly one distinct mapped role is required; unmatched
+or conflicting groups fail closed. Group sessions expire with the ID token and
+affected policy changes require sign-in again. An admin-only API, both SDKs and
+Members & keys show this team's effective sign-in policy without exposing secrets
+or other teams' groups. Empty mappings preserve the current role-claim path.
+
+The acceptance boundary is signed-token fixture tests, native contract/SDK/console
+checks and Helm rendering, plus the documented source-build Quickstart when Docker
+is available. Real identity-provider configuration and deployment acceptance remain
+operator tasks. One-click/versioned templates, multi-approver escalation,
+per-workflow secrets, broader SDK parity and live trace export remain open. Cron,
+approval expiry, console cancellation/retry, trigger history and CSV export were
+already implemented and are not counted again in this milestone.

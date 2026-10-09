@@ -27,6 +27,27 @@ def _record_sleeps(monkeypatch, client):
     return sleeps
 
 
+def test_team_sso_returns_policy_and_preserves_authorization_errors(monkeypatch):
+    policy = {
+        "team_id": "team", "enabled": True, "provider_name": "idp.example", "role_source": "groups",
+        "team_claim": "team", "project_claim": "project", "role_claim": None, "default_role": None,
+        "groups_claim": "groups", "group_role_mappings": {"Reviewers": "approver"},
+    }
+    responses = [httpx.Response(200, json=policy), httpx.Response(403, json={"detail": "Admin required"})]
+
+    def handler(request):
+        assert request.method == "GET" and request.url.path == "/v1/team/sso"
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        return responses.pop(0)
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        assert client.team_sso() == policy
+        with pytest.raises(GatewayError, match="Admin required") as error:
+            client.team_sso()
+        assert error.value.status_code == 403
+
+
 def test_usage_csv_download_and_errors(monkeypatch):
     csv = 'team_id,name,cost_usd\r\ndemo,"Grüße, team",0.000000001\r\n'
     responses = [httpx.Response(200, text=csv), httpx.Response(403, json={"detail": "Team access required"})]

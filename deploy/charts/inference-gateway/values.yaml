@@ -349,6 +349,13 @@ auth:
     roleClaim: role
     projectClaim: project
     defaultRole: viewer
+    # Exact group names, scoped by the verified team claim. Empty keeps role-claim behavior.
+    groupsClaim: groups
+    groupRoleMappings: {}
+    # groupRoleMappings:
+    #   demo:
+    #     engineering-builders: builder
+    #     engineering-reviewers: approver
 
 service:
   # ClusterIP keeps the gateway in-cluster (port-forward or Ingress for outside clients).

@@ -2,8 +2,11 @@
 
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
+
+from app.oidc_access import TeamSSO
 
 
 def require_role(request: Request, *roles: str) -> dict[str, Any]:
@@ -76,6 +79,27 @@ def register_team_routes(app: FastAPI) -> None:
     register_audit_routes(app)
     register_team_settings_routes(app)
     register_spend_routes(app)
+
+    @app.get("/v1/team/sso", tags=["teams"], response_model=TeamSSO,
+             summary="Inspect this team's company sign-in policy (unrestricted admin only)")
+    async def team_sso(request: Request) -> dict[str, Any]:
+        principal = require_role(request, "admin")
+        if principal.get("project"):
+            raise HTTPException(403, detail="Use an unrestricted team admin credential to inspect company sign-in.")
+        settings = app.state.settings
+        groups = bool(settings.oidc_group_role_mappings)
+        return {
+            "team_id": request.state.sandbox_id,
+            "enabled": bool(settings.oidc_issuer),
+            "provider_name": urlsplit(settings.oidc_issuer).hostname,
+            "role_source": "groups" if groups else "claim",
+            "team_claim": settings.oidc_team_claim or settings.jwt_tenant_claim,
+            "project_claim": settings.oidc_project_claim,
+            "role_claim": None if groups else settings.oidc_role_claim,
+            "default_role": None if groups else settings.oidc_default_role,
+            "groups_claim": settings.oidc_groups_claim if groups else None,
+            "group_role_mappings": settings.oidc_group_role_mappings.get(request.state.sandbox_id, {}),
+        }
 
     @app.get("/v1/team", tags=["teams"], summary="Discover your team, role, projects, and provider configuration")
     async def team_info(request: Request) -> dict[str, Any]:

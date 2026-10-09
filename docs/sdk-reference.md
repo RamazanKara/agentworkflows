@@ -44,7 +44,7 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
 
-Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.7.0 checkout SDK and gateway,
+Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.8.0 checkout SDK and gateway,
 not the v0.5.1 wheel or images. `runs list` and `runs export` accept `--project`,
 `--workflow`, `--status`, `--cursor` and `--limit` (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have `next_cursor`.
@@ -105,6 +105,38 @@ The [template gallery](templates.md) includes input fields, expected results and
 steps for every starter. Install from this checkout to get its current template set.
 Scaffolds include `input-schema.json` and a schema declaration in `workflow.py`. Copy the
 schema to the workflow policy's `inputSchema` to enable console forms and gateway validation.
+
+## Company group access (v0.8.0)
+
+Gateway v0.8.0 adds `GET /v1/team/sso` for a team admin credential without a project
+restriction. It returns `TeamSSO`: team ID, enabled state, provider hostname,
+`role_source` (`groups` or `claim`), team/project claim names, and only the current
+team's group-to-role mappings. In group mode, `role_claim` and `default_role` are
+null; in claim mode, `groups_claim` is null and mappings are empty. No secrets,
+other teams' mappings or user group memberships are returned. A disabled provider
+has `enabled: false` and `provider_name: null`.
+
+```python
+from agentworkflows import GatewayClient
+
+with GatewayClient("https://agents.example.com", api_key=admin_key) as client:
+    policy = client.team_sso()
+    print(policy["role_source"], policy["group_role_mappings"])
+```
+
+```typescript
+import { GatewayClient } from '@agentworkflows/sdk';
+
+const client = new GatewayClient('https://agents.example.com', { apiKey: adminKey });
+const policy = await client.teamSSO();
+console.log(policy.role_source, policy.group_role_mappings);
+```
+
+Both helpers use the SDK's authenticated GET retries and preserve 401/403 errors.
+This is an inspection API; an operator configures mappings through Helm or
+environment variables. See [group access semantics and acceptance](workflows.md#sso-group-to-role-mapping).
+Members & keys displays the same policy. The API does not log users into their
+identity provider, create groups or change memberships.
 
 ## Trigger history and usage CSV (v0.7.0 candidate)
 

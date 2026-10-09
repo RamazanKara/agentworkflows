@@ -30,6 +30,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | Python client SDK and CLI | Shipped (typed) | Install `./sdk/python`; command `agentworkflows` | Isolated build/test matrix, checksums, and release artifacts; PyPI Trusted Publishing is optional |
 | API-key authentication | Shipped | Local on; chart base off | Hashed keys or scoped/expiring key records |
 | JWT/JWKS authentication | Shipped | Customer template on | Issuer/audience/time/algorithm validation and tenant binding |
+| SSO group-to-role mapping | Implemented for v0.8.0 (unreleased) | Off; existing OIDC role claims remain the default | Exact team-scoped mappings, deny unmapped/conflicting groups, token-bounded sessions and policy-change invalidation; admin policy view in Members & keys, API and both SDKs. IdP provisioning remains operator-owned |
 | Model allowlist and routing | Shipped | On | Per-model primary/fallback/canary/shadow routes |
 | Runtime failover | Shipped | Configured by policy | Readiness accepts a healthy declared fallback chain |
 | Prompt and tool-payload admission | Shipped | On | Recursive secret/blocked-term scan and size ceilings |

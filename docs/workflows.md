@@ -233,7 +233,7 @@ public client. The gateway discovers authorization, token, and JWKS endpoints fr
 issuer; it supports `client_secret_basic` and `client_secret_post` for confidential clients.
 OIDC is disabled when its settings are absent. `OIDC_TEAM_CLAIM` defaults to
 `JWT_TENANT_CLAIM`; the role/project defaults are `role`/`project`. Claims are top-level
-strings. The team must name an existing sandbox policy, and any project must belong to it.
+strings (group mapping below uses an array). The team must name an existing sandbox policy, and any project must belong to it.
 A missing role uses `OIDC_DEFAULT_ROLE`; an invalid supplied role is rejected. Only the
 identity provider's administrators should be able to set membership claims.
 
@@ -263,7 +263,7 @@ Approval step.
 or existing JWT. `GET /v1/auth/session` restores it and returns the CSRF token;
 `POST /v1/auth/logout` invalidates it. Browser sign-in is enabled by the console or OIDC
 configuration and requires Redis. Sessions slide for 12 hours with an absolute seven-day
-limit; pasted JWT sessions also stop at the JWT expiry. OIDC claim changes take effect on
+limit; pasted JWT and group-mapped OIDC sessions also stop at token expiry. OIDC claim changes take effect on
 the next sign-in. Logout ends the gateway session, not the provider's own login session.
 
 Cookies are HttpOnly (session), Secure, and SameSite=Lax. The separate CSRF cookie must
@@ -273,6 +273,80 @@ automation do not require CSRF. Serve the console and gateway on the same HTTPS 
 For HTTP localhost only, set `SESSION_COOKIE_SECURE=false`; Compose already does so and
 `local-development-only` continues to work. The demo adds no identity-provider container;
 connect an existing provider using the settings above.
+
+### SSO group-to-role mapping
+
+With the v0.8.0 gateway, map existing company groups instead of requiring a scalar
+role claim. Keep the OIDC setup above, then configure:
+
+```text
+OIDC_GROUPS_CLAIM=groups
+OIDC_GROUP_ROLE_MAPPINGS={"default":{"engineering-builders":"builder","engineering-reviewers":"approver","platform-admins":"admin"}}
+```
+
+The JSON object is keyed by the **verified team claim** (here `default`). Each team
+maps exact group names or IDs to `admin`, `builder`, `approver` or `viewer`.
+`OIDC_GROUPS_CLAIM` names one exact top-level ID-token claim, including names that
+contain dots or URLs; it is not a nested path. The claim must be an array of nonempty
+strings. Group matching is case-sensitive, with no trimming, wildcards, hierarchy
+or automatic role combination. Multiple groups mapping to the same role are allowed.
+
+Any nonempty mapping object enables group mode for **all OIDC sign-ins**. The team
+must have a mapping and the caller's groups must resolve to exactly one distinct
+role. Missing groups, only unmatched groups, and conflicting mapped roles reject
+sign-in, even if the token also claims `role: admin`. The role claim and default role
+are ignored in this mode. An empty object preserves the previous role-claim mode.
+Team and optional project claims must still identify configured policies/projects;
+group mapping never grants another team or expands a project-bound identity.
+
+Configure your provider to include the group array in the **ID token** for this
+client and request the provider's group scope if needed. Use the actual values it
+emits (for example, group IDs instead of display names). Missing/overage claims do
+not trigger directory or UserInfo lookups; sign-in is denied. Identity-provider
+administrators must control these claims and group assignments.
+
+Group membership is a sign-in snapshot. Sessions end at ID-token expiry (or the
+existing idle/absolute deadline, whichever comes first). Group removal at the
+provider takes effect on the next sign-in; no background directory synchronization
+is provided. Changing the affected team's mapping, claim settings, issuer or client
+invalidates its existing OIDC sessions on their next request. Enabling mappings also
+requires old browser JWT/OIDC sessions to sign in again. API-key sessions and direct
+bearer JWT authorization retain their existing rules. Roll out the same configuration
+to every gateway replica before testing access; the gateway stores a policy hash,
+not the raw groups or ID token, in Redis sessions.
+
+In **Members & keys → Company sign-in**, team admins can inspect the provider,
+claim names, mappings and denial rules. `GET /v1/team/sso` returns the same typed
+view; it requires a team admin credential without a project restriction and returns
+only that team's mappings. It never returns the client secret or another team's
+group names. Configure mappings through the deployment, not the API; the public
+`/v1/auth/config` response does not expose them. Both SDKs provide the
+[same inspection method](sdk-reference.md#company-group-access-v080).
+
+For the umbrella chart, merge this into your existing OIDC values:
+
+```yaml
+inference-gateway:
+  auth:
+    oidc:
+      groupsClaim: groups
+      groupRoleMappings:
+        default:
+          engineering-builders: builder
+          engineering-reviewers: approver
+          platform-admins: admin
+```
+
+Apply with the existing `helm upgrade` command in the [install guide](install-kubernetes.md).
+Use `auth.oidc` directly for the standalone gateway chart. Keep an operator's
+team-admin API key available while configuring sign-in.
+
+Acceptance: sign in as a builder-group member and verify the team/project and
+builder controls; sign out and repeat for an approver. Unmapped users and users
+in both differently mapped groups must be rejected. Change a mapping and verify
+the existing session requires sign-in, then verify the new role. Confirm
+`team_sso()` / `teamSSO()` show only the current team's mapping. The credential-free
+Quickstart tests workflow execution separately; it does not configure a real IdP.
 
 Use one trusted worker per team with a bound builder key carrying `workflows:execute`.
 Set `TEMPORAL_TASK_QUEUE=research-team-workflows`; the API selects that queue from the

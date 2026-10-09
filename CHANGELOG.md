@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.8.0 - Unreleased
+
+- Map company OIDC groups to team roles with exact, team-scoped matches. Nonempty
+  mappings require one distinct mapped role; missing, malformed, unmapped or
+  conflicting memberships are denied without falling back to role claims.
+  Existing team/project claims still constrain access; API-key and bearer JWT
+  authorization are unchanged. Empty mappings preserve existing role-claim sign-in.
+- Invalidate affected OIDC sessions when access policy changes and bound group-based
+  sessions to ID-token expiry. Existing sessions must sign in again when mappings
+  are enabled; no tokens or group lists are retained in sessions.
+- Show company sign-in policy and group roles in Members & keys, backed by the
+  admin-only `GET /v1/team/sso` contract and typed Python `team_sso()` / TypeScript
+  `teamSSO()` helpers. Keep identity policy operator-managed through environment
+  variables or Helm values; expose only the caller's team mappings and no secrets.
+- Advance source, SDK and chart versions to 0.8.0 and document source-build and SSO
+  acceptance paths. Published Quickstart images remain on v0.5.1 until release.
+
 ## v0.7.0 - Unreleased
 
 - Add retained run history for cron and webhook triggers: persist launch provenance,

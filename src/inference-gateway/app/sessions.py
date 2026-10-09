@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response
 
+from app.oidc_access import access_policy_digest
 from app.request_context import _sandbox_binding_response, authenticate_credential
 from app.settings import validate_sandbox_id
 from app.workflow_budget import redis_call
@@ -79,6 +80,17 @@ async def bind_session(request: Request) -> Response | None:
     if session is None:
         raise HTTPException(401, detail="Your session expired. Sign in again.")
     check_csrf(request, session)
+    settings = request.app.state.settings
+    digest = session.get("oidc_policy_digest")
+    if (
+        (digest is not None and digest != access_policy_digest(settings, session["sandbox_id"]))
+        or (
+            settings.oidc_group_role_mappings and "oidc_policy_digest" not in session
+            and not session.get("credential_digest")
+        )
+    ):
+        await redis_call(request, "delete", session_key(request, request.cookies[SESSION_COOKIE]))
+        raise HTTPException(401, detail="Company sign-in policy changed. Sign in again.")
     if session.get("credential_digest"):
         error = await authenticate_credential(request, "", digest=session["credential_digest"])
         if error is not None:
@@ -114,6 +126,7 @@ async def create_session(request: Request, response: Response) -> dict[str, Any]
         "principal": request.state.principal, "sandbox_id": request.state.sandbox_id,
         "sandbox_bound": request.state.sandbox_bound,
         "credential_digest": getattr(request.state, "credential_digest", None),
+        "oidc_policy_digest": getattr(request.state, "oidc_policy_digest", None),
         "absolute_expires_at": min(time() + MAX_SECONDS, getattr(request.state, "credential_expires_at", float("inf"))),
         "csrf_token": secrets.token_urlsafe(32),
     }

@@ -138,6 +138,26 @@ Console cancellation/retry, cron scheduling and approval expiry already exist. O
 template installation/versioning, multi-approver escalation, per-workflow secrets and
 SSO group mapping remain separate work; this milestone does not claim those features.
 
+## Milestone 14: company group access for teams — v0.8.0, unreleased
+
+- Resolve verified OIDC groups to a single team-scoped role, with explicit denial
+  for missing, malformed, unmapped or conflicting memberships. Preserve the
+  existing team/project boundaries and role-claim mode when mappings are empty.
+- End group-based sessions at ID-token expiry and require sign-in after affected
+  policy changes, including upgrades from sessions created before group mapping.
+- Inspect the current team's sign-in policy in Members & keys, the typed admin
+  API and both SDKs; configure it through validated environment/Helm values.
+- Cover signed-token login, authorization, session lifecycle, console flows, SDK
+  calls and Helm rendering. Verify source builds with the documented Quickstart.
+
+This closes the SSO group-mapping gap without adding an identity store or service.
+It is the selected v0.8.0 scope: group access is a direct team-adoption need and fits
+the existing OIDC, role and session model. Identity-provider provisioning remains
+operator-owned; group updates apply at the next sign-in, bounded by token expiry.
+Template installation/versioning, multi-approver escalation, per-workflow secrets
+and broader SDK parity remain open. Existing cron, cancellation/retry, approval
+expiry, trigger history and CSV export are unchanged.
+
 ## Next: deployment validation and integration coverage
 
 Deployment-specific identity, networking, storage failover and retention remain operator

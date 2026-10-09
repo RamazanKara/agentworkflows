@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
-import type { CostRow, Run, TeamSettings } from '../src/api';
+import type { CostRow, Run, TeamSettings, TeamSSO } from '../src/api';
 
 const id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb';
 const run = (overrides = {}) => ({
@@ -12,6 +12,70 @@ const run = (overrides = {}) => ({
 });
 const policies = { workflows: { ResearchWorkflow: { inputSchema: {"type":"object","properties":{"topic":{"type":"string","default":"How should our team evaluate AI agents?"},"model":{"type":"string","default":"demo-openai"}},"required":["topic"]}, allowedModels: ['demo-openai'], allowedProviders: ['openai', 'anthropic'], tokenLimit: 10000, costLimitUsd: 5 }, CustomWorkflow: { allowedModels: [], allowedProviders: [], tokenLimit: 500, costLimitUsd: 1 } } };
 const costs = { cost_usd: .0432, tokens: 63, calls: 2 };
+
+const ssoPolicy = (): TeamSSO => ({
+  team_id: 'demo', enabled: true, provider_name: 'idp.example', role_source: 'groups',
+  team_claim: 'team', project_claim: 'project', role_claim: null, default_role: null,
+  groups_claim: 'groups', group_role_mappings: { 'Engineering builders': 'builder', 'Engineering reviewers': 'approver' },
+});
+
+for (const width of [393, 1440]) {
+  test(`company group access is readable and refreshes at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    let policy = ssoPolicy();
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/v1/team/sso', route => route.fulfill({ json: policy }));
+    await login(page, 'admin', '/console/#keys');
+    await expect(page).toHaveTitle('Members & keys · AgentWorkflows Console');
+    const panel = page.getByRole('region', { name: 'Company sign-in', exact: true });
+    await expect(panel.getByRole('rowheader', { name: 'Engineering builders' })).toBeVisible();
+    await expect(panel.getByRole('cell', { name: /Approver$/ })).toBeVisible();
+    await expect(panel).toContainText('matching groups grant different roles, sign-in is denied');
+    await expect(panel.getByRole('link', { name: 'Company sign-in setup' })).toHaveAttribute('href', /#sso-group-to-role-mapping$/);
+    policy = { ...policy, group_role_mappings: { ['<script>unsafe</script>' + 'x'.repeat(100)]: 'viewer' } };
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await expect(panel.getByRole('cell', { name: /Viewer$/ })).toBeVisible();
+    await expect(panel.locator('script')).toHaveCount(0);
+    await expect(panel).not.toContainText('Engineering builders');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+}
+
+test('company sign-in explains unmapped teams and legacy role claims', async ({ page }) => {
+  let policy = { ...ssoPolicy(), group_role_mappings: {} };
+  await page.route('**/v1/team/sso', route => route.fulfill({ json: policy }));
+  await login(page, 'admin', '/console/#keys');
+  const panel = page.getByRole('region', { name: 'Company sign-in', exact: true });
+  await expect(panel).toContainText('No groups are mapped for this team. Company sign-in is denied');
+  policy = { ...policy, role_source: 'claim', groups_claim: null, role_claim: 'access_role', default_role: 'viewer' };
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(panel).toContainText('Roles come from the access_role claim, with Viewer when it is absent.');
+  await expect(panel).not.toContainText('No groups are mapped');
+});
+
+test('company sign-in policy errors can be retried without hiding key management', async ({ page }) => {
+  let unavailable = true;
+  await page.route('**/v1/team/sso', route => unavailable
+    ? route.fulfill({ status: 503, json: { detail: 'Sign-in policy unavailable' } })
+    : route.fulfill({ json: ssoPolicy() }));
+  await login(page, 'admin', '/console/#keys');
+  await expect(page.getByRole('alert')).toContainText('Sign-in policy unavailable');
+  await expect(page.getByRole('heading', { name: 'Create a key' })).toBeVisible();
+  unavailable = false;
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByRole('rowheader', { name: 'Engineering builders' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('non-admins cannot open company group access', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/v1/team/sso', route => { requests++; return route.fulfill({ json: ssoPolicy() }); });
+  await login(page, 'viewer', '/console/#keys');
+  await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
+  expect(requests).toBe(0);
+});
 
 test('viewer exports CSV from Costs and can retry a failed download', async ({ page }) => {
   const csv = 'team_id,name,cost_usd\r\ndemo,"Grüße, team",0.000000001\r\n';
@@ -336,6 +400,8 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/v1/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname === '/v1/auth/config') return route.fulfill({ json: { api_key: true, jwt: true, oidc: { enabled: false } } });
+    if (url.pathname === '/v1/team/sso') return route.fulfill({ json: { ...ssoPolicy(), enabled: false } });
+    if (url.pathname === '/v1/team/keys') return route.fulfill({ json: { keys: [] } });
     if (url.pathname === '/v1/auth/session') {
       if (route.request().method() === 'POST') {
         const key = route.request().postDataJSON().key;

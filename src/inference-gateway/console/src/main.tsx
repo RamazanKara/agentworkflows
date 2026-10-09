@@ -20,7 +20,7 @@ const navigation = [
 const signinErrors: Record<string, string> = {
   expired: 'That sign-in attempt expired. Start again.',
   declined: 'Sign-in was cancelled at your company account.',
-  rejected: 'Your company account is not linked to a team here yet. Ask your team admin to check your team and role.',
+  rejected: 'Your company account is not linked to a team with an allowed role. Ask your team admin to check your team, project and group membership; conflicting group roles also prevent sign-in.',
   unavailable: 'Company sign-in is unavailable right now. Try again in a moment, or use an API key.',
 };
 const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);

@@ -39,7 +39,7 @@ CONTRACTS = {
     "inference-gateway": ServiceContract(
         service_dir=ROOT / "src/inference-gateway",
         title="AgentWorkflows Inference Gateway",
-        version="0.7.0",
+        version="0.8.0",
         snapshot=ROOT / "platform/api-contracts/inference-gateway.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -49,6 +49,7 @@ CONTRACTS = {
             "/v1/usage": RouteContract("get"),
             "/v1/usage/export": RouteContract("get"),
             "/v1/team": RouteContract("get"),
+            "/v1/team/sso": RouteContract("get"),
             "/v1/team/spend": RouteContract("get"),
             "/v1/team/settings": RouteContract("patch", request_schema="TeamSettingsPatch"),
             "/v1/team/settings/{field}": RouteContract("delete"),
@@ -133,6 +134,7 @@ CONTRACTS = {
                 "/v1/usage",
                 "/v1/usage/export",
                 "/v1/team",
+                "/v1/team/sso",
                 "/v1/team/spend",
                 "/v1/team/settings",
                 "/v1/team/settings/{field}",
@@ -173,6 +175,12 @@ CONTRACTS = {
             }
         ),
         required_schemas={
+            "TeamSSO": {
+                "properties": {"team_id", "enabled", "provider_name", "role_source", "team_claim", "project_claim",
+                               "role_claim", "default_role", "groups_claim", "group_role_mappings"},
+                "required": {"team_id", "enabled", "provider_name", "role_source", "team_claim", "project_claim",
+                             "role_claim", "default_role", "groups_claim", "group_role_mappings"},
+            },
             "TeamSettingsPatch": {"properties": {"fields"}, "required": {"fields"}},
             "ChatCompletionRequest": {
                 "properties": {
@@ -252,7 +260,7 @@ CONTRACTS = {
     "rag-service": ServiceContract(
         service_dir=ROOT / "src/rag-service",
         title="AgentWorkflows RAG Service",
-        version="0.7.0",
+        version="0.8.0",
         snapshot=ROOT / "platform/api-contracts/rag-service.openapi.json",
         routes={
             "/healthz": RouteContract("get"),

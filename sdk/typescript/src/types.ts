@@ -6,6 +6,19 @@ export interface ChatCompletion {
 
 export type Role = 'admin' | 'builder' | 'approver' | 'viewer';
 
+export interface TeamSSO {
+  team_id: string;
+  enabled: boolean;
+  provider_name: string | null;
+  role_source: 'groups' | 'claim';
+  team_claim: string;
+  project_claim: string;
+  role_claim: string | null;
+  default_role: Role | null;
+  groups_claim: string | null;
+  group_role_mappings: Record<string, Role>;
+}
+
 export interface KeyOptions {
   role?: Role;
   project?: string | null;

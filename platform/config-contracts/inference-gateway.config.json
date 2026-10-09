@@ -804,6 +804,30 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": "groups",
+      "chart_default": "groups",
+      "chart_value": "auth.oidc.groupsClaim",
+      "description": "Exact top-level ID-token claim containing an array of company group names; used when group role mappings are nonempty.",
+      "field": "oidc_groups_claim",
+      "name": "OIDC_GROUPS_CLAIM",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": {},
+      "chart_default": {},
+      "chart_value": "auth.oidc.groupRoleMappings",
+      "description": "JSON object mapping team IDs to group/role objects. Nonempty enables group-based OIDC access for every team: exactly one distinct mapped role is required; role claims and the default role are ignored. Empty preserves role-claim behavior. Changes invalidate affected OIDC sessions.",
+      "field": "oidc_group_role_mappings",
+      "name": "OIDC_GROUP_ROLE_MAPPINGS",
+      "sensitive": false,
+      "type": "json"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": "",
       "chart_default": "",
       "chart_value": "auth.oidc.issuer",

@@ -25,6 +25,8 @@ provider Secrets, image compatibility, upgrades and uninstalling.
 | `inference-gateway.auth.oidc.defaultRole` | `viewer` |
 | `inference-gateway.auth.oidc.existingSecret.key` | `oidc-client-secret` |
 | `inference-gateway.auth.oidc.existingSecret.name` | `""` |
+| `inference-gateway.auth.oidc.groupRoleMappings` | `{}` |
+| `inference-gateway.auth.oidc.groupsClaim` | `groups` |
 | `inference-gateway.auth.oidc.issuer` | `""` |
 | `inference-gateway.auth.oidc.projectClaim` | `project` |
 | `inference-gateway.auth.oidc.redirectUrl` | `""` |

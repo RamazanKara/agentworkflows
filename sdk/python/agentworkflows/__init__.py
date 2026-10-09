@@ -51,6 +51,7 @@ from agentworkflows.types import (
     TeamSettings,
     TeamSettingValue,
     TeamSpend,
+    TeamSSO,
 )
 
 with _workflow.unsafe.imports_passed_through():
@@ -540,6 +541,10 @@ class GatewayClient:
     def revoke_key(self, key_id: str) -> ManagedKey:
         """Revoke a managed key immediately; the current key cannot revoke itself."""
         return self._request("DELETE", f"/v1/team/keys/{quote(key_id, safe='')}", creates_state=True).json()
+
+    def team_sso(self) -> TeamSSO:
+        """Inspect this team's company sign-in policy (unrestricted admin only)."""
+        return self._request("GET", "/v1/team/sso").json()
 
     def team_settings(self) -> TeamSettings:
         """Read effective settings, policy defaults and the revision (unrestricted admin only)."""

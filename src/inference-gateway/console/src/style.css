@@ -4,6 +4,8 @@
   --ink: #073a32; --teal: #007c70; --line: #d6dfda; --muted: #586963;
 }
 * { box-sizing: border-box; }
+.sso-groups { table-layout: fixed; }
+.sso-groups th { white-space: normal; overflow-wrap: anywhere; }
 body { margin: 0; font-size: 15px; line-height: 1.55; }
 button, input, select, textarea { font: inherit; }
 a { color: #006f65; text-underline-offset: 4px; }

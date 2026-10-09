@@ -146,6 +146,9 @@ inference-gateway:
       roleClaim: role
       projectClaim: project
       defaultRole: viewer
+      groupsClaim: groups
+      # Maps team IDs to exact company group names and roles; nonempty enables fail-closed group access.
+      groupRoleMappings: {}
     keyRecords:
       existingSecret:
         name: agentworkflows-key-records

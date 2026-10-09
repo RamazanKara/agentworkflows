@@ -272,6 +272,17 @@ changes continue during export; this is not a transactional snapshot or backup.
 Expired runs/content are not recovered, and the stored start input is omitted.
 Downloaded files need their own retention policy. See [CLI and SDK paging](sdk-reference.md#cli).
 
+## Company group access (v0.8.0 candidate)
+
+Build the gateway from this checkout using the Python Quickstart's
+[source-build path](quickstart.md) and install this checkout's TypeScript SDK for
+unreleased features. With an unrestricted team-admin credential,
+`await client.teamSSO()` inspects the same sign-in policy shown in Members & keys.
+See the [typed contract and example](sdk-reference.md#company-group-access-v080).
+Configure your existing identity provider using the
+[group mapping guide](workflows.md#sso-group-to-role-mapping); the local fixture
+workflow does not require SSO.
+
 ## Trigger history and usage CSV (v0.7.0 candidate)
 
 Use the checkout SDK and a gateway built from this checkout. Run history is available

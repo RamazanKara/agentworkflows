@@ -12,9 +12,9 @@ spend; platform engineers control shared model and tool access. Connect OpenAI, 
 Azure OpenAI, AWS Bedrock and Vertex Gemini through one governed API. Self-hosted Ollama
 and vLLM models are optional add-ons. You operate the service and own your integrations.
 
-The **0.7.0 candidate (unreleased)** adds trigger run history and CSV spend exports to the
-console, API and SDKs, building on team settings, PostgreSQL history and monthly spend limits
-from the 0.6.0 candidate. Company sign-in, managed keys, approvals and the
+The **0.8.0 candidate (unreleased)** maps company groups to team roles and shows the
+sign-in policy in the console, API and both SDKs. It builds on trigger run history,
+CSV exports, PostgreSQL history and spend limits. Company sign-in, managed keys, approvals and the
 [one-command Helm install](docs/install-kubernetes.md) are already available.
 The published Quickstart still uses v0.5.1 images; follow its source-build note to try this checkout.
 

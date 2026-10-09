@@ -69,6 +69,8 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `auth.oidc.defaultRole` | `viewer` |
 | `auth.oidc.existingSecret.key` | `oidc-client-secret` |
 | `auth.oidc.existingSecret.name` | `""` |
+| `auth.oidc.groupRoleMappings` | `{}` |
+| `auth.oidc.groupsClaim` | `groups` |
 | `auth.oidc.issuer` | `""` |
 | `auth.oidc.projectClaim` | `project` |
 | `auth.oidc.redirectUrl` | `""` |

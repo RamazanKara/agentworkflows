@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, label, useData, type AuthConfig, type Session, type Team } from './api';
+import { api, label, useData, type Session, type Team, type TeamSSO } from './api';
 import { Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh } from './ui';
 
 type Key = {
@@ -34,7 +34,7 @@ export function Keys({ session }: { session: Session }) {
 function KeyManagement({ session }: { session: Session }) {
   const [revision, setRevision] = useState(0);
   const result = useData<{ keys: Key[] }>(session.csrfToken, '/v1/team/keys', revision);
-  const config = useData<AuthConfig>(session.csrfToken, '/v1/auth/config');
+  const config = useData<TeamSSO>(session.csrfToken, '/v1/team/sso', revision);
   const [name, setName] = useState('');
   const [role, setRole] = useState<Team['role']>('viewer');
   const [project, setProject] = useState(session.team.projects.length === 1 ? session.team.projects[0] : '');
@@ -46,9 +46,25 @@ function KeyManagement({ session }: { session: Session }) {
   const [message, setMessage] = useState('');
   const keys = [...result.data?.keys ?? []].sort((a, b) => Number(state(a) !== 'active') - Number(state(b) !== 'active') || (b.created_at ?? 0) - (a.created_at ?? 0));
   return <><PageHeader title="Members & keys" subtitle="Who can use this team, and with which role."><Refresh onClick={() => { setCreated(undefined); setRevision(value => value + 1); }}/></PageHeader>
-    <p className="intro">{config.data?.oidc.enabled
+    <p className="intro">{config.data?.enabled
       ? 'People who sign in with their company account get their team and role from it. Create keys here for anyone without company sign-in and for automation.'
       : 'Give each person and integration their own key, so you can revoke one without affecting anyone else.'}</p>
+    {(config.data?.enabled || config.error) && <section className="panel form-panel" aria-labelledby="company-signin">
+      <h2 id="company-signin">Company sign-in</h2>
+      <ErrorMessage message={config.error}/>
+      {config.data?.enabled && <>
+        <p>Provider: <strong>{config.data.provider_name}</strong>. Team and project access come from the <code>{config.data.team_claim}</code> and <code>{config.data.project_claim}</code> claims.</p>
+        {config.data.role_source === 'groups' ? <>
+          <p>Roles come from the <code>{config.data.groups_claim}</code> group claim. These mappings apply only to this team.</p>
+          {Object.keys(config.data.group_role_mappings).length ? <table className="stack sso-groups"><thead><tr><th>Company group</th><th>Role</th></tr></thead><tbody>
+            {Object.entries(config.data.group_role_mappings).sort(([a], [b]) => a.localeCompare(b)).map(([group, mappedRole]) => <tr key={group}><th scope="row">{group}</th><td data-label="Role">{label(mappedRole)}</td></tr>)}
+          </tbody></table> : <p className="callout">No groups are mapped for this team. Company sign-in is denied until your operator adds a mapping.</p>}
+          <p className="muted">Unmapped groups grant no access. If matching groups grant different roles, sign-in is denied. Membership updates apply at the next sign-in; sessions end when the ID token expires.</p>
+        </> : <p>Roles come from the <code>{config.data.role_claim}</code> claim, with <strong>{label(config.data.default_role!)}</strong> when it is absent.</p>}
+        <p className="muted">Your operator manages sign-in policy in the gateway configuration. Policy changes require a new sign-in.</p>
+        <a href="https://ramazankara.github.io/agentworkflows/workflows/#sso-group-to-role-mapping">Company sign-in setup</a>
+      </>}
+    </section>}
     <ErrorMessage message={error || result.error}/><p role="status" className="status">{message}</p>
     {editing && <KeyEditor key={editing.key_id} record={editing} session={session} onCancel={() => setEditing(undefined)} onSaved={name => {
       setEditing(undefined); setMessage(`${name} updated. Access changes apply immediately.`); setRevision(value => value + 1);

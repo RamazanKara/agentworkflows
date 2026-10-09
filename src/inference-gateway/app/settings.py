@@ -181,6 +181,8 @@ class Settings:
     oidc_role_claim: str = "role"
     oidc_project_claim: str = "project"
     oidc_default_role: str = "viewer"
+    oidc_groups_claim: str = "groups"
+    oidc_group_role_mappings: dict[str, dict[str, str]] = dataclasses.field(default_factory=dict)
     session_cookie_secure: bool = True
     runtime_max_retries: int = 2
     runtime_retry_backoff_seconds: float = 0.1
@@ -306,6 +308,22 @@ class Settings:
             raise ValueError("jwt_cache_seconds must be greater than zero")
         if self.oidc_default_role not in {"admin", "builder", "approver", "viewer"}:
             raise ValueError("oidc_default_role must be admin, builder, approver, or viewer")
+        if not self.oidc_groups_claim.strip():
+            raise ValueError("OIDC_GROUPS_CLAIM must not be empty")
+        if not isinstance(self.oidc_group_role_mappings, dict):
+            raise ValueError("OIDC_GROUP_ROLE_MAPPINGS must be an object keyed by team")
+        for team, mapping in self.oidc_group_role_mappings.items():
+            if not isinstance(team, str) or validate_sandbox_id(team) != team:
+                raise ValueError("OIDC_GROUP_ROLE_MAPPINGS team names must be canonical sandbox IDs")
+            if not isinstance(mapping, dict):
+                raise ValueError("OIDC_GROUP_ROLE_MAPPINGS must map each team to a group/role object")
+            for group, role in mapping.items():
+                if not isinstance(group, str) or not group.strip():
+                    raise ValueError("OIDC_GROUP_ROLE_MAPPINGS group names must be nonempty strings")
+                if not isinstance(role, str) or role not in {"admin", "builder", "approver", "viewer"}:
+                    raise ValueError("OIDC_GROUP_ROLE_MAPPINGS roles must be admin, builder, approver, or viewer")
+        if self.oidc_group_role_mappings and not self.oidc_issuer:
+            raise ValueError("OIDC_GROUP_ROLE_MAPPINGS requires OIDC_ISSUER")
         if any((self.oidc_issuer, self.oidc_client_id, self.oidc_client_secret, self.oidc_redirect_url)):
             if not all((self.oidc_issuer, self.oidc_client_id, self.oidc_redirect_url)):
                 raise ValueError("OIDC requires OIDC_ISSUER, OIDC_CLIENT_ID, and OIDC_REDIRECT_URL")
@@ -507,6 +525,8 @@ class Settings:
             oidc_role_claim=os.getenv("OIDC_ROLE_CLAIM", "role").strip(),
             oidc_project_claim=os.getenv("OIDC_PROJECT_CLAIM", "project").strip(),
             oidc_default_role=os.getenv("OIDC_DEFAULT_ROLE", "viewer").strip(),
+            oidc_groups_claim=os.getenv("OIDC_GROUPS_CLAIM", "groups").strip(),
+            oidc_group_role_mappings=json.loads(os.getenv("OIDC_GROUP_ROLE_MAPPINGS", "{}")),
             session_cookie_secure=_bool_from_env("SESSION_COOKIE_SECURE", True),
             runtime_max_retries=_int_from_env("RUNTIME_MAX_RETRIES", 2),
             runtime_retry_backoff_seconds=_positive_float_from_env(

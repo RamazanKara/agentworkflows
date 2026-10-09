@@ -1,5 +1,6 @@
 """Render regressions; build chart dependencies and put Helm on PATH before running."""
 
+import json
 import shutil
 import subprocess
 import tempfile
@@ -45,6 +46,19 @@ def gateway_env(docs):
     HELM and yaml and (CHART / "charts").exists(), "Helm, PyYAML and built chart dependencies required"
 )
 class UmbrellaChartTests(unittest.TestCase):
+    def test_oidc_group_mapping_serialization_and_schema(self):
+        mapping = {"default": {"Engineering / Reviewers": "approver", "Builders": "builder"}}
+        values = {"inference-gateway": {"ingress": TLS, "auth": {"oidc": {
+            **OIDC, "groupsClaim": "company.groups", "groupRoleMappings": mapping,
+        }}}}
+        env = gateway_env(self.render(values))
+        self.assertEqual(env["OIDC_GROUPS_CLAIM"]["value"], "company.groups")
+        self.assertEqual(json.loads(env["OIDC_GROUP_ROLE_MAPPINGS"]["value"]), mapping)
+        self.assertEqual(json.loads(gateway_env(self.render())["OIDC_GROUP_ROLE_MAPPINGS"]["value"]), {})
+        for invalid in ({"default": {"group": "owner"}}, {"Default": {}}, {"default": {"": "viewer"}}):
+            values["inference-gateway"]["auth"]["oidc"]["groupRoleMappings"] = invalid
+            self.assertIn("schema", self.render(values, valid=False))
+
     def test_external_gateway_postgres_secret_and_defaults(self):
         default = gateway_env(self.render())
         self.assertEqual(default["STORAGE_BACKEND"]["value"], "redis")

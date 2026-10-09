@@ -280,6 +280,10 @@ spec:
               value: {{ .Values.auth.oidc.projectClaim | quote }}
             - name: OIDC_DEFAULT_ROLE
               value: {{ .Values.auth.oidc.defaultRole | quote }}
+            - name: OIDC_GROUPS_CLAIM
+              value: {{ .Values.auth.oidc.groupsClaim | quote }}
+            - name: OIDC_GROUP_ROLE_MAPPINGS
+              value: {{ .Values.auth.oidc.groupRoleMappings | toJson | quote }}
             - name: SESSION_COOKIE_SECURE
               value: {{ or .Values.adminConsole.cookieSecure (and .Values.ingress.enabled .Values.ingress.tls.enabled) | quote }}
             - name: API_KEY_SHA256S

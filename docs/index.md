@@ -9,8 +9,8 @@ Cron schedules and signed webhooks can start work, with notifications for waitin
 failures and budget thresholds. People sign in with their company account (OIDC) or an API key,
 and admins add members and manage keys in the console.
 
-The **v0.7.0 candidate (unreleased)** connects triggers to retained run history and adds
-CSV usage exports for team reporting. Use the [Quickstart's source-build path](quickstart.md)
+The **v0.8.0 candidate (unreleased)** maps company groups to team roles, with an admin
+sign-in policy view in the console and both SDKs. Use the [Quickstart's source-build path](quickstart.md)
 to try these features; published image defaults remain on v0.5.1.
 
 It is for **developers** turning agent scripts into repeatable jobs, **team leads** reviewing

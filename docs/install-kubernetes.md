@@ -187,6 +187,12 @@ setting yourself. Scopes must include `openid`; missing roles use `defaultRole` 
 The client secret is referenced from the existing Secret, not copied into Helm values.
 OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.
 
+On the v0.8.0 source build, `inference-gateway.auth.oidc.groupsClaim` and
+`groupRoleMappings` can derive roles from existing company groups. See the
+[mapping example and acceptance checks](workflows.md#sso-group-to-role-mapping).
+Mappings are scoped by team; nonempty mappings deny unmapped or conflicting
+memberships. Members & keys shows the current team's sign-in policy to admins.
+
 ## Gateway availability and resources
 
 The default is one gateway replica with requests of `100m` CPU / `128Mi` memory and
