@@ -2747,6 +2747,10 @@ not receive direct Temporal access or worker keys.</p>
 <td><code>GET /v1/usage</code></td>
 <td>Token/request window usage and monthly team/project spend by provider and workflow</td>
 </tr>
+<tr>
+<td><code>GET /v1/usage/export</code></td>
+<td>Current UTC month CSV, with total and provider/workflow rows, scoped to the credential (v0.7.0)</td>
+</tr>
 </tbody>
 </table>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://127.0.0.1:8080/v1/workflow-runs<span class="w"> </span><span class="se">\</span>
@@ -2771,6 +2775,16 @@ Custom workflows expose a <code>status</code> query returning <code>stage</code>
 support approvals, a <code>review(approved, reviewer)</code> update returning whether the waiting
 decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.</p>
 <h2 id="triggers-and-notifications">Triggers and notifications<a class="headerlink" href="#triggers-and-notifications" title="Permanent link">&para;</a></h2>
+<p>The v0.7.0 candidate adds <strong>Run history</strong> on each console trigger. It opens retained
+runs with their status, approval review, costs and receipts, filtered by workflow and
+trigger name. The API/CLI/SDK filters and retention boundaries are documented in the
+<a href="../sdk-reference/#trigger-history-and-usage-csv-v070-candidate">SDK reference</a>.
+This uses <code>inference-gateway.workflowRecords.runRecordRetentionSeconds</code> in Helm (30
+days by default), with Redis or PostgreSQL; no new store or setting is required.</p>
+<p>For monthly reporting, <strong>Costs → Export CSV</strong> uses <code>GET /v1/usage/export</code> and the
+existing Redis accounting. Project-bound credentials can export only their project.
+Use the candidate gateway image built from source until v0.7.0 is published; the
+default chart image tags still point to v0.5.1.</p>
 <p>Open <strong>Triggers</strong> in the console to see cron expressions, upcoming times, signed webhook
 endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
 viewers and approvers can inspect them. Existing runs continue when a trigger is paused.</p>

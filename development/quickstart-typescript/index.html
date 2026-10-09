@@ -621,6 +621,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trigger history and usage CSV (v0.7.0 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-and-stop" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2156,6 +2167,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trigger history and usage CSV (v0.7.0 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-and-stop" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2479,6 +2501,16 @@ transport errors propagate and can leave partial output. Retention and status
 changes continue during export; this is not a transactional snapshot or backup.
 Expired runs/content are not recovered, and the stored start input is omitted.
 Downloaded files need their own retention policy. See <a href="../sdk-reference/#cli">CLI and SDK paging</a>.</p>
+<h2 id="trigger-history-and-usage-csv-v070-candidate">Trigger history and usage CSV (v0.7.0 candidate)<a class="headerlink" href="#trigger-history-and-usage-csv-v070-candidate" title="Permanent link">&para;</a></h2>
+<p>Use the checkout SDK and a gateway built from this checkout. Run history is available
+from each console trigger; <code>runs({ workflow, trigger, project, cursor })</code> and
+<code>exportRuns({ workflow, trigger })</code> use the same project-scoped filter. A trigger name
+requires a workflow. Only launches recorded by v0.7.0 have trigger provenance; existing
+run retention applies. Manual retries are separate runs.</p>
+<p><code>await gateway.exportUsage()</code> returns UTF-8 CSV for the current UTC month. Write it
+with <code>writeFile('usage.csv', await gateway.exportUsage(), 'utf8')</code> from <code>node:fs/promises</code>,
+or use <strong>Costs → Export CSV</strong>. The total and provider/workflow rows overlap and include
+reservations. See the <a href="../sdk-reference/#trigger-history-and-usage-csv-v070-candidate">column and scope reference</a>.</p>
 <h2 id="verify-and-stop">Verify and stop<a class="headerlink" href="#verify-and-stop" title="Permanent link">&para;</a></h2>
 <p>From <code>sdk/typescript</code>, run <code>npm run build</code>, <code>npm run lint</code>, and <code>npm test</code>. Vitest
 uses at most two workers. The equivalent repository target is <code>make test-typescript</code>.

@@ -2205,12 +2205,12 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 <p>Compose pulls the signed v0.5.1 release images; nothing is built locally. <code>--wait</code> waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every <a href="../templates/">gallery template</a>. The public demo key is a local admin
 identity. <a href="../workflows/#teams-projects-and-roles">Team setup</a> separates builders and approvers.</p>
-<p><strong>Testing the unreleased v0.6.0 checkout:</strong> use your existing checkout instead of
+<p><strong>Testing the unreleased v0.7.0 checkout:</strong> use your existing checkout instead of
 cloning v0.5.1, install <code>./sdk/python</code>, and replace <code>--no-build</code> above with <code>--build</code>
 (<code>docker compose ... up -d --wait --build workflow-worker temporal-ui</code>). This builds
 the gateway and worker from source; it requires network access for build dependencies.
 The default pull-only path remains v0.5.1 until the new release is published.
-Generated projects pin the SDK's release version; before v0.6.0 is published, install
+Generated projects pin the SDK's release version; before v0.7.0 is published, install
 the checkout SDK in those projects instead of its generated release-wheel URL.</p>
 <p>The default <strong>fake</strong> returns canned text and synthetic prices without contacting a cloud.
 For real generated text, select the <a href="#use-a-real-openai-key">OpenAI option</a> now, then continue
@@ -2261,11 +2261,17 @@ step or <strong>Arguments and result</strong> on a tool step to see
 what it sent and received, with redaction and truncation notes. The demo captures redacted
 content for seven days; terminal run records expire after 30 days. Receipt hashes contain
 no captured text. Temporal history is at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a> and has its own retention.</p>
-<p>On the v0.6.0 checkout, save completed runs before their retention deadline with
+<p>On the v0.7.0 checkout, save completed runs before their retention deadline with
 <code>agentworkflows runs export --status completed --output runs.jsonl</code>. This follows
 cursor pages and includes results, receipts and retained step content. Settings and
 the audit log are available to team admins in the console. Run and audit exports
 are retained views, not backups; see <a href="../sdk-reference/#cli">CLI paging and export</a>.</p>
+<p>On this v0.7.0 candidate, open <strong>Triggers → Run history</strong> to inspect runs started by
+each schedule or webhook. New launches carry their trigger name through the run page
+and receipts. <strong>Costs → Export CSV</strong>, or <code>agentworkflows usage --output usage.csv</code>,
+downloads the current UTC month. The total and provider/workflow rows overlap; do not
+add them together. Both SDKs support the same history filter and CSV export; see the
+<a href="../sdk-reference/#trigger-history-and-usage-csv-v070-candidate">reference</a>.</p>
 <p>You can also choose <strong>Run workflow</strong>, select any starter, and fill in its generated form.
 Forms come from the workflow policy's <code>inputSchema</code>; workflows without one use a JSON box.
 For your edited project, keep <code>workflow.py</code>'s schema declaration and the reviewed policy
