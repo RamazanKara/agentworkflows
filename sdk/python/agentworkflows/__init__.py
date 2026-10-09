@@ -509,6 +509,10 @@ class GatewayClient:
         """Return this sandbox's usage and estimated cost."""
         return self._get("/v1/usage")
 
+    def export_usage(self) -> str:
+        """Export current UTC month usage as CSV, scoped to this credential's team/project."""
+        return self._request("GET", "/v1/usage/export", headers={"Accept": "text/csv"}).text
+
     def team(self) -> dict[str, Any]:
         """Discover the current credential's team, role, and projects."""
         return self._get("/v1/team")

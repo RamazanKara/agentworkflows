@@ -43,6 +43,7 @@ export type Step = {
 };
 export type Run = {
   run_id: string; workflow: string; project: string; created_at: number; status: string;
+  trigger?: { name: string; kind: 'cron' | 'webhook' };
   progress?: { stage: string; draft?: string; message?: string };
   budget: { tokens: number; cost_usd: number; token_limit: number; cost_limit_usd: number };
   timeline?: Step[];
@@ -91,6 +92,7 @@ export async function api<T>(csrfToken: string, path: string, init: RequestInit 
     if (init.signal?.aborted) throw error;
     throw new Error('Cannot reach the gateway. Check your connection, then try again.');
   }
+  if (response.ok && headers.get('Accept') === 'text/csv') return await response.text() as T;
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith('/v1/auth/')) window.dispatchEvent(new Event('aw:expired'));

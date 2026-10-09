@@ -272,6 +272,19 @@ changes continue during export; this is not a transactional snapshot or backup.
 Expired runs/content are not recovered, and the stored start input is omitted.
 Downloaded files need their own retention policy. See [CLI and SDK paging](sdk-reference.md#cli).
 
+## Trigger history and usage CSV (v0.7.0 candidate)
+
+Use the checkout SDK and a gateway built from this checkout. Run history is available
+from each console trigger; `runs({ workflow, trigger, project, cursor })` and
+`exportRuns({ workflow, trigger })` use the same project-scoped filter. A trigger name
+requires a workflow. Only launches recorded by v0.7.0 have trigger provenance; existing
+run retention applies. Manual retries are separate runs.
+
+`await gateway.exportUsage()` returns UTF-8 CSV for the current UTC month. Write it
+with `writeFile('usage.csv', await gateway.exportUsage(), 'utf8')` from `node:fs/promises`,
+or use **Costs → Export CSV**. The total and provider/workflow rows overlap and include
+reservations. See the [column and scope reference](sdk-reference.md#trigger-history-and-usage-csv-v070-candidate).
+
 ## Verify and stop
 
 From `sdk/typescript`, run `npm run build`, `npm run lint`, and `npm test`. Vitest

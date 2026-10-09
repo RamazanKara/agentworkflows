@@ -122,6 +122,22 @@ for run history, audit events and heads, settings and API-key metadata. Redis re
 the default and still holds live budgets, sessions and captured content. Temporal's
 PostgreSQL remains separate. Validate storage cutover and recovery for each deployment.
 
+## Milestone 13: trace automated work and export team spend — v0.7.0, unreleased
+
+- Connect configured cron/webhook triggers to retained run history, status and receipts
+  in the console. Record provenance at launch, with project-scoped cursor paging and
+  matching filters in both SDKs and the CLI, including JSON Lines run export.
+- Download current UTC month usage as CSV from Costs, the API, both SDKs and CLI.
+  Include team/project totals and provider/workflow breakdowns with explicit periods,
+  reservation accounting, spreadsheet-safe names and existing role boundaries.
+- Use the existing Redis/PostgreSQL run stores, retention and Helm values; no new
+  service or migration is required. Build the candidate from source for verification.
+
+These close day-to-day visibility and reporting gaps in existing team operations.
+Console cancellation/retry, cron scheduling and approval expiry already exist. One-click
+template installation/versioning, multi-approver escalation, per-workflow secrets and
+SSO group mapping remain separate work; this milestone does not claim those features.
+
 ## Next: deployment validation and integration coverage
 
 Deployment-specific identity, networking, storage failover and retention remain operator

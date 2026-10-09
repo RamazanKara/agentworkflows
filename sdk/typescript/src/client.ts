@@ -43,6 +43,11 @@ export class GatewayClient {
     return this.request('GET', '/v1/team/keys');
   }
 
+  /** Export current UTC month usage as CSV, scoped to this credential's team/project. */
+  exportUsage(): Promise<string> {
+    return this.request('GET', '/v1/usage/export', undefined, true, { Accept: 'text/csv' });
+  }
+
   /** Issue a key whose plaintext is returned only here; role defaults to viewer. Expiry is ISO-8601 with a timezone. */
   createKey(name: string, options: KeyOptions = {}): Promise<CreatedKey> {
     return this.request('POST', '/v1/team/keys', { name, ...options });

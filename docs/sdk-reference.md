@@ -29,6 +29,7 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 | `audit verify --from UNIX_SECONDS --to UNIX_SECONDS` | Verify every team event in the selected time range; both bounds are optional |
 | `audit export --output audit-log.jsonl` | Follow all cursor pages and write original events as JSON Lines; omit output or use `-` for stdout |
 | `usage` | Usage, estimated spend, provider and workflow breakdowns |
+| `usage --output usage.csv` | Export current UTC month usage as CSV; `--output -` writes CSV to stdout |
 | `runs start [WORKFLOW] --input '@input.json'` | Start a workflow (default ResearchWorkflow); input can also be inline JSON |
 | `runs list --project PROJECT --cursor CURSOR` | One run page; options are optional; pass next_cursor with the same filters for older runs |
 | `runs export --status completed --output runs.jsonl` | Export full retained run details as JSON Lines; status/output are optional |
@@ -43,7 +44,7 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
 
-Run cursors and export require the v0.6.0 checkout SDK and gateway (unreleased),
+Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.7.0 checkout SDK and gateway,
 not the v0.5.1 wheel or images. `runs list` and `runs export` accept `--project`,
 `--workflow`, `--status`, `--cursor` and `--limit` (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have `next_cursor`.
@@ -104,6 +105,46 @@ The [template gallery](templates.md) includes input fields, expected results and
 steps for every starter. Install from this checkout to get its current template set.
 Scaffolds include `input-schema.json` and a schema declaration in `workflow.py`. Copy the
 schema to the workflow policy's `inputSchema` to enable console forms and gateway validation.
+
+## Trigger history and usage CSV (v0.7.0 candidate)
+
+`runs list` and `runs export` accept `--trigger NAME` together with `--workflow WORKFLOW`.
+The API uses `GET /v1/workflow-runs?workflow=WORKFLOW&trigger=NAME`; retain both filters
+when following `next_cursor`. Missing workflow returns 422 `trigger_workflow_required`.
+Run metadata includes `trigger: {name, kind}` for cron/webhook launches recorded by
+v0.7.0. Older/manual runs and manual retries have no trigger provenance. History survives
+removal of the trigger's configuration, until run retention expires. Rejected deliveries
+do not have a run; inspect their audit receipts instead.
+
+```python
+from agentworkflows import GatewayClient
+
+with GatewayClient("http://127.0.0.1:8080", api_key="local-development-only") as gateway:
+    page = gateway.runs(workflow="DailyReportWorkflow", trigger="daily")
+    with open("usage.csv", "w", encoding="utf-8", newline="") as output:
+        output.write(gateway.export_usage())
+```
+
+```typescript
+import { writeFile } from 'node:fs/promises';
+import { GatewayClient } from '@agentworkflows/sdk';
+const gateway = new GatewayClient('http://127.0.0.1:8080', { apiKey: 'local-development-only' });
+const page = await gateway.runs({ workflow: 'DailyReportWorkflow', trigger: 'daily' });
+await writeFile('usage.csv', await gateway.exportUsage(), 'utf8');
+```
+
+`GET /v1/usage/export` returns UTF-8 `text/csv` with an attachment filename and
+`Cache-Control: no-store`. All team roles may export. A project-bound credential sees
+only that project; an unrestricted credential sees team totals. Columns are
+`team_id,project,period_start,period_end,dimension,name,calls,tokens,cost_usd,currency`.
+The period is the current UTC month (`period_end` exclusive); currency is USD and costs
+have nine decimal places. There is one `total` row, then sorted `provider` and `workflow`
+rows. Empty months have a zero total. These are overlapping views, **not additive rows**.
+Totals include tool costs and held reservations; call/token counts come from provider
+accounting. Data uses configured prices, not provider invoices. Older months and raw
+per-call data are outside this export. CSV names that could execute spreadsheet formulas
+have a leading apostrophe; quotes, commas, newlines and Unicode are escaped by CSV rules.
+Export errors propagate through each SDK's existing error and read-retry handling.
 
 ## Environment
 

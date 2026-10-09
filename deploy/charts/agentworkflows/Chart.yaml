@@ -4,8 +4,8 @@ description: >-
   Cloud-first AgentWorkflows: gateway and console, Redis, Temporal, PostgreSQL,
   and a workflow worker in one namespace. Self-hosted models and retrieval are opt-in.
 type: application
-version: 0.6.0
-appVersion: "0.6.0"
+version: 0.7.0
+appVersion: "0.7.0"
 home: https://github.com/RamazanKara/agentworkflows
 keywords:
   - agentworkflows
@@ -30,30 +30,30 @@ annotations:
       url: https://github.com/RamazanKara/agentworkflows/issues
 dependencies:
   - name: workflows
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../workflows"
     condition: workflows.enabled
   - name: inference-gateway
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../inference-gateway"
     condition: inference-gateway.enabled
   - name: rag-service
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../rag-service"
     condition: rag-service.enabled
   - name: ollama
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../ollama"
     condition: ollama.enabled
   - name: budget-redis
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../budget-redis"
     condition: budget-redis.enabled
   - name: qdrant-vector-store
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../qdrant-vector-store"
     condition: qdrant-vector-store.enabled
   - name: vllm
-    version: "0.6.0"
+    version: "0.7.0"
     repository: "file://../vllm"
     condition: vllm.enabled

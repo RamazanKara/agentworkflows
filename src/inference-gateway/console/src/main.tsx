@@ -122,7 +122,7 @@ function App() {
   }, []);
   useEffect(() => {
     main.current?.focus();
-    const title = navigation.find(([id]) => id === route)?.[1] || (route === 'new' || route.startsWith('new/') ? 'Run workflow' : route === 'home' ? 'Workspace' : 'Run detail');
+    const title = navigation.find(([id]) => id === route.split('?')[0])?.[1] || (route === 'new' || route.startsWith('new/') ? 'Run workflow' : route === 'home' ? 'Workspace' : 'Run detail');
     document.title = `${session ? title : 'Sign in'} · AgentWorkflows Console`;
   }, [route, session]);
   if (loading) return <Loading/>;
@@ -133,7 +133,7 @@ function App() {
       setSession({ csrfToken, team, id: ++sequence.current, name: principal.name, keyId: principal.key_id });
       setAdding(false); setExpired(false); setError('');
     }}/>;
-  const active = route.startsWith('run/') || route === 'new' || route.startsWith('new/') ? 'runs' : route;
+  const active = route.startsWith('run/') || route === 'new' || route.startsWith('new/') ? 'runs' : route.split('?')[0];
   const teamName = label(session.team.team_id.replaceAll('-', ' '));
   // Phones get a compact top bar; the menu button opens the same navigation as the desktop sidebar.
   return <div className={menu ? 'shell menu-open' : 'shell'} onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
@@ -158,7 +158,7 @@ function App() {
       </div>
     </aside>
     <main id="main" ref={main} tabIndex={-1} key={`${session.id}:${route}`}>
-      {route === 'home' ? <Landing session={session}/> : route === 'start' ? <GetStarted session={session}/> : route === 'runs' ? <Runs session={session}/> :
+      {route === 'home' ? <Landing session={session}/> : route === 'start' ? <GetStarted session={session}/> : route === 'runs' || route.startsWith('runs?') ? <Runs session={session} initial={route.slice(5)}/> :
         route === 'new' || route.startsWith('new/') ? <StartRun session={session} initial={decodeURIComponent(route.slice(4))}/> : route === 'approvals' ? <Approvals session={session}/> :
         route === 'keys' ? <Keys session={session}/> :
         route === 'audit' ? <AuditLog session={session}/> :

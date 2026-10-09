@@ -9,6 +9,30 @@ const ok = (body = {}) => new Response(JSON.stringify(body), { status: 200 });
 beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); vi.mocked(setTimeout).mockClear(); });
 afterEach(() => vi.unstubAllGlobals());
 
+it('exports monthly CSV through authenticated retry and error handling', async () => {
+  const csv = 'name,cost_usd\r\n"Grüße, team",0.000000001\r\n';
+  fetchMock.mockResolvedValueOnce(new Response('{}', { status: 503 }))
+    .mockResolvedValueOnce(new Response(csv, { headers: { 'Content-Type': 'text/csv' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Team access required' }), { status: 403 }));
+  expect(await client.exportUsage()).toBe(csv);
+  expect(fetchMock.mock.calls[1][0]).toBe('http://gateway.test/v1/usage/export');
+  expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({ Authorization: 'Bearer fixture-key', Accept: 'text/csv' });
+  await expect(client.exportUsage()).rejects.toMatchObject({ statusCode: 403 });
+});
+
+it('keeps the trigger filter while exporting through empty history pages', async () => {
+  fetchMock.mockResolvedValueOnce(ok({ runs: [], next_cursor: 'older' }))
+    .mockResolvedValueOnce(ok({ runs: [{ run_id: 'run-1' }], next_cursor: null }))
+    .mockResolvedValueOnce(ok({ run_id: 'run-1', trigger: { name: 'daily & weekly', kind: 'cron' } }));
+  const lines: string[] = [];
+  for await (const line of client.exportRuns({ workflow: 'ResearchWorkflow', trigger: 'daily & weekly' })) lines.push(line);
+  expect(JSON.parse(lines[0]).trigger).toEqual({ name: 'daily & weekly', kind: 'cron' });
+  for (const [url] of fetchMock.mock.calls.slice(0, 2)) {
+    expect(new URL(String(url)).searchParams.get('trigger')).toBe('daily & weekly');
+  }
+  expect(new URL(String(fetchMock.mock.calls[1][0])).searchParams.get('cursor')).toBe('older');
+});
+
 it('reads spend alerts and changes limits and capture at the supplied revision', async () => {
   fetchMock.mockImplementation(async () => ok({ revision: 3 }));
   await client.teamSpend();

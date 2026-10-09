@@ -9,6 +9,10 @@ Cron schedules and signed webhooks can start work, with notifications for waitin
 failures and budget thresholds. People sign in with their company account (OIDC) or an API key,
 and admins add members and manage keys in the console.
 
+The **v0.7.0 candidate (unreleased)** connects triggers to retained run history and adds
+CSV usage exports for team reporting. Use the [Quickstart's source-build path](quickstart.md)
+to try these features; published image defaults remain on v0.5.1.
+
 It is for **developers** turning agent scripts into repeatable jobs, **team leads** reviewing
 drafts and spend, and **platform engineers** managing shared provider access. Built-in routes
 cover OpenAI, Anthropic, Azure OpenAI, AWS Bedrock and Vertex Gemini; Ollama and vLLM are optional.

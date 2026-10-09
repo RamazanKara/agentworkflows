@@ -12,6 +12,62 @@ const run = (overrides = {}) => ({
 });
 const policies = { workflows: { ResearchWorkflow: { inputSchema: {"type":"object","properties":{"topic":{"type":"string","default":"How should our team evaluate AI agents?"},"model":{"type":"string","default":"demo-openai"}},"required":["topic"]}, allowedModels: ['demo-openai'], allowedProviders: ['openai', 'anthropic'], tokenLimit: 10000, costLimitUsd: 5 }, CustomWorkflow: { allowedModels: [], allowedProviders: [], tokenLimit: 500, costLimitUsd: 1 } } };
 const costs = { cost_usd: .0432, tokens: 63, calls: 2 };
+
+test('viewer exports CSV from Costs and can retry a failed download', async ({ page }) => {
+  const csv = 'team_id,name,cost_usd\r\ndemo,"Grüße, team",0.000000001\r\n';
+  let attempts = 0;
+  await page.route('**/v1/usage/export', route => {
+    expect(route.request().headers().accept).toBe('text/csv');
+    expect(route.request().headers().cookie).toContain('aw_session=opaque-session');
+    return ++attempts === 1 ? route.fulfill({ status: 503, json: { detail: 'Usage unavailable' } })
+      : route.fulfill({ body: csv, contentType: 'text/csv;charset=utf-8' });
+  });
+  await login(page, 'viewer', '/console/#costs');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await expect(page.getByRole('alert')).toContainText('Usage unavailable');
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  const download = await downloaded;
+  expect(download.suggestedFilename()).toBe('usage.csv');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream!) chunks.push(chunk);
+  expect(Buffer.concat(chunks).toString('utf8')).toBe(csv);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+for (const width of [393, 1440]) {
+  test(`trigger history links to paged runs and receipts at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route('**/v1/workflow-triggers', route => route.fulfill({ json: { triggers: [
+      { workflow: 'ResearchWorkflow', name: 'daily', kind: 'cron', project: 'default', cron: '0 9 * * *', paused: false },
+    ] } }));
+    const queries: URLSearchParams[] = [];
+    await page.route('**/v1/workflow-runs?*', route => {
+      const query = new URL(route.request().url()).searchParams;
+      queries.push(query);
+      return route.fulfill({ json: { runs: query.has('cursor') ? [run()] : [], next_cursor: query.has('cursor') ? null : 'older' } });
+    });
+    await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({ trigger: { kind: 'cron', name: 'daily' } }) }));
+    await login(page, 'viewer', '/console/#triggers');
+    await page.getByRole('link', { name: 'Run history for daily' }).click();
+    await expect(page.getByText('Started by trigger')).toBeVisible();
+    await page.getByRole('button', { name: 'Load more' }).click();
+    await expect(page.getByRole('link', { name: 'Research', exact: true })).toBeVisible();
+    expect(queries.map(query => query.get('trigger'))).toEqual(['daily', 'daily']);
+    expect(queries.map(query => query.get('workflow'))).toEqual(['ResearchWorkflow', 'ResearchWorkflow']);
+    expect(queries.map(query => query.get('project'))).toEqual(['default', 'default']);
+    expect(queries[1].get('cursor')).toBe('older');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.getByRole('link', { name: 'Research', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
+    await page.getByRole('link', { name: 'Schedule: daily' }).click();
+    await expect(page.getByText('Started by trigger')).toBeVisible();
+    await page.getByRole('link', { name: 'All workflow runs', exact: true }).click();
+    await expect(page.getByText('Started by trigger')).toHaveCount(0);
+    await expect.poll(() => queries.at(-1)?.get('trigger')).toBeNull();
+  });
+}
 const settings = (): TeamSettings => ({
   revision: 0, updated_by: null, updated_at: null, routes: ['demo-openai', 'demo-anthropic'],
   providers: ['openai', 'anthropic'], approver_roles: ['admin', 'approver'], fields: {

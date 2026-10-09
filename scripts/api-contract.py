@@ -39,7 +39,7 @@ CONTRACTS = {
     "inference-gateway": ServiceContract(
         service_dir=ROOT / "src/inference-gateway",
         title="AgentWorkflows Inference Gateway",
-        version="0.6.0",
+        version="0.7.0",
         snapshot=ROOT / "platform/api-contracts/inference-gateway.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -47,6 +47,7 @@ CONTRACTS = {
             "/metrics": RouteContract("get"),
             "/v1/sandbox/budget": RouteContract("get"),
             "/v1/usage": RouteContract("get"),
+            "/v1/usage/export": RouteContract("get"),
             "/v1/team": RouteContract("get"),
             "/v1/team/spend": RouteContract("get"),
             "/v1/team/settings": RouteContract("patch", request_schema="TeamSettingsPatch"),
@@ -130,6 +131,7 @@ CONTRACTS = {
                 "/v1/models",
                 "/v1/sandbox/budget",
                 "/v1/usage",
+                "/v1/usage/export",
                 "/v1/team",
                 "/v1/team/spend",
                 "/v1/team/settings",
@@ -250,7 +252,7 @@ CONTRACTS = {
     "rag-service": ServiceContract(
         service_dir=ROOT / "src/rag-service",
         title="AgentWorkflows RAG Service",
-        version="0.6.0",
+        version="0.7.0",
         snapshot=ROOT / "platform/api-contracts/rag-service.openapi.json",
         routes={
             "/healthz": RouteContract("get"),

@@ -1,5 +1,7 @@
 # Single-namespace cloud install; deploy/clusters/* retains its separate GitOps defaults.
 # Supply provider Secrets in the release namespace, each with an api-key entry.
+# v0.7.0 trigger history uses inference-gateway.workflowRecords.runRecordRetentionSeconds;
+# usage CSV uses existing monthly Redis accounting. Neither needs an additional service.
 providers:
   openai:
     existingSecret: ""

@@ -44,6 +44,8 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | RAG retrieval receipts | Shipped | On | Own chain, same primitives and same verifier as the gateway |
 | Audit chain head persistence | Shipped | Memory (no continuity) | `file` or `redis` head backend, or the opt-in PostgreSQL gateway store, preserves cross-restart linkage; storage is operator-provided |
 | Team web console | Shipped | On in Compose/umbrella Helm; opt-in standalone | `/console`; existing auth, identity switching, filtered runs, approvals, step receipts/logs, admin configuration guidance, and costs |
+| Trigger run history | Implemented for v0.7.0 (unreleased) | On for new cron/webhook launches | Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; existing run retention, no backfill |
+| Usage CSV export | Implemented for v0.7.0 (unreleased) | Available to team roles | Costs, `/v1/usage/export`, both SDKs and CLI; current UTC month, scoped totals and overlapping breakdowns; estimates include reservations |
 | Docker Compose evaluation stack | Shipped | `make compose-up` | Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; headless browser smoke in CI; no Kubernetes network policy or agent workspaces |
 | Ollama runtime | Shipped | Local profile | Pinned image; local-only model-pull egress exception |
 | vLLM generation runtime | Shipped | Customer profile | NVIDIA/AMD values, explicit task, queue-based autoscaling |

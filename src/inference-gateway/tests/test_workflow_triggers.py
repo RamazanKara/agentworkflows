@@ -164,6 +164,52 @@ def test_concurrent_deliveries_start_once(gateway):
     assert len(app.state.temporal_client.executions) == 1
 
 
+def test_trigger_history_provenance_paging_retention_and_scope(gateway):
+    client, app, _ = gateway
+    url = "/v1/workflow-triggers/ResearchWorkflow/daily/fire"
+    firing = {"firing_id": str(uuid4())}
+    scheduled = client.post(url, headers=auth("worker"), json=firing).json()
+    assert client.post(url, headers=auth("worker"), json=firing).json() == scheduled
+    webhook = client.post(PATH, content=b'{"topic":"from webhook"}', headers=signed()).json()
+    manual = client.post("/v1/workflow-runs", headers=auth("builder"), json={
+        "workflow": "ResearchWorkflow", "input": {"topic": "manual"},
+    }).json()
+    params = {"workflow": "ResearchWorkflow", "trigger": "daily", "limit": 1}
+    page = client.get("/v1/workflow-runs", params=params, headers=auth("viewer")).json()
+    assert not page["runs"] and page["next_cursor"]
+    assert client.get("/v1/workflow-runs", params={**params, "trigger": "inbound", "cursor": page["next_cursor"]},
+                      headers=auth("viewer")).status_code == 422
+    for expected in ([], [scheduled["run_id"]]):
+        page = client.get("/v1/workflow-runs", params={**params, "cursor": page["next_cursor"]},
+                          headers=auth("viewer")).json()
+        assert [row["run_id"] for row in page["runs"]] == expected
+    assert page["next_cursor"] is None
+    assert page["runs"][0]["trigger"] == {"name": "daily", "kind": "cron"}
+    detail = client.get(f"/v1/workflow-runs/{webhook['run_id']}", headers=auth("viewer")).json()
+    assert detail["trigger"] == {"name": "inbound", "kind": "webhook"}
+    assert any(step["action"] == "trigger" for step in detail["timeline"])
+    assert "trigger" not in client.get(f"/v1/workflow-runs/{manual['run_id']}", headers=auth("viewer")).json()
+    assert client.get("/v1/workflow-runs", params=params, headers=auth("other")).json()["runs"] == []
+    assert client.get("/v1/workflow-runs", params={**params, "project": "default"},
+                      headers=auth("project")).status_code == 404
+    assert client.get("/v1/workflow-runs?trigger=daily", headers=auth("viewer")).status_code == 422
+    assert client.post("/v1/workflow-runs", headers=auth("builder"), json={
+        "input": {"topic": "spoof"}, "trigger": {"name": "daily", "kind": "cron"},
+    }).status_code == 422
+    app.state.temporal_client.executions[scheduled["workflow_id"]].status = "COMPLETED"
+    detail = client.get(f"/v1/workflow-runs/{scheduled['run_id']}", headers=auth("viewer")).json()
+    assert detail["trigger"] == {"name": "daily", "kind": "cron"}
+    # Removed schedules remain discoverable until their run records expire.
+    team = app.state.sandbox_policy_set.policies["team"]
+    app.state.sandbox_policy_set.policies["team"] = replace(team, workflows={})
+    assert client.get("/v1/workflow-runs", params={**params, "limit": 100},
+                      headers=auth("viewer")).json()["runs"][0]["trigger"] == detail["trigger"]
+    prefix = app.state.settings.sandbox_budget_key_prefix
+    app.state.budget_tracker.client.delete(f"{prefix}:workflow:team:{scheduled['run_id']}:metadata")
+    assert client.get("/v1/workflow-runs", params={**params, "limit": 100},
+                      headers=auth("viewer")).json()["runs"] == []
+
+
 def test_native_github_signature_cannot_replay_with_changed_delivery_or_route(gateway):
     client, app, _ = gateway
     body = b'{"topic":"native GitHub payload"}'

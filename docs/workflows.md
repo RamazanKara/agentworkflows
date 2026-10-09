@@ -295,6 +295,7 @@ The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
 | `POST /v1/workflow-runs/{run_id}/retry` | Start a fresh execution after failure/cancellation |
 | `POST /v1/workflow-runs/{run_id}/approve` | Submit `{"approved":true}` or `false` |
 | `GET /v1/usage` | Token/request window usage and monthly team/project spend by provider and workflow |
+| `GET /v1/usage/export` | Current UTC month CSV, with total and provider/workflow rows, scoped to the credential (v0.7.0) |
 
 ```bash
 curl -s http://127.0.0.1:8080/v1/workflow-runs \
@@ -322,6 +323,18 @@ support approvals, a `review(approved, reviewer)` update returning whether the w
 decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.
 
 ## Triggers and notifications
+
+The v0.7.0 candidate adds **Run history** on each console trigger. It opens retained
+runs with their status, approval review, costs and receipts, filtered by workflow and
+trigger name. The API/CLI/SDK filters and retention boundaries are documented in the
+[SDK reference](sdk-reference.md#trigger-history-and-usage-csv-v070-candidate).
+This uses `inference-gateway.workflowRecords.runRecordRetentionSeconds` in Helm (30
+days by default), with Redis or PostgreSQL; no new store or setting is required.
+
+For monthly reporting, **Costs → Export CSV** uses `GET /v1/usage/export` and the
+existing Redis accounting. Project-bound credentials can export only their project.
+Use the candidate gateway image built from source until v0.7.0 is published; the
+default chart image tags still point to v0.5.1.
 
 Open **Triggers** in the console to see cron expressions, upcoming times, signed webhook
 endpoints and pause state. Admins and builders can pause/resume triggers in their projects;

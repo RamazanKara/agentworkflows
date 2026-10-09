@@ -160,6 +160,7 @@ export interface WorkflowRun {
   workflow_id: string;
   workflow: string;
   project: string;
+  trigger?: { name: string; kind: 'cron' | 'webhook' };
   status: 'running' | 'completed' | 'failed' | 'canceled' | 'terminated' | 'continued_as_new' | 'timed_out';
   progress?: { stage: string; draft?: string; reviewer?: string; run_id?: string };
   result?: unknown;
@@ -170,6 +171,7 @@ export interface WorkflowRun {
 export interface RunFilters {
   project?: string;
   workflow?: string;
+  trigger?: string;
   status?: WorkflowRun['status'] | 'awaiting_approval';
   cursor?: string;
   offset?: number;

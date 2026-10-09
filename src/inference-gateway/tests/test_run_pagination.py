@@ -26,6 +26,20 @@ def test_cursor_survives_new_runs_and_expired_anchor(team_gateway):
     assert page["next_cursor"] is None and page["next_offset"] is None
 
 
+def test_pre_070_cursor_still_pages_unfiltered_history(team_gateway):
+    client, _ = team_gateway
+    first = start(client).json()
+    start(client)
+    page = client.get("/v1/workflow-runs?limit=1", headers=auth("viewer")).json()
+    cursor = json.loads(base64.urlsafe_b64decode(page["next_cursor"]))
+    del cursor["trigger"]
+    response = client.get("/v1/workflow-runs", headers=auth("viewer"), params={
+        "cursor": base64.urlsafe_b64encode(json.dumps(cursor).encode()).decode(),
+    })
+    assert response.status_code == 200
+    assert [row["run_id"] for row in response.json()["runs"]] == [first["run_id"]]
+
+
 def test_cursor_orders_tied_timestamps_and_advances_through_empty_pages(team_gateway):
     client, app = team_gateway
     runs = [start(client).json() for _ in range(4)]

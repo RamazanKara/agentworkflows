@@ -61,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
     chat.add_argument(
         "--model", help="Approved model ID from 'agentworkflows models'; defaults to the gateway's model."
     )
-    commands.add_parser("usage", help="Show your team's token usage, estimated cost, and provider breakdown.")
+    usage = commands.add_parser("usage", help="Show your team's token usage, estimated cost, and provider breakdown.")
+    usage.add_argument("--output", help="Export current UTC month usage as CSV; '-' writes to stdout.")
     commands.add_parser("team", help="Show your team, role, projects, and configured providers.")
     keys = commands.add_parser("keys", help="Manage your team's API keys (admin only).")
     key_operations = keys.add_subparsers(dest="operation", required=True)
@@ -120,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
         sub = operations.add_parser(operation, help=f"{operation.title()} retained runs in your project.")
         sub.add_argument("--project")
         sub.add_argument("--workflow", help="Exact workflow name.")
+        sub.add_argument("--trigger", help="Exact trigger name; requires --workflow. History starts with v0.7.0.")
         sub.add_argument("--status", choices=(
             "running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out",
             "continued_as_new",
@@ -244,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
                 elif args.operation in {"list", "export"}:
                     run_filters = {
                         field: getattr(args, field)
-                        for field in ("project", "workflow", "status", "limit", "cursor", "offset")
+                        for field in ("project", "workflow", "trigger", "status", "limit", "cursor", "offset")
                         if getattr(args, field) is not None
                     }
                     if args.operation == "export":
@@ -269,7 +271,18 @@ def main(argv: list[str] | None = None) -> int:
                     result = gateway.approve_run(str(args.run_id), approved=not args.reject)
                 print(json.dumps(result, indent=2))
             else:
-                print(json.dumps(gateway.usage(), indent=2))
+                if args.output is None:
+                    print(json.dumps(gateway.usage(), indent=2))
+                else:
+                    try:
+                        content = gateway.export_usage()
+                        if args.output == "-":
+                            sys.stdout.buffer.write(content.encode("utf-8"))
+                        else:
+                            Path(args.output).write_text(content, encoding="utf-8", newline="")
+                    except OSError as exc:
+                        print(f"agentworkflows: usage export failed: {exc}", file=sys.stderr)
+                        return 1
     except GatewayError as exc:
         hints = {
             401: "Check AGENTWORKFLOWS_API_KEY.",

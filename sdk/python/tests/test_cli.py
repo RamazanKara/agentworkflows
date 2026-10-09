@@ -218,7 +218,7 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     assert "@input_schema(" in (target / "workflow.py").read_text()
     assert "worker.py" in (target / "README.md").read_text()
     assert f"templates/#{template}" in (target / "README.md").read_text()
-    assert "releases/download/v0.6.0/agentworkflows-0.6.0-py3-none-any.whl" in (target / "requirements.txt").read_text()
+    assert "releases/download/v0.7.0/agentworkflows-0.7.0-py3-none-any.whl" in (target / "requirements.txt").read_text()
     assert "--input '@input.json'" in capsys.readouterr().out
     before = {p.name: p.read_bytes() for p in target.iterdir()}
     with pytest.raises(SystemExit) as exc:
@@ -493,15 +493,35 @@ def test_run_export_reports_unwritable_file(monkeypatch, tmp_path, capsys):
     assert "run export failed" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("destination", ["-", "file", "unwritable"])
+def test_usage_csv_output(monkeypatch, tmp_path, capsys, destination):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "viewer-key")
+    csv = 'name,cost_usd\r\n"Grüße, team",1.000000001\r\n'
+    monkeypatch.setattr(agentworkflows.GatewayClient, "export_usage", lambda self: csv)
+    path = tmp_path / "usage.csv" if destination == "file" else tmp_path
+    assert main(["usage", "--output", "-" if destination == "-" else str(path)]) == (
+        1 if destination == "unwritable" else 0
+    )
+    captured = capsys.readouterr()
+    if destination == "unwritable":
+        assert "usage export failed" in captured.err
+    elif destination == "file":
+        assert path.read_bytes() == csv.encode() and not captured.out
+    else:
+        assert captured.out == csv
+
+
 def test_run_list_sends_filters_and_rejects_mixed_paging(monkeypatch, capsys):
     monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "viewer-key")
 
     def runs(self, **filters):
-        assert filters == {"workflow": "ResearchWorkflow", "status": "awaiting_approval", "limit": 5, "cursor": "older"}
+        assert filters == {"workflow": "ResearchWorkflow", "trigger": "daily", "status": "awaiting_approval",
+                           "limit": 5, "cursor": "older"}
         return {"runs": [], "next_cursor": None, "next_offset": None}
 
     monkeypatch.setattr(agentworkflows.GatewayClient, "runs", runs)
-    assert main(["runs", "list", "--workflow", "ResearchWorkflow", "--status", "awaiting_approval",
+    assert main(["runs", "list", "--workflow", "ResearchWorkflow", "--trigger", "daily",
+                 "--status", "awaiting_approval",
                  "--limit", "5", "--cursor", "older"]) == 0
     assert json.loads(capsys.readouterr().out)["next_cursor"] is None
     with pytest.raises(SystemExit) as exc:

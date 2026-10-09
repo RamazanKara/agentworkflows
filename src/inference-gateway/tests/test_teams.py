@@ -1,5 +1,7 @@
 import asyncio
+import csv
 import hashlib
+import io
 import json
 import logging
 from dataclasses import replace
@@ -23,6 +25,51 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 from tests.gateway_support import _tool_settings
 from tests.test_audit_verify import _double_logged_lines, _load_verifier
 from tests.test_workflows import RunRedis
+
+
+def test_usage_csv_matches_monthly_accounting_and_project_scope(team_gateway, monkeypatch):
+    from app.team_budget import month_window
+
+    client, app = team_gateway
+    start, seconds, _ = month_window()
+    end = start + seconds
+    prefix = app.state.settings.sandbox_budget_key_prefix
+    raw = {
+        "cost": 4_000_000_007, "project.private.cost": 1_000_000_001,
+        "provider.openai.cost": 3_000_000_007, "provider.openai.calls": 2, "provider.openai.tokens": 11,
+        'workflow.=SUM(1,2)\n"Grüße".cost': 2_000_000_000,
+        "project.private.provider.anthropic.cost": 1_000_000_001,
+        "project.private.provider.anthropic.calls": 1, "project.private.provider.anthropic.tokens": 3,
+        "project.private.workflow.PrivateWorkflow.cost": 1_000_000_001,
+    }
+    app.state.budget_tracker.client.data[f"{prefix}:team:cost:month:{start}"] = raw
+    response = client.get("/v1/usage/export", headers=auth("viewer"))
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["content-disposition"] == 'attachment; filename="usage.csv"'
+    rows = list(csv.DictReader(io.StringIO(response.text, newline="")))
+    assert [row["dimension"] for row in rows] == ["total", "provider", "workflow"]
+    assert rows[0]["team_id"] == "team" and rows[0]["project"] == ""
+    assert rows[0]["cost_usd"] == "4.000000007" and rows[0]["currency"] == "USD"
+    assert rows[0]["calls"] == "2" and rows[0]["tokens"] == "11"
+    from datetime import datetime
+
+    assert datetime.fromisoformat(rows[0]["period_start"]).timestamp() == start
+    assert datetime.fromisoformat(rows[0]["period_end"]).timestamp() == end
+    assert rows[1]["cost_usd"] == "3.000000007"
+    assert rows[2]["name"] == '\'=SUM(1,2)\n"Grüße"'
+    scoped = client.get("/v1/usage/export?project=default", headers=auth("project"))
+    private = list(csv.DictReader(io.StringIO(scoped.text)))
+    assert {row["project"] for row in private} == {"private"}
+    assert private[0]["cost_usd"] == "1.000000001"
+    assert private[0]["calls"] == "1" and private[0]["tokens"] == "3"
+    assert "openai" not in scoped.text and "SUM" not in scoped.text
+    other = list(csv.DictReader(io.StringIO(client.get("/v1/usage/export", headers=auth("other")).text)))
+    assert len(other) == 1 and other[0]["cost_usd"] == "0.000000000" and other[0]["team_id"] == "other"
+    assert client.get("/v1/usage/export").status_code == 401
+    monkeypatch.setattr("app.team_budget.month_window", lambda: (end, 30 * 86400, 30 * 86400))
+    assert len(list(csv.DictReader(io.StringIO(client.get("/v1/usage/export", headers=auth("viewer")).text)))) == 1
 
 
 class TeamRedis(RunRedis):

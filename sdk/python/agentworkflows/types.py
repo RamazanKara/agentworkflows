@@ -95,6 +95,7 @@ RunStatus = Literal[
 class RunFilters(TypedDict, total=False):
     project: str | None
     workflow: str | None
+    trigger: str | None
     status: RunStatus | None
     cursor: str | None
     offset: int

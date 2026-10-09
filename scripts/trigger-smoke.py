@@ -2,8 +2,10 @@
 """Run inside the Compose worker: real Temporal schedules, fake notification channels."""
 
 import asyncio
+import csv
 import hashlib
 import hmac
+import io
 import json
 import os
 import time
@@ -92,10 +94,11 @@ async def main():
         ScheduleBackfill(start_at=yesterday - timedelta(minutes=1), end_at=yesterday + timedelta(minutes=1))
     )
     reports = await until(
-        lambda: request("GET", "/v1/workflow-runs?workflow=DailyReportWorkflow")["runs"],
+        lambda: request("GET", "/v1/workflow-runs?workflow=DailyReportWorkflow&trigger=daily")["runs"],
         lambda rows: bool(rows) and rows[0]["created_at"] >= began,
     )
     daily_id = reports[0]["run_id"]
+    assert reports[0]["trigger"] == {"name": "daily", "kind": "cron"}
     await until(
         lambda: request("GET", f"/v1/workflow-runs/{daily_id}"),
         lambda row: row.get("progress", {}).get("stage") == "awaiting_approval",
@@ -147,6 +150,10 @@ async def main():
             ),
         )
         assert any(step["action"] == "trigger" for step in row["timeline"])
+        assert row["trigger"] == {
+            "name": "daily" if run_id == daily_id else "github",
+            "kind": "cron" if run_id == daily_id else "webhook",
+        }
         assert any(step["receipt"].get("notification_event") == event for step in row["timeline"])
     with urllib.request.urlopen("http://notification-fake:8025/", timeout=10) as response:
         messages = json.load(response)["messages"]
@@ -185,8 +192,17 @@ async def main():
     )
     if row["status"] == "running":
         request("POST", f"/v1/workflow-runs/{budget_id}/cancel")
+    export = urllib.request.Request(GATEWAY + "/v1/usage/export", headers={
+        "Authorization": "Bearer demo-viewer", "Accept": "text/csv",
+    })
+    with urllib.request.urlopen(export, timeout=20) as response:
+        assert response.headers["Content-Type"].startswith("text/csv")
+        rows = list(csv.DictReader(io.StringIO(response.read().decode("utf-8"))))
+    assert rows[0]["dimension"] == "total" and rows[0]["team_id"] == "demo"
+    assert {row["dimension"] for row in rows} == {"total", "provider", "workflow"}
+    assert any(row["name"] == "DailyReportWorkflow" for row in rows)
     print(
-        "[triggers] Temporal daily backfill, GitHub signing, replay/pause protection, approval/failure/budget alerts and all three channels passed"
+        "[triggers] Temporal daily backfill, trigger history, usage CSV, GitHub signing, replay/pause protection, approval/failure/budget alerts and all three channels passed"
     )
 
 

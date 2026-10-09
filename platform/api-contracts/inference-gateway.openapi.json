@@ -1789,7 +1789,7 @@
   "info": {
     "description": "OpenAI-compatible private inference gateway with sandbox traceability, admission controls, budget enforcement, redacted audit events, and runtime routing to Ollama or vLLM.",
     "title": "AgentWorkflows Inference Gateway",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4227,6 +4227,39 @@
         ]
       }
     },
+    "/v1/usage/export": {
+      "get": {
+        "description": "UTF-8 CSV: team_id,project,period_start,period_end,dimension,name,calls,tokens,cost_usd,currency. Period end is exclusive. Total, provider and workflow rows overlap; costs include reservations at configured USD prices. All team roles may export; project-bound credentials see only their project. Spreadsheet formula names are apostrophe-prefixed. No historical-month or per-call export.",
+        "operationId": "export_usage_v1_usage_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Export current UTC month team or project usage as CSV",
+        "tags": [
+          "sandbox"
+        ]
+      }
+    },
     "/v1/workflow-policies": {
       "get": {
         "operationId": "workflow_policies_v1_workflow_policies_get",
@@ -4339,6 +4372,26 @@
                 }
               ],
               "title": "Workflow"
+            }
+          },
+          {
+            "description": "Exact trigger name; requires workflow. Only launches recorded since v0.7.0 have provenance.",
+            "in": "query",
+            "name": "trigger",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact trigger name; requires workflow. Only launches recorded since v0.7.0 have provenance.",
+              "title": "Trigger"
             }
           },
           {

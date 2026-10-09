@@ -5,10 +5,12 @@ import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, Metrics, NumberInpu
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
 const canApprove = (session: Session) => ['admin', 'approver'].includes(session.team.role);
 
-export function Runs({ session }: { session: Session }) {
-  const [project, setProject] = useState(session.team.projects[0] || '');
+export function Runs({ session, initial = '' }: { session: Session; initial?: string }) {
+  const query = new URLSearchParams(initial);
+  const [project, setProject] = useState(query.get('project') || session.team.projects[0] || '');
   const [filter, setFilter] = useState('');
-  const [workflow, setWorkflow] = useState('');
+  const [workflow, setWorkflow] = useState(query.get('workflow') || '');
+  const [trigger, setTrigger] = useState(query.get('trigger') || '');
   const [revision, setRevision] = useState(0);
   const [rows, setRows] = useState<Run[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -27,6 +29,7 @@ export function Runs({ session }: { session: Session }) {
       if (after) query.set('cursor', after);
       if (filter) query.set('status', filter);
       if (workflow) query.set('workflow', workflow);
+      if (trigger) query.set('trigger', trigger);
       const result = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
       if (!controller.signal.aborted) {
         setRows(values => [...(reset ? [] : values), ...result.runs].filter((r, i, all) => all.findIndex(v => v.run_id === r.run_id) === i));
@@ -35,9 +38,10 @@ export function Runs({ session }: { session: Session }) {
     } catch (error) { if (!controller.signal.aborted) setError((error as Error).message); }
     finally { if (!controller.signal.aborted) setBusy(false); }
   }
-  useEffect(() => { void load(null, true); return () => current.current?.abort(); }, [project, filter, workflow, revision]);
+  useEffect(() => { void load(null, true); return () => current.current?.abort(); }, [project, filter, workflow, trigger, revision]);
   return <>
     <PageHeader title="Workflow runs" subtitle="Runs in your projects, newest first."><Refresh onClick={() => setRevision(v => v + 1)}/>{canBuild(session) && <a className="button" href="#new">Run workflow</a>}</PageHeader>
+    {trigger && <p className="callout">Started by trigger <strong>{trigger}</strong>. History includes retained launches recorded since v0.7.0. <a href="#runs">All workflow runs</a> · <a href="#triggers">Back to triggers</a></p>}
     <Metrics compact items={[
       ['Runs shown', number(rows.length)], ['Awaiting approval', number(rows.filter(r => status(r) === 'awaiting_approval').length)],
       ['Cost of these runs', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
@@ -45,9 +49,9 @@ export function Runs({ session }: { session: Session }) {
     <button className="secondary filter-toggle" aria-expanded={filters} aria-controls="run-filters" onClick={() => setFilters(value => !value)}>
       {filters ? 'Hide filters' : <DotList items={['Filters', project, filter && label(filter), workflow && workflowName(workflow)]}/>}</button>
     <div id="run-filters" className={filters ? 'filters panel' : 'filters panel collapsed'}>
-      <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
+      <label>Project<select value={project} onChange={e => { setProject(e.target.value); setTrigger(''); }}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
       <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
-      <label>Workflow<select value={workflow} onChange={e => setWorkflow(e.target.value)}><option value="">All workflows</option>{Object.keys(policies.data?.workflows || {}).map(w => <option key={w} value={w}>{workflowName(w)}</option>)}</select></label>
+      <label>Workflow<select value={workflow} onChange={e => { setWorkflow(e.target.value); setTrigger(''); }}><option value="">All workflows</option>{Object.keys(policies.data?.workflows || {}).map(w => <option key={w} value={w}>{workflowName(w)}</option>)}</select></label>
     </div>
     <ErrorMessage message={error || policies.error} retry={() => void load(cursor)}/>
     <div className="panel">
@@ -262,6 +266,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
     <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status" className="status">{notice || copied}</p>
     {!run && !result.error && <Loading/>}
     {run && <><div className="run-meta"><Badge value={status(run)}/><span>Project {run.project}</span><span>Started {date(run.created_at)}</span>
+        {run.trigger && <a href={`#runs?${new URLSearchParams({ project: run.project, workflow: run.workflow, trigger: run.trigger.name })}`}>{run.trigger.kind === 'cron' ? 'Schedule' : 'Webhook'}: {run.trigger.name}</a>}
         <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="copy-id" aria-label="Copy run ID" onClick={async () => {
           try { await navigator.clipboard.writeText(run.run_id); setCopied('Run ID copied.'); } catch { setCopied(`Run ID: ${run.run_id}`); }
         }}><Icon name="copy"/>Copy ID</button></span></div>

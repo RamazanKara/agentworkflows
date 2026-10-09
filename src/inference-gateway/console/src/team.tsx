@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
+import { useEffect, useRef, useState } from 'react';
+import { api, date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
 import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 import { SettingsPanel } from './settings';
 
@@ -81,14 +81,32 @@ function SpendTiles({ usage, budget }: { usage?: Usage; budget?: Budget }) {
 
 export function Costs({ session }: { session: Session }) {
   const [revision, setRevision] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const download = useRef<AbortController | null>(null);
+  useEffect(() => () => download.current?.abort(), []);
   const result = useData<Usage>(session.csrfToken, '/v1/usage', revision);
   const budget = useData<Budget>(session.csrfToken, '/v1/sandbox/budget', revision);
   const spend = result.data?.spend;
-  return <><PageHeader title="Costs" subtitle="Where your team’s spend goes, by provider and workflow."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
-    <ErrorMessage message={result.error} retry={() => setRevision(v => v + 1)}/>
+  async function exportUsage() {
+    const controller = new AbortController(); download.current = controller;
+    setExporting(true); setExportError('');
+    try {
+      const csv = await api<string>(session.csrfToken, '/v1/usage/export', { headers: { Accept: 'text/csv' }, signal: controller.signal });
+      if (controller.signal.aborted) return;
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url; link.download = 'usage.csv'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { if (!controller.signal.aborted) setExportError((error as Error).message); }
+    finally { setExporting(false); }
+  }
+  return <><PageHeader title="Costs" subtitle="Where your team’s spend goes, by provider and workflow."><Refresh onClick={() => setRevision(v => v + 1)}/><button className="secondary" disabled={!spend || exporting} onClick={() => void exportUsage()}>{exporting ? 'Exporting…' : 'Export CSV'}</button></PageHeader>
+    <ErrorMessage message={exportError || result.error} retry={() => setRevision(v => v + 1)}/>
     {!result.data && !result.error && <Loading/>}
     {spend && <>
       <SpendTiles usage={result.data} budget={budget.data}/>
+      <p className="muted">CSV exports the current UTC month’s totals and provider/workflow breakdowns, including reservations. These are overlapping views; don’t add the rows together.</p>
       {!spend.project && <SpendAlerts session={session} revision={revision}/>}
       {spend.project && <p className="callout">This sign-in is limited to one project. Team-wide spend is hidden; the tables cover your project only.</p>}
       {Object.keys(spend.providers).length || Object.keys(spend.workflows || {}).length ? <>

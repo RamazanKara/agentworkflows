@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.7.0 - Unreleased
+
+- Add retained run history for cron and webhook triggers: persist launch provenance,
+  filter and cursor-page runs by workflow/trigger, and link each console trigger to
+  run status, approval review and receipts. Python/TypeScript run paging and JSON
+  Lines export accept the same filter. Existing cursors remain compatible; history
+  starts with launches recorded by this version and follows run-record retention.
+- Export current UTC month usage as CSV from Costs, the authenticated API, both SDKs
+  and `agentworkflows usage --output usage.csv`. Include scope totals and provider/
+  workflow breakdowns with project isolation, nanodollar precision and spreadsheet
+  formula protection. Estimates include reservations; exports are not invoices.
+- Advance source, SDK and chart versions to 0.7.0; document candidate build and
+  verification commands while keeping published quickstart image defaults on v0.5.1.
+
 ## v0.6.0 - Unreleased
 
 - Add an offline Redis-to-PostgreSQL import command with read-only dry-run,

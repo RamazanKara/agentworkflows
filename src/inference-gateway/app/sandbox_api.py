@@ -9,10 +9,14 @@ sandbox, which the auth middleware pinned before any handler runs.
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
+from datetime import UTC, datetime
 from time import time
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response
 
 from app.audit import chain_audit_event, emit_audit_record
 from app.budget import BudgetBackendError, SandboxBudgetTracker
@@ -25,6 +29,85 @@ from app.settings import AdmissionPolicyError, Settings
 
 def register_sandbox_routes(app: FastAPI, settings: Settings) -> None:
     """Register the sandbox budget/usage/model reads and the receipt intake."""
+
+    @app.get(
+        "/v1/usage/export",
+        tags=["sandbox"],
+        summary="Export current UTC month team or project usage as CSV",
+        description="UTF-8 CSV: team_id,project,period_start,period_end,dimension,name,calls,tokens,cost_usd,currency. "
+        "Period end is exclusive. Total, provider and workflow rows overlap; costs include reservations at configured "
+        "USD prices. All team roles may export; project-bound credentials see only their project. "
+        "Spreadsheet formula names are apostrophe-prefixed. No historical-month or per-call export.",
+        response_class=Response,
+        responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}}},
+    )
+    async def export_usage(request: Request) -> Response:
+        from app.team_budget import team_cost_report
+        from app.teams import require_role
+
+        require_role(request, "admin", "builder", "approver", "viewer")
+        report = await team_cost_report(request)
+        if not report:
+            raise HTTPException(404, detail="Monthly usage requires a configured team with projects or spend limits.")
+        output = io.StringIO(newline="")
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "team_id",
+                "project",
+                "period_start",
+                "period_end",
+                "dimension",
+                "name",
+                "calls",
+                "tokens",
+                "cost_usd",
+                "currency",
+            ]
+        )
+        period = [
+            datetime.fromtimestamp(report["window_start"] + offset, UTC).isoformat()
+            for offset in (0, report["window_seconds"])
+        ]
+        project = report["project"]
+        total = {
+            "calls": sum(row.get("calls", 0) for row in report["providers"].values()),
+            "tokens": sum(row.get("tokens", 0) for row in report["providers"].values()),
+            "cost_usd": report["project_budgets"][project]["reserved_and_spent_usd"]
+            if project
+            else report["reserved_and_spent_usd"],
+        }
+        for dimension, rows in (
+            ("total", {project or report["team_id"]: total}),
+            ("provider", report["providers"]),
+            ("workflow", report["workflows"]),
+        ):
+            for name, row in sorted(rows.items()):
+                # Quoting alone does not stop spreadsheet formulas in team-controlled names.
+                labels = [report["team_id"], project or "", *period, dimension, name]
+                labels = [
+                    "'" + value
+                    if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n"))
+                    else value
+                    for value in labels
+                ]
+                writer.writerow(
+                    [
+                        *labels,
+                        row.get("calls", 0),
+                        row.get("tokens", 0),
+                        f"{row.get('cost_usd', 0):.9f}",
+                        "USD",
+                    ]
+                )
+        return Response(
+            output.getvalue(),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": 'attachment; filename="usage.csv"',
+                "Cache-Control": "no-store",
+            },
+        )
 
     @app.get(
         "/v1/sandbox/budget",

@@ -38,7 +38,7 @@ from app.tracing import configure_tracing, trace_request
 
 AUDIT_LOGGER = logging.getLogger("agentworkflows.rag.audit")
 TRACEPARENT_PATTERN = re.compile(r"^[\da-f]{2}-[\da-f]{32}-[\da-f]{16}-[\da-f]{2}$")
-SERVICE_VERSION = "0.6.0"
+SERVICE_VERSION = "0.7.0"
 OPENAPI_DESCRIPTION = (
     "Private retrieval service for platform and customer knowledge. The service "
     "returns traceable retrieval results, optional context blocks, and "

@@ -52,6 +52,7 @@ class RunCursor(BaseModel):
     project: str
     workflow: str | None
     status: str | None
+    trigger: str | None = None
     created_at: float = Field(ge=0, allow_inf_nan=False)
     run_id: UUID
 
@@ -212,7 +213,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
     return result
 
 
-async def start_run(request: Request, body: StartRun) -> dict[str, Any]:
+async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str] | None = None) -> dict[str, Any]:
     principal = require_role(request, "admin", "builder")
     project = project_access(request, body.project)
     team = request.app.state.sandbox_policy_set.policies[request.state.sandbox_id]
@@ -233,6 +234,7 @@ async def start_run(request: Request, body: StartRun) -> dict[str, Any]:
             },
         )
     workflow_id = f"{request.state.sandbox_id}/{project}/{body.request_id}"
+    origin = {"trigger": trigger} if trigger else {}
     canonical = json.dumps({"workflow": body.workflow, "input": body.input}, sort_keys=True)
     fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
     data = {
@@ -244,6 +246,7 @@ async def start_run(request: Request, body: StartRun) -> dict[str, Any]:
         "fingerprint": fingerprint,
         "created_at": time(),
         "submitted_by": principal,
+        **origin,
     }
     data = await storage_call(request, "save_intent", workflow_id, data)
     if data["fingerprint"] != fingerprint:
@@ -329,6 +332,10 @@ def register_operation_routes(app: FastAPI) -> None:
             description="next_cursor from the previous page, with unchanged filters",
         ),
         workflow: str | None = Query(None, max_length=128),
+        trigger: str | None = Query(
+            None, min_length=1, max_length=128,
+            description="Exact trigger name; requires workflow. Only launches recorded since v0.7.0 have provenance.",
+        ),
         status: Literal[
             "running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out",
             "continued_as_new"
@@ -336,7 +343,14 @@ def register_operation_routes(app: FastAPI) -> None:
         | None = None,
     ) -> dict[str, Any]:
         selected = project_access(request, project)
-        scope = {"team": request.state.sandbox_id, "project": selected, "workflow": workflow, "status": status}
+        if trigger and not workflow:
+            raise HTTPException(422, detail={
+                "reason": "trigger_workflow_required", "message": "Select a workflow when filtering by trigger.",
+            })
+        scope = {
+            "team": request.state.sandbox_id, "project": selected, "workflow": workflow,
+            "status": status, "trigger": trigger,
+        }
         position = None
         # Page the underlying index before filtering, keeping Temporal fan-out bounded.
         # Continuations advance even when this page has no matching runs.
@@ -355,8 +369,12 @@ def register_operation_routes(app: FastAPI) -> None:
         removed = 0
         for run_id, _ in ids[:limit]:
             try:
-                if workflow and (await run_metadata(request, run_id))["workflow"] != workflow:
-                    continue
+                if workflow:
+                    metadata = await run_metadata(request, run_id)
+                    if metadata["workflow"] != workflow or (
+                        trigger and (metadata.get("trigger") or {}).get("name") != trigger
+                    ):
+                        continue
                 row = await describe_run(request, run_id, timeline=False)
             except HTTPException as exc:
                 if exc.status_code != 404 or exc.detail.get("reason") != "workflow_run_missing":

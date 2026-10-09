@@ -33,6 +33,7 @@ export async function requestJson<T>(
       signal,
     });
     const text = await response.text();
+    if (response.ok && headers.Accept === 'text/csv') return text as T;
     try {
       result = text ? JSON.parse(text) : {};
     } catch {

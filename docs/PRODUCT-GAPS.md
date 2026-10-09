@@ -33,3 +33,19 @@ tests. The same pass adds offline Redis-to-PostgreSQL import for gap **9**, and
 soft/hard monthly spend limits with in-console and webhook alerts for gap **8**.
 Live cutover, identity-provider administration and provider-secret provisioning
 remain operator responsibilities.
+
+## v0.7.0: automated run visibility and spend reporting (unreleased)
+
+The next coherent step is to make scheduled work inspectable and team spend portable.
+Cron/webhook starts, approval expiry and console cancellation/retry already work; they
+are not new v0.7.0 features. This milestone completes two remaining product paths:
+
+| Gap | v0.7.0 implementation | Boundary |
+| --- | --- | --- |
+| Trigger run history | Console Run history links; persisted launch provenance; workflow/trigger filters in the API, CLI and both SDKs | New launches only; existing run retention applies; rejected deliveries remain audit events |
+| Usage CSV export | Costs download, API, Python and TypeScript helpers, CLI output | Current UTC month, configured price estimates and reservations; project-bound credentials export only their project |
+
+Both paths share existing storage and authorization. No new service or Helm switch
+is needed. One-click/versioned template installation, multi-approver escalation,
+per-workflow secrets and SSO group mapping remain open. Broader SDK parity and live
+OpenTelemetry/deployment acceptance remain integration work. There is no hosted SaaS.

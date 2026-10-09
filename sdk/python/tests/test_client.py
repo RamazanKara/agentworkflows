@@ -27,6 +27,23 @@ def _record_sleeps(monkeypatch, client):
     return sleeps
 
 
+def test_usage_csv_download_and_errors(monkeypatch):
+    csv = 'team_id,name,cost_usd\r\ndemo,"Grüße, team",0.000000001\r\n'
+    responses = [httpx.Response(200, text=csv), httpx.Response(403, json={"detail": "Team access required"})]
+
+    def handler(request):
+        assert request.url.path == "/v1/usage/export"
+        assert request.headers["Authorization"] == "Bearer viewer-key"
+        assert request.headers["Accept"] == "text/csv"
+        return responses.pop(0)
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="viewer-key") as client:
+        assert client.export_usage() == csv
+        with pytest.raises(GatewayError, match="Team access required"):
+            client.export_usage()
+
+
 def test_validation_error_reports_fields_without_echoing_input():
     request = httpx.Request("POST", "http://gateway/v1/workflow-runs")
     response = httpx.Response(
@@ -640,13 +657,16 @@ def test_run_export_follows_empty_cursor_pages_and_includes_details(monkeypatch)
     _mock_transport(monkeypatch, handler)
     with GatewayClient("http://gateway.test") as client:
         lines = list(client.export_runs(
-            project="A & B", workflow="ResearchWorkflow", status="completed", limit=1, offset=2,
+            project="A & B", workflow="ResearchWorkflow", trigger="daily & weekly",
+            status="completed", limit=1, offset=2,
         ))
     assert [json.loads(line) for line in lines] == [detail]
     assert lines[0].endswith("\n") and len(lines[0].splitlines()) == 1
     assert pages == [
-        {"project": "A & B", "workflow": "ResearchWorkflow", "status": "completed", "limit": "1", "offset": "2"},
-        {"project": "A & B", "workflow": "ResearchWorkflow", "status": "completed", "limit": "1", "offset": "0",
+        {"project": "A & B", "workflow": "ResearchWorkflow", "trigger": "daily & weekly",
+         "status": "completed", "limit": "1", "offset": "2"},
+        {"project": "A & B", "workflow": "ResearchWorkflow", "trigger": "daily & weekly",
+         "status": "completed", "limit": "1", "offset": "0",
          "cursor": "older"},
     ]
 

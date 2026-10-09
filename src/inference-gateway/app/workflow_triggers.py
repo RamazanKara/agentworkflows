@@ -190,6 +190,7 @@ async def fire(request: Request, workflow: str, name: str, delivery: str, payloa
                 project=trigger.project,
                 request_id=uuid5(NAMESPACE_URL, f"{request.state.sandbox_id}/{workflow}/{name}/{delivery}"),
             ),
+            trigger={"name": name, "kind": trigger.kind},
         )
     except (HTTPException, RPCError) as exc:
         await operation_receipt(
