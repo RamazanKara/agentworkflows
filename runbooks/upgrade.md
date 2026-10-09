@@ -12,7 +12,7 @@ unforgiving: the thing you change in Git is the thing that ships.
 The optional gateway PostgreSQL store has its own transactional schema migrations;
 Temporal's PostgreSQL is separate. Redis remains the default. See
 [gateway storage upgrade and rollback](../docs/postgresql-storage.md#upgrade-and-rollback)
-before changing backends: existing Redis records are not imported, all replicas must
+before changing backends: import existing Redis records with the offline command; all replicas must
 select the same backend, and SQL down migration 1 deletes gateway records. Include
 the optional database in backups in addition to the existing Redis/Temporal stores.
 

@@ -9,6 +9,21 @@ const ok = (body = {}) => new Response(JSON.stringify(body), { status: 200 });
 beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); vi.mocked(setTimeout).mockClear(); });
 afterEach(() => vi.unstubAllGlobals());
 
+it('reads spend alerts and changes limits and capture at the supplied revision', async () => {
+  fetchMock.mockImplementation(async () => ok({ revision: 3 }));
+  await client.teamSpend();
+  await client.setSpendLimits({ softLimitUsd: 0, hardLimitUsd: null }, { revision: 0 });
+  await client.setContentCapture('redacted', { revision: '"1"' });
+  await client.setContentCapture('none', { revision: 2, workflow: 'ResearchWorkflow' });
+  expect(fetchMock.mock.calls[0][0]).toBe('http://gateway.test/v1/team/spend');
+  expect(fetchMock.mock.calls.slice(1).map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
+    { fields: { soft_cost_limit_usd: 0, cost_limit_usd: null } },
+    { fields: { capture_content: 'redacted' } },
+    { fields: { 'workflows.ResearchWorkflow.capture_content': 'none' } },
+  ]);
+  expect(fetchMock.mock.calls.slice(1).map(([, init]) => (init?.headers as Record<string, string>)['If-Match'])).toEqual(['0', '"1"', '2']);
+});
+
 it('uses the workflow API with encoded paths, pagination, and authenticated approval', async () => {
   fetchMock.mockImplementation(async () => ok());
   await client.startRun('CodeReviewWorkflow', { diff: 'diff' }, { requestId: 'request-1', project: 'engineering' });

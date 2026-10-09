@@ -16,6 +16,8 @@ const settings = (): TeamSettings => ({
   revision: 0, updated_by: null, updated_at: null, routes: ['demo-openai', 'demo-anthropic'],
   providers: ['openai', 'anthropic'], approver_roles: ['admin', 'approver'], fields: {
     cost_limit_usd: { value: 50, policy_default: 50, source: 'policy' },
+    soft_cost_limit_usd: { value: null, policy_default: null, source: 'policy' },
+    capture_content: { value: 'none', policy_default: 'none', source: 'policy' },
     'project_budgets.default': { value: null, policy_default: null, source: 'policy' },
     'workflows.ResearchWorkflow.token_limit': { value: 10000, policy_default: 10000, source: 'policy' },
     'workflows.ResearchWorkflow.cost_limit_usd': { value: 5, policy_default: 5, source: 'policy' },
@@ -23,6 +25,7 @@ const settings = (): TeamSettings => ({
     'workflows.ResearchWorkflow.approval_threshold_usd': { value: 0, policy_default: 0, source: 'policy' },
     'workflows.ResearchWorkflow.approver_role': { value: 'approver', policy_default: 'approver', source: 'policy' },
     'workflows.ResearchWorkflow.allowed_providers': { value: ['openai', 'anthropic'], policy_default: ['openai', 'anthropic'], source: 'policy' },
+    'workflows.ResearchWorkflow.capture_content': { value: 'none', policy_default: 'none', source: 'policy' },
     'model_routes.research': { value: 'demo-openai', policy_default: 'demo-openai', source: 'policy' },
   },
 });
@@ -322,6 +325,7 @@ test.beforeEach(async ({ page }) => {
     else if (url.pathname === '/v1/workflow-policies') body = policies;
     else if (url.pathname === '/v1/models') body = { data: [{ id: 'demo-openai' }] };
     else if (url.pathname === '/v1/sandbox/budget') body = { usage: { estimated_tokens: 63 }, limits: { estimated_tokens: 200000 }, window_seconds: 86400 };
+    else if (url.pathname === '/v1/team/spend') body = { team_id: team, window_start: 1790812800, window_end: 1793491200, soft_limit_usd: null, hard_limit_usd: 50, reserved_and_spent_usd: .0432, status: 'ok', alerts: [] };
     else if (url.pathname === '/v1/usage') body = { estimated_cost: .0432, spend: { project: null, window_start: 1791316800, window_seconds: 86400, cost_limit_usd: 50, reserved_and_spent_usd: .0432, providers: { anthropic: costs }, workflows: { ResearchWorkflow: costs }, accounting: 'Configured prices, not provider invoices.' } };
     else if (url.pathname === '/v1/workflow-runs' && route.request().method() === 'POST') body = { run_id: id };
     else if (url.pathname === '/v1/workflow-runs') body = { runs: team === 'other' || url.searchParams.get('project') === 'engineering' || url.searchParams.get('status') === 'failed' ? [] : [run()], next_cursor: null };
@@ -997,7 +1001,7 @@ for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
     expect((await request).postDataJSON()).toEqual({ fields: { cost_limit_usd: 125, 'project_budgets.default': 40, 'workflows.ResearchWorkflow.cost_limit_usd': 3, 'workflows.ResearchWorkflow.token_limit': 12345 } });
     expect((await request).headers()['if-match']).toBe('0');
     expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
-    await expect(page.getByRole('status')).toContainText('Settings saved.');
+    await expect(page.getByRole('status').filter({ hasText: 'Settings saved.' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Reset Team monthly budget (USD) to policy default' })).toBeVisible();
     // Right after saving, the bar shows only the confirmation.
     await expect(page.getByRole('button', { name: 'Save settings' })).toHaveCount(0);
@@ -1117,4 +1121,60 @@ test('monthly spend displays a zero limit as a limit', async ({ page }) => {
   await expect(page.getByText('Spent this month', { exact: true })).toBeVisible();
   await expect(page.getByText('of $0.00', { exact: true })).toBeVisible();
   await expect(page.getByText('No team limit', { exact: true })).toHaveCount(0);
+});
+
+test('admins save soft limits and capture defaults with workflow overrides', async ({ page }) => {
+  await login(page, 'admin', '/console/#team');
+  await page.getByLabel('Team monthly soft limit (USD)', { exact: true }).fill('40');
+  await page.getByLabel('Default step content capture', { exact: true }).selectOption('redacted');
+  await page.getByLabel('Research · Step content capture', { exact: true }).selectOption('full');
+  const request = page.waitForRequest(req => req.method() === 'PATCH' && req.url().endsWith('/v1/team/settings'));
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  expect((await request).postDataJSON()).toEqual({ fields: {
+    soft_cost_limit_usd: 40, capture_content: 'redacted', 'workflows.ResearchWorkflow.capture_content': 'full',
+  } });
+  await expect(page.getByText('Settings saved. They apply to the next request.')).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Default step content capture', { exact: true })).toHaveValue('redacted');
+});
+
+test('Costs shows hard-limit and webhook alerts on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 900 });
+  await page.route('**/v1/team/spend', route => route.fulfill({ json: {
+    team_id: 'demo', window_start: 1790812800, window_end: 1793491200, soft_limit_usd: 40, hard_limit_usd: 50,
+    reserved_and_spent_usd: 50, status: 'hard_limit', alerts: [{ id: 'alert', level: 'hard', limit_usd: 50,
+      reserved_and_spent_usd: 50, requested_usd: 1, created_at: 1791316800, webhook_status: 'failed', attempts: 5 }],
+  } }));
+  await login(page, 'viewer', '/console/#costs');
+  await expect(page.getByRole('heading', { name: 'Spend alerts' })).toBeVisible();
+  await expect(page.getByText('Hard limit reached. Further paid calls return 429', { exact: false })).toBeVisible();
+  await expect(page.getByText('after five attempts', { exact: false })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('key access editing submits changed fields and preserves drafts after a conflict', async ({ page }) => {
+  let conflict = true;
+  const key = { key_id: 'edit-me', name: 'Alice', role: 'viewer', project: null, expires_at: null, revoked_at: null, last_used_at: null, created_at: 1 };
+  await page.route('**/v1/team/keys**', route => {
+    if (route.request().method() === 'PATCH') {
+      expect(route.request().postDataJSON()).toEqual({ name: 'Build bot', role: 'builder', project: 'engineering', expires_at: '2027-01-01T12:00:00.000Z' });
+      if (conflict) return route.fulfill({ status: 409, json: { detail: 'This key is already revoked.' } });
+      Object.assign(key, route.request().postDataJSON(), { expires_at: 1798804800 });
+      return route.fulfill({ json: key });
+    }
+    return route.fulfill({ json: { keys: [key] } });
+  });
+  await login(page, 'admin', '/console/#keys');
+  await page.getByRole('button', { name: 'Edit Alice', exact: true }).click();
+  await page.getByLabel('Edit name', { exact: true }).fill('Build bot');
+  await page.getByLabel('Edit role', { exact: true }).selectOption('builder');
+  await page.getByLabel('Edit project', { exact: true }).selectOption('engineering');
+  await page.getByLabel('Edit expiry (UTC)', { exact: true }).fill('2027-01-01T12:00');
+  await page.getByRole('button', { name: 'Save key', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('already revoked');
+  await expect(page.getByLabel('Edit name', { exact: true })).toHaveValue('Build bot');
+  conflict = false;
+  await page.getByRole('button', { name: 'Save key', exact: true }).click();
+  await expect(page.getByText('Build bot updated. Access changes apply immediately.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Build bot', exact: true })).toBeVisible();
 });

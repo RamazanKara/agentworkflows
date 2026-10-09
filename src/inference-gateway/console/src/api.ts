@@ -6,6 +6,8 @@ export type Team = {
   projects: string[];
   providers: string[];
   cost_limit_usd: number | null;
+  soft_cost_limit_usd?: number | null;
+  capture_content?: 'none' | 'redacted' | 'full';
   project_budgets?: Record<string, number | null>;
   model_routes?: Record<string, string>;
   notifications?: { channels: string[]; budget_threshold: number };
@@ -58,6 +60,13 @@ export type Usage = {
   };
 };
 export type Budget = { usage: { estimated_tokens: number }; limits: { estimated_tokens: number }; window_seconds?: number };
+export type TeamSpend = {
+  team_id: string; window_start: number; window_end: number;
+  soft_limit_usd: number | null; hard_limit_usd: number | null; reserved_and_spent_usd: number;
+  status: 'ok' | 'soft_limit' | 'hard_limit';
+  alerts: { id: string; level: 'soft' | 'hard'; limit_usd: number; reserved_and_spent_usd: number;
+    requested_usd: number; created_at: number; webhook_status: 'disabled' | 'pending' | 'delivered' | 'failed'; attempts: number }[];
+};
 export type Models = { data: { id: string; owned_by: string; simulated?: boolean }[] };
 export type SettingValue = number | string | boolean | string[] | null;
 export type SettingField = { value: SettingValue; source: 'policy' | 'override'; policy_default: SettingValue };
@@ -92,6 +101,7 @@ export async function api<T>(csrfToken: string, path: string, init: RequestInit 
       404: 'Not found in this team or project. The run may be outside Temporal retention.',
       409: 'This run changed. Refresh and review its current state before trying again.',
       422: 'Check the workflow input and selected project, then try again.',
+      429: 'The spend or request limit was reached. Review Costs or ask your team admin to update the limit.',
       503: 'The service is unavailable. Check the gateway, Redis, and Temporal, then retry.',
     };
     throw Object.assign(new Error(`${detail || advice[response.status] || 'The request failed.'} (${response.status})`), { status: response.status, fields: body.detail?.fields });

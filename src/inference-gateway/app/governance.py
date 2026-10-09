@@ -500,6 +500,11 @@ def route_settings(settings: Settings, model_route: Any) -> Settings:
 
 def admission_status(reason: str, settings: Settings) -> tuple[int, dict[str, str] | None]:
     """Map an admission-rejection reason to its HTTP status and retry headers."""
+    if reason in {"team_cost_budget_exceeded", "project_cost_budget_exceeded"}:
+        from app.team_budget import month_window
+
+        _, _, retry_after = month_window()
+        return 429, {"Retry-After": str(retry_after)}
     if reason in {
         "workflow_token_budget_exceeded",
         "workflow_cost_budget_exceeded",
@@ -508,7 +513,6 @@ def admission_status(reason: str, settings: Settings) -> tuple[int, dict[str, st
         "workflow_not_allowed",
         "workflow_egress_denied",
         "agent_not_allowed",
-        "team_cost_budget_exceeded",
     }:
         return 403, None
     if reason == "data_classification_denied":

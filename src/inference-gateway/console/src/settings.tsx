@@ -3,20 +3,23 @@ import { api, date, label as titleCase, money, number, providerName, useData, wo
 import { DotList, ErrorMessage, Loading, NumberInput, PageHeader } from './ui';
 
 // Field keys: cost_limit_usd, project_budgets.<project>, workflows.<Workflow>.<field>, model_routes.<alias>.
-type Kind = 'usd' | 'tokens' | 'flag' | 'role' | 'route' | 'providers';
+type Kind = 'usd' | 'tokens' | 'flag' | 'role' | 'route' | 'providers' | 'capture';
 const workflowFields: Record<string, [string, Kind]> = {
   cost_limit_usd: ['Budget per run', 'usd'], token_limit: ['Token limit per run', 'tokens'],
   approval_required: ['Require approval', 'flag'], approval_threshold_usd: ['Approval threshold', 'usd'],
   approver_role: ['Approver role', 'role'], allowed_providers: ['Allowed providers', 'providers'],
+  capture_content: ['Step content capture', 'capture'],
 };
 // A workflow card reads in three rows: limits, the approval rule, then providers.
-const cardRows = [['cost_limit_usd', 'token_limit'], ['approval_required', 'approval_threshold_usd', 'approver_role'], ['allowed_providers']];
+const cardRows = [['cost_limit_usd', 'token_limit'], ['approval_required', 'approval_threshold_usd', 'approver_role'], ['allowed_providers', 'capture_content']];
 const workflowOf = (field: string) => field.startsWith('workflows.') ? field.slice(10, field.lastIndexOf('.')) : '';
 const leaf = (field: string) => field.slice(field.lastIndexOf('.') + 1);
 const kind = (field: string): Kind => field.startsWith('model_routes.') ? 'route'
+  : field === 'capture_content' ? 'capture'
   : workflowOf(field) ? workflowFields[leaf(field)]?.[1] ?? 'usd' : 'usd';
 // What a person reads next to the control; the accessible name adds the workflow and the unit.
 const visible = (field: string) => field === 'cost_limit_usd' ? 'Team monthly budget'
+  : field === 'soft_cost_limit_usd' ? 'Team monthly soft limit' : field === 'capture_content' ? 'Default step content capture'
   : field.startsWith('project_budgets.') ? `Project ${field.slice(16)} monthly budget`
   : field.startsWith('model_routes.') ? field.slice(13)
   : workflowFields[leaf(field)]?.[0] ?? field;
@@ -27,7 +30,7 @@ const format = (field: string, value: SettingValue) => value === null || value =
   : typeof value === 'boolean' ? value ? 'Required' : 'Not required'
   : kind(field) === 'usd' ? money(Number(value)) : kind(field) === 'tokens' ? `${number(Number(value))} tokens`
   : kind(field) === 'role' ? titleCase(String(value)) : String(value);
-const budgetField = (field: string) => field === 'cost_limit_usd' || field.startsWith('project_budgets.') || /\.(cost_limit_usd|token_limit)$/.test(field);
+const budgetField = (field: string) => ['cost_limit_usd', 'soft_cost_limit_usd'].includes(field) || field.startsWith('project_budgets.') || /\.(cost_limit_usd|token_limit)$/.test(field);
 // An emptied input and a stored "no limit" are the same value.
 const normal = (value: SettingValue) => Array.isArray(value) ? [...value].sort() : value === '' ? null : value;
 const same = (a: SettingValue, b: SettingValue) => JSON.stringify(normal(a)) === JSON.stringify(normal(b));
@@ -35,7 +38,7 @@ const RouteName = ({ field }: { field: string }) => <>Model for <code className=
 const Custom = () => <span className="badge custom" title="Differs from team policy">Custom</span>;
 const Unsaved = () => <span className="badge unsaved">Unsaved</span>;
 
-type Groups = { team: string[]; workflows: [string, string[]][]; routes: string[] };
+type Groups = { team: string[]; capture: string[]; workflows: [string, string[]][]; routes: string[] };
 function group(fields: string[], budgetsOnly: boolean): Groups {
   const shown = fields.filter(field => !budgetsOnly || budgetField(field));
   const workflows = new Map<string, string[]>();
@@ -43,7 +46,7 @@ function group(fields: string[], budgetsOnly: boolean): Groups {
   // Budget first, then tokens and approval, in the order of workflowFields.
   const order = Object.keys(workflowFields);
   for (const names of workflows.values()) names.sort((a, b) => order.indexOf(leaf(a)) - order.indexOf(leaf(b)));
-  return { team: shown.filter(field => field === 'cost_limit_usd' || field.startsWith('project_budgets.')), workflows: [...workflows], routes: shown.filter(field => field.startsWith('model_routes.')) };
+  return { team: shown.filter(field => ['cost_limit_usd', 'soft_cost_limit_usd'].includes(field) || field.startsWith('project_budgets.')), capture: shown.filter(field => field === 'capture_content'), workflows: [...workflows], routes: shown.filter(field => field.startsWith('model_routes.')) };
 }
 const rows = (fields: string[]) => cardRows.map(row => fields.filter(field => row.includes(leaf(field)))).filter(row => row.length > 0);
 
@@ -78,7 +81,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
     return () => window.clearTimeout(timer);
   }, [justSaved]);
   const groups = settings && group(Object.keys(settings.fields), budgetsOnly);
-  const ordered = groups ? [...groups.team, ...groups.workflows.flatMap(([, names]) => names), ...groups.routes] : [];
+  const ordered = groups ? [...groups.team, ...groups.capture, ...groups.workflows.flatMap(([, names]) => names), ...groups.routes] : [];
   const pending = ordered.filter(name => name in draft || resets.includes(name));
   const changes = pending.length;
   const discard = () => { setDraft({}); setResets([]); setErrors({}); setError(''); };
@@ -135,7 +138,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
     || [state.value, state.policy_default].some(value => Array.isArray(value) && value.includes(provider)));
   const field = (name: string) => <SettingControl key={name} field={name} state={settings!.fields[name]} value={current(name)}
     pending={pending.includes(name)} resetting={resets.includes(name)} error={errors[name]} providers={offered(settings!.fields[name])} owners={owners}
-    choices={name.startsWith('model_routes.') ? settings!.routes : name.endsWith('.approver_role') ? settings!.approver_roles : undefined}
+    choices={kind(name) === 'capture' ? ['none', 'redacted', 'full'] : name.startsWith('model_routes.') ? settings!.routes : name.endsWith('.approver_role') ? settings!.approver_roles : undefined}
     disabled={name.endsWith('.approval_threshold_usd') && current(name.replace(/threshold_usd$/, 'required')) === false}
     onChange={next => change(name, next)} onReset={() => reset(name)}/>;
   const docked = changes > 0 || justSaved || Boolean(error);
@@ -148,6 +151,10 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
       <fieldset className="plain" disabled={busy || conflict}>
         {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">
           <div className="setting-grid">{groups.team.map(field)}</div>
+          <p className="muted">The soft limit alerts your team. The monthly budget is a hard limit: calls that would exceed it return 429. Blank team limits are unlimited.</p>
+        </SettingsGroup>}
+        {groups.capture.length > 0 && <SettingsGroup nested={false} title="Step content" note="None keeps capture off. Redacted masks configured secrets and personal data. Full stores content after request guardrails. Changes affect future steps; existing content keeps its retention deadline. Workflow overrides take precedence.">
+          <div className="setting-grid">{groups.capture.map(field)}</div>
         </SettingsGroup>}
         {groups.workflows.length > 0 && (budgetsOnly
           ? <SettingsGroup nested title="Run budgets" note="Each run of a workflow stays within these limits and within what its worker requests.">
@@ -226,7 +233,7 @@ function SettingControl({ field, state, value, pending, resetting, error, provid
     {choices.map(option => <option key={option} value={option}>{type === 'role' ? titleCase(option) : owners[option] ? `${option} · ${owners[option]}` : option}</option>)}</select></>;
   else {
     const input = <NumberInput id={id} min={0} max={type === 'tokens' ? 1000000000 : 1000000} step={type === 'tokens' ? 1 : 'any'} placeholder="No limit"
-      value={value === null || value === '' ? '' : Number(value)} required={pending && !resetting} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
+      value={value === null || value === '' ? '' : Number(value)} required={pending && !resetting && !['cost_limit_usd', 'soft_cost_limit_usd'].includes(field)} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
       onChange={onChange}/>;
     control = <><label htmlFor={id}>{name}</label>{type === 'usd' ? <div className="prefixed"><span aria-hidden="true">$</span>{input}</div> : input}</>;
   }
@@ -244,11 +251,13 @@ function ReadOnlySettings({ session, budgetsOnly }: { session: Session; budgetsO
   const fields: Record<string, SettingValue> = {};
   if (team.data) {
     fields.cost_limit_usd = team.data.cost_limit_usd;
+    fields.soft_cost_limit_usd = team.data.soft_cost_limit_usd ?? null;
+    fields.capture_content = team.data.capture_content ?? 'none';
     for (const project of team.data.projects) fields[`project_budgets.${project}`] = team.data.project_budgets?.[project] ?? null;
     for (const [alias, model] of Object.entries(team.data.model_routes || {})) fields[`model_routes.${alias}`] = model;
   }
   for (const [name, policy] of Object.entries(policies.data?.workflows || {})) {
-    const values = { cost_limit_usd: policy.costLimitUsd, token_limit: policy.tokenLimit, approval_required: policy.approvalRequired ?? true, approval_threshold_usd: policy.approvalThresholdUsd ?? 0, approver_role: policy.approverRole ?? 'approver', allowed_providers: policy.allowedProviders };
+    const values = { cost_limit_usd: policy.costLimitUsd, token_limit: policy.tokenLimit, approval_required: policy.approvalRequired ?? true, approval_threshold_usd: policy.approvalThresholdUsd ?? 0, approver_role: policy.approverRole ?? 'approver', allowed_providers: policy.allowedProviders, capture_content: policy.captureContent ?? team.data?.capture_content ?? 'none' };
     for (const [field, value] of Object.entries(values)) fields[`workflows.${name}.${field}`] = value;
   }
   const groups = group(Object.keys(fields), budgetsOnly);
@@ -262,6 +271,7 @@ function ReadOnlySettings({ session, budgetsOnly }: { session: Session; budgetsO
     <ErrorMessage message={team.error || policies.error}/>
     {!team.data && !team.error && <Loading/>}
     {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">{list(groups.team)}</SettingsGroup>}
+    {groups.capture.length > 0 && <SettingsGroup nested={false} title="Step content" note="Capture applies to future steps; workflow overrides take precedence.">{list(groups.capture)}</SettingsGroup>}
     {groups.workflows.length > 0 && (budgetsOnly
       ? <SettingsGroup nested title="Run budgets" note="Each run of a workflow stays within these limits.">
         <table className="stack numeric"><thead><tr><th>Workflow</th><th className="num">Budget per run</th><th className="num">Token limit per run</th></tr></thead>

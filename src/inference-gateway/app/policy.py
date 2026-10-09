@@ -411,6 +411,7 @@ class SandboxPolicy:
     projects: tuple[str, ...] = ()
     provider_credentials: dict[str, str] = field(default_factory=dict)
     cost_limit_usd: float | None = None
+    soft_cost_limit_usd: float | None = None
     project_budgets: dict[str, float | None] = field(default_factory=dict)
     webhook_secret_env: str = ""
     notifications: TeamNotifications | None = None
@@ -504,6 +505,12 @@ class SandboxPolicySet:
                 or cost_limit < 0
             ):
                 raise ValueError("budgets.costLimitUsd must be a finite non-negative USD amount")
+            soft_limit = budgets.get("softCostLimitUsd")
+            if soft_limit is not None and (
+                type(soft_limit) not in (int, float) or not isfinite(soft_limit) or soft_limit < 0
+                or (cost_limit is not None and soft_limit > cost_limit)
+            ):
+                raise ValueError("budgets.softCostLimitUsd must be non-negative and no greater than costLimitUsd")
             project_budgets = budgets.get("projectCostLimitsUsd", {})
             if not isinstance(project_budgets, dict) or any(
                 project not in projects or type(value) not in (int, float) or not isfinite(value) or value < 0
@@ -543,6 +550,7 @@ class SandboxPolicySet:
                 projects=projects,
                 provider_credentials=credentials,
                 cost_limit_usd=cost_limit,
+                soft_cost_limit_usd=soft_limit,
                 project_budgets=project_budgets,
                 webhook_secret_env=webhook_secret,
                 notifications=TeamNotifications.model_validate(item["notifications"])

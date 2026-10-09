@@ -12,6 +12,13 @@ from __future__ import annotations
 from typing import Any
 
 
+def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
+    if page.file.src_uri.startswith("runbooks/"):
+        # The mirror is already inside docs/, unlike the repository source.
+        return markdown.replace("](../docs/", "](../")
+    return markdown
+
+
 def on_page_context(context: dict[str, Any], page: Any, config: Any, nav: Any) -> dict[str, Any]:
     src = page.file.src_uri
     if src.startswith("runbooks/"):

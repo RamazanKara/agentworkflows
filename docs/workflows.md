@@ -104,6 +104,11 @@ redactors to the stored text; `full` stores the admitted request and guarded res
 Neither mode bypasses DLP. Each input/output field is limited to `CONTENT_MAX_BYTES`
 (default 16,384 UTF-8 bytes), after redaction.
 
+Admins can change team and workflow capture modes in **Team settings**, without a
+redeploy. Both SDKs expose `set_content_capture` / `setContentCapture` with a settings
+revision. Changes affect future steps and preserve existing content TTLs; see
+[capture settings and spend alerts](team-settings.md).
+
 Run timeline steps expose `content: {input, output, truncated: {input, output}, redaction}`.
 Input and output are text (structured values are JSON text); an unfinished/failed call can
 have a null output. A retried step shows its latest captured attempt. Content is separate
@@ -175,6 +180,14 @@ expiry, and revocation status. Creation displays the new `aw_` key once, with a 
 save it securely before leaving the page. The store retains only its SHA-256 digest and
 metadata, including creator and timestamps. Last use is written at most once per minute.
 Every create, update, and revoke produces a hash-chained audit receipt.
+
+Choose **Edit** next to an existing key to change its name, role, project or expiry.
+Expiry in the editor is UTC; blank clears it, and a past date immediately disables
+access. Revoked keys and your currently signed-in key have no edit control.
+Errors keep your draft for review. SDK equivalents are
+`gateway.update_key(key_id, name="Build bot", role="builder", project="engineering", expires_at=None)`
+and `gateway.updateKey(keyId, { name: 'Build bot', role: 'builder', project: 'engineering', expires_at: null })`.
+These edit access metadata without reissuing or exposing the secret.
 
 ```bash
 agentworkflows keys list

@@ -108,13 +108,65 @@ with complete logs, not a team-only export.
 ## Upgrade and rollback
 
 An ordinary upgrade leaves Redis selected and does not copy or delete records.
-Selecting PostgreSQL starts a separate record store: **existing Redis history,
-settings, keys and revocations are not imported**. Do not mix backend selections
-across replicas. For an existing installation, keep Redis selected until a planned
-cutover: drain active workflows, export retained runs/audit, back up Redis and
-Temporal, and recreate reviewed settings and managed keys in the new store using
-the bootstrap admin credential. Keep the old store and exports for their required
-retention period. There is no live import or dual-write mode.
+Selecting PostgreSQL starts a separate record store. Use the offline import below
+before cutover; backend selection alone does not import anything. Do not mix
+backend selections across replicas. There is no live import or dual-write mode.
+
+### Import existing Redis records
+
+1. Drain active workflows. Stop **all** gateway replicas, workers and other writers,
+   including background refresh processes. Back up Redis, Temporal and the gateway
+   database. Keep the same Redis for live accounting, sessions and captured content.
+2. Use an empty gateway PostgreSQL scope, or the partial destination from an earlier
+   attempt. Set `SANDBOX_BUDGET_REDIS_URL`, `SANDBOX_BUDGET_KEY_PREFIX` and
+   `STORAGE_POSTGRES_DSN` in the operator environment. Keep the existing
+   `AUDIT_CHAIN_STORE_*` settings: the importer reads that persisted head too,
+   including when it resides in a separate Redis or a file. DSNs are not CLI arguments.
+3. From `src/inference-gateway`, initialize SQL tables without starting a gateway,
+   then run preflight:
+
+   ```bash
+   python -c 'from app.settings import Settings; from app.postgres_storage import PostgresStorage; s = PostgresStorage(Settings.from_env()); s.open(); s.close()'
+   python -m app.redis_import --dry-run
+   ```
+
+4. With writers still stopped, import and repeat preflight:
+
+   ```bash
+   python -m app.redis_import --apply
+   python -m app.redis_import --dry-run
+   ```
+
+5. Require a final `verified` progress record and exit status zero. Inspect counts,
+   settings revisions, key revocations, representative runs and audit verification.
+   Switch **every** gateway to `STORAGE_BACKEND=postgres`, then restart gateways and
+   workers. Keep the source backup and operator audit logs for their retention period.
+
+The command emits JSON progress and counts, never credentials or run inputs. Dry-run
+performs no Redis or SQL record writes and does not run migrations. It checks the
+entire retained source, receipt hashes, team projection links, available consecutive
+process links, persisted heads and destination conflicts before import. The source
+is checked again before and after copying; a changing source fails the command.
+Natural TTL expiration can also change a long-running preflight: rerun with writers
+stopped, or rehearse against a consistent backup first. Plan operator memory for the
+retained dataset, which is read into memory for preflight.
+
+Each record is committed independently; a run and its ordered timeline commit in
+one transaction. If interrupted, rerun the same command. Identical existing records
+are skipped, and conflicting records stop import without overwriting them. A SQL
+advisory lock serializes importers for the same scope. Do not start destination
+gateways until verification finishes; the import lock does not stop application
+writers. Original absolute run deadlines and audit storage timestamps are preserved,
+so import does not renew retention. Managed keys retain their digests, roles, project,
+expiry, revocation and last-used metadata. Settings keep their original revision.
+
+Audit receipt JSON and projection hashes are preserved, then read back and verified
+in PostgreSQL. Redis retains team projections, not a complete process-wide log:
+trimmed prefixes and interleaved events missing from those projections remain
+verification boundaries. Import cannot recover those events, prove missing tails,
+or recreate expired history. Independently verify complete operator logs with
+`scripts/audit-verify.py`. Redis has no terminal-result snapshots to import; these
+are populated by the gateway from Temporal after cutover while history is available.
 
 Migrations in `app/sql/NNN.up.sql` and `.down.sql` are versioned in
 `aw_schema_version`. A database-wide advisory lock serializes startup migrations;
@@ -151,7 +203,10 @@ python -m pytest -q src/inference-gateway/tests/test_postgres_integration.py
 
 Each test creates a unique schema and drops only that schema afterwards. These
 tests exercise up/down/up migrations, schema version rejection, concurrent settings
-updates, key revocation, scoped paging, retention cascades and audit hash round trips.
+updates, key revocation, scoped paging, retention cascades, audit hash round trips,
+and dry-run, interrupted import, resume, repeat import and destination conflicts.
+`tests/test_redis_import.py` covers source verification and import orchestration with
+fakes; it does not substitute for the real SQL test.
 On Windows use `$env:TEST_POSTGRES_DSN` and your Windows Python environment. The
 Linux/WSL repository gates remain `make lint`, `make test-gateway`, and
 `make test-scripts`; WSL is not required by the fake or SQL tests themselves.

@@ -13,6 +13,38 @@ from tests.test_teams import auth, start, team_gateway  # noqa: F401
 from tests.test_workflows import gateway, set_workflow_policy  # noqa: F401
 
 
+def test_capture_settings_apply_to_future_steps_and_reset_to_inheritance(team_gateway):
+    client, app = team_gateway
+    headers = {**auth("admin"), "If-Match": "0"}
+    patch = client.patch("/v1/team/settings", headers=headers, json={"fields": {"capture_content": "redacted"}})
+    assert patch.status_code == 200
+    field = "workflows.ResearchWorkflow.capture_content"
+    assert patch.json()["fields"][field]["value"] == "redacted"
+    started = start(client).json()
+    run_id = started["run_id"]
+    assert client.put(
+        f"/v1/workflow-runs/{run_id}", headers={**auth("worker"), "X-Workflow-ID": started["workflow_id"]},
+        json={"workflow": "ResearchWorkflow"},
+    ).status_code == 200
+    base = f"{app.state.settings.sandbox_budget_key_prefix}:workflow:team:{run_id}"
+    for step, mode in (("first", "redacted"), ("second", "none")):
+        if mode == "none":
+            assert client.patch("/v1/team/settings", headers={**auth("admin"), "If-Match": "1"},
+                                json={"fields": {field: "none"}}).status_code == 200
+        response = client.post("/v1/chat/completions", headers={
+            **auth("worker"), "X-Workflow-Run-ID": run_id, "X-Workflow-Step-ID": step,
+        }, json={"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}]})
+        assert response.status_code == 200, response.text
+        raw = app.state.budget_tracker.client.get(content_key(base, step))
+        assert (raw is not None) == (mode == "redacted")
+    assert app.state.budget_tracker.client.get(content_key(base, "first"))
+    reset = client.delete("/v1/team/settings/" + field, headers={**auth("admin"), "If-Match": "2"})
+    assert reset.json()["fields"][field]["value"] == "redacted"
+    assert client.get("/v1/workflow-policies", headers=auth("viewer")).json()["workflows"]["ResearchWorkflow"][
+        "captureContent"
+    ] == "redacted"
+
+
 @pytest.mark.parametrize("mode", ["none", "redacted", "full"])
 @pytest.mark.parametrize("kind", ["model", "tool"])
 def test_step_capture_modes_are_separate_from_receipts(gateway, monkeypatch, caplog, mode, kind):

@@ -2,6 +2,8 @@
 
 from calendar import monthrange
 from datetime import UTC, datetime
+from math import ceil
+from time import time
 from typing import Any
 
 from fastapi import Request
@@ -11,13 +13,35 @@ from app.settings import AdmissionPolicyError
 from app.team_settings import effective_team_settings
 from app.workflow_budget import model_charge, nanodollars, redis_call
 
-RESERVE_COST = """
+ALERT = """
+local function alert(level, limit, spent, requested, now)
+  if limit >= 0 and spent + requested >= limit then
+    redis.call('HSETNX', KEYS[1], 'alert.' .. level, cjson.encode({
+      level=level, limit_usd=limit/1000000000, reserved_and_spent_usd=spent/1000000000,
+      requested_usd=requested/1000000000, created_at=tonumber(now)}))
+  end
+end
+"""
+
+RESERVE_COST = ALERT + """
 local current = tonumber(redis.call('HGET', KEYS[1], 'cost') or '0')
-if tonumber(ARGV[2]) >= 0 and current + tonumber(ARGV[1]) > tonumber(ARGV[2]) then return 0 end
+if tonumber(ARGV[2]) >= 0 and current + tonumber(ARGV[1]) > tonumber(ARGV[2]) then
+  alert('hard', tonumber(ARGV[2]), current, tonumber(ARGV[1]), ARGV[6])
+  return 0
+end
 local project = tonumber(redis.call('HGET', KEYS[1], ARGV[3]) or '0')
 if tonumber(ARGV[4]) >= 0 and project + tonumber(ARGV[1]) > tonumber(ARGV[4]) then return -1 end
 redis.call('HINCRBY', KEYS[1], 'cost', ARGV[1])
 redis.call('HINCRBY', KEYS[1], ARGV[3], ARGV[1])
+alert('soft', tonumber(ARGV[5]), current + tonumber(ARGV[1]), 0, ARGV[6])
+alert('hard', tonumber(ARGV[2]), current + tonumber(ARGV[1]), 0, ARGV[6])
+return 1
+"""
+
+CHECK_ALERTS = ALERT + """
+local current = tonumber(redis.call('HGET', KEYS[1], 'cost') or '0')
+alert('soft', tonumber(ARGV[1]), current, 0, ARGV[3])
+alert('hard', tonumber(ARGV[2]), current, 0, ARGV[3])
 return 1
 """
 
@@ -28,10 +52,16 @@ return 1
 """
 
 
-def cost_key(request: Request) -> tuple[str, int]:
-    settings = request.app.state.settings
+def month_window() -> tuple[int, int, int]:
     now = datetime.now(UTC)
     start = int(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timestamp())
+    seconds = monthrange(now.year, now.month)[1] * 86400
+    return start, seconds, max(1, ceil(start + seconds - now.timestamp()))
+
+
+def cost_key(request: Request) -> tuple[str, int]:
+    settings = request.app.state.settings
+    start, _, _ = month_window()
     return f"{settings.sandbox_budget_key_prefix}:{request.state.sandbox_id}:cost:month:{start}", start
 
 
@@ -39,7 +69,7 @@ async def reserve_team_cost(request: Request, payload: dict[str, Any]) -> None:
     from app.governance import effective_settings, route_settings
 
     team = (await effective_team_settings(request)).team
-    if not team or (not team.projects and team.cost_limit_usd is None):
+    if not team or (not team.projects and team.cost_limit_usd is None and team.soft_cost_limit_usd is None):
         return
     routes = getattr(request.state, "cost_routes", [])
     settings = effective_settings(request, request.app.state.sandbox_policy_set, request.app.state.settings)
@@ -66,6 +96,7 @@ async def reserve_team_cost(request: Request, payload: dict[str, Any]) -> None:
         request, "eval", RESERVE_COST, 1, key, amount,
         nanodollars(team.cost_limit_usd) if team.cost_limit_usd is not None else -1,
         f"project.{project}.cost", nanodollars(project_limit) if project_limit is not None else -1,
+        nanodollars(team.soft_cost_limit_usd) if team.soft_cost_limit_usd is not None else -1, time(),
     )
     if result != 1:
         dimension = "project" if result == -1 else "team"
@@ -115,7 +146,7 @@ async def settle_team_cost(request: Request, response: dict[str, Any] | None) ->
 
 async def team_cost_report(request: Request) -> dict[str, Any]:
     team = (await effective_team_settings(request)).team
-    if not team or (not team.projects and team.cost_limit_usd is None):
+    if not team or (not team.projects and team.cost_limit_usd is None and team.soft_cost_limit_usd is None):
         return {}
     key, start = cost_key(request)
     raw = await redis_call(request, "hgetall", key)
@@ -138,6 +169,7 @@ async def team_cost_report(request: Request) -> dict[str, Any]:
                                      datetime.fromtimestamp(start, UTC).month)[1] * 86400,
         "period": "month",
         "cost_limit_usd": team.cost_limit_usd,
+        "soft_cost_limit_usd": team.soft_cost_limit_usd,
         "project_budgets": {
             name: {"cost_limit_usd": team.project_budgets.get(name),
                    "reserved_and_spent_usd": int(raw.get(f"project.{name}.cost", 0)) / 1_000_000_000}

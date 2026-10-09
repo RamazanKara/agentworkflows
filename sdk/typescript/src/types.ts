@@ -55,6 +55,28 @@ export interface TeamSettings {
   approver_roles: ('admin' | 'approver')[];
 }
 
+export type CaptureMode = 'none' | 'redacted' | 'full';
+export interface SpendAlert {
+  id: string;
+  level: 'soft' | 'hard';
+  limit_usd: number;
+  reserved_and_spent_usd: number;
+  requested_usd: number;
+  created_at: number;
+  webhook_status: 'disabled' | 'pending' | 'delivered' | 'failed';
+  attempts: number;
+}
+export interface TeamSpend {
+  team_id: string;
+  window_start: number;
+  window_end: number;
+  soft_limit_usd: number | null;
+  hard_limit_usd: number | null;
+  reserved_and_spent_usd: number;
+  status: 'ok' | 'soft_limit' | 'hard_limit';
+  alerts: SpendAlert[];
+}
+
 export interface AuditRange {
   from?: number;
   to?: number;

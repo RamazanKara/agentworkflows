@@ -131,7 +131,7 @@ def test_project_bound_admin_cannot_edit_team_settings(settings_gateway):
 
 
 @pytest.mark.parametrize(("field", "value"), [
-    ("cost_limit_usd", -1), ("cost_limit_usd", True), ("cost_limit_usd", "12"), ("cost_limit_usd", None),
+    ("cost_limit_usd", -1), ("cost_limit_usd", True), ("cost_limit_usd", "12"),
     ("project_budgets.unknown", 1), ("project_budgets.default", -1),
     (WORKFLOW + "token_limit", 1.5), (WORKFLOW + "token_limit", True), (WORKFLOW + "token_limit", -1),
     (WORKFLOW + "cost_limit_usd", -1), (WORKFLOW + "approval_threshold_usd", -1),
@@ -188,7 +188,8 @@ def test_monthly_budget_enforcement_changes_without_restart(settings_gateway, fi
     assert chat(client).status_code == 200
     assert update(client, {field: 0}).status_code == 200
     denied = chat(client)
-    assert denied.status_code == (403 if field == "cost_limit_usd" else 400)
+    assert denied.status_code == 429
+    assert int(denied.headers["retry-after"]) > 0
     expected = "team" if field == "cost_limit_usd" else "project"
     assert denied.json()["detail"]["reason"] == f"{expected}_cost_budget_exceeded"
     assert app.state.runtime_client.calls == 1

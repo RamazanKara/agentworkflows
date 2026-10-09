@@ -4,5 +4,5 @@ export { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './e
 export type {
   AuditEntry, AuditFilters, AuditPage, AuditPosition, AuditRange, AuditVerification, ChatCompletion,
   CreatedKey, KeyList, KeyOptions, KeyUpdate, ManagedKey, Receipt, Role, RunBudget, RunFilters, RunPage, StartedRun,
-  TeamSetting, TeamSettings, TeamSettingValue, WorkflowRun,
+  CaptureMode, SpendAlert, TeamSetting, TeamSettings, TeamSettingValue, TeamSpend, WorkflowRun,
 } from './types';

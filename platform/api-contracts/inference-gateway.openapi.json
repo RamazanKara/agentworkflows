@@ -505,6 +505,103 @@
         "title": "CreateBatchRequest",
         "type": "object"
       },
+      "CreatedKey": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "builder",
+              "approver",
+              "viewer"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "team",
+          "name",
+          "role",
+          "project",
+          "created_by",
+          "created_at",
+          "expires_at",
+          "last_used_at",
+          "revoked_at",
+          "key"
+        ],
+        "title": "CreatedKey",
+        "type": "object"
+      },
       "EmbeddingsRequest": {
         "additionalProperties": true,
         "description": "Request body for an OpenAI-compatible embeddings call.\n\nRouting embeddings through the gateway (rather than calling a separate embedding\nservice directly) subjects them to the same auth, model allowlist, budget, and\naudit controls as chat completions. ``extra=\"allow\"`` forwards provider params\nsuch as ``dimensions`` or ``encoding_format`` unchanged.",
@@ -616,6 +713,22 @@
         "title": "KeyCreate",
         "type": "object"
       },
+      "KeyList": {
+        "properties": {
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/ManagedKey"
+            },
+            "title": "Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "keys"
+        ],
+        "title": "KeyList",
+        "type": "object"
+      },
       "KeyUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -675,6 +788,98 @@
           }
         },
         "title": "KeyUpdate",
+        "type": "object"
+      },
+      "ManagedKey": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "builder",
+              "approver",
+              "viewer"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "team": {
+            "title": "Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "team",
+          "name",
+          "role",
+          "project",
+          "created_by",
+          "created_at",
+          "expires_at",
+          "last_used_at",
+          "revoked_at"
+        ],
+        "title": "ManagedKey",
         "type": "object"
       },
       "Message": {
@@ -1294,6 +1499,64 @@
         "title": "SessionLogin",
         "type": "object"
       },
+      "SpendAlert": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "soft",
+              "hard"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "limit_usd": {
+            "title": "Limit Usd",
+            "type": "number"
+          },
+          "requested_usd": {
+            "title": "Requested Usd",
+            "type": "number"
+          },
+          "reserved_and_spent_usd": {
+            "title": "Reserved And Spent Usd",
+            "type": "number"
+          },
+          "webhook_status": {
+            "enum": [
+              "disabled",
+              "pending",
+              "delivered",
+              "failed"
+            ],
+            "title": "Webhook Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "level",
+          "limit_usd",
+          "reserved_and_spent_usd",
+          "requested_usd",
+          "created_at",
+          "webhook_status",
+          "attempts"
+        ],
+        "title": "SpendAlert",
+        "type": "object"
+      },
       "StartRun": {
         "additionalProperties": false,
         "properties": {
@@ -1344,6 +1607,76 @@
           "fields"
         ],
         "title": "TeamSettingsPatch",
+        "type": "object"
+      },
+      "TeamSpend": {
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/SpendAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "hard_limit_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Limit Usd"
+          },
+          "reserved_and_spent_usd": {
+            "title": "Reserved And Spent Usd",
+            "type": "number"
+          },
+          "soft_limit_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soft Limit Usd"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "soft_limit",
+              "hard_limit"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          },
+          "window_end": {
+            "title": "Window End",
+            "type": "integer"
+          },
+          "window_start": {
+            "title": "Window Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "team_id",
+          "window_start",
+          "window_end",
+          "soft_limit_usd",
+          "hard_limit_usd",
+          "reserved_and_spent_usd",
+          "status",
+          "alerts"
+        ],
+        "title": "TeamSpend",
         "type": "object"
       },
       "ToolCall": {
@@ -3356,9 +3689,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Keys V1 Team Keys Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/KeyList"
                 }
               }
             },
@@ -3398,9 +3729,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Key V1 Team Keys Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CreatedKey"
                 }
               }
             },
@@ -3454,9 +3783,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Revoke Key V1 Team Keys  Key Id  Delete",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ManagedKey"
                 }
               }
             },
@@ -3518,9 +3845,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Update Key V1 Team Keys  Key Id  Patch",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ManagedKey"
                 }
               }
             },
@@ -3728,6 +4053,41 @@
           }
         ],
         "summary": "Reset one override to its YAML policy default",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/spend": {
+      "get": {
+        "operationId": "get_spend_v1_team_spend_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamSpend"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "An unrestricted team credential is required"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Read monthly limits, reservations and spend alerts",
         "tags": [
           "teams"
         ]

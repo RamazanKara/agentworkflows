@@ -71,9 +71,11 @@ def authorize_team_request(request: Request) -> None:
 def register_team_routes(app: FastAPI) -> None:
     from app.audit_view import register_audit_routes
     from app.team_settings import effective_team_settings, register_team_settings_routes
+    from app.team_spend import register_spend_routes
 
     register_audit_routes(app)
     register_team_settings_routes(app)
+    register_spend_routes(app)
 
     @app.get("/v1/team", tags=["teams"], summary="Discover your team, role, projects, and provider configuration")
     async def team_info(request: Request) -> dict[str, Any]:
@@ -91,6 +93,8 @@ def register_team_routes(app: FastAPI) -> None:
             "projects": projects,
             "providers": sorted(team.provider_credentials) if team else [],
             "cost_limit_usd": team.cost_limit_usd if team else None,
+            "soft_cost_limit_usd": team.soft_cost_limit_usd if team else None,
+            "capture_content": team.capture_content if team else "none",
             "project_budgets": {name: team.project_budgets.get(name) for name in projects} if team else {},
             "model_routes": {alias: route.model_id for route in settings.routing.routes for alias in route.aliases},
             "notifications": {

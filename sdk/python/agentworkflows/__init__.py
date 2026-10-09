@@ -40,6 +40,7 @@ from agentworkflows.types import (
     AuditFilters,
     AuditPage,
     AuditVerification,
+    CaptureMode,
     CreatedKey,
     KeyList,
     KeyOptions,
@@ -49,6 +50,7 @@ from agentworkflows.types import (
     RunPage,
     TeamSettings,
     TeamSettingValue,
+    TeamSpend,
 )
 
 with _workflow.unsafe.imports_passed_through():
@@ -538,6 +540,25 @@ class GatewayClient:
     def team_settings(self) -> TeamSettings:
         """Read effective settings, policy defaults and the revision (unrestricted admin only)."""
         return self._request("GET", "/v1/team/settings").json()
+
+    def team_spend(self) -> TeamSpend:
+        """Read monthly spend, limits and alerts (an unrestricted team credential is required)."""
+        return self._request("GET", "/v1/team/spend").json()
+
+    def set_spend_limits(
+        self, *, soft_limit_usd: float | None, hard_limit_usd: float | None, revision: int | str
+    ) -> TeamSettings:
+        """Set monthly limits atomically; None disables a limit, zero is a zero-dollar limit."""
+        return self.update_team_settings(
+            {"soft_cost_limit_usd": soft_limit_usd, "cost_limit_usd": hard_limit_usd}, revision=revision
+        )
+
+    def set_content_capture(
+        self, mode: CaptureMode, *, revision: int | str, workflow: str | None = None
+    ) -> TeamSettings:
+        """Set capture for future steps, for the team default or a named workflow."""
+        field = f"workflows.{workflow}.capture_content" if workflow is not None else "capture_content"
+        return self.update_team_settings({field: mode}, revision=revision)
 
     def update_team_settings(
         self, fields: Mapping[str, TeamSettingValue], *, revision: int | str

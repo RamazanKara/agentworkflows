@@ -118,6 +118,46 @@ def test_real_run_paging_snapshots_and_retention_cascade(postgres):
         assert connection.execute("SELECT count(*) FROM aw_start_intents").fetchone() == (2,)
 
 
+def test_real_redis_import_dry_run_atomic_resume_and_conflict(postgres, monkeypatch):
+    from app import redis_import
+
+    from tests.test_redis_import import source_fixture
+
+    client, source, _, head = source_fixture(postgres.settings)
+    progress = []
+    result = redis_import.import_redis(client, postgres, head=head, progress=progress.append)
+    assert result["dry_run"] and result["inserted"] == 8
+    assert postgres.get_settings("team") is None
+    original = redis_import.import_record
+
+    def interrupt(connection, scope, kind, identity, data, apply):
+        result = original(connection, scope, kind, identity, data, apply)
+        if apply and kind == "run":
+            raise OSError("crash before run transaction committed")
+        return result
+
+    monkeypatch.setattr(redis_import, "import_record", interrupt)
+    with pytest.raises(OSError):
+        redis_import.import_redis(client, postgres, apply=True, head=head, progress=progress.append)
+    assert postgres.get_run("team", "run") is None
+    assert postgres.run_steps("team", "run") == []
+    monkeypatch.setattr(redis_import, "import_record", original)
+    redis_import.import_redis(client, postgres, apply=True, head=head, progress=progress.append)
+    repeated = redis_import.import_redis(client, postgres, apply=True, head=head, progress=progress.append)
+    assert repeated["existing"] == 8 and repeated["inserted"] == 0
+    assert postgres.get_settings("team")["revision"] == 7
+    assert len(postgres.run_steps("team", "run")) == 1
+    assert postgres.lookup_key("a" * 64, time())["revoked_at"] == 4
+    entries = list(postgres.audit_entries("team", None, True))
+    assert len(entries) == 3 and all(check_entry(row, entries[i - 1] if i else None) is None
+                                   for i, row in enumerate(entries))
+    assert postgres.load() == head
+    source[postgres.scope + ":team-settings:team"] = '{"revision":8,"overrides":{}}'
+    with pytest.raises(ValueError, match="Destination conflict"):
+        redis_import.import_redis(client, postgres, apply=True, head=head, progress=progress.append)
+    assert postgres.get_settings("team")["revision"] == 7
+
+
 def test_real_audit_hashes_restart_heads_paging_and_retention_boundary(postgres):
     previous = view_previous = AUDIT_GENESIS
     entries = []

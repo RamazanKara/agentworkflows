@@ -3,8 +3,8 @@ import { setTimeout } from 'node:timers/promises';
 import { GatewayError, GatewayRetryAfterError, GatewayTransportError } from './errors';
 import { requestJson } from './http';
 import type {
-  AuditFilters, AuditPage, AuditRange, AuditVerification, CreatedKey, KeyList, KeyOptions, KeyUpdate,
-  ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, WorkflowRun,
+  AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
+  ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, WorkflowRun,
 } from './types';
 
 export interface ClientOptions {
@@ -61,6 +61,22 @@ export class GatewayClient {
   /** Read effective values, policy defaults and the current revision (unrestricted admin only). */
   teamSettings(): Promise<TeamSettings> {
     return this.request('GET', '/v1/team/settings');
+  }
+
+  /** Monthly limits and alerts; requires an unrestricted team credential. */
+  teamSpend(): Promise<TeamSpend> {
+    return this.request('GET', '/v1/team/spend');
+  }
+
+  /** Set both monthly limits atomically. null disables a limit; zero is a zero-dollar limit. */
+  setSpendLimits(limits: { softLimitUsd: number | null; hardLimitUsd: number | null }, options: { revision: number | string }): Promise<TeamSettings> {
+    return this.updateTeamSettings({ soft_cost_limit_usd: limits.softLimitUsd, cost_limit_usd: limits.hardLimitUsd }, options);
+  }
+
+  /** Change capture for future steps, for the team default or a named workflow. */
+  setContentCapture(mode: CaptureMode, options: { revision: number | string; workflow?: string }): Promise<TeamSettings> {
+    const field = options.workflow === undefined ? 'capture_content' : `workflows.${options.workflow}.capture_content`;
+    return this.updateTeamSettings({ [field]: mode }, options);
   }
 
   /** Atomically override fields with If-Match; stale revisions raise 409 and invalid fields raise 422. */

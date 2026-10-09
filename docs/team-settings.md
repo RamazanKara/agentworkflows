@@ -1,6 +1,6 @@
 # Team settings
 
-Team admins can change budgets, approval rules, allowed providers and model alias
+Team admins can change budgets, content capture, approval rules, allowed providers and model alias
 selections in **Team settings** in the console. **Providers & budgets** and **Costs**
 include the budget editor. Other roles see effective values without editing
 controls. Provider API keys stay in Kubernetes Secrets or gateway environment
@@ -33,6 +33,8 @@ default** removes one override and uses the current loaded YAML default.
 | API field | YAML default | Meaning |
 | --- | --- | --- |
 | `cost_limit_usd` | `budgets.costLimitUsd` | Team budget in USD per UTC calendar month |
+| `soft_cost_limit_usd` | `budgets.softCostLimitUsd` (unset) | Advisory monthly threshold; never blocks calls |
+| `capture_content` | `captureContent` (default `none`) | Default step capture: `none`, `redacted`, or `full` |
 | `project_budgets.<project>` | `budgets.projectCostLimitsUsd.<project>` | Project budget in the same month; project must already exist |
 | `workflows.<name>.token_limit` | `workflows.<name>.tokenLimit` | Token ceiling for each run |
 | `workflows.<name>.cost_limit_usd` | `workflows.<name>.costLimitUsd` | USD ceiling for each run |
@@ -40,12 +42,78 @@ default** removes one override and uses the current loaded YAML default.
 | `workflows.<name>.approval_threshold_usd` | `workflows.<name>.approvalThresholdUsd` (default `0`) | Require review when run spend at the gate is at least this amount |
 | `workflows.<name>.approver_role` | `workflows.<name>.approverRole` (default `approver`) | `approver` or `admin`; admins can always review |
 | `workflows.<name>.allowed_providers` | `workflows.<name>.allowedProviders` | Provider names eligible for this workflow |
+| `workflows.<name>.capture_content` | Workflow `captureContent`, otherwise team default | Override capture for this workflow's future steps |
 | `model_routes.<alias>` | Alias assignment in `model-routing.yaml` | Canonical ID of an existing route |
 
 Dollar overrides must be finite numbers between 0 and 1,000,000; token overrides
 must be integers between 0 and 1,000,000,000. Zero is a spending/token ceiling,
 not unlimited. An absent team/project YAML limit means unlimited; reset to restore
-that default. Booleans and strings are not accepted as numbers.
+that default. `null` explicitly disables either team soft or hard limit; the soft
+limit cannot exceed a configured hard limit. Booleans and strings are not accepted
+as numbers.
+
+Capture changes affect future steps only. Existing captured text retains its TTL;
+changing to `none` does not delete it, and enabling capture cannot recover earlier
+content. An explicit workflow setting (including `none`) overrides the team value.
+Resetting a workflow override restores its YAML value, or the current team default
+when YAML has no workflow value. Redaction, byte limits, access checks and retention
+continue to apply; see [step content](workflows.md#workflow-forms-and-step-content).
+
+## Monthly spend limits and alerts
+
+In **Costs** or **Team settings**, set the team monthly soft limit and monthly budget
+(hard limit). Both include conservative reservations across providers and tools.
+Soft limits allow work to continue. A reservation that would exceed the hard team
+or project budget returns **429**, with `detail.reason` equal to
+`team_cost_budget_exceeded` or `project_cost_budget_exceeded`, before calling the
+provider. `Retry-After` is the number of seconds to the next UTC calendar month.
+An admin can raise the limit sooner; editing a limit never resets spend. Actual
+reported usage can exceed an estimate and block subsequent calls; these are
+configured-price controls, not provider invoice guarantees.
+
+`GET /v1/team/spend` returns `team_id`, `window_start`, `window_end`,
+`soft_limit_usd`, `hard_limit_usd`, `reserved_and_spent_usd`, `status`
+(`ok`, `soft_limit`, `hard_limit`), and `alerts`. All unrestricted team roles can
+read it; project-bound credentials receive 403 and should use `/v1/usage`.
+Settings writes retain the admin and revision requirements below.
+
+An alert is retained once per level per UTC month. Each has `id`, `level`,
+`limit_usd`, `reserved_and_spent_usd`, `requested_usd`, `created_at`,
+`webhook_status` (`disabled`, `pending`, `delivered`, `failed`) and `attempts`.
+Reservations can trigger alerts even when settlement later reduces the charge.
+Hard-limit refusal records the rejected reservation separately as `requested_usd`.
+The **Costs → Spend alerts** panel remains available without email or a webhook;
+Refresh loads current status. Historical alerts for the month remain visible after
+limits change, alongside current status. New months use new counters and alerts.
+
+For outgoing delivery, reuse the team's reviewed `notifications.webhookEnv` and
+`notifications.consoleUrl` configuration. The gateway checks every 30 seconds,
+independently of Temporal, including after a limit is lowered. No email is sent for
+spend alerts. Webhooks receive `event: team_spend_soft_limit` or
+`team_spend_hard_limit`, team identity, the alert fields and a console link.
+The `Idempotency-Key` header equals the alert ID. Delivery is at least once:
+receivers must deduplicate it. Redis stores attempts and retry times across replicas
+and restarts; up to five attempts use exponential backoff starting at 30 seconds.
+Retries cover the current month. After five failures the console reports failure;
+operators should inspect destination configuration. Webhook failures never disable
+budget enforcement. Preserve Redis persistence and backups during PostgreSQL cutover.
+
+```python
+settings = gateway.team_settings()
+settings = gateway.set_spend_limits(soft_limit_usd=80, hard_limit_usd=100, revision=settings["revision"])
+print(gateway.team_spend()["alerts"])
+gateway.set_content_capture("redacted", revision=settings["revision"], workflow="ResearchWorkflow")
+```
+
+```typescript
+let settings = await gateway.teamSettings();
+settings = await gateway.setSpendLimits({ softLimitUsd: 80, hardLimitUsd: 100 }, { revision: settings.revision });
+console.log((await gateway.teamSpend()).alerts);
+await gateway.setContentCapture('redacted', { revision: settings.revision, workflow: 'ResearchWorkflow' });
+```
+
+Use `update_team_settings` / `updateTeamSettings` to combine other fields in the
+same atomic change; `reset_team_setting` / `resetTeamSetting` restores policy.
 
 Team and project reservations are checked atomically against the same monthly
 counter across providers and tools. Editing a limit does not clear spend. Token

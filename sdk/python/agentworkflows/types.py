@@ -4,6 +4,29 @@ from typing import Any, Literal, NotRequired, TypedDict
 
 Role = Literal["admin", "builder", "approver", "viewer"]
 TeamSettingValue = str | int | float | bool | list[str] | None
+CaptureMode = Literal["none", "redacted", "full"]
+
+
+class SpendAlert(TypedDict):
+    id: str
+    level: Literal["soft", "hard"]
+    limit_usd: float
+    reserved_and_spent_usd: float
+    requested_usd: float
+    created_at: float
+    webhook_status: Literal["disabled", "pending", "delivered", "failed"]
+    attempts: int
+
+
+class TeamSpend(TypedDict):
+    team_id: str
+    window_start: int
+    window_end: int
+    soft_limit_usd: float | None
+    hard_limit_usd: float | None
+    reserved_and_spent_usd: float
+    status: Literal["ok", "soft_limit", "hard_limit"]
+    alerts: list[SpendAlert]
 
 
 class KeyOptions(TypedDict, total=False):

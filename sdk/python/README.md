@@ -72,6 +72,8 @@ and the gateway request ID when available. The API key is read from the environm
 | Responses API | `create_response`, `get_response`, `delete_response`, `response_input_items` |
 | Agent-action receipts | `record_receipt` |
 | Accounting and health | `models`, `usage`, `sandbox_budget`, `ready` |
+| Team spend and capture | `team_spend`, `set_spend_limits`, `set_content_capture` (revision checked settings writes) |
+| Managed-key access | `list_keys`, `create_key`, `update_key`, `revoke_key` |
 
 ## Behavior worth knowing
 

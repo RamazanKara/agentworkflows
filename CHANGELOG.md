@@ -2,6 +2,17 @@
 
 ## v0.6.0 - Unreleased
 
+- Add an offline Redis-to-PostgreSQL import command with read-only dry-run,
+  progress, conflict refusal, atomic run/timeline copies and resumable idempotent
+  inserts. Preserve retention deadlines, settings revisions, key revocations and
+  original audit hashes; verify source and imported chains before cutover.
+- Add monthly team soft spend limits and durable in-console/webhook alerts using
+  existing Redis accounting. Hard team/project denials return 429 and Retry-After
+  until the next UTC month. Add a typed spend API and Python/TypeScript SDK methods.
+- Complete key access editing in Members & keys, and expose team/workflow content
+  capture controls through revision-checked settings, the console and both SDKs.
+- Fix PostgreSQL upgrade links when runbooks are mirrored into the strict docs site.
+
 - Add an opt-in PostgreSQL gateway store for run metadata, receipts and terminal
   snapshots, audit events, team settings and managed-key metadata, with migrations,
   retention and readiness checks. Redis remains required for live budgets, sessions,

@@ -113,6 +113,9 @@ See the [template gallery](docs/templates.md) and [decision guide](docs/decision
 - Page run history and approvals with stable cursors; export retained run details as
   JSON Lines using either SDK or the CLI. Existing offset clients remain compatible.
 - Production Helm controls for TLS ingress, HA, NetworkPolicies and external stores.
+- Offline, resumable Redis-to-PostgreSQL import with audit verification; monthly
+  soft/hard spend limits and webhook/in-console alerts; existing-key access editing
+  and runtime step-content capture settings in the console and SDKs.
 
 The v0.6.x work adds an optional [PostgreSQL gateway store](docs/postgresql-storage.md)
 for run history, audit events and heads, settings and API-key metadata. Redis remains

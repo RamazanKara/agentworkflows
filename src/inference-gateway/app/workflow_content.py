@@ -9,6 +9,7 @@ from fastapi import HTTPException, Request
 
 from app.policy import SandboxPolicy, WorkflowPolicy
 from app.settings import Settings
+from app.team_settings import effective_team_settings
 from app.workflow_budget import redis_call, run_key
 
 
@@ -25,7 +26,7 @@ def content_key(base: str, step_id: str) -> str:
 async def capture_input(request: Request, settings: Settings, value: Any) -> None:
     if not getattr(request.state, "workflow_run_id", None):
         return
-    team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    team = (await effective_team_settings(request)).team
     mode = capture_mode(team, getattr(request.state, "workflow_policy", None))
     if mode == "none":
         return

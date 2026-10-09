@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type Usage } from './api';
+import { date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
 import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 import { SettingsPanel } from './settings';
 
@@ -89,6 +89,7 @@ export function Costs({ session }: { session: Session }) {
     {!result.data && !result.error && <Loading/>}
     {spend && <>
       <SpendTiles usage={result.data} budget={budget.data}/>
+      {!spend.project && <SpendAlerts session={session} revision={revision}/>}
       {spend.project && <p className="callout">This sign-in is limited to one project. Team-wide spend is hidden; the tables cover your project only.</p>}
       {Object.keys(spend.providers).length || Object.keys(spend.workflows || {}).length ? <>
         <CostTable title="By provider" rows={spend.providers}/>
@@ -98,6 +99,23 @@ export function Costs({ session }: { session: Session }) {
     </>}
     <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
   </>;
+}
+
+function SpendAlerts({ session, revision }: { session: Session; revision: number }) {
+  const result = useData<TeamSpend>(session.csrfToken, '/v1/team/spend', revision);
+  return <section className="panel" aria-labelledby="spend-alerts"><h2 id="spend-alerts">Spend alerts</h2>
+    <ErrorMessage message={result.error}/>
+    {result.data && <>
+      <p role="status">{result.data.status === 'hard_limit' ? 'Hard limit reached. Further paid calls return 429 until the limit is raised or the month resets.'
+        : result.data.status === 'soft_limit' ? 'Soft limit reached. Calls continue within the hard limit.' : 'Spend is within your configured limits.'}</p>
+      <p className="muted">Soft limit: {result.data.soft_limit_usd === null ? 'None' : money(result.data.soft_limit_usd)}. Hard limit: {result.data.hard_limit_usd === null ? 'None' : money(result.data.hard_limit_usd)}. Resets {new Date(result.data.window_end * 1000).toLocaleString(undefined, { timeZone: 'UTC' })} (UTC).</p>
+      {result.data.alerts.length ? <ul>{result.data.alerts.map(alert => <li key={alert.id}>
+        <strong>{alert.level === 'hard' ? 'Hard limit reached or a call was blocked' : 'Soft limit reached'}</strong> · {money(alert.limit_usd)} · {date(alert.created_at)}.
+        {' '}Webhook: {alert.webhook_status === 'disabled' ? 'not configured' : alert.webhook_status}{alert.webhook_status === 'failed' && ' after five attempts; ask your operator to check the destination'}.
+      </li>)}</ul> : <p>No spend alerts this month.</p>}
+      <p className="muted">Alerts include reservations and stay visible for this month even if usage is later settled down. No email setup is needed.</p>
+    </>}
+  </section>;
 }
 
 export function Providers({ session }: { session: Session }) {

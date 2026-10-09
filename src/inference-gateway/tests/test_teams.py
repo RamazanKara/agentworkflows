@@ -13,8 +13,9 @@ from app.key_records import KeyRecordSet
 from app.main import create_app
 from app.policy import ModelRoute, ModelRoutingPolicy, SandboxPolicy, SandboxPolicySet, WorkflowPolicy
 from app.runtime_client import RuntimeClient
-from app.team_budget import RESERVE_COST, SETTLE_COST
+from app.team_budget import CHECK_ALERTS, RESERVE_COST, SETTLE_COST
 from app.team_settings import CHANGE as CHANGE_SETTINGS
+from app.workflow_notifications import CLAIM, RELEASE
 from app.workflow_operations import RUN_PAGE
 from fastapi.testclient import TestClient
 from temporalio.exceptions import WorkflowAlreadyStartedError
@@ -60,6 +61,15 @@ class TeamRedis(RunRedis):
         return rows[start:] if end == -1 else rows[start : end + 1]
 
     def eval(self, script, numkeys, key, *args):
+        if script == CLAIM:
+            return "OK" if self.setnx(key, args[0]) else None
+        if script == RELEASE:
+            return self.delete(key) if self.get(key) == args[0] else 0
+        if script == CHECK_ALERTS:
+            raw = self.data.setdefault(key, {})
+            for level, limit in zip(("soft", "hard"), args[:2], strict=True):
+                self.alert(raw, level, limit, raw.get("cost", 0), 0, args[2])
+            return 1
         if script == RUN_PAGE:
             rows = self.zrevrange(key, 0, len(self.data.get(key, {})), withscores=True)
             older = [row for row in rows if (row[1], row[0]) < (args[0], args[1])]
@@ -73,11 +83,14 @@ class TeamRedis(RunRedis):
         if script == RESERVE_COST:
             raw = self.data.setdefault(key, {"cost": 0})
             if args[1] >= 0 and raw["cost"] + args[0] > args[1]:
+                self.alert(raw, "hard", args[1], raw["cost"], args[0], args[5])
                 return 0
             if args[3] >= 0 and raw.get(args[2], 0) + args[0] > args[3]:
                 return -1
             raw["cost"] += args[0]
             raw[args[2]] = raw.get(args[2], 0) + args[0]
+            self.alert(raw, "soft", args[4], raw["cost"], 0, args[5])
+            self.alert(raw, "hard", args[1], raw["cost"], 0, args[5])
             return 1
         if script == SETTLE_COST:
             raw = self.data[key]
@@ -86,6 +99,13 @@ class TeamRedis(RunRedis):
                 raw[name] = raw.get(name, 0) + value
             return 1
         return super().eval(script, numkeys, key, *args)
+
+    def alert(self, raw, level, limit, spent, requested, now):
+        if limit >= 0 and spent + requested >= limit:
+            raw.setdefault(f"alert.{level}", json.dumps({
+                "level": level, "limit_usd": limit / 1e9, "reserved_and_spent_usd": spent / 1e9,
+                "requested_usd": requested / 1e9, "created_at": now,
+            }))
 
 
 class Execution:
@@ -425,7 +445,7 @@ def test_worker_scope_timeline_and_shared_provider_budget(team_gateway):
         headers=auth("builder"),
         json={"model": "backup", "messages": [{"role": "user", "content": "hello"}]},
     )
-    assert blocked.status_code == 403 and blocked.json()["detail"]["reason"] == "team_cost_budget_exceeded"
+    assert blocked.status_code == 429 and blocked.json()["detail"]["reason"] == "team_cost_budget_exceeded"
     assert app.state.runtime_client.calls == 2
 
 
@@ -469,7 +489,7 @@ def test_fallback_reserves_each_models_estimate_and_retains_failed_cost(team_gat
 
     app.state.runtime_client.chat_completions = fail_primary
     body = {"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}]}
-    assert client.post("/v1/chat/completions", headers=auth("builder"), json=body).status_code == 403
+    assert client.post("/v1/chat/completions", headers=auth("builder"), json=body).status_code == 429
     assert app.state.runtime_client.calls == 0
     app.state.sandbox_policy_set.policies["team"] = replace(team, cost_limit_usd=0.1)
     assert client.post("/v1/chat/completions", headers=auth("builder"), json=body).status_code == 200

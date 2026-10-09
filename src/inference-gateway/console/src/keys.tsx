@@ -40,6 +40,7 @@ function KeyManagement({ session }: { session: Session }) {
   const [project, setProject] = useState(session.team.projects.length === 1 ? session.team.projects[0] : '');
   const [lifetime, setLifetime] = useState(90);
   const [created, setCreated] = useState<{ name: string; key: string; id: string }>();
+  const [editing, setEditing] = useState<Key>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -49,6 +50,9 @@ function KeyManagement({ session }: { session: Session }) {
       ? 'People who sign in with their company account get their team and role from it. Create keys here for anyone without company sign-in and for automation.'
       : 'Give each person and integration their own key, so you can revoke one without affecting anyone else.'}</p>
     <ErrorMessage message={error || result.error}/><p role="status" className="status">{message}</p>
+    {editing && <KeyEditor key={editing.key_id} record={editing} session={session} onCancel={() => setEditing(undefined)} onSaved={name => {
+      setEditing(undefined); setMessage(`${name} updated. Access changes apply immediately.`); setRevision(value => value + 1);
+    }}/>}
     <section className="panel form-panel key-form" aria-labelledby="create-key">
       {created ? <div className="new-key">
         <h2 id="create-key">Key created for {created.name}</h2>
@@ -82,11 +86,45 @@ function KeyManagement({ session }: { session: Session }) {
       const current = state(key);
       return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}{key.revoked_at != null && ` ${day(key.revoked_at)}`}</span></td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
         if (!window.confirm(`Revoke ${key.name}? It stops working immediately.`)) return;
-        setBusy(true); setError(''); setCreated(undefined);
+        setBusy(true); setError(''); setCreated(undefined); setEditing(undefined);
         try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); }
         catch (value) { setError((value as Error).message); }
         finally { setBusy(false); }
-      }}>Revoke</button>}</td></tr>;
+      }}>Revoke</button>}{key.revoked_at == null && key.key_id !== session.keyId && <button className="secondary" disabled={busy} aria-label={`Edit ${key.name}`} onClick={() => { setCreated(undefined); setEditing(key); setMessage(''); }}>Edit</button>}</td></tr>;
     })}</tbody></table></div></div> : <div className="panel"><Empty title="No keys yet"><p>Create the first key above. Keys from your gateway configuration keep working and are not listed here.</p></Empty></div>)}
   </>;
+}
+
+function KeyEditor({ record, session, onCancel, onSaved }: { record: Key; session: Session; onCancel: () => void; onSaved: (name: string) => void }) {
+  const [name, setName] = useState(record.name);
+  const [role, setRole] = useState(record.role);
+  const [project, setProject] = useState(record.project || '');
+  const originalExpiry = record.expires_at == null ? '' : new Date(record.expires_at * 1000).toISOString().slice(0, 16);
+  const [expiry, setExpiry] = useState(originalExpiry);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return <section className="panel form-panel" aria-labelledby="edit-key"><h2 id="edit-key">Edit {record.name}</h2>
+    <ErrorMessage message={error}/>
+    <form onSubmit={async event => {
+      event.preventDefault(); setBusy(true); setError('');
+      const changes: Record<string, unknown> = {};
+      if (name.trim() !== record.name) changes.name = name.trim();
+      if (role !== record.role) changes.role = role;
+      if ((project || null) !== record.project) changes.project = project || null;
+      if (expiry !== originalExpiry) changes.expires_at = expiry ? new Date(`${expiry}:00Z`).toISOString() : null;
+      try {
+        await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(record.key_id)}`, { method: 'PATCH', body: JSON.stringify(changes) });
+        onSaved(name.trim());
+      } catch (value) { setError((value as Error).message); }
+      finally { setBusy(false); }
+    }}>
+      <fieldset className="plain" disabled={busy}>
+        <div className="field"><label htmlFor="edit-key-name">Edit name</label><input id="edit-key-name" autoFocus required maxLength={128} value={name} onChange={event => setName(event.target.value)}/></div>
+        <div className="field"><label htmlFor="edit-key-role">Edit role</label><select id="edit-key-role" value={role} onChange={event => setRole(event.target.value as Team['role'])}>{roles.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></div>
+        <div className="field"><label htmlFor="edit-key-project">Edit project</label><select id="edit-key-project" value={project} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{session.team.projects.map(value => <option key={value}>{value}</option>)}</select></div>
+        <div className="field"><label htmlFor="edit-key-expiry">Edit expiry (UTC)</label><input id="edit-key-expiry" type="datetime-local" value={expiry} onChange={event => setExpiry(event.target.value)} aria-describedby="edit-expiry-help"/><small id="edit-expiry-help">Leave blank for no expiry. A past date disables access immediately.</small></div>
+        <div className="actions"><button>{busy ? 'Saving…' : 'Save key'}</button><button type="button" className="secondary" onClick={onCancel}>Cancel editing</button></div>
+      </fieldset>
+    </form>
+  </section>;
 }

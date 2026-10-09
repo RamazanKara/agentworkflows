@@ -74,6 +74,27 @@ class KeyUpdate(KeyCreate):
     role: Role | None = None
 
 
+class ManagedKey(BaseModel):
+    key_id: str
+    team: str
+    name: str
+    role: Role
+    project: str | None
+    created_by: str
+    created_at: float
+    expires_at: float | None
+    last_used_at: float | None
+    revoked_at: float | None
+
+
+class CreatedKey(ManagedKey):
+    key: str
+
+
+class KeyList(BaseModel):
+    keys: list[ManagedKey]
+
+
 def public_record(record: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in record.items() if key != "sha256"}
 
@@ -123,7 +144,7 @@ async def change_key(request: Request, key_id: str, changes: dict[str, Any], act
 
 
 def register_key_routes(app: FastAPI) -> None:
-    @app.get("/v1/team/keys", tags=["teams"])
+    @app.get("/v1/team/keys", tags=["teams"], response_model=KeyList)
     async def list_keys(request: Request) -> dict[str, Any]:
         principal = require_role(request, "admin")
         rows = await storage_call(request, "list_keys", request.state.sandbox_id)
@@ -132,7 +153,7 @@ def register_key_routes(app: FastAPI) -> None:
             keys = [row for row in keys if row["project"] == principal["project"]]
         return {"keys": sorted(keys, key=lambda row: row["created_at"], reverse=True)}
 
-    @app.post("/v1/team/keys", status_code=201, tags=["teams"])
+    @app.post("/v1/team/keys", status_code=201, tags=["teams"], response_model=CreatedKey)
     async def create_key(request: Request, body: KeyCreate) -> dict[str, Any]:
         principal = require_role(request, "admin")
         check_project(request, body.project)
@@ -148,7 +169,7 @@ def register_key_routes(app: FastAPI) -> None:
         key_receipt(request, "create", record)
         return {**public_record(record), "key": key}
 
-    @app.patch("/v1/team/keys/{key_id}", tags=["teams"])
+    @app.patch("/v1/team/keys/{key_id}", tags=["teams"], response_model=ManagedKey)
     async def update_key(request: Request, key_id: str, body: KeyUpdate) -> dict[str, Any]:
         require_role(request, "admin")
         changes = body.model_dump(exclude_unset=True)
@@ -160,6 +181,6 @@ def register_key_routes(app: FastAPI) -> None:
             changes["expires_at"] = body.expires_at.timestamp() if body.expires_at else None
         return await change_key(request, key_id, changes, "update")
 
-    @app.delete("/v1/team/keys/{key_id}", tags=["teams"])
+    @app.delete("/v1/team/keys/{key_id}", tags=["teams"], response_model=ManagedKey)
     async def revoke_key(request: Request, key_id: str) -> dict[str, Any]:
         return await change_key(request, key_id, {"revoked_at": time()}, "revoke")

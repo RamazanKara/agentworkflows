@@ -674,3 +674,25 @@ def test_run_export_rejects_a_gateway_without_cursor_support(monkeypatch):
     _mock_transport(monkeypatch, lambda _: httpx.Response(200, json={"runs": [], "next_offset": 20}))
     with GatewayClient("http://gateway.test") as client, pytest.raises(RuntimeError, match="upgrade the gateway"):
         list(client.export_runs())
+
+
+def test_spend_and_capture_methods_use_revision_checked_settings(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"alerts": []} if request.method == "GET" else {"revision": 3})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test") as client:
+        assert client.team_spend() == {"alerts": []}
+        client.set_spend_limits(soft_limit_usd=0, hard_limit_usd=None, revision=0)
+        client.set_content_capture("redacted", revision='"1"')
+        client.set_content_capture("none", workflow="ResearchWorkflow", revision=2)
+    assert requests[0].url.path == "/v1/team/spend"
+    assert [json.loads(request.content) for request in requests[1:]] == [
+        {"fields": {"soft_cost_limit_usd": 0, "cost_limit_usd": None}},
+        {"fields": {"capture_content": "redacted"}},
+        {"fields": {"workflows.ResearchWorkflow.capture_content": "none"}},
+    ]
+    assert [request.headers["If-Match"] for request in requests[1:]] == ["0", '"1"', "2"]

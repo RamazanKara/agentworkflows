@@ -23,3 +23,13 @@ Deliberately not planned: hosted SaaS, billing and plans (self-hosted product; s
 Status: 1–7 shipped in v0.5.0 (2026-10-08). Gaps 8 and 10 are implemented for v0.6.0 (unreleased): revision-checked team settings and the retained audit viewer, verification and export. Run retention shipped in v0.5.0; v0.6.0 adds stable run cursors and full-detail JSON Lines export. The v0.6.x storage work adds optional PostgreSQL for gateway run history, audit, settings and API-key metadata. Redis remains the default and still handles live accounting and sessions; Temporal retains its separate PostgreSQL execution store. See [gateway storage](postgresql-storage.md) for cutover and validation limits.
 
 Codex job prompts live in `docs/codex/` (not published on the docs site).
+
+The next v0.6.x pass closes the remaining console paths within gaps **2** and **5**:
+edit existing key names, roles, projects and expiry; change team/workflow content
+capture without redeployment. These were chosen because day-to-day access changes
+and inspecting step content otherwise still required operator work. Both use the
+existing administration APIs, now with matching SDK helpers, console controls and
+tests. The same pass adds offline Redis-to-PostgreSQL import for gap **9**, and
+soft/hard monthly spend limits with in-console and webhook alerts for gap **8**.
+Live cutover, identity-provider administration and provider-secret provisioning
+remain operator responsibilities.

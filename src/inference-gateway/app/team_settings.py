@@ -75,9 +75,14 @@ def layer_settings(
     defaults: dict[str, Any] = {}
     if team:
         defaults["cost_limit_usd"] = team.cost_limit_usd
+        defaults["soft_cost_limit_usd"] = team.soft_cost_limit_usd
+        defaults["capture_content"] = team.capture_content
         defaults.update({f"project_budgets.{name}": team.project_budgets.get(name) for name in team.projects})
         for name, workflow in team.workflows.items():
             defaults.update({f"workflows.{name}.{field}": getattr(workflow, field) for field in WORKFLOW_FIELDS})
+            defaults[f"workflows.{name}.capture_content"] = (
+                workflow.capture_content if "capture_content" in workflow.model_fields_set else team.capture_content
+            )
         defaults.update(
             {f"model_routes.{alias}": route.model_id for route in routing.routes for alias in route.aliases}
         )
@@ -91,13 +96,20 @@ def layer_settings(
         for name, value in defaults.items()
     }
     if team:
+        for name, workflow in team.workflows.items():
+            field = f"workflows.{name}.capture_content"
+            if field not in overrides and "capture_content" not in workflow.model_fields_set:
+                fields[field]["value"] = fields["capture_content"]["value"]
         team = replace(
             team,
             cost_limit_usd=fields["cost_limit_usd"]["value"],
+            soft_cost_limit_usd=fields["soft_cost_limit_usd"]["value"],
+            capture_content=fields["capture_content"]["value"],
             project_budgets={name: fields[f"project_budgets.{name}"]["value"] for name in team.projects},
             workflows={
                 name: workflow.model_copy(
-                    update={field: fields[f"workflows.{name}.{field}"]["value"] for field in WORKFLOW_FIELDS}
+                    update={field: fields[f"workflows.{name}.{field}"]["value"]
+                            for field in (*WORKFLOW_FIELDS, "capture_content")}
                 )
                 for name, workflow in team.workflows.items()
             },
@@ -133,6 +145,11 @@ def validate_changes(settings: EffectiveTeamSettings, changes: dict[str, Any]) -
         message = ""
         if field not in settings.fields:
             message = "Unknown setting; choose a field from GET /v1/team/settings."
+        elif field == "capture_content" or field.endswith(".capture_content"):
+            if value not in ("none", "redacted", "full"):
+                message = "Choose none, redacted or full."
+        elif field in {"cost_limit_usd", "soft_cost_limit_usd"} and value is None:
+            continue
         elif field.startswith("model_routes."):
             if not isinstance(value, str) or value not in settings.routing.model_ids():
                 message = "Choose an existing model route ID."
@@ -190,6 +207,10 @@ async def change_settings(
         overrides.pop(reset, None)
     else:
         overrides.update(changes)
+    soft = overrides.get("soft_cost_limit_usd", current.fields["soft_cost_limit_usd"]["policy_default"])
+    hard = overrides.get("cost_limit_usd", current.fields["cost_limit_usd"]["policy_default"])
+    if soft is not None and hard is not None and soft > hard:
+        invalid_fields([{"field": "soft_cost_limit_usd", "message": "Soft limit must not exceed the hard limit."}])
     document = {
         "revision": revision + 1,
         "updated_by": principal.get("sub") or principal.get("key_id"),
