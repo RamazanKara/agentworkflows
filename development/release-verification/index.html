@@ -1426,6 +1426,62 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#rc3-reliability-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 reliability pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.3 reliability pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rc3-caller-checks-in-wsl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 caller checks in WSL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc2-lifecycle-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.2 lifecycle pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.2 lifecycle pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#caller-checks-in-wsl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caller checks in WSL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#candidate-readiness-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1482,7 +1538,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#caller-checks-in-wsl" class="md-nav__link">
+  <a href="#caller-checks-in-wsl_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Caller checks in WSL
@@ -2186,6 +2242,62 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#rc3-reliability-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 reliability pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.3 reliability pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rc3-caller-checks-in-wsl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 caller checks in WSL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc2-lifecycle-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.2 lifecycle pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.2 lifecycle pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#caller-checks-in-wsl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caller checks in WSL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#candidate-readiness-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2242,7 +2354,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#caller-checks-in-wsl" class="md-nav__link">
+  <a href="#caller-checks-in-wsl_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Caller checks in WSL
@@ -2364,6 +2476,178 @@ the TypeScript SDK's <code>npm run build</code>, <code>npm run lint</code> and <
 Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: <code>make lint test-gateway test-scripts</code>. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.</p>
+<h2 id="rc3-reliability-pass">rc.3 reliability pass<a class="headerlink" href="#rc3-reliability-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0 and Helm 3.18.6.
+Package/chart versions remain 0.9.0. No commit, push, publication or <code>gh</code> command was run;
+no dependency pins changed.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway suite excluding live-provider tests</td>
+<td>1,110 passed, 14 skipped: eight PostgreSQL, five Redis migration checks and one SDK-environment-only approval check.</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td>205 passed, 3 optional-framework skips.</td>
+</tr>
+<tr>
+<td>TypeScript SDK build/lint/tests</td>
+<td>Passed; 79 tests.</td>
+</tr>
+<tr>
+<td>Console build/Playwright</td>
+<td>Passed; 76 tests. The managed preview teardown hung on Windows; the final successful run used the same tests with only <code>webServer</code> disabled in an ignored temporary config, as described below.</td>
+</tr>
+<tr>
+<td>Script tests</td>
+<td>51 passed, including backup verification, fault cleanup, regression thresholds and 19 umbrella Helm tests.</td>
+</tr>
+<tr>
+<td>Helm</td>
+<td>All nine charts passed strict lint and template rendering after dependency builds. Four historical-value render tests passed in the gateway suite.</td>
+</tr>
+<tr>
+<td>OpenAPI/config contracts, chart docs, dashboards</td>
+<td>Passed.</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>Strict MkDocs build and repository Markdown link/Make-target checks passed.</td>
+</tr>
+<tr>
+<td>Load</td>
+<td>Two runs of 4,000 HTTP requests, zero errors; the second passed p95 +25% / throughput -20% thresholds against the recorded baseline. See <a href="../benchmarks-and-evals/#rc3-native-gateway-baseline-2026-10-09">measurements and scope</a>.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>All changed Python files pass. Full lint still finds the existing E501 at <code>src/inference-gateway/tests/test_approval_policies.py:67</code>; the format check reports repository drift.</td>
+</tr>
+<tr>
+<td>Full repository hygiene</td>
+<td>Link checks pass; two pre-existing failures remain: gateway/RAG tracing copies differ, and <code>scripts/first-approved-run.py</code> is tracked as 100644 instead of 100755. Both were verified against HEAD and left unchanged.</td>
+</tr>
+</tbody>
+</table>
+<p>The native tests inject lost replies before/after Temporal accepts a start, partial Redis index
+writes, SQL connection/pool errors, slow Redis sockets, truncated provider streams and worker
+transport/startup timeouts. They check fail-closed behavior, bounded waits, stable retry IDs,
+circuit recovery, redaction and W3C context propagation. Historical config and values fixtures
+come from the actual 0.2.0 and rc.2 commits. Native tests do not prove live restore, SQL DDL
+rollback, Redis Lua migrations, Temporal recovery or collector delivery.</p>
+<h3 id="rc3-caller-checks-in-wsl">rc.3 caller checks in WSL<a class="headerlink" href="#rc3-caller-checks-in-wsl" title="Permanent link">&para;</a></h3>
+<p>Use a Linux checkout/venv with Docker, Helm, kind and kubectl. Run the real dependency stop/pause
+matrix and recovery checks in the disposable projects created by the scripts:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>workflow-upgrade-test<span class="w"> </span>workflow-helm-upgrade-test<span class="w"> </span>workflow-restore-drill
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make<span class="w"> </span>compose-up<span class="w"> </span>compose-smoke<span class="w"> </span>workflow-loadtest
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>make<span class="w"> </span>loadtest-local
+</code></pre></div>
+<p>Set <code>TEST_REDIS_URL</code> and <code>TEST_POSTGRES_DSN</code> to disposable stores (the PostgreSQL user must be
+able to create/drop test schemas), then run from the gateway test environment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src/inference-gateway<span class="w"> </span>src/inference-gateway/.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>src/inference-gateway/tests/test_upgrade.py<span class="w"> </span>src/inference-gateway/tests/test_postgres_integration.py
+</code></pre></div>
+<p>For operator backups, run <code>python3 scripts/workflow-recovery.py verify --directory /secure/aw-backup</code>
+and an isolated restore drill using the <a href="../runbooks/disaster-recovery/">backup/restore runbook</a>.
+Verification of checksums/receipt chains works natively; it does not establish database restorability.
+The default helper covers Redis-backed gateway state and Temporal databases; optional gateway
+PostgreSQL, object data and original encryption/signing keys require the documented coordinated backup.
+Also verify <a href="../runbooks/observability/">OTLP collector delivery and dashboards</a> against the real
+stack. Container/cluster checks and live providers were not run in this native pass.</p>
+<h2 id="rc2-lifecycle-pass">rc.2 lifecycle pass<a class="headerlink" href="#rc2-lifecycle-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-09, native Windows, Python 3.12.14, Node 24.19.0, portable Helm 3.18.6.
+This is unreleased source work: no commit, push, PR or publication, and no new dependencies.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway full suite</td>
+<td>1,082 passed, 26 skipped; final lifecycle/stream-erasure/concurrency/run-audit/quickstart/telemetry subset: 59 passed. Six optional PostgreSQL tests require the caller database.</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td>202 passed, 3 optional-framework skips.</td>
+</tr>
+<tr>
+<td>TypeScript SDK build, lint, tests</td>
+<td>Passed; 79 tests.</td>
+</tr>
+<tr>
+<td>Console build, Playwright</td>
+<td>Passed; 76 tests with the same Windows preview workaround described below. Final capture-only rerun: 3 passed.</td>
+</tr>
+<tr>
+<td>OpenAPI/config contracts, chart docs, dashboards</td>
+<td>Passed; generated snapshots updated.</td>
+</tr>
+<tr>
+<td>Helm dependencies, strict kind-profile lint/render</td>
+<td>Passed; 19 umbrella chart tests, including encryption Secret references and OTLP flags.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>Changed Python files pass. Repository lint still reports the untouched E501 at <code>test_approval_policies.py:67</code>; formatter also finds existing repository drift.</td>
+</tr>
+<tr>
+<td>Gateway mypy</td>
+<td>26 existing errors in 13 files, identical to a clean HEAD comparison; no new findings.</td>
+</tr>
+<tr>
+<td>Scripted quickstarts</td>
+<td>Native CLI and mocked approval/audit checks pass; live Compose/kind runs are blocked as described below.</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>107 PNGs</strong> in <code>.out/console-v1.0.0-rc.2/</code> cover 360/393/1440, including the gallery,
+installation, secret rotation, retention/export/telemetry, cancellation confirmation, retry
+and operation receipts. Layout assertions check overflow and mid-word wrapping; visual review
+checks readable controls and spacing. Screens use one Insights/Maya Chen fixture. The canceled
+run retains 4,200 tokens/$0.06 and gains two operation receipts; its retry starts with zero
+tokens, spend and receipts. Template descriptions match the actual catalog. Downloads and
+screenshots are synthetic UI evidence, not live backend proof.</p>
+<p>The native sandbox blocks Playwright-managed Vite teardown. A temporary ignored config at
+<code>.out/playwright-rc2.config.ts</code> disables only <code>webServer</code>, uses the same tests/locale/timezone,
+and runs against a separately started Vite preview. No permanent test configuration changed.</p>
+<h3 id="caller-checks-in-wsl">Caller checks in WSL<a class="headerlink" href="#caller-checks-in-wsl" title="Permanent link">&para;</a></h3>
+<p>Native Docker is absent. <code>kind get clusters</code> cannot find Docker; <code>wsl.exe -d Ubuntu -e docker version</code>
+returns <code>Wsl/Service/E_ACCESSDENIED</code>, and <code>kubectl config current-context</code> reports no context.
+No live first-run timing, cluster mutation, real PostgreSQL deletion, or collector delivery
+is claimed. From a Linux/WSL checkout with Docker, Python 3.12+, Helm, kind and kubectl:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>build
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>pull<span class="w"> </span>--ignore-buildable
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>compose
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-gateway:quickstart<span class="w"> </span>src/inference-gateway
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>sdk/python/Dockerfile<span class="w"> </span>-t<span class="w"> </span>agentworkflows-worker:quickstart<span class="w"> </span>.
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>kind
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>make<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts<span class="w"> </span>test-typescript<span class="w"> </span>test-console
+</code></pre></div>
+<p>The scripts fail if the prepared trial exceeds 300 seconds. Image preparation/downloads are
+outside that clock. Record their output and inspect the approved run and verified audit chain.
+For gateway SQL erasure/retention integration, point <code>TEST_POSTGRES_DSN</code> at a <strong>disposable</strong>
+PostgreSQL database where the test user can create schemas, then run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src/inference-gateway<span class="w"> </span>src/inference-gateway/.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>src/inference-gateway/tests/test_postgres_integration.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Also exercise <a href="../runbooks/observability/">OTLP collector/Grafana delivery</a>, and the
+<a href="../team-lifecycle/">team lifecycle</a> export/erasure flow with real Redis/Temporal and a second
+team retained as the isolation control. Verify secret creation/rotation from an authorized
+worker activity and rejection for other teams/projects. These live checks remain required
+before treating the candidate as release-ready.</p>
 <h2 id="candidate-readiness-pass">Candidate readiness pass<a class="headerlink" href="#candidate-readiness-pass" title="Permanent link">&para;</a></h2>
 <p>2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0, Helm 3.18.6.
 This pass prepares <strong>1.0.0-rc.1</strong> without changing package versions, publishing
@@ -2491,23 +2775,23 @@ The remaining commands/walkthroughs, in guide order, are:</p>
 NetworkPolicy-capable CNI, and reachable external stores. Offline renders cannot
 verify those conditions or existing-Secret reuse. Preserve the candidate image
 overrides in every installation/upgrade values set.</p>
-<h3 id="caller-checks-in-wsl">Caller checks in WSL<a class="headerlink" href="#caller-checks-in-wsl" title="Permanent link">&para;</a></h3>
+<h3 id="caller-checks-in-wsl_1">Caller checks in WSL<a class="headerlink" href="#caller-checks-in-wsl_1" title="Permanent link">&para;</a></h3>
 <p>Use a Linux venv in a WSL checkout with Docker available; do not reuse the native
 Windows venv. Re-run the documented quickstart and cluster checks above, then:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>validate-full
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>compose-up
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make<span class="w"> </span>compose-smoke
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>make<span class="w"> </span>workflow-loadtest
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>make<span class="w"> </span>workflow-upgrade-test
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>make<span class="w"> </span>workflow-helm-upgrade-test
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>make<span class="w"> </span>workflow-restore-drill
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>make<span class="w"> </span>repo-security-scan
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>make<span class="w"> </span>dependency-lock-check
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>make<span class="w"> </span>image-scan
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>make<span class="w"> </span>supply-chain-check
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>make<span class="w"> </span>loadtest-local
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>make<span class="w"> </span>evidence
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>make<span class="w"> </span>release-gate-strict
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>validate-full
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>make<span class="w"> </span>compose-up
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>make<span class="w"> </span>compose-smoke
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>make<span class="w"> </span>workflow-loadtest
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>make<span class="w"> </span>workflow-upgrade-test
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>make<span class="w"> </span>workflow-helm-upgrade-test
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>make<span class="w"> </span>workflow-restore-drill
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>make<span class="w"> </span>repo-security-scan
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>make<span class="w"> </span>dependency-lock-check
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>make<span class="w"> </span>image-scan
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>make<span class="w"> </span>supply-chain-check
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>make<span class="w"> </span>loadtest-local
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>make<span class="w"> </span>evidence
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>make<span class="w"> </span>release-gate-strict
 </code></pre></div>
 <p>The workflow recovery/Helm checks require their documented test stacks and backups;
 see <a href="../local-evaluation/">local evaluation</a> and <a href="../production-readiness/">production readiness</a>.
@@ -2517,59 +2801,59 @@ release evidence. No commit, push, tag, publication or <code>gh</code> command w
 <h2 id="published-artifact-verification">Published artifact verification<a class="headerlink" href="#published-artifact-verification" title="Permanent link">&para;</a></h2>
 <p>The commands below target the older published release; change <code>RELEASE</code> only after
 the matching artifacts exist. Set the release and repository once:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.5.1
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REPOSITORY</span><span class="o">=</span>RamazanKara/agentworkflows
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">IMAGE_REPO</span><span class="o">=</span>ghcr.io/ramazankara/agentworkflows
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE_IDENTITY</span><span class="o">=</span><span class="s2">"https://github.com/</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/release.yml@refs/tags/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.5.1
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REPOSITORY</span><span class="o">=</span>RamazanKara/agentworkflows
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">IMAGE_REPO</span><span class="o">=</span>ghcr.io/ramazankara/agentworkflows
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE_IDENTITY</span><span class="o">=</span><span class="s2">"https://github.com/</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/release.yml@refs/tags/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
 </code></pre></div>
 <h2 id="helm-oci-charts">Helm OCI Charts<a class="headerlink" href="#helm-oci-charts" title="Permanent link">&para;</a></h2>
 <p>Tag builds publish each chart to <code>oci://$IMAGE_REPO/charts</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
 </code></pre></div>
 <p>Render the downloaded chart before installing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>helm<span class="w"> </span>template<span class="w"> </span>verify-inference<span class="w"> </span><span class="s2">"inference-gateway-</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">.tgz"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--values<span class="w"> </span>deploy/clusters/customer/values/inference-gateway.yaml<span class="w"> </span>&gt;/tmp/inference.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>template<span class="w"> </span>verify-inference<span class="w"> </span><span class="s2">"inference-gateway-</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">.tgz"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--values<span class="w"> </span>deploy/clusters/customer/values/inference-gateway.yaml<span class="w"> </span>&gt;/tmp/inference.yaml
 </code></pre></div>
 <h2 id="image-signatures">Image Signatures<a class="headerlink" href="#image-signatures" title="Permanent link">&para;</a></h2>
 <p>Release images are signed by digest with Cosign in GitHub Actions.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/inference-gateway:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/rag-service:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/inference-gateway:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/rag-service:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
 </code></pre></div>
 <p>Release images are also multi-arch (<code>linux/amd64</code> and <code>linux/arm64</code>); the signature covers the manifest list, so the same <code>cosign verify</code> works on Apple Silicon and arm64 (Graviton/Ampere) clusters.</p>
 <h2 id="chart-signatures">Chart Signatures<a class="headerlink" href="#chart-signatures" title="Permanent link">&para;</a></h2>
 <p>Helm chart OCI artifacts are cosign-signed by digest in the same release workflow as the images.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
 </code></pre></div>
 <p>Chart OCI tags drop the leading <code>v</code> (<code>${RELEASE#v}</code>) to match the chart <code>version</code>, while runtime image tags keep it.</p>
 <h2 id="release-files">Release Files<a class="headerlink" href="#release-files" title="Permanent link">&para;</a></h2>
 <p>Download the release files into a new directory and check them:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span>--dir<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="o">(</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nb">cd</span><span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>sha256sum<span class="w"> </span>--check<span class="w"> </span>sdk-checksums.txt
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>cosign<span class="w"> </span>verify-blob<span class="w"> </span>chart-release-manifest.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span>--bundle<span class="w"> </span>chart-release-manifest.sigstore.json<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="o">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span>--dir<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="o">(</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nb">cd</span><span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>sha256sum<span class="w"> </span>--check<span class="w"> </span>sdk-checksums.txt
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span>cosign<span class="w"> </span>verify-blob<span class="w"> </span>chart-release-manifest.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span>--bundle<span class="w"> </span>chart-release-manifest.sigstore.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="o">)</span>
 </code></pre></div>
 <p><code>sdk-checksums.txt</code> covers the Python wheel, source archive and TypeScript package. The
 signed chart manifest records each chart package and the image digests it embeds.
@@ -2578,19 +2862,19 @@ not publish SBOM or provenance attestations. Run <code>make image-scan</code> lo
 vulnerability report before deploying.</p>
 <h2 id="strict-evidence">Strict Evidence<a class="headerlink" href="#strict-evidence" title="Permanent link">&para;</a></h2>
 <p>Strict release evidence must be generated from current artifacts, not sample evidence:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>make<span class="w"> </span>validate-full
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>make<span class="w"> </span>image-scan
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>make<span class="w"> </span>supply-chain-check
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>make<span class="w"> </span>loadtest-local
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>make<span class="w"> </span>evidence
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>make<span class="w"> </span>release-gate-strict
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>make<span class="w"> </span>validate-full
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>make<span class="w"> </span>image-scan
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>make<span class="w"> </span>supply-chain-check
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>make<span class="w"> </span>loadtest-local
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>make<span class="w"> </span>evidence
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>make<span class="w"> </span>release-gate-strict
 </code></pre></div>
 <p>For a live customer-style validation path, run the local cluster checks and generate live evidence:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>make<span class="w"> </span>trace-smoke
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>make<span class="w"> </span>tenant-smoke
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>make<span class="w"> </span>agent-smoke
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>make<span class="w"> </span>trace-smoke
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>make<span class="w"> </span>tenant-smoke
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>make<span class="w"> </span>agent-smoke
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 <p>Record the command output, generated evidence paths under <code>results/</code>, image digests, chart versions, and GitHub Actions run URL in the release notes.</p>
 

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/runbooks/disaster-recovery/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/runbooks/observability/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Disaster Recovery Runbook - AgentWorkflows</title>
+        <title>OTLP traces and metrics - AgentWorkflows</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#disaster-recovery-runbook" class="md-skip">
+        <a href="#otlp-traces-and-metrics" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Disaster Recovery Runbook
+              OTLP traces and metrics
             
           </span>
         </div>
@@ -1983,91 +1983,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-agentworkflows-backs-up" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What AgentWorkflows Backs Up
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rpo-and-rto-targets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        RPO And RTO Targets
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#per-store-data-loss-window" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Per-Store Data-Loss Window
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#whole-platform-recovery-sequence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Whole-Platform Recovery Sequence
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#operator-owned-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operator-Owned Scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related-runbooks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related Runbooks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gateway-and-worker-backup-verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gateway and worker backup verification
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -2083,7 +1998,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/runbooks/disaster-recovery.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/runbooks/observability.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2091,254 +2006,85 @@
   
 
 
-<h1 id="disaster-recovery-runbook">Disaster Recovery Runbook<a class="headerlink" href="#disaster-recovery-runbook" title="Permanent link">&para;</a></h1>
-<p>This runbook defines the single-cluster disaster-recovery (DR) posture for the platform: what the platform
-backs up, the recovery-point and recovery-time targets those backups imply, the order in which the
-platform is restored, and -- explicitly -- what the platform does <em>not</em> do and hands off to the operator.</p>
-<p>Scope is one cluster. The deployment templates ship no secondary cluster, no multi-region
-topology, and no warm standby. Everything beyond a single-cluster rebuild is operator-owned and is
-listed under <a href="#operator-owned-scope">Operator-Owned Scope</a>.</p>
-<p>For a confirmed data-loss or data-exposure event treat this as <strong>SEV1</strong> and start from the
-<a href="../incident-response/">incident-response index</a> first; this runbook is the recovery procedure that
-the SEV1 path routes into. For backup-tooling failures (a drill or backup that did not complete) use
-<a href="../restore-drill/">restore-drill.md</a> instead -- a failed drill is not yet a disaster.</p>
-<h2 id="what-agentworkflows-backs-up">What AgentWorkflows Backs Up<a class="headerlink" href="#what-agentworkflows-backs-up" title="Permanent link">&para;</a></h2>
-<p>Two complementary mechanisms ship in <code>deploy/backup</code>:</p>
-<ul>
-<li><strong>Velero schedule</strong> (<code>deploy/backup/velero/schedule.yaml</code>). A daily <code>Schedule</code> named
-  <code>ai-platform-daily</code> running at <code>0 2 * * *</code> with <code>ttl: 168h0m0s</code> (7-day retention). It backs up the
-  <strong>data-bearing namespaces only</strong> and sets <code>defaultVolumesToFsBackup: true</code> so PVC <em>contents</em> are
-  captured, not just resource metadata. The included namespaces are:</li>
-<li><code>vector</code> -- Qdrant vector-store PVCs (RAG embeddings)</li>
-<li><code>ai-agents</code> -- agent-workspace PVCs</li>
-<li><code>argocd</code> -- GitOps / Argo CD application and sync state</li>
-<li><code>ollama</code> -- local model store</li>
-<li><code>restore-drill</code> -- restore-drill evidence consumed by the smoke test</li>
-</ul>
-<p>This schedule does <strong>not</strong> cover gateway/workflow state in <code>budget</code>, <code>inference</code> or <code>workflows</code>.
-  Redis is durable application state when workflows are enabled. Optional gateway PostgreSQL,
-  Temporal databases, file/object storage and encryption/signing keys need the coordinated backup
-  procedure below. The stateless model runtimes can be reconstructed from images and model pulls.</p>
-<ul>
-<li><strong>restore-drill</strong> (<code>deploy/backup/restore-drill</code>, runbook <a href="../restore-drill/">restore-drill.md</a>).
-  This <em>validates</em> recoverability; it is not itself a backup. The Kubernetes CronJob
-  (<code>deploy/backup/restore-drill/k8s/cronjob.yaml</code>) runs daily at <code>0 3 * * *</code>, one hour after the
-  Velero schedule. Two drills exist and prove different things: the default Redis-AOF smoke proves
-  the restore <em>tooling</em> runs, while <code>RUNTIME=local RESTORE_DRILL_QDRANT_DATA=1 make restore-drill</code>
-  proves real Qdrant vector data is recoverable end to end. Read
-  <a href="../restore-drill/">restore-drill.md</a> before relying on either as evidence.</li>
-</ul>
-<p>The Velero <code>BackupStorageLocation</code> and <code>VolumeSnapshotLocation</code>, and the object-storage target
-behind them, are <strong>not</strong> shipped by the platform -- they are operator-owned (see
-<a href="#operator-owned-scope">Operator-Owned Scope</a> and the customer handoff checklist in
-<code>deploy/clusters/customer/README.md</code>). A metadata-only backup restores empty data stores, so CSI
-volume snapshots or <code>defaultVolumesToFsBackup</code> must be in effect for the PVC-bearing namespaces.</p>
-<h2 id="rpo-and-rto-targets">RPO And RTO Targets<a class="headerlink" href="#rpo-and-rto-targets" title="Permanent link">&para;</a></h2>
-<p><strong>RPO (recovery point objective)</strong> is bounded by backup cadence. With the shipped Velero schedule at
-<code>0 2 * * *</code> and AgentWorkflows' snapshot/AOF cadence, the worst-case data-loss window for the protected
-data stores is <strong>up to 24 hours</strong> -- the time between the last completed daily backup and the
-failure. The realised loss is smaller for stores that also keep their own continuous journal (Redis
-AOF, where used) but you should plan against the 24-hour bound unless you raise the schedule
-frequency or add CSI snapshot intervals. These cadences are operator-tunable: shorten the Velero
-<code>schedule</code> and add a <code>VolumeSnapshotLocation</code> to tighten RPO.</p>
-<p><strong>RTO (recovery time objective)</strong> is the time to a serving platform after the decision to recover. It
-is dominated by data restore time (Qdrant snapshot size, agent-workspace PVC size) and runtime
-warm-up (image and model re-pull -- the model weights are the long pole, especially large vLLM
-models). As a single-cluster planning target, aim for <strong>bring-up within a few hours</strong> for a
-moderate data footprint, with the caveat that very large model weights and large vector collections
-extend the runtime and vector-store steps. Measure your own RTO with a real restore drill rather
-than trusting this estimate; the platform gives you the drill to do exactly that.</p>
-<blockquote>
-<p>These are <em>targets for a single-cluster rebuild from good backups</em>. They assume the operator-owned
-backup target and Velero locations exist and are healthy. With no off-cluster backup, the cluster
-loss is unrecoverable and RPO/RTO are undefined -- see <a href="#operator-owned-scope">Operator-Owned Scope</a>.</p>
-</blockquote>
-<h2 id="per-store-data-loss-window">Per-Store Data-Loss Window<a class="headerlink" href="#per-store-data-loss-window" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Store</th>
-<th>Namespace</th>
-<th>Backed up by</th>
-<th>Worst-case loss on cluster failure</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Qdrant vector store</td>
-<td><code>vector</code></td>
-<td>Velero daily (PVC contents) + Qdrant snapshots</td>
-<td>Up to 24h of newly ingested vectors</td>
-<td>Rebuildable from the source-of-truth knowledge ingestion if no good snapshot exists (re-embed).</td>
-</tr>
-<tr>
-<td>Agent-workspace PVCs</td>
-<td><code>ai-agents</code></td>
-<td>Velero daily (PVC contents)</td>
-<td>Up to 24h of uncommitted workspace state</td>
-<td>Anything pushed to a Git remote is not lost; only un-pushed local working state is.</td>
-</tr>
-<tr>
-<td>Argo CD / GitOps state</td>
-<td><code>argocd</code></td>
-<td>Velero daily; also reconstructable from Git</td>
-<td>Effectively zero for desired state</td>
-<td>The Git repo is the source of truth; Velero restores app/sync state faster than re-bootstrapping.</td>
-</tr>
-<tr>
-<td>Ollama model store</td>
-<td><code>ollama</code></td>
-<td>Velero daily; also re-pullable</td>
-<td>Up to 24h, but re-pullable</td>
-<td>Models are re-pullable from the registry/model store, so this is convenience, not unique data.</td>
-</tr>
-<tr>
-<td>Gateway/budget Redis</td>
-<td><code>budget</code> (or the installation namespace)</td>
-<td>Coordinated RDB/AOF backup; excluded from shipped Velero schedule</td>
-<td>Since the last consistent snapshot</td>
-<td>Contains accounting, sessions, secrets and, with the Redis storage backend, runs, settings, keys and receipts. Never silently reset it.</td>
-</tr>
-<tr>
-<td>Gateway PostgreSQL (optional)</td>
-<td><code>inference</code> or external</td>
-<td>Coordinated <code>pg_dump -Fc</code> or managed-store snapshot</td>
-<td>Since the last consistent snapshot</td>
-<td>Gateway records and schema version; Redis accounting is still required.</td>
-</tr>
-<tr>
-<td>Temporal PostgreSQL</td>
-<td><code>workflows</code> or external</td>
-<td>Both <code>temporal</code> and <code>temporal_visibility</code> databases</td>
-<td>Since the last consistent snapshot</td>
-<td>Preserve workflow history and visibility together; independent of gateway SQL schema.</td>
-</tr>
-<tr>
-<td>Inference / vLLM runtimes</td>
-<td><code>inference</code>, <code>vllm</code></td>
-<td><strong>Not backed up</strong> (stateless)</td>
-<td>None (no unique data)</td>
-<td>Reconstructed by GitOps + image/model re-pull.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="whole-platform-recovery-sequence">Whole-Platform Recovery Sequence<a class="headerlink" href="#whole-platform-recovery-sequence" title="Permanent link">&para;</a></h2>
-<p>Recover in dependency order. Each step assumes the previous one is healthy; restoring out of order
-either fails admission or resurrects an empty store. Before starting, classify the incident and page
-per <a href="../incident-response/">incident-response.md</a>, and pause any Argo CD auto-sync you do not want
-fighting the restore (see <a href="../upgrade/">upgrade.md</a>).</p>
-<ol>
-<li>
-<p><strong>Cluster + Argo CD / GitOps state first.</strong> Stand up the cluster (or the rebuilt one), install
-   Argo CD, and restore the <code>argocd</code> namespace -- either by Velero restore or by re-bootstrapping
-   from Git (<code>make bootstrap-argocd</code>, then <code>make sync</code>; for the customer overlay,
-   <code>ENVIRONMENT=customer make bootstrap-argocd &amp;&amp; ENVIRONMENT=customer make sync</code>). <em>Why first:</em>
-   GitOps is the control plane that schedules everything else. The Git repo is the source of truth
-   for desired state, so the platform's shape is reconstructable even if the <code>argocd</code> PVC backup is
-   stale; restore it before the data stores so the workloads have somewhere to land.</p>
-</li>
-<li>
-<p><strong>Vector store (Qdrant PVC) next.</strong> Let GitOps create the <code>vector</code> workloads, then restore the
-   Qdrant data: restore the <code>vector</code> namespace PVCs from Velero, or restore the collection from a
-   Qdrant snapshot following the snapshot-restore path documented in
-   <a href="../restore-drill/">restore-drill.md</a> ("Real Data-Recovery Drill (Qdrant)") against the real
-   <code>customer-platform-knowledge</code> collection. <em>Why before agents and runtimes:</em> RAG and any
-   agent that retrieves context depend on the vector store being present and populated; bringing it
-   up early lets later smoke tests actually exercise retrieval. After restore, confirm recovered
-   point counts match expectations before declaring this store recovered.</p>
-</li>
-<li>
-<p><strong>Agent-workspace PVCs next.</strong> Restore the <code>ai-agents</code> namespace PVCs from Velero. <em>Why here:</em>
-   workspaces are independent of the runtimes but should be back before users return; restoring them
-   after the vector store keeps the data-restore work batched and lets you validate storage health on
-   the smaller PVCs first. Only un-pushed local working state is at risk -- anything pushed to a Git
-   remote is intact.</p>
-</li>
-<li>
-<p><strong>Runtimes via image + model re-pull.</strong> Let GitOps reconcile <code>inference</code> and <code>vllm</code>; these hold
-   no unique data and are rebuilt entirely from image pulls and model-weight pulls. <em>Why after the
-   data stores:</em> the runtimes are stateless and re-pullable, so they are deliberately last among the
-   serving components -- there is nothing to "restore," only to warm up. This is typically the
-   slowest step (large model weights); start the pulls as early as the cluster allows but do not
-   gate the data restores on it. Confirm the model runtime has ready endpoints
-   (see <a href="../incident-inference-runtime/">incident-inference-runtime.md</a>).</p>
-</li>
-<li>
-<p><strong>Gateway and workflow state before reopening ingress.</strong> Restore Redis, both Temporal databases,
-   optional gateway PostgreSQL, object data and the original encryption/signing keys from one
-   recovery point. Keep gateway and workers stopped until the stores are verified, then start
-   Temporal, gateway and workers in that order. Run the checks below before accepting new work;
-   restoring only Redis or only Temporal can repeat completed effects or lose budget holds.</p>
-</li>
-</ol>
-<p>After all steps, run the smoke and evidence checks before declaring recovery: <code>make eval</code> (and
-<code>make loadtest</code>) against the gateway, RAG retrieval smoke, and -- for the recovered vector store --
-re-confirm point counts. Capture the full timeline and the restore artifacts as incident evidence
-per <a href="../incident-response/">incident-response.md</a>.</p>
-<h2 id="operator-owned-scope">Operator-Owned Scope<a class="headerlink" href="#operator-owned-scope" title="Permanent link">&para;</a></h2>
-<p>AgentWorkflows' boundary is "manifests, charts, service code, validation tooling, and runbooks." The
-following are deliberately <em>not</em> shipped and are the operator's responsibility for any real DR
-posture beyond a single-cluster rebuild:</p>
-<ul>
-<li><strong>Off-cluster backup target.</strong> Velero needs a <code>BackupStorageLocation</code> (object storage) and a
-  <code>VolumeSnapshotLocation</code> that the operator provisions and credentials. The platform ships the schedule
-  template and the data-bearing namespace list; without a configured, off-cluster target the backups
-  do not survive cluster loss and the restore drill validates nothing. See the handoff checklist in
-  <code>deploy/clusters/customer/README.md</code>.</li>
-<li><strong>Secondary cluster.</strong> There is no standby cluster in the platform. Cross-cluster restore (Velero
-  restore into a fresh cluster) is operator-driven.</li>
-<li><strong>Multi-region / warm standby.</strong> Region failover, replication, and a warm-standby topology are out
-  of scope for the current deployment templates and are handed off on the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">roadmap</a> under
-  "Remaining External / Operator-Owned Work."</li>
-<li><strong>Backup-target and snapshot scheduling decisions.</strong> The Velero cadence and retention, CSI
-  snapshot intervals, and any tightening of RPO are per-environment operational decisions; the platform
-  ships sane defaults the operator tunes.</li>
-</ul>
-<h2 id="related-runbooks">Related Runbooks<a class="headerlink" href="#related-runbooks" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../incident-response/">Incident response index</a> -- severity tiers and the SEV1 path that routes here.</li>
-<li><a href="../restore-drill/">Restore drill</a> -- backup-tooling smoke and the real Qdrant data-recovery drill.</li>
-<li><a href="../budget-controls/">Budget controls</a> -- budget posture while Redis recovers.</li>
-<li><a href="../incident-inference-runtime/">Inference runtime incident</a> -- bringing runtimes back to ready.</li>
-<li><a href="../upgrade/">Upgrade &amp; rollback</a> -- pausing Argo CD automation during a controlled change.</li>
-<li><a href="../">Runbooks index</a> -- the full runbook catalog.</li>
-</ul>
-<h2 id="gateway-and-worker-backup-verification">Gateway and worker backup verification<a class="headerlink" href="#gateway-and-worker-backup-verification" title="Permanent link">&para;</a></h2>
-<p>For the default Redis-backed Compose installation, the existing script stops workers, gateway
-and Temporal, exports both PostgreSQL databases and Redis, collects receipts, records SHA-256
-checksums and an audit anchor, then restarts the source even if backup fails. Quiesce external
-writers and ingress first. Protect the backup directory as sensitive data and copy it off-host;
-retain its manifest and audit anchor independently so rewritten backups cannot replace the trust
-anchor. The shipped daily Velero schedule does not set an RPO for these additional stores.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>backup<span class="w"> </span>--project<span class="w"> </span>source-project<span class="w"> </span>--directory<span class="w"> </span>/secure/aw-backup<span class="w"> </span>--receipts<span class="w"> </span>/secure/retained-receipts.jsonl
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python3<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>verify<span class="w"> </span>--directory<span class="w"> </span>/secure/aw-backup
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>restore<span class="w"> </span>--project<span class="w"> </span>new-isolated-restore<span class="w"> </span>--directory<span class="w"> </span>/secure/aw-backup
+<h1 id="otlp-traces-and-metrics">OTLP traces and metrics<a class="headerlink" href="#otlp-traces-and-metrics" title="Permanent link">&para;</a></h1>
+<p>The gateway exports OTLP over HTTP/protobuf using its existing OpenTelemetry dependency.
+Enable either signal independently. In Compose set <code>OTEL_TRACING_ENABLED=true</code>,
+<code>OTEL_METRICS_ENABLED=true</code>, <code>OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318</code>
+and optionally <code>OTEL_SERVICE_NAME=inference-gateway</code>. Use an endpoint reachable from the container.
+The base URL is expanded to <code>/v1/traces</code> and <code>/v1/metrics</code>; a legacy full <code>/v1/traces</code>
+endpoint is also accepted and its sibling metrics endpoint is derived.</p>
+<p>Equivalent Helm values (under <code>inference-gateway</code> when using the umbrella chart):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">observability</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">tracing</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">otlpEndpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://otel-collector.monitoring.svc.cluster.local:4318</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">serviceName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">inference-gateway</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
-<p>Use the actual source Compose project and a new, empty restore project. <code>restore</code> refuses running
-consumers or nonempty stores. <code>verify</code> is read-only and runs natively without Docker: it rejects
-missing/empty files, checksum mismatches and broken receipt chains. It does <strong>not</strong> prove that a
-database can be restored. The default helper covers Redis-backed gateway records and Temporal;
-it does not back up optional gateway PostgreSQL, external stores, object files or deployment secrets.</p>
-<p>For those installations, quiesce <strong>all</strong> gateway/worker/Temporal replicas and other writers, take
-consistent Redis and database snapshots, and capture object data plus Secret-manager versions as
-one recovery point. Use a protected PostgreSQL service file for credentials, for example
-<code>PGSERVICE=aw-gateway pg_dump -Fc --file=gateway.dump</code>; verify with <code>pg_restore --list gateway.dump</code>
-and an actual restore into an isolated empty database. Hash these additional artifacts in the
-operator's manifest. Preserve <code>WORKFLOW_SECRETS_KEY</code>, session/credential signing keys, authentication
-configuration and provider-secret references; restored encrypted values need the original key.</p>
-<p>Before reopening traffic, compare retained run IDs, settings revisions, revocations, budgets and
-receipt heads with the captured inventory; verify <code>GET /v1/team/audit/verify</code>, resolve a seeded
-workflow secret through an authorized activity, and resume a pending approval. A restored completed
-step must keep its receipt and must not cause another provider/tool call. Keep another team as an
-isolation control. Record backup time, restore time, observed data loss, checks and failures.</p>
-<p>In a disposable Linux/WSL environment, <code>make workflow-restore-drill</code> runs an actual restore,
-compares state and budgets, resumes an approval, checks receipt continuity and worker shutdown,
-then stops and pauses Redis, Temporal and Temporal PostgreSQL in turn. Each fault must return a
-bounded 503 while liveness stays healthy, and recovery with the same request ID must produce one
-model receipt and charge. Faults are reversed in <code>finally</code>; only the drill's named volumes are
-removed. Evidence is written under <code>.out/aw-hardening-*/result.json</code>. This must pass before a
-backup is accepted as recoverable; native unit tests and checksum verification alone are insufficient.</p>
+<p>Allow collector egress in the chart's network policy. Configure collector authentication/TLS
+and the standard OTLP exporter headers/environment through your deployment's secret mechanism.
+The console's <strong>Data &amp; privacy</strong> page and <code>GET /v1/team/telemetry</code> report configuration,
+not collector health. Check collector logs and Grafana to confirm delivery.</p>
+<p>Example collector pipelines, with an existing Tempo OTLP receiver and Prometheus scraping port 8889:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">receivers</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">otlp</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">protocols</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">http</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0.0.0:4318</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">processors</span><span class="p">:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">batch</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nt">exporters</span><span class="p">:</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">otlp/tempo</span><span class="p">:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tempo.monitoring.svc.cluster.local:4317</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">      </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w"> </span><span class="c1"># Only for an isolated local trial; configure TLS in production.</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">prometheus</span><span class="p">:</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0.0.0:8889</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nt">service</span><span class="p">:</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">pipelines</span><span class="p">:</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">    </span><span class="nt">traces</span><span class="p">:</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">      </span><span class="nt">receivers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">otlp</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">      </span><span class="nt">processors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">batch</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">      </span><span class="nt">exporters</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">otlp/tempo</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="nt">metrics</span><span class="p">:</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">      </span><span class="nt">receivers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">otlp</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">      </span><span class="nt">processors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">batch</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">      </span><span class="nt">exporters</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">prometheus</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>Import <code>deploy/observability/dashboards/otlp-dashboard.json</code> and select the Prometheus datasource
+scraping that collector. The generated dashboard ConfigMaps include the same dashboard for
+Grafana sidecar provisioning. Panels cover request rate, server errors, latency p95, workflow
+states, monthly spend and limits. Team gauges use <code>max</code> across replicas because each replica
+reads the same shared state; HTTP counters sum across replicas. Prometheus naming converts
+OTLP <code>agentworkflows_http_requests</code> into <code>agentworkflows_http_requests_total</code> and replaces dots
+in attribute names with underscores. Do not apply a collector metric namespace prefix unless
+you also update the dashboard queries.</p>
+<p>HTTP attributes use route patterns and method/status, never raw run IDs or query strings.
+Trace exception messages are suppressed to avoid capturing payloads or credentials. Existing
+trace context propagation and workflow/team metadata remain available for correlation; set
+appropriate collector access and retention. Duration measures the gateway response dispatch;
+streaming body lifetime is not included. The existing Prometheus scrape endpoint is unchanged.
+Provider export failures are asynchronous and require collector monitoring.</p>
+<p>Validate dashboard metric names/provisioning with <code>python scripts/dashboard-check.py --check</code>.
+For live verification enable both signals, perform a run/cancel/retry, wait one metric export
+interval, inspect the collector for both signals and verify the Grafana panels. This live
+collector/Tempo/Prometheus check requires your container or cluster environment.
+See <a href="https://opentelemetry.io/docs/languages/python/exporters/">Python exporters</a> for transport setup.</p>
+<p>The rc.3 review keeps the existing metric names and dashboard queries. Unknown HTTP methods collapse
+to <code>_OTHER</code>; unmatched paths collapse to <code>/unmatched</code>. Request IDs, workflow run/step IDs, prompts,
+query strings and credentials must never become metric labels. Sandbox Prometheus labels retain
+the existing 2,000-value cap; team gauges are scoped to configured teams and removed on erasure.
+Use <code>max</code> for replicated shared-state gauges and <code>sum(rate(...))</code> for per-process counters.</p>
+<p>With tracing enabled, an inbound W3C parent creates a gateway SERVER span; the outgoing runtime
+request uses that span as its parent. Cloud routes receive only W3C trace context and their own
+provider credentials, without tenant headers or baggage. Tracing does not automatically instrument
+Temporal history or SDK activities; validate collector delivery and any separately configured
+Temporal instrumentation in the deployment. Spans omit exception payloads and raw URL paths.</p>
+<p>Audit-store failures still produce ERROR logs and chain-persist error metrics, but omit driver
+tracebacks that may contain DSNs or SQL data. Worker activity errors retain status, machine reason
+and gateway request ID while omitting response bodies; use the retained, access-controlled audit
+trail for investigation. Native regression tests cover these redaction and propagation boundaries.</p>
 
 
 

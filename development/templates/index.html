@@ -582,6 +582,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#install-a-reviewed-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install a reviewed version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#before-you-start" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2153,6 +2164,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#install-a-reviewed-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install a reviewed version
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#before-you-start" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2288,6 +2310,19 @@
 
 
 <h1 id="workflow-template-gallery">Workflow template gallery<a class="headerlink" href="#workflow-template-gallery" title="Permanent link">&para;</a></h1>
+<h2 id="install-a-reviewed-version">Install a reviewed version<a class="headerlink" href="#install-a-reviewed-version" title="Permanent link">&para;</a></h2>
+<p>Open <strong>Workflow templates</strong> in the console. A team admin can install any bundled template
+whose worker and team policy are already configured with one click, then select <strong>Run</strong>.
+The six shipped templates (including Research) have immutable catalog version <code>0.9.0</code>.
+Installation pins that version in the team's revisioned settings and records an audit entry;
+repeating the same installation is idempotent. New runs retain the template ID and version.
+Unknown versions return 422; an unapproved workflow returns 409.</p>
+<p>This installs the catalog selection, not remote executable code. The Compose worker already
+registers all six implementations. For Kubernetes, register the implementation in your worker
+and approve <code>inference-gateway.sandboxPolicy.policy.policies[].workflows</code> in Helm first;
+the gallery never expands model, tool or egress permissions. Operator policy remains authoritative.
+Source changes still require a worker deployment. The existing scaffold command below is
+the way to edit a template. See <a href="../team-lifecycle/">lifecycle API and SDK methods</a>.</p>
 <p>Pick one team task, run its fixture, then adapt its inputs and tools. Each walkthrough takes
 about five minutes after the <a href="../quickstart/">quickstart</a>. All five run in the same Compose
 trial without credentials for any external service, a GPU, or framework extras.</p>

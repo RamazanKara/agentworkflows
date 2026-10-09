@@ -2105,6 +2105,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#rc3-compatibility-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 compatibility checks
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2263,6 +2274,21 @@ incident -- a permanently manual Application drifts silently.</p>
 commit that moved <code>CUSTOMER_REVISION</code>, smoke and gate results
 (<code>make eval</code>, <code>make loadtest</code>, <code>make release-gate-strict</code>), and -- if automation
 was paused -- when it was disabled and re-enabled.</p>
+<h2 id="rc3-compatibility-checks">rc.3 compatibility checks<a class="headerlink" href="#rc3-compatibility-checks" title="Permanent link">&para;</a></h2>
+<p>The gateway tests contain selected reliability configuration and Helm values captured from the
+actual 0.2.0 and rc.2 commits (source hashes are in <code>tests/fixtures/upgrade</code>). With Helm on PATH
+and <code>helm dependency build deploy/charts/workflows</code> complete, run
+<code>python -m pytest src/inference-gateway/tests/test_upgrade.py src/inference-gateway/tests/test_storage.py</code>.
+These checks load legacy environment values and render current gateway/worker charts with old
+values, retaining store connections, task queues, timeouts and Secret references.</p>
+<p>Set <code>TEST_REDIS_URL</code> and <code>TEST_POSTGRES_DSN</code> to disposable stores and also run
+<code>src/inference-gateway/tests/test_postgres_integration.py</code>. The Redis checks use unique key prefixes
+and cover unversioned/0/1/2 state, TTL preservation, interrupted migration replies and future-version
+refusal. PostgreSQL checks use disposable schemas and verify timeout recovery and transactional DDL
+rollback before retry. No schema version changes in rc.3. SQL down migration 1 remains destructive.</p>
+<p>On Linux/WSL, <code>make workflow-upgrade-test</code> upgrades actual 0.2.0 Compose state and
+<code>make workflow-helm-upgrade-test</code> upgrades charts and images in disposable kind. These live checks
+prove properties that native config parsing and Helm rendering cannot establish.</p>
 
 
 

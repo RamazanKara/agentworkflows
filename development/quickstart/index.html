@@ -536,6 +536,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1. Install and start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scripted-first-approved-run-rc2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scripted first approved run (rc.2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2128,6 +2156,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="1. Install and start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scripted-first-approved-run-rc2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scripted first approved run (rc.2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2234,26 +2290,58 @@ The command verification and remaining Docker/WSL checks are recorded in
 <p>Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
 the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout on Windows.</p>
 <h2 id="1-install-and-start">1. Install and start<a class="headerlink" href="#1-install-and-start" title="Permanent link">&para;</a></h2>
+<h3 id="scripted-first-approved-run-rc2">Scripted first approved run (rc.2)<a class="headerlink" href="#scripted-first-approved-run-rc2" title="Permanent link">&para;</a></h3>
+<p>The script installs the Research template, starts its simulated workflow, prints and approves
+the fixture draft, checks publication and verifies the audit chain. It fails after 300 seconds
+and reports elapsed time on success. This is an automated acceptance check; the manual steps
+below let you review the draft yourself. It refuses real model routes so it cannot approve a
+real-provider run. Image builds, dependency installation and initial downloads are preparation
+outside the timed run; the five-minute result is measured, not guaranteed on a cold machine.</p>
+<p>From the repository root in Linux/WSL with Python 3.12+, Docker and Compose installed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Prepare candidate images and dependencies before starting the clock.</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>build
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>pull<span class="w"> </span>--ignore-buildable
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>compose
+</code></pre></div>
+<p>For kind, also install <code>kind</code>, <code>kubectl</code> and Helm. Use an isolated cluster/namespace named
+<code>agentworkflows-quickstart</code>; the script always supplies that context, creates it if absent,
+loads the local images and installs the chart's source candidate. Prepare images/chart dependencies:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-gateway:quickstart<span class="w"> </span>src/inference-gateway
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>sdk/python/Dockerfile<span class="w"> </span>-t<span class="w"> </span>agentworkflows-worker:quickstart<span class="w"> </span>.
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>kind
+</code></pre></div>
+<p>The kind profile <code>deploy/charts/agentworkflows/values-quickstart.yaml</code> uses a local fake provider,
+one approval and local research/publish fixtures; no cloud credential is needed. It is for evaluation.
+The script's temporary port-forward is stopped on exit; it prints how to reopen the console.
+Both scripts leave their containers/cluster/data in place for inspection. On failure inspect
+<code>docker compose -f deploy/compose/compose.yaml logs workflow-worker inference-gateway</code> or
+<code>kubectl --context kind-agentworkflows-quickstart -n agentworkflows-quickstart get pods</code>.</p>
+<p>On this native Windows sandbox Docker/kind execution may be unavailable. Run the commands above
+inside WSL, using its own Python environment. A native <code>python scripts/first-approved-run.py --help</code>
+only verifies the CLI, not a successful run. See <a href="../release-verification/">release verification</a>.</p>
+<h3 id="manual-setup">Manual setup<a class="headerlink" href="#manual-setup" title="Permanent link">&para;</a></h3>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Bash (Linux/macOS)</label><label for="__tabbed_1_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./sdk/python
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>--build<span class="w"> </span>workflow-worker<span class="w"> </span>temporal-ui
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>local-development-only
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./sdk/python
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>--build<span class="w"> </span>workflow-worker<span class="w"> </span>temporal-ui
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>local-development-only
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">git</span> <span class="n">clone</span> <span class="p">-</span><span class="n">-branch</span> <span class="n">main</span> <span class="p">-</span><span class="n">-depth</span> <span class="n">1</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RamazanKara</span><span class="p">/</span><span class="n">agentworkflows</span><span class="p">.</span><span class="n">git</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd </span><span class="n">agentworkflows</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">$env:Path</span> <span class="p">=</span> <span class="s2">"$PWD\.venv\Scripts;$env:Path"</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="p">./</span><span class="n">sdk</span><span class="p">/</span><span class="n">python</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="p">-</span><span class="n">-build</span> <span class="n">workflow-worker</span> <span class="n">temporal-ui</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">$env:AGENTWORKFLOWS_API_KEY</span> <span class="p">=</span> <span class="s1">'local-development-only'</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">git</span> <span class="n">clone</span> <span class="p">-</span><span class="n">-branch</span> <span class="n">main</span> <span class="p">-</span><span class="n">-depth</span> <span class="n">1</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RamazanKara</span><span class="p">/</span><span class="n">agentworkflows</span><span class="p">.</span><span class="n">git</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd </span><span class="n">agentworkflows</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">$env:Path</span> <span class="p">=</span> <span class="s2">"$PWD\.venv\Scripts;$env:Path"</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="p">./</span><span class="n">sdk</span><span class="p">/</span><span class="n">python</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="p">-</span><span class="n">-build</span> <span class="n">workflow-worker</span> <span class="n">temporal-ui</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nv">$env:AGENTWORKFLOWS_API_KEY</span> <span class="p">=</span> <span class="s1">'local-development-only'</span>
 </code></pre></div>
 </div>
 </div>
@@ -2275,9 +2363,9 @@ with exactly the same workflow steps. Research and publish tools remain local fi
 both modes: no external document is published.</p>
 <h2 id="2-create-and-run-a-project">2. Create and run a project<a class="headerlink" href="#2-create-and-run-a-project" title="Permanent link">&para;</a></h2>
 <p>These commands work in either shell:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-research
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>my-research
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>ResearchWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@input.json'</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-research
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">cd</span><span class="w"> </span>my-research
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>ResearchWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@input.json'</span>
 </code></pre></div>
 <p>You now have editable <code>workflow.py</code>, <code>worker.py</code>, <code>input.json</code>, and <code>input-schema.json</code>, plus a README with
 worker instructions. <code>init --help</code> lists <strong>research</strong>, <strong>code-review</strong>, <strong>support-triage</strong>,
@@ -2288,13 +2376,13 @@ follow <a href="../templates/#run-your-edits">Edit your workflow</a> when you ch
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Bash (Linux/macOS)</label><label for="__tabbed_2_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">RUN_ID</span><span class="o">=</span><span class="s1">'paste-the-run_id-here'</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">RUN_ID</span><span class="o">=</span><span class="s1">'paste-the-run_id-here'</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">$RUN_ID</span> <span class="p">=</span> <span class="s1">'paste-the-run_id-here'</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">agentworkflows</span> <span class="n">runs</span> <span class="n">inspect</span> <span class="s2">"$RUN_ID"</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">$RUN_ID</span> <span class="p">=</span> <span class="s1">'paste-the-run_id-here'</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">agentworkflows</span> <span class="n">runs</span> <span class="n">inspect</span> <span class="s2">"$RUN_ID"</span>
 </code></pre></div>
 </div>
 </div>
@@ -2303,9 +2391,9 @@ follow <a href="../templates/#run-your-edits">Edit your workflow</a> when you ch
 working, repeat <code>inspect</code> after a few seconds. A fixture draft is deliberately synthetic.</p>
 <h2 id="3-approve-and-inspect-the-receipts">3. Approve and inspect the receipts<a class="headerlink" href="#3-approve-and-inspect-the-receipts" title="Permanent link">&para;</a></h2>
 <p>After reviewing that draft, in the same shell:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>approve<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>agentworkflows<span class="w"> </span>usage
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>approve<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>agentworkflows<span class="w"> </span>usage
 </code></pre></div>
 <p>Repeat <code>inspect</code> if the run is still finishing. Success is <strong><code>status: completed</code></strong>, a
 <strong><code>result.status: published</code></strong>, and a timeline with <code>research</code>, two model calls, your
@@ -2337,15 +2425,15 @@ in sync using <code>input-schema.json</code>. Invalid fields are reported before
 <div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Bash (Linux/macOS)</label><label for="__tabbed_3_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>..
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>logs<span class="w"> </span>--no-color<span class="w"> </span>--no-log-prefix<span class="w"> </span>inference-gateway<span class="w"> </span>&gt;<span class="w"> </span>receipts.log
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>python<span class="w"> </span>scripts/audit-verify.py<span class="w"> </span>receipts.log
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">cd</span><span class="w"> </span>..
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>logs<span class="w"> </span>--no-color<span class="w"> </span>--no-log-prefix<span class="w"> </span>inference-gateway<span class="w"> </span>&gt;<span class="w"> </span>receipts.log
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>python<span class="w"> </span>scripts/audit-verify.py<span class="w"> </span>receipts.log
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd </span><span class="p">..</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">logs</span> <span class="p">-</span><span class="n">-no-color</span> <span class="p">-</span><span class="n">-no-log-prefix</span> <span class="n">inference-gateway</span> <span class="p">|</span> <span class="nb">Out-File</span> <span class="n">-Encoding</span> <span class="n">utf8</span> <span class="n">receipts</span><span class="p">.</span><span class="n">log</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">python</span> <span class="n">scripts</span><span class="p">/</span><span class="n">audit-verify</span><span class="p">.</span><span class="n">py</span> <span class="n">receipts</span><span class="p">.</span><span class="n">log</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd </span><span class="p">..</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">logs</span> <span class="p">-</span><span class="n">-no-color</span> <span class="p">-</span><span class="n">-no-log-prefix</span> <span class="n">inference-gateway</span> <span class="p">|</span> <span class="nb">Out-File</span> <span class="n">-Encoding</span> <span class="n">utf8</span> <span class="n">receipts</span><span class="p">.</span><span class="n">log</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">python</span> <span class="n">scripts</span><span class="p">/</span><span class="n">audit-verify</span><span class="p">.</span><span class="n">py</span> <span class="n">receipts</span><span class="p">.</span><span class="n">log</span>
 </code></pre></div>
 </div>
 </div>
@@ -2373,11 +2461,11 @@ are needed to detect truncation or a complete rewrite. Save the export before re
 <div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Bash (Linux/macOS)</label><label for="__tabbed_4_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
 </code></pre></div>
 </div>
 </div>
@@ -2390,21 +2478,21 @@ OpenAI override. Read the key into your shell without saving it in the repositor
 <div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Bash (Linux/macOS)</label><label for="__tabbed_5_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'OpenAI API key: '</span><span class="w"> </span>OPENAI_API_KEY<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">export</span><span class="w"> </span>OPENAI_API_KEY
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>-f<span class="w"> </span>deploy/compose/openai.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>inference-gateway
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nb">unset</span><span class="w"> </span>OPENAI_API_KEY
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'OpenAI API key: '</span><span class="w"> </span>OPENAI_API_KEY<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">export</span><span class="w"> </span>OPENAI_API_KEY
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>-f<span class="w"> </span>deploy/compose/openai.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>inference-gateway
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nb">unset</span><span class="w"> </span>OPENAI_API_KEY
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">$secret</span> <span class="p">=</span> <span class="nb">Read-Host</span> <span class="s1">'OpenAI API key'</span> <span class="n">-AsSecureString</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nv">$env:OPENAI_API_KEY</span> <span class="p">=</span> <span class="no">[System.Net.NetworkCredential]</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s1">''</span><span class="p">,</span> <span class="nv">$secret</span><span class="p">).</span><span class="n">Password</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nv">$savedWSLENV</span> <span class="p">=</span> <span class="nv">$env:WSLENV</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nv">$env:WSLENV</span> <span class="p">=</span> <span class="p">(@(</span><span class="nv">$savedWSLENV</span><span class="p">,</span> <span class="s1">'OPENAI_API_KEY'</span><span class="p">)</span> <span class="p">|</span> <span class="nb">Where-Object</span> <span class="p">{</span> <span class="nv">$_</span> <span class="p">})</span> <span class="n">-join</span> <span class="s1">':'</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">openai</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="n">inference-gateway</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="nv">$env:WSLENV</span> <span class="p">=</span> <span class="nv">$savedWSLENV</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="nb">Remove-Item</span> <span class="n">Env</span><span class="p">:</span><span class="n">OPENAI_API_KEY</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="nb">Remove-Variable</span> <span class="n">secret</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nv">$secret</span> <span class="p">=</span> <span class="nb">Read-Host</span> <span class="s1">'OpenAI API key'</span> <span class="n">-AsSecureString</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nv">$env:OPENAI_API_KEY</span> <span class="p">=</span> <span class="no">[System.Net.NetworkCredential]</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s1">''</span><span class="p">,</span> <span class="nv">$secret</span><span class="p">).</span><span class="n">Password</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nv">$savedWSLENV</span> <span class="p">=</span> <span class="nv">$env:WSLENV</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nv">$env:WSLENV</span> <span class="p">=</span> <span class="p">(@(</span><span class="nv">$savedWSLENV</span><span class="p">,</span> <span class="s1">'OPENAI_API_KEY'</span><span class="p">)</span> <span class="p">|</span> <span class="nb">Where-Object</span> <span class="p">{</span> <span class="nv">$_</span> <span class="p">})</span> <span class="n">-join</span> <span class="s1">':'</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">openai</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="n">inference-gateway</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nv">$env:WSLENV</span> <span class="p">=</span> <span class="nv">$savedWSLENV</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="nb">Remove-Item</span> <span class="n">Env</span><span class="p">:</span><span class="n">OPENAI_API_KEY</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nb">Remove-Variable</span> <span class="n">secret</span>
 </code></pre></div>
 </div>
 </div>
@@ -2471,15 +2559,15 @@ does not verify account access. The automated walkthrough uses fakes only.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Bash (Linux/macOS)</label><label for="__tabbed_6_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'AGENTWORKFLOWS_GATEWAY_PORT=18080'</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>deploy/compose/.env
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>http://127.0.0.1:18080
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker<span class="w"> </span>temporal-ui
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'AGENTWORKFLOWS_GATEWAY_PORT=18080'</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>deploy/compose/.env
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>http://127.0.0.1:18080
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker<span class="w"> </span>temporal-ui
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">Add-Content</span> <span class="n">-LiteralPath</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/.</span><span class="n">env</span> <span class="n">-Value</span> <span class="s1">'AGENTWORKFLOWS_GATEWAY_PORT=18080'</span> <span class="n">-Encoding</span> <span class="n">utf8</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nv">$env:AGENTWORKFLOWS_URL</span> <span class="p">=</span> <span class="s1">'http://127.0.0.1:18080'</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="n">workflow-worker</span> <span class="n">temporal-ui</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">Add-Content</span> <span class="n">-LiteralPath</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/.</span><span class="n">env</span> <span class="n">-Value</span> <span class="s1">'AGENTWORKFLOWS_GATEWAY_PORT=18080'</span> <span class="n">-Encoding</span> <span class="n">utf8</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nv">$env:AGENTWORKFLOWS_URL</span> <span class="p">=</span> <span class="s1">'http://127.0.0.1:18080'</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="n">workflow-worker</span> <span class="n">temporal-ui</span>
 </code></pre></div>
 </div>
 </div>
