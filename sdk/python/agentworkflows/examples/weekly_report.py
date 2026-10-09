@@ -21,7 +21,7 @@ class WeeklyReportRequest:
         "properties": {
             "period": {
                 "type": "string",
-                "description": "Start and end dates, as YYYY-MM-DD/YYYY-MM-DD.",
+                "description": "Start and end date, e.g. 2026-09-28/2026-10-04",
                 "examples": ["2026-09-28/2026-10-04"],
                 "minLength": 1,
                 "pattern": "\\S",

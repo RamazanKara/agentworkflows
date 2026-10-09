@@ -3,12 +3,12 @@ import { api, date, label as titleCase, money, number, providerName, useData, wo
 import { DotList, ErrorMessage, Loading, NumberInput, PageHeader } from './ui';
 
 // Field keys: cost_limit_usd, project_budgets.<project>, workflows.<Workflow>.<field>, model_routes.<alias>.
-type Kind = 'usd' | 'tokens' | 'count' | 'seconds' | 'flag' | 'role' | 'route' | 'providers' | 'capture';
+type Kind = 'usd' | 'tokens' | 'count' | 'minutes' | 'flag' | 'role' | 'route' | 'providers' | 'capture';
 const workflowFields: Record<string, [string, Kind]> = {
   cost_limit_usd: ['Budget per run', 'usd'], token_limit: ['Token limit per run', 'tokens'],
   approval_required: ['Require approval', 'flag'], approval_threshold_usd: ['Approval threshold', 'usd'],
   approver_role: ['Approver role', 'role'], allowed_providers: ['Allowed providers', 'providers'],
-  required_approvals: ['Required reviewers', 'count'], approval_timeout_seconds: ['Approval expiry (seconds)', 'seconds'],
+  required_approvals: ['Required reviewers', 'count'], approval_timeout_seconds: ['Approval expiry (minutes)', 'minutes'],
   capture_content: ['Step content capture', 'capture'],
 };
 const cardRows = [['cost_limit_usd', 'token_limit'], ['approval_required', 'approval_threshold_usd', 'approver_role'], ['required_approvals', 'approval_timeout_seconds'], ['allowed_providers', 'capture_content']];
@@ -29,7 +29,9 @@ const format = (field: string, value: SettingValue) => value === null || value =
   : Array.isArray(value) ? value.map(providerName).join(', ') || 'Team policy'
   : typeof value === 'boolean' ? value ? 'Required' : 'Not required'
   : kind(field) === 'usd' ? money(Number(value)) : kind(field) === 'tokens' ? `${number(Number(value))} tokens`
-  : kind(field) === 'role' ? titleCase(String(value)) : String(value);
+  : kind(field) === 'minutes' ? `${number(Number(value) / 60)} minutes`
+  : kind(field) === 'capture' && value === 'none' ? 'Off'
+  : ['role', 'capture'].includes(kind(field)) ? titleCase(String(value)) : String(value);
 const budgetField = (field: string) => ['cost_limit_usd', 'soft_cost_limit_usd'].includes(field) || field.startsWith('project_budgets.') || /\.(cost_limit_usd|token_limit)$/.test(field);
 // An emptied input and a stored "no limit" are the same value.
 const normal = (value: SettingValue) => Array.isArray(value) ? [...value].sort() : value === '' ? null : value;
@@ -153,7 +155,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
           <div className="setting-grid">{groups.team.map(field)}</div>
           <p className="muted">The soft limit alerts your team. The monthly budget is a hard limit: calls that would exceed it return 429. Blank team limits are unlimited.</p>
         </SettingsGroup>}
-        {groups.capture.length > 0 && <SettingsGroup nested={false} title="Step content" note="None keeps capture off. Redacted masks configured secrets and personal data. Full stores content after request guardrails. Changes affect future steps; existing content keeps its retention deadline. Workflow overrides take precedence.">
+        {groups.capture.length > 0 && <SettingsGroup nested={false} title="Step content" note="Off disables capture. Redacted masks configured secrets and personal data. Full stores content after request guardrails. Changes affect future steps; existing content keeps its retention deadline. Workflow overrides take precedence.">
           <div className="setting-grid">{groups.capture.map(field)}</div>
         </SettingsGroup>}
         {groups.workflows.length > 0 && (budgetsOnly
@@ -162,7 +164,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
             <div className="run-budgets"><div className="run-budgets-head" aria-hidden="true"><span>Workflow</span><span>Budget per run</span><span>Token limit per run</span></div>
               {groups.workflows.map(([workflow, fields]) => <div className="setting-row" key={workflow}><h4>{workflowName(workflow)}</h4><div className="setting-grid">{fields.map(field)}</div></div>)}</div>
           </SettingsGroup>
-          : <SettingsGroup nested={false} title="Workflows" note="Approval rules are saved when a run starts. Each reviewer counts once; any rejection stops approval. Expiry is 60 to 604800 seconds from the review step. Changes apply to new runs.">
+          : <SettingsGroup nested={false} title="Workflows" note="Approval rules are saved when a run starts. Each reviewer counts once; any rejection stops approval. Approvals expire 1 minute to 7 days after the review step. Changes apply to new runs.">
             {groups.workflows.map(([workflow, fields]) => <WorkflowCard key={workflow} workflow={workflow} open={groups.workflows.length <= 2}
               custom={fields.some(name => settings.fields[name].source === 'override')} unsaved={fields.some(name => pending.includes(name))}
               summary={summary(workflow, current)}>
@@ -230,11 +232,11 @@ function SettingControl({ field, state, value, pending, resetting, error, provid
     <input type="checkbox" checked={Array.isArray(value) && value.includes(provider)} onChange={event => onChange(event.target.checked
       ? [...(Array.isArray(value) ? value : []), provider] : (Array.isArray(value) ? value : []).filter(item => item !== provider))}/>{providerName(provider)}</label>)}</fieldset>;
   else if (choices) control = <><label htmlFor={id}>{name}</label><select id={id} value={String(value)} onChange={event => onChange(event.target.value)}>
-    {choices.map(option => <option key={option} value={option}>{type === 'role' ? titleCase(option) : owners[option] ? `${option} · ${owners[option]}` : option}</option>)}</select></>;
+    {choices.map(option => <option key={option} value={option}>{['role', 'capture'].includes(type) ? format(field, option) : owners[option] ? `${option} · ${owners[option]}` : option}</option>)}</select></>;
   else {
-    const input = <NumberInput id={id} min={type === 'count' ? 1 : type === 'seconds' ? 60 : 0} max={type === 'count' ? 10 : type === 'seconds' ? 604800 : type === 'tokens' ? 1000000000 : 1000000} step={type === 'usd' ? 'any' : 1} placeholder="No limit"
-      value={value === null || value === '' ? '' : Number(value)} required={pending && !resetting && !['cost_limit_usd', 'soft_cost_limit_usd'].includes(field)} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
-      onChange={onChange}/>;
+    const input = <NumberInput id={id} min={['count', 'minutes'].includes(type) ? 1 : 0} max={type === 'count' ? 10 : type === 'minutes' ? 10080 : type === 'tokens' ? 1000000000 : 1000000} step={['usd', 'minutes'].includes(type) ? 'any' : 1} placeholder="No limit"
+      value={value === null || value === '' ? '' : Number(value) / (type === 'minutes' ? 60 : 1)} required={pending && !resetting && !['cost_limit_usd', 'soft_cost_limit_usd'].includes(field)} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
+      onChange={next => onChange(type === 'minutes' && next !== '' ? Math.round(next * 60) : next)}/>;
     control = <><label htmlFor={id}>{name}</label>{type === 'usd' ? <div className="prefixed"><span aria-hidden="true">$</span>{input}</div> : input}</>;
   }
   return <div className={['setting', pending && 'pending', type === 'flag' && 'flag'].filter(Boolean).join(' ')}>

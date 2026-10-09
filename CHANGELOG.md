@@ -8,6 +8,9 @@
 - Refresh console evidence at 360, 393 and 1440 pixels with consistent seeded identity,
   receipts and totals, including approval quorums, SSO, spend, triggers and CSV export.
   Fix spend-alert spacing and adjacent key/trigger action controls.
+- Keep template hints intact on phones, simplify approval and sign-in copy, and
+  edit budgets only in Team settings. Use one six-workflow policy and an internal
+  gateway host across console captures, with distinct SSO and spend-limit views.
 - Throttle browser authentication with the configured limiter and remove OIDC query
   parameters from Uvicorn access logs. Bound webhook bodies before authentication;
   add regression tests and security review notes.

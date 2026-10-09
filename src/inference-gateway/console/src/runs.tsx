@@ -41,7 +41,7 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
   useEffect(() => { void load(null, true); return () => current.current?.abort(); }, [project, filter, workflow, trigger, revision]);
   return <>
     <PageHeader title="Workflow runs" subtitle="Runs in your projects, newest first."><Refresh onClick={() => setRevision(v => v + 1)}/>{canBuild(session) && <a className="button" href="#new">Run workflow</a>}</PageHeader>
-    {trigger && <p className="callout">Started by trigger <strong>{trigger}</strong>. History includes retained launches recorded since v0.7.0. <a href="#runs">All workflow runs</a> · <a href="#triggers">Back to triggers</a></p>}
+    {trigger && <p className="callout">Started by trigger <strong>{trigger}</strong>. History includes retained launches. <a href="#runs">All workflow runs</a> · <a href="#triggers">Back to triggers</a></p>}
     <Metrics compact items={[
       ['Runs shown', number(rows.length)], ['Awaiting approval', number(rows.filter(r => status(r) === 'awaiting_approval').length)],
       ['Cost of these runs', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
@@ -165,7 +165,7 @@ function SchemaField({ name, property, required, models }: { name: string; prope
   return <div className="field">
     {property.type !== 'boolean' && <label htmlFor={id}>{fieldLabel(name, property)}{usd && <span className="visually-hidden"> in US dollars</span>}</label>}
     {usd ? <div className="prefixed"><span aria-hidden="true">$</span>{control}</div> : control}
-    {property.description && <small id={`${id}-help`}>{property.description}</small>}
+    {property.description && <small id={`${id}-help`}>{property.description.split(/(\S+)/).map((part, index) => /\S/.test(part) ? <span className="nowrap" key={index}>{part}</span> : part)}</small>}
     {property.type === 'array' && <small id={`${id}-lines`}>One item per line.</small>}
     {example !== undefined && value === undefined && property.type !== 'boolean' && !property.enum && <button type="button" className="link" onClick={() => {
       const element = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;

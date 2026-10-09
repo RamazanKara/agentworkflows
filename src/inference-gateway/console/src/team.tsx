@@ -115,7 +115,7 @@ export function Costs({ session }: { session: Session }) {
         <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes budget reserved for failed calls the provider didn’t report. Calls made outside a workflow appear only under By provider.</p>
       </> : <div className="panel"><Empty title="No recorded spend yet"><p>Costs show up here by provider and workflow after your first run.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
     </>}
-    <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
+    <p className="muted">Manage budgets in <a href="#team">Team settings</a>.</p>
   </>;
 }
 
@@ -126,7 +126,7 @@ function SpendAlerts({ session, revision }: { session: Session; revision: number
     {result.data && <>
       <p role="status">{result.data.status === 'hard_limit' ? 'Hard limit reached. Further paid calls return 429 until the limit is raised or the month resets.'
         : result.data.status === 'soft_limit' ? 'Soft limit reached. Calls continue within the hard limit.' : 'Spend is within your configured limits.'}</p>
-      <p className="muted">Soft limit: {result.data.soft_limit_usd === null ? 'None' : money(result.data.soft_limit_usd)}. Hard limit: {result.data.hard_limit_usd === null ? 'None' : money(result.data.hard_limit_usd)}. Resets {new Date(result.data.window_end * 1000).toLocaleString(undefined, { timeZone: 'UTC' })} (UTC).</p>
+      <p className="muted">Soft limit: {result.data.soft_limit_usd === null ? 'None' : money(result.data.soft_limit_usd)}. Hard limit: {result.data.hard_limit_usd === null ? 'None' : money(result.data.hard_limit_usd)}. Resets {new Date(result.data.window_end * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'UTC' }).replace(' at ', ', ')} UTC.</p>
       {result.data.alerts.length ? <ul>{result.data.alerts.map(alert => <li key={alert.id}>
         <strong>{alert.level === 'hard' ? 'Hard limit reached or a call was blocked' : 'Soft limit reached'}</strong> · {money(alert.limit_usd)} · {date(alert.created_at)}.
         {' '}Webhook: {alert.webhook_status === 'disabled' ? 'not configured' : alert.webhook_status}{alert.webhook_status === 'failed' && ' after five attempts; ask your operator to check the destination'}.
@@ -137,7 +137,7 @@ function SpendAlerts({ session, revision }: { session: Session; revision: number
 }
 
 export function Providers({ session }: { session: Session }) {
-  if (session.team.role !== 'admin') return <><PageHeader title="Providers & budgets" subtitle="Your team’s spending limits."/><SettingsPanel session={session} budgetsOnly/></>;
+  if (session.team.role !== 'admin') return <><PageHeader title="Providers & budgets" subtitle="Your team’s spending limits."/><SettingsPanel session={session} budgetsOnly/><p className="muted">Review all settings in <a href="#team">Team settings</a>.</p></>;
   return <ProviderSettings session={session}/>;
 }
 
@@ -210,7 +210,6 @@ function ProviderSettings({ session }: { session: Session }) {
       <p>Store provider keys in the gateway’s environment or Kubernetes Secrets. New model routes, prices and network access are configured by your operator. Model routes are chosen in <a href="#team">Team settings</a>.</p>
       <p className="setup-links"><DotList items={[<a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a>, <a href={routes}>Cloud routes and prices</a>]}/></p>
     </section>}
-    <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
-    <p className="muted">Approval rules and model routes are in <a href="#team">Team settings</a>.</p>
+    <p className="muted">Budgets, approval rules and model routes are in <a href="#team">Team settings</a>.</p>
   </>;
 }

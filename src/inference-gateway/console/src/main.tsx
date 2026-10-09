@@ -41,7 +41,7 @@ function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
   </div><main className="signin-form"><h2>{cancel ? 'Switch account' : 'Sign in to your team'}</h2>
     <p>{sso ? 'Use your company account. Your team and role come with it.' : 'Use the API key your team admin gave you. Your team and role come with it.'}</p>
     {sso && <>
-      <button className="sso" onClick={() => location.assign(config!.oidc.login_url)}><Icon name="signin"/>Sign in with your company account</button>
+      <button className="sso" onClick={() => location.assign(config!.oidc.login_url)}><Icon name="signin"/>Sign in with SSO</button>
       <p className="divider"><span>or use an API key</span></p>
     </>}
     <form onSubmit={async event => {

@@ -49,7 +49,7 @@ function KeyManagement({ session }: { session: Session }) {
     <p className="intro">{config.data?.enabled
       ? 'People who sign in with their company account get their team and role from it. Create keys here for anyone without company sign-in and for automation.'
       : 'Give each person and integration their own key, so you can revoke one without affecting anyone else.'}</p>
-    {(config.data?.enabled || config.error) && <section className="panel form-panel" aria-labelledby="company-signin">
+    {(config.data?.enabled || config.error) && <section className="panel form-panel sso-policy" aria-labelledby="company-signin">
       <h2 id="company-signin">Company sign-in</h2>
       <ErrorMessage message={config.error}/>
       {config.data?.enabled && <>
@@ -135,10 +135,10 @@ function KeyEditor({ record, session, onCancel, onSaved }: { record: Key; sessio
       finally { setBusy(false); }
     }}>
       <fieldset className="plain" disabled={busy}>
-        <div className="field"><label htmlFor="edit-key-name">Edit name</label><input id="edit-key-name" autoFocus required maxLength={128} value={name} onChange={event => setName(event.target.value)}/></div>
-        <div className="field"><label htmlFor="edit-key-role">Edit role</label><select id="edit-key-role" value={role} onChange={event => setRole(event.target.value as Team['role'])}>{roles.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></div>
-        <div className="field"><label htmlFor="edit-key-project">Edit project</label><select id="edit-key-project" value={project} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{session.team.projects.map(value => <option key={value}>{value}</option>)}</select></div>
-        <div className="field"><label htmlFor="edit-key-expiry">Edit expiry (UTC)</label><input id="edit-key-expiry" type="datetime-local" value={expiry} onChange={event => setExpiry(event.target.value)} aria-describedby="edit-expiry-help"/><small id="edit-expiry-help">Leave blank for no expiry. A past date disables access immediately.</small></div>
+        <div className="field"><label htmlFor="edit-key-name">Name</label><input id="edit-key-name" autoFocus required maxLength={128} value={name} onChange={event => setName(event.target.value)}/></div>
+        <div className="field"><label htmlFor="edit-key-role">Role</label><select id="edit-key-role" value={role} onChange={event => setRole(event.target.value as Team['role'])}>{roles.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></div>
+        <div className="field"><label htmlFor="edit-key-project">Project</label><select id="edit-key-project" value={project} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{session.team.projects.map(value => <option key={value}>{value}</option>)}</select></div>
+        <div className="field"><label htmlFor="edit-key-expiry">Expiry (UTC)</label><input id="edit-key-expiry" type="datetime-local" value={expiry} onChange={event => setExpiry(event.target.value)} aria-describedby="edit-expiry-help"/><small id="edit-expiry-help">Leave blank for no expiry. A past date disables access immediately.</small></div>
         <div className="actions"><button>{busy ? 'Saving…' : 'Save key'}</button><button type="button" className="secondary" onClick={onCancel}>Cancel editing</button></div>
       </fieldset>
     </form>

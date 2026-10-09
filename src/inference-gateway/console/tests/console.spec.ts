@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
-import type { CostRow, Run, TeamSettings, TeamSSO } from '../src/api';
+import type { CostRow, Policy, Run, TeamSettings, TeamSSO } from '../src/api';
 
 const id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb';
 const run = (overrides = {}) => ({
@@ -478,12 +478,20 @@ test('model prompts read as a transcript and the answer is previewed on the step
 for (const width of [360, 393, 1440]) {
   test(`release console layouts at ${width}px`, async ({ page }) => {
     test.setTimeout(60000);
+    const origin = 'https://gateway.insights.internal';
+    const visit = (path: string) => page.goto(`${origin}${path}`);
+    await page.route(`${origin}/console/**`, async route => {
+      const url = new URL(route.request().url());
+      const response = await route.fetch({ url: `http://127.0.0.1:4175${url.pathname}${url.search}` });
+      await route.fulfill({ response });
+    });
     await page.setViewportSize({ width, height: width < 760 ? 852 : 1000 });
     await page.clock.setFixedTime(new Date('2026-10-09T10:00:00Z'));
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
-    const capture = async (name: string) => {
+    const capture = async (name: string, target?: Locator) => {
       await expect(page.locator('main .loading')).toHaveCount(0);
+      expect(new URL(page.url()).origin).toBe(origin);
       await expect(page).toHaveTitle(/ · AgentWorkflows Console$/);
       await expect(page.locator('main h1')).toBeVisible();
       await expect(page.locator('vite-error-overlay')).toHaveCount(0);
@@ -508,11 +516,31 @@ for (const width of [360, 393, 1440]) {
         return split;
       });
       expect(splitWords, `${name}: words must wrap at spaces`).toEqual([]);
-      await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.1/${width}-${name}.png`, fullPage: true });
+      const path = `../../../.out/console-v1.0.0-rc.1/${width}-${name}.png`;
+      if (target) await target.screenshot({ path });
+      else await page.screenshot({ path, fullPage: true });
     };
     const runId = '7e2b941c-65af-4d83-9c12-34b08f6ea725';
     const started = Date.parse('2026-10-09T09:40:00Z') / 1000;
     const models = [{ id: 'gpt-4.1-mini', owned_by: 'openai' }, { id: 'claude-haiku-4-5', owned_by: 'anthropic' }];
+    const templates = [
+      ['ResearchWorkflow', 'research', 'topic', 'Agent workflow evaluation', 'A question or subject, in a sentence.', 'How should our team evaluate AI agents?'],
+      ['CodeReviewWorkflow', 'code-review', 'diff', '- const timeout = 1000;\n+ const timeout = 5000;', 'Paste a unified diff (git diff output).', '- return user.is_admin\n+ return True'],
+      ['SupportTriageWorkflow', 'support-triage', 'ticket', 'Password reset blocks sign-in.', "Paste the customer's message.", 'I cannot sign in after resetting my password.'],
+      ['WeeklyReportWorkflow', 'weekly-report', 'period', '2026-09-28/2026-10-04', 'Start and end date, e.g. 2026-09-28/2026-10-04', '2026-09-28/2026-10-04'],
+      ['IncidentSummaryWorkflow', 'incident-summary', 'incident_id', 'INC-1042', 'The ID from your incident tracker.', 'INC-1042'],
+      ['DocumentQAWorkflow', 'document-qa', 'question', 'Who can approve workflows?', "A question about your team's documents.", 'Who can approve a workflow, and when does approval expire?'],
+    ];
+    const capturePolicies: { workflows: Record<string, Policy> } = { workflows: Object.fromEntries(templates.map(([workflow, , field, , description, example]) => [workflow, {
+      allowedModels: workflow === 'ResearchWorkflow' ? models.map(model => model.id) : [models[0].id],
+      allowedProviders: workflow === 'ResearchWorkflow' ? ['openai', 'anthropic'] : ['openai'], tokenLimit: 10000, costLimitUsd: 5,
+      approvalRequired: true, approvalThresholdUsd: 0, approverRole: 'approver', requiredApprovals: 2, approvalTimeoutSeconds: 3600, captureContent: 'redacted',
+      inputSchema: { type: 'object', properties: {
+        [field]: { type: 'string', description, examples: [example], minLength: 1, pattern: '\\S' },
+        model: { type: 'string', default: models[0].id, minLength: 1, pattern: '\\S' },
+        ...(workflow === 'ResearchWorkflow' ? { token_limit: { type: 'integer', default: 10000, minimum: 1, maximum: 1000000000 }, cost_limit_usd: { type: 'number', default: 5, exclusiveMinimum: 0, maximum: 1000000 } } : {}),
+      }, required: [field], additionalProperties: false },
+    }])) };
     const draft = '# Briefing: Agent workflow evaluation\n\nStart with a small set of representative tasks. Compare answer quality, cost and review effort before expanding access.';
     const timeline = [
       { step_id: 'research', action: 'tool_call', provider: 'tool', model: '', tool: 'research', tokens: 0, cost_usd: .01, duration_ms: 320,
@@ -542,9 +570,12 @@ for (const width of [360, 393, 1440]) {
     teamSettings.fields['model_routes.research'] = { value: models[0].id, policy_default: models[0].id, source: 'policy' };
     teamSettings.fields['soft_cost_limit_usd'] = { value: 40, policy_default: 40, source: 'policy' };
     teamSettings.fields['capture_content'] = { value: 'redacted', policy_default: 'redacted', source: 'policy' };
-    teamSettings.fields['workflows.ResearchWorkflow.capture_content'] = { value: 'redacted', policy_default: 'redacted', source: 'policy' };
-    teamSettings.fields['workflows.ResearchWorkflow.required_approvals'] = { value: 2, policy_default: 2, source: 'policy' };
-    teamSettings.fields['workflows.ResearchWorkflow.approval_timeout_seconds'] = { value: 3600, policy_default: 3600, source: 'policy' };
+    for (const [workflow, policy] of Object.entries(capturePolicies.workflows)) {
+      const fields = { cost_limit_usd: policy.costLimitUsd, token_limit: policy.tokenLimit, approval_required: policy.approvalRequired!,
+        approval_threshold_usd: policy.approvalThresholdUsd!, approver_role: policy.approverRole!, allowed_providers: policy.allowedProviders,
+        capture_content: policy.captureContent!, required_approvals: policy.requiredApprovals!, approval_timeout_seconds: policy.approvalTimeoutSeconds! };
+      for (const [field, value] of Object.entries(fields)) teamSettings.fields[`workflows.${workflow}.${field}`] = { value, policy_default: value, source: 'policy' };
+    }
     let openaiConfigured = false;
     let anthropicConfigured = false;
     let recorded = false;
@@ -554,8 +585,8 @@ for (const width of [360, 393, 1440]) {
       if (route.request().method() === 'POST') {
         signedIn = true;
         await page.context().addCookies([
-          { name: 'aw_session', value: 'opaque-session', url: 'http://127.0.0.1:4175', httpOnly: true, sameSite: 'Lax' },
-          { name: 'aw_csrf', value: 'csrf-fixture', url: 'http://127.0.0.1:4175', sameSite: 'Lax' },
+          { name: 'aw_session', value: 'opaque-session', url: origin, httpOnly: true, sameSite: 'Lax' },
+          { name: 'aw_csrf', value: 'csrf-fixture', url: origin, sameSite: 'Lax' },
         ]);
       }
       return route.fulfill(signedIn ? { json: { csrf_token: 'csrf-fixture', principal: { key_id: 'admin', name: 'Maya Chen' } } } : { status: 401, json: {} });
@@ -579,10 +610,7 @@ for (const width of [360, 393, 1440]) {
     } }));
     await page.route('**/v1/models', route => route.fulfill({ json: { data: models } }));
     await page.route('**/v1/team/settings', route => route.fulfill({ json: teamSettings }));
-    await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: { ResearchWorkflow: {
-      ...policies.workflows.ResearchWorkflow, allowedModels: models.map(model => model.id),
-      inputSchema: { type: 'object', properties: { topic: { type: 'string', default: 'Agent workflow evaluation' }, model: { type: 'string', default: models[0].id } }, required: ['topic'] },
-    } } } }));
+    await page.route('**/v1/workflow-policies', route => route.fulfill({ json: capturePolicies }));
     await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: recorded ? [activeRun] : [], next_cursor: null } }));
     await page.route(`**/v1/workflow-runs/${runId}`, route => route.fulfill({ json: activeRun }));
     await page.route('**/v1/sandbox/budget', route => route.fulfill({ json: { usage: { estimated_tokens: recorded ? totals.tokens : 0 }, limits: { estimated_tokens: 200000 }, window_seconds: 86400 } }));
@@ -597,10 +625,14 @@ for (const width of [360, 393, 1440]) {
     await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: timeline.map((step, index) => ({
       id: `${step.timestamp * 1000}-0`, chain_id: step.chain_id, sequence: index + 1, event: step.receipt,
     })).reverse(), next_cursor: null } }));
-    await page.goto('/console/');
-    await expect(page.getByRole('button', { name: 'Sign in with your company account' })).toBeVisible();
+    await visit('/console/');
+    await expect(page.getByRole('button', { name: 'Sign in with SSO' })).toBeVisible();
+    expect(await page.getByRole('button', { name: 'Sign in with SSO' }).evaluate(button => {
+      const range = document.createRange(); range.selectNodeContents(button.lastChild!);
+      return range.getClientRects().length;
+    })).toBe(1);
     await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.1/${width}-sso-sign-in.png`, fullPage: true });
-    await login(page);
+    await login(page, 'admin', `${origin}/console/#start`);
     await expect(page.locator('.identity .team')).toHaveText('Insights');
     await expect(page.locator('.identity .who')).toHaveText('Maya Chen');
     page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
@@ -628,7 +660,7 @@ for (const width of [360, 393, 1440]) {
       const style = getComputedStyle(node); return [style.fontFamily, style.fontVariantNumeric, style.color, style.fontWeight];
     });
     await capture('get-started');
-    await page.goto('/console/#providers');
+    await visit('/console/#providers');
     const helm = page.locator('.setup pre');
     await expect(helm).toContainText('# Release and namespace are "aw", as in\n# the install guide. Change if needed.');
     await expect(page.getByText('Tokens in this 24-hour window', { exact: true })).toBeVisible();
@@ -644,7 +676,7 @@ for (const width of [360, 393, 1440]) {
     }
     await capture('providers');
     openaiConfigured = true;
-    await page.goto('/console/#start');
+    await visit('/console/#start');
     await page.reload();
     await expect(page.locator('.model-list .badge')).toHaveText(['Ready', 'Key missing']);
     await expect(page.locator('.onboarding .note-warn a')).toHaveCSS('white-space', 'nowrap');
@@ -661,18 +693,19 @@ for (const width of [360, 393, 1440]) {
       await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
     }
-    await page.goto('/console/#providers');
+    await visit('/console/#providers');
     await expect(page.getByText('Key present', { exact: true })).toHaveCount(2);
     expect(await page.locator('.usage-bar > span').first().evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThanOrEqual(4);
     await capture('providers-ready');
-    await page.goto('/console/#costs');
+    await visit('/console/#costs');
     await expect(page.getByRole('heading', { name: 'By provider' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'By workflow table' }).locator('tbody td')).toHaveText(['3', '4,200', '$0.06']);
     await expect(page.getByText('Tokens in this 24-hour window', { exact: true })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Spending period' })).toContainText('This month (UTC)');
     await expect(page.getByRole('region', { name: 'Spending period' })).not.toContainText('24-hour window');
-    await expect(page.getByLabel('Research · Token limit per run')).toHaveValue('10,000');
     expect(await page.getByRole('region', { name: 'Spend alerts', exact: true }).evaluate(node => parseFloat(getComputedStyle(node).paddingLeft))).toBeGreaterThanOrEqual(18);
+    await expect(page.getByRole('region', { name: 'Spend alerts', exact: true })).toContainText('Resets Nov 1, 00:00 UTC');
+    await expect(page.locator('main form')).toHaveCount(0);
     await capture('costs');
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
@@ -683,33 +716,35 @@ for (const width of [360, 393, 1440]) {
     for await (const chunk of stream!) chunks.push(chunk);
     expect(Buffer.concat(chunks).toString('utf8')).toBe(csv);
     await capture('csv-export');
-    await page.goto('/console/#keys');
+    await visit('/console/#keys');
     await expect(page.getByRole('rowheader', { name: 'Maya Chen You' })).toBeVisible();
     const revoke = await page.getByRole('button', { name: 'Revoke Research worker', exact: true }).boundingBox();
     const edit = await page.getByRole('button', { name: 'Edit Research worker', exact: true }).boundingBox();
     expect(edit!.x - revoke!.x - revoke!.width).toBeGreaterThanOrEqual(8);
+    const ssoCard = await page.getByRole('region', { name: 'Company sign-in', exact: true }).boundingBox();
+    const keyCard = await page.getByRole('region', { name: 'Create a key', exact: true }).boundingBox();
+    expect(ssoCard!.width).toBe(keyCard!.width);
     await capture('members-keys');
     await expect(page.getByRole('region', { name: 'Company sign-in', exact: true })).toContainText('Engineering reviewers');
-    await capture('sso-policy');
+    await capture('sso-policy', page.getByRole('region', { name: 'Company sign-in', exact: true }));
     await page.getByRole('button', { name: 'Edit Research worker', exact: true }).click();
-    await expect(page.getByLabel('Edit name', { exact: true })).toHaveValue('Research worker');
+    await expect(page.getByRole('region', { name: /^Edit / }).getByLabel('Name', { exact: true })).toHaveValue('Research worker');
     await capture('edit-key');
-    await page.goto('/console/#runs');
+    await visit('/console/#runs');
     await expect(page.getByRole('link', { name: 'Research', exact: true })).toBeVisible();
     await capture('workflow-runs');
-    await page.goto('/console/#triggers');
+    await visit('/console/#triggers');
     await expect(page.getByRole('link', { name: 'Run history for morning-briefing' })).toBeVisible();
     const history = await page.getByRole('link', { name: 'Run history for morning-briefing' }).boundingBox();
     const pause = await page.getByRole('button', { name: 'Pause morning-briefing', exact: true }).boundingBox();
     expect(pause!.x - history!.x - history!.width).toBeGreaterThanOrEqual(8);
+    await expect(page.getByLabel('Webhook URL')).toHaveText(`${origin}/v1/hooks/insights/ResearchWorkflow/requested-briefing`);
     await capture('triggers');
     await page.getByRole('link', { name: 'Run history for morning-briefing' }).click();
     await expect(page.getByText('Started by trigger')).toBeVisible();
+    await expect(page.locator('.callout')).not.toContainText('v0.7.0');
     await capture('trigger-history');
-    await page.goto('/console/#new/ResearchWorkflow');
-    await expect(page.getByLabel('Topic', { exact: true })).toHaveValue('Agent workflow evaluation');
-    await capture('template-research');
-    await page.goto(`/console/#run/${runId}`);
+    await visit(`/console/#run/${runId}`);
     await expect(page.locator('.draft h3')).toHaveText('Briefing: Agent workflow evaluation');
     await expect(page.locator('.step-preview h3')).toHaveText('Briefing: Agent workflow evaluation');
     await expect(page.locator('.metrics dd')).toHaveText(['4,200 of 10,000', '$0.06 of $5.00', '3']);
@@ -734,48 +769,42 @@ for (const width of [360, 393, 1440]) {
     await page.getByText('Prompt and response', { exact: true }).last().click();
     await expect(page.locator('.step-content h3')).toHaveText('Briefing: Agent workflow evaluation');
     await capture('run-step-output');
-    await page.goto('/console/#approvals');
+    await visit('/console/#approvals');
     await expect(page.locator('.review h2')).toHaveText('Briefing: Agent workflow evaluation');
     await capture('approvals');
-    await page.goto('/console/#team');
+    await visit('/console/#team');
     await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Model for research')).toHaveValue(models[0].id);
     await expect(page.getByLabel('Model for research').locator('option')).toHaveText(['gpt-4.1-mini · OpenAI', 'claude-haiku-4-5 · Anthropic']);
-    await expect(page.locator('.workflow-card > summary .dot-list > span')).toHaveText(['$5.00 per run', 'Approval on every run', 'OpenAI, Anthropic']);
+    await expect(page.locator('.workflow-card').first().locator('summary .dot-list > span')).toHaveText(['$5.00 per run', 'Approval on every run', 'OpenAI, Anthropic']);
+    await expect(page.locator('.workflow-card')).toHaveCount(6);
+    await page.locator('.workflow-card').first().locator('summary').click();
     await expect(page.getByLabel('Research · Token limit per run')).toHaveValue('10,000');
+    await expect(page.getByLabel('Research · Approval expiry (minutes)')).toHaveValue('60');
+    await expect(page.getByLabel('Default step content capture', { exact: true }).locator('option')).toHaveText(['Off', 'Redacted', 'Full']);
     if (width === 1440) {
       const columns = await page.locator('.workflow-card .card-row').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').filter(size => parseFloat(size) > 0));
       expect(columns).toHaveLength(2);
     }
     await capture('team-settings');
-    await capture('spend-limits');
-    await page.goto('/console/#audit');
+    await capture('spend-limits', page.locator('.settings-group').filter({ has: page.getByRole('heading', { name: 'Budgets', exact: true }) }));
+    await visit('/console/#audit');
     await expect(page.locator('.audit-table').getByText('Model call', { exact: true })).toHaveCount(2);
     await expect(page.locator('.audit-table').getByText('Agent action', { exact: true })).toHaveCount(1);
     await expect(page.locator('.audit-table td[data-label="Actor"]')).toHaveText(['Research workerAPI key', 'Research workerAPI key', 'Research workerAPI key']);
     await expect(page.locator('.audit-table')).not.toContainText('key-rese');
     await capture('audit');
-    const templates = [
-      ['ResearchWorkflow', 'research', 'topic', 'Agent workflow evaluation', 'A question or subject, in a sentence.', 'How should our team evaluate AI agents?'],
-      ['CodeReviewWorkflow', 'code-review', 'diff', '- const timeout = 1000;\n+ const timeout = 5000;', 'Paste a unified diff (git diff output).', '- return user.is_admin\n+ return True'],
-      ['SupportTriageWorkflow', 'support-triage', 'ticket', 'Password reset blocks sign-in.', "Paste the customer's message.", 'I cannot sign in after resetting my password.'],
-      ['WeeklyReportWorkflow', 'weekly-report', 'period', '2026-09-28/2026-10-04', 'Start and end dates, as YYYY-MM-DD/YYYY-MM-DD.', '2026-09-28/2026-10-04'],
-      ['IncidentSummaryWorkflow', 'incident-summary', 'incident_id', 'INC-1042', 'The ID from your incident tracker.', 'INC-1042'],
-      ['DocumentQAWorkflow', 'document-qa', 'question', 'Who can approve workflows?', "A question about your team's documents.", 'Who can approve a workflow, and when does approval expire?'],
-    ];
-    await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: Object.fromEntries(templates.map(([workflow, , field, , description, example]) => [workflow, {
-      allowedModels: [models[0].id], allowedProviders: ['openai'], tokenLimit: 10000, costLimitUsd: 5,
-      inputSchema: { type: 'object', properties: {
-        [field]: { type: 'string', description, examples: [example], minLength: 1, pattern: '\\S' },
-        model: { type: 'string', default: models[0].id, minLength: 1, pattern: '\\S' },
-        ...(workflow === 'ResearchWorkflow' ? { token_limit: { type: 'integer', default: 10000, minimum: 1, maximum: 1000000000 }, cost_limit_usd: { type: 'number', default: 5, exclusiveMinimum: 0, maximum: 1000000 } } : {}),
-      }, required: [field], additionalProperties: false },
-    }])) } }));
     for (const [workflow, name, field, value] of templates) {
-      await page.goto(`/console/#new/${workflow}`);
+      await visit(`/console/#new/${workflow}`);
       await expect(page.getByLabel('Workflow', { exact: true }).locator('option')).toHaveCount(6);
       await page.locator(`[name="input.${field}"]`).fill(value);
       if (workflow === 'CodeReviewWorkflow') await expect(page.getByLabel('Diff', { exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');
+      if (workflow === 'WeeklyReportWorkflow') {
+        await expect(page.locator('#field-period-help')).toHaveText('Start and end date, e.g. 2026-09-28/2026-10-04');
+        const token = page.locator('#field-period-help .nowrap').last();
+        await expect(token).toHaveText('2026-09-28/2026-10-04');
+        expect(await token.evaluate(node => node.getClientRects().length)).toBe(1);
+      }
       await page.getByRole('heading', { name: 'Run workflow', exact: true }).click();
       await capture(`template-${name}`);
     }
@@ -1096,10 +1125,10 @@ test('OIDC sign-in button is shown only when configured', async ({ page }) => {
     api_key: true, oidc: { enabled: true, provider_name: 'Company', login_url: '/v1/auth/login' },
   } }));
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Sign in with your company account' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in with SSO' })).toBeVisible();
   await expect(page.getByLabel('API key', { exact: true })).toBeVisible();
   await page.route('**/v1/auth/login', route => route.fulfill({ contentType: 'text/html', body: '<p>Company sign-in</p>' }));
-  await page.getByRole('button', { name: 'Sign in with your company account' }).click();
+  await page.getByRole('button', { name: 'Sign in with SSO' }).click();
   await expect(page).toHaveURL(/\/v1\/auth\/login$/);
 });
 
@@ -1224,6 +1253,11 @@ for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
     page.on('pageerror', error => errors.push(error.message));
     await login(page);
     await page.getByRole('link', { name: surface, exact: true }).click();
+    if (surface !== 'Team settings') {
+      await expect(page.locator('main form')).toHaveCount(0);
+      await page.locator('main').getByRole('link', { name: 'Team settings', exact: true }).last().click();
+      await expect(page).toHaveURL(/#team$/);
+    }
     await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('125');
     await page.getByLabel('Project default monthly budget (USD)', { exact: true }).fill('40');
     await page.getByLabel('Research · Budget per run (USD)', { exact: true }).fill('3');
@@ -1323,6 +1357,7 @@ for (const role of ['builder', 'approver', 'viewer']) {
     await login(page, role);
     for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
       await page.getByRole('link', { name: surface, exact: true }).click();
+      if (surface === 'Costs') await page.locator('main').getByRole('link', { name: 'Team settings', exact: true }).click();
       await expect(page.getByText('Read-only. Your team admin can change these settings.')).toBeVisible();
       await expect(page.getByText('Team monthly budget', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Save settings' })).toHaveCount(0);
@@ -1400,13 +1435,13 @@ test('key access editing submits changed fields and preserves drafts after a con
   });
   await login(page, 'admin', '/console/#keys');
   await page.getByRole('button', { name: 'Edit Alice', exact: true }).click();
-  await page.getByLabel('Edit name', { exact: true }).fill('Build bot');
-  await page.getByLabel('Edit role', { exact: true }).selectOption('builder');
-  await page.getByLabel('Edit project', { exact: true }).selectOption('engineering');
-  await page.getByLabel('Edit expiry (UTC)', { exact: true }).fill('2027-01-01T12:00');
+  await page.getByRole('region', { name: /^Edit / }).getByLabel('Name', { exact: true }).fill('Build bot');
+  await page.getByRole('region', { name: /^Edit / }).getByLabel('Role', { exact: true }).selectOption('builder');
+  await page.getByRole('region', { name: /^Edit / }).getByLabel('Project', { exact: true }).selectOption('engineering');
+  await page.getByRole('region', { name: /^Edit / }).getByLabel('Expiry (UTC)', { exact: true }).fill('2027-01-01T12:00');
   await page.getByRole('button', { name: 'Save key', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('already revoked');
-  await expect(page.getByLabel('Edit name', { exact: true })).toHaveValue('Build bot');
+  await expect(page.getByRole('region', { name: /^Edit / }).getByLabel('Name', { exact: true })).toHaveValue('Build bot');
   conflict = false;
   await page.getByRole('button', { name: 'Save key', exact: true }).click();
   await expect(page.getByText('Build bot updated. Access changes apply immediately.')).toBeVisible();
@@ -1450,11 +1485,15 @@ test('approval deadline and admin-only policy disable unavailable decisions', as
 test('team settings saves quorum and expiry together at the current revision', async ({ page }) => {
   await login(page, 'admin', '/console/#team');
   const count = page.getByLabel('Research · Required reviewers', { exact: true });
-  const expiry = page.getByLabel('Research · Approval expiry (seconds)', { exact: true });
+  const expiry = page.getByLabel('Research · Approval expiry (minutes)', { exact: true });
   await expect(count).toHaveValue('1');
-  await expect(expiry).toHaveValue('604,800');
+  await expect(expiry).toHaveValue('10,080');
   await count.fill('2');
-  await expiry.fill('3600');
+  await expiry.fill('0.5');
+  expect(await expiry.evaluate(input => (input as HTMLInputElement).validity.valid)).toBe(false);
+  await expiry.fill('10081');
+  expect(await expiry.evaluate(input => (input as HTMLInputElement).validity.valid)).toBe(false);
+  await expiry.fill('60');
   const saved = page.waitForRequest(request => request.url().endsWith('/v1/team/settings') && request.method() === 'PATCH');
   await page.getByRole('button', { name: 'Save settings', exact: true }).click();
   const request = await saved;
@@ -1463,5 +1502,12 @@ test('team settings saves quorum and expiry together at the current revision', a
     'workflows.ResearchWorkflow.required_approvals': 2,
     'workflows.ResearchWorkflow.approval_timeout_seconds': 3600,
   } });
+  await expect(page.getByText(/Settings saved/)).toBeVisible();
+  await page.reload();
+  await expect(expiry).toHaveValue('60');
+  await expiry.fill('1.5');
+  const fractional = page.waitForRequest(request => request.url().endsWith('/v1/team/settings') && request.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  expect((await fractional).postDataJSON()).toEqual({ fields: { 'workflows.ResearchWorkflow.approval_timeout_seconds': 90 } });
   await expect(page.getByText(/Settings saved/)).toBeVisible();
 });
