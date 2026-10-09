@@ -7,6 +7,7 @@ import json
 from time import time
 
 import httpx
+import pytest
 from app.batch_worker import WorkerConfig, _amain, process_batch, run_once, run_worker
 from app.batchstore import BatchRecord, FileRecord, MemoryBatchStore
 from app.objectstore import MemoryObjectStore
@@ -104,6 +105,78 @@ def test_process_mixed_success_and_error_splits_files():
     assert record.completed == 1 and record.failed == 1
     assert record.output_file_id and record.error_file_id
     assert len(obj.get(f"{tenant}/{record.error_file_id}").decode().strip().splitlines()) == 1
+
+
+def test_restart_during_finalization_keeps_result_parts(monkeypatch):
+    obj, store, tenant, batch_id = _setup([_line("ok"), _line("bad", content="bad")])
+    create_file = store.create_file
+
+    def interrupt_error_file(record):
+        if record.purpose == "batch_error":
+            raise asyncio.CancelledError()
+        create_file(record)
+
+    def handler(req):
+        failing = json.loads(req.content)["messages"][0]["content"] == "bad"
+        return httpx.Response(400 if failing else 200, json={})
+
+    monkeypatch.setattr(store, "create_file", interrupt_error_file)
+    with pytest.raises(asyncio.CancelledError):
+        _run(obj, store, tenant, batch_id, handler)
+    monkeypatch.setattr(store, "create_file", create_file)
+    _run(obj, store, tenant, batch_id, handler)
+    record = store.get_batch(tenant, batch_id)
+    assert record.status == "completed"
+    assert (record.completed, record.failed) == (1, 1)
+    assert obj.get(f"{tenant}/{record.output_file_id}")
+    assert obj.get(f"{tenant}/{record.error_file_id}")
+    assert obj.list_keys(f"{tenant}/parts/") == []
+
+
+def test_lost_claim_during_final_chunk_does_not_checkpoint():
+    obj, store, tenant, batch_id = _setup([_line("a")])
+
+    def handler(req):
+        store.reclaim(0)
+        return httpx.Response(200, json={})
+
+    async def _go():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await run_once(_config(part_lines=1), obj, store, client)
+
+    assert asyncio.run(_go()) is True
+    record = store.get_batch(tenant, batch_id)
+    assert record.status == "in_progress"
+    assert record.processed_lines == 0
+    assert obj.list_keys(f"{tenant}/parts/") == []
+    assert store.claim() is not None
+
+
+@pytest.mark.parametrize("state", ["cancelling", "expired"])
+def test_final_chunk_observes_cancellation_and_expiry(state, monkeypatch):
+    obj, store, tenant, batch_id = _setup([_line("a")])
+    expires_at = store.get_batch(tenant, batch_id).expires_at
+
+    def handler(req):
+        if state == "cancelling":
+            store.update_batch(tenant, batch_id, {"status": "cancelling"})
+        else:
+            monkeypatch.setattr("app.batch_worker.time", lambda: expires_at + 1)
+        return httpx.Response(200, json={})
+
+    _run(obj, store, tenant, batch_id, handler)
+    record = store.get_batch(tenant, batch_id)
+    assert record.status == ("cancelled" if state == "cancelling" else "expired")
+    assert record.completed == 1
+    assert obj.get(f"{tenant}/{record.output_file_id}")
+
+
+def test_redirected_item_is_an_error():
+    obj, store, tenant, batch_id = _setup([_line("a")])
+    _run(obj, store, tenant, batch_id, lambda req: httpx.Response(302, headers={"Location": "/login"}))
+    record = store.get_batch(tenant, batch_id)
+    assert (record.completed, record.failed) == (0, 1)
+    assert record.error_file_id is not None
 
 
 def test_malformed_line_and_endpoint_mismatch_error_out():
@@ -215,8 +288,8 @@ def test_long_batch_refreshes_its_claim_so_it_is_not_reclaimed():
             return await run_once(_CONFIG, obj, store, client)
 
     assert asyncio.run(_go()) is True
-    # One heartbeat per chunk of `concurrency` (2) lines.
-    assert beats == [batch_id] * 3
+    # Check ownership before and after each chunk of `concurrency` (2) lines.
+    assert beats == [batch_id] * 6
     assert store.get_batch(tenant, batch_id).status == "completed"
 
 

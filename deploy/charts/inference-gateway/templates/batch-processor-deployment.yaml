@@ -1,4 +1,7 @@
 {{- if and .Values.batch.enabled .Values.batch.worker.enabled }}
+{{- if ne .Values.batch.store.backend "redis" }}
+{{- fail "batch.store.backend must be redis when the batch-processor worker is deployed: the memory backend cannot share queued batches between gateway and worker pods" }}
+{{- end }}
 {{- if ne .Values.batch.objectStore.backend "s3" }}
 {{- fail "batch.objectStore.backend must be s3 when the batch-processor worker is deployed: the filesystem and memory backends are local to one pod, so the worker could never read the gateway's uploads" }}
 {{- end }}

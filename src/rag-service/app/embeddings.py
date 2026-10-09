@@ -103,10 +103,16 @@ class OpenAICompatibleEmbeddingProvider:
             self._async_client = None
 
     def _parse(self, payload: object) -> list[float]:
-        embedding = payload.get("data", [{}])[0].get("embedding") if isinstance(payload, dict) else None
+        data = payload.get("data") if isinstance(payload, dict) else None
+        embedding = data[0].get("embedding") if isinstance(data, list) and data and isinstance(data[0], dict) else None
         if not isinstance(embedding, list):
             raise ValueError("embedding response did not contain data[0].embedding")
-        vector = [float(item) for item in embedding]
+        try:
+            vector = [float(item) for item in embedding]
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("embedding values must be finite numbers") from exc
+        if not all(math.isfinite(item) for item in vector):
+            raise ValueError("embedding values must be finite numbers")
         if len(vector) != self.dimensions:
             raise ValueError(f"embedding returned {len(vector)} dimensions; expected {self.dimensions}")
         return vector

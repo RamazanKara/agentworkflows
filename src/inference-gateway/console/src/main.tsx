@@ -75,8 +75,17 @@ function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
 function Landing({ session }: { session: Session }) {
   useEffect(() => {
     const controller = new AbortController();
-    const first = (project: string, status?: string) => api<RunPage>(session.csrfToken, `/v1/workflow-runs?${new URLSearchParams({ project, limit: '1', ...(status ? { status } : {}) })}`, { signal: controller.signal })
-      .then(page => page.runs.length > 0, () => false);
+    const first = async (project: string, status?: string) => {
+      const query = new URLSearchParams({ project, limit: '100', ...(status ? { status } : {}) });
+      try {
+        for (;;) {
+          const page = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
+          if (page.runs.length) return true;
+          if (page.next_cursor === null) return false;
+          query.set('cursor', page.next_cursor);
+        }
+      } catch { return false; }
+    };
     const any = (status?: string) => Promise.all(session.team.projects.map(project => first(project, status))).then(found => found.some(Boolean));
     const reviewer = ['admin', 'approver'].includes(session.team.role);
     (async () => {

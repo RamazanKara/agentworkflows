@@ -185,7 +185,8 @@ def _image_part_bytes(part: dict[str, Any]) -> int:
     if not isinstance(url, str) or not url.startswith("data:"):
         return 0
     _, _, b64 = url.partition(",")
-    return (len(b64) * 3) // 4
+    padding = 2 if b64.endswith("==") else 1 if b64.endswith("=") else 0
+    return max(0, (len(b64) * 3) // 4 - padding)
 
 
 def _iter_image_parts(messages: list[Any]) -> Any:

@@ -46,6 +46,13 @@ def gateway_env(docs):
     HELM and yaml and (CHART / "charts").exists(), "Helm, PyYAML and built chart dependencies required"
 )
 class UmbrellaChartTests(unittest.TestCase):
+    def test_batch_worker_requires_shared_queue(self):
+        values = {"inference-gateway": {"batch": {
+            "enabled": True, "worker": {"enabled": True},
+            "objectStore": {"backend": "s3"}, "store": {"backend": "memory"},
+        }}}
+        self.assertIn("batch.store.backend must be redis", self.render(values, valid=False))
+
     def test_workflow_secrets_and_otlp_are_explicitly_enabled(self):
         defaults = gateway_env(self.render())
         self.assertNotIn("WORKFLOW_SECRETS_KEY", defaults)

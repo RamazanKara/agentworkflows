@@ -396,6 +396,35 @@ async function login(page: Page, token = 'admin', path = '/console/#start') {
   await expect(page.getByRole('region', { name: 'Signed in as' })).toBeVisible();
 }
 
+test('landing follows empty filtered pages to pending approvals', async ({ page }) => {
+  await page.route('**/v1/workflow-runs?*', route => {
+    const query = new URL(route.request().url()).searchParams;
+    const older = query.has('cursor');
+    return route.fulfill({ json: { runs: older ? [run()] : [], next_cursor: older ? null : 'older' } });
+  });
+  await login(page, 'admin', '/console/');
+  await expect(page).toHaveURL(/#approvals$/);
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toBeVisible();
+});
+
+test('tool-call messages without content keep the run detail readable', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const original = run();
+  const content = {
+    input: JSON.stringify([{ role: 'assistant', tool_calls: [{ id: 'call-1', type: 'function', function: { name: 'search', arguments: '{}' } }] }]),
+    output: 'Done', redaction: 'full', truncated: { input: false, output: false },
+  };
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: {
+    ...original, timeline: [{ ...original.timeline[0], content }],
+  } }));
+  await login(page, 'viewer', `/console/#run/${id}`);
+  await page.getByText('Prompt and response', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
+  await expect(page.locator('.transcript')).toContainText('Assistant');
+  expect(errors).toEqual([]);
+});
+
 test.beforeEach(async ({ page }) => {
   let identity = '';
   const currentSettings = settings();

@@ -13,6 +13,7 @@ tenant can neither read nor delete another tenant's responses.
 from __future__ import annotations
 
 import json
+from collections import OrderedDict
 from dataclasses import dataclass
 from threading import Lock
 from time import time
@@ -65,7 +66,7 @@ class MemoryResponseStore:
     def __init__(self, retention_seconds: int) -> None:
         self._retention = retention_seconds
         self._lock = Lock()
-        self._store: dict[str, tuple[float, StoredResponse]] = {}
+        self._store: OrderedDict[str, tuple[float, StoredResponse]] = OrderedDict()
 
     @staticmethod
     def _key(tenant: str, response_id: str) -> str:
@@ -73,7 +74,16 @@ class MemoryResponseStore:
 
     def create(self, record: StoredResponse) -> None:
         with self._lock:
-            self._store[self._key(record.tenant, record.id)] = (time() + self._retention, record)
+            now = time()
+            # Reclaim unread records without scanning every live conversation on each write.
+            while self._store:
+                expires_at, _ = next(iter(self._store.values()))
+                if expires_at > now:
+                    break
+                self._store.popitem(last=False)
+            key = self._key(record.tenant, record.id)
+            self._store[key] = (now + self._retention, record)
+            self._store.move_to_end(key)
 
     def get(self, tenant: str, response_id: str) -> StoredResponse | None:
         key = self._key(tenant, response_id)
@@ -82,14 +92,15 @@ class MemoryResponseStore:
             if item is None:
                 return None
             expires_at, record = item
-            if expires_at < time():
+            if expires_at <= time():
                 self._store.pop(key, None)
                 return None
             return record
 
     def delete(self, tenant: str, response_id: str) -> bool:
         with self._lock:
-            return self._store.pop(self._key(tenant, response_id), None) is not None
+            item = self._store.pop(self._key(tenant, response_id), None)
+            return item is not None and item[0] > time()
 
 
 class RedisResponseStore:

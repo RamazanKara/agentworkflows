@@ -9,6 +9,7 @@ plug a Cohere/Jina/TEI-compatible ``/rerank`` endpoint without changing the retr
 
 from __future__ import annotations
 
+import math
 from typing import Any, Protocol
 
 import httpx
@@ -72,7 +73,13 @@ class OpenAICompatibleReranker:
             index = item.get("index")
             score = item.get("relevance_score", item.get("score"))
             if isinstance(index, int) and 0 <= index < count and isinstance(score, (int, float)):
-                scores[index] = float(score)
+                try:
+                    value = float(score)
+                except OverflowError as exc:
+                    raise ValueError("reranker scores must be finite numbers") from exc
+                if not math.isfinite(value):
+                    raise ValueError("reranker scores must be finite numbers")
+                scores[index] = value
         return scores
 
     async def rerank_async(self, query: str, documents: list[str]) -> list[float]:

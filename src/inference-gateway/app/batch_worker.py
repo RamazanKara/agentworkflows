@@ -143,7 +143,7 @@ async def _replay_line(
         "response": {"status_code": response.status_code, "body": _parse_body(response)},
         "error": None,
     }
-    if response.status_code >= 400:
+    if not response.is_success:
         item["error"] = {"message": f"item returned status {response.status_code}"}
         item["__error__"] = True
     return item
@@ -241,7 +241,10 @@ async def process_batch(
             if int(time()) > record.expires_at:
                 expired = True
                 break
-            for item in await asyncio.gather(*(_replay_line(client, config, record, line) for line in chunk)):
+            results = await asyncio.gather(*(_replay_line(client, config, record, line) for line in chunk))
+            if claim is not None and not batch_store.heartbeat(claim):
+                raise ClaimLost(batch_id)
+            for item in results:
                 (errors if item.pop("__error__", False) else outputs).append(item)
             progress.processed += len(chunk)
             if len(outputs) + len(errors) >= config.part_lines:
@@ -250,6 +253,9 @@ async def process_batch(
         _fail(batch_store, tenant, batch_id, "input file content is missing")
         return
     # Results gathered before a cancel or expiry are kept, as in OpenAI's batch semantics.
+    current = batch_store.get_batch(tenant, batch_id)
+    cancelled = cancelled or (current is not None and current.status == BATCH_CANCELLING)
+    expired = expired or int(time()) > (current or record).expires_at
     _checkpoint(object_store, batch_store, tenant, batch_id, progress, outputs, errors)
     _finalize(object_store, batch_store, record, tenant, batch_id, progress, cancelled, expired)
 
@@ -333,6 +339,13 @@ def _finalize(
     else:
         updates.update({"status": BATCH_COMPLETED, "completed_at": now})
     batch_store.update_batch(tenant, batch_id, updates)
+    # Keep parts until both result files and the terminal status survive a restart.
+    for kind, parts in (("output", progress.output_parts), ("error", progress.error_parts)):
+        for index in range(parts):
+            try:
+                object_store.delete(_part_key(tenant, batch_id, kind, index))
+            except (httpx.HTTPError, OSError):
+                _LOGGER.warning("could not remove result part for completed batch %s", batch_id)
 
 
 def _assemble_result_file(
@@ -368,8 +381,6 @@ def _assemble_result_file(
             line_count=lines,
         )
     )
-    for index in range(parts):
-        object_store.delete(_part_key(tenant, batch_id, kind, index))
     return file_id
 
 

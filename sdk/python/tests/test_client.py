@@ -27,6 +27,17 @@ def _record_sleeps(monkeypatch, client):
     return sleeps
 
 
+def test_chat_stream_stops_at_done(monkeypatch):
+    body = '\n\n'.join([
+        'data: {"choices":[{"delta":{"content":"hello"}}]}',
+        'data: [DONE]',
+        'data: {"error":{"message":"after completion"}}',
+    ])
+    _mock_transport(monkeypatch, lambda request: httpx.Response(200, text=body))
+    with GatewayClient("http://gateway.test") as client:
+        assert list(client.chat_stream([{"role": "user", "content": "hi"}])) == ["hello"]
+
+
 def test_lifecycle_endpoints_preserve_versions_and_activity_scope(monkeypatch):
     requests = []
 

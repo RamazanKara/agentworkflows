@@ -408,13 +408,14 @@ def test_operators_can_forward_extra_params_including_refused_ones():
     assert "X-Dropped-Params" not in response.headers
 
 
-def test_completions_allow_best_of_one_but_not_more():
+@pytest.mark.parametrize("best_of", [3, 3.0, "3", "3.0"])
+def test_completions_allow_best_of_one_but_not_more(best_of):
     app = create_app(_tool_settings())
     app.state.runtime_client = FakeRuntimeClient(response={"id": "x", "object": "text_completion", "choices": []})
     client = TestClient(app)
 
     assert client.post("/v1/completions", json={"prompt": "hi", "best_of": 1}).status_code == 200
-    refused = client.post("/v1/completions", json={"prompt": "hi", "best_of": 3})
+    refused = client.post("/v1/completions", json={"prompt": "hi", "best_of": best_of})
     assert refused.status_code == 400
     assert refused.json()["detail"]["reason"] == "parameter_not_allowed"
 

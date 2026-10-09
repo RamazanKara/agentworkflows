@@ -376,7 +376,7 @@ function StepCard({ step }: { step: Step }) {
 }
 
 const parsed = (text: string): unknown => { try { return JSON.parse(text); } catch { return undefined; } };
-const messageText = (content: unknown) => typeof content === 'string' ? content
+const messageText = (content: unknown) => content == null ? '' : typeof content === 'string' ? content
   : Array.isArray(content) ? content.map(part => (part as { text?: string }).text ?? JSON.stringify(part)).join('\n') : JSON.stringify(content, null, 2);
 // Previews show prose answers; structured tool results stay in the expandable section.
 const preview = (text: string) => { const value = parsed(text); const plain = typeof value === 'string' ? value : value === undefined ? text : ''; return plain.length > 280 ? plain.slice(0, 280).trimEnd() + '…' : plain; };

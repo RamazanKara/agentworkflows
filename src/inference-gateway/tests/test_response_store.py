@@ -79,6 +79,42 @@ def test_memory_ttl_expiry():
     assert store.get("tA", "resp-1") is None
 
 
+def test_memory_create_reclaims_expired_unread_records(monkeypatch):
+    now = [0]
+    monkeypatch.setattr("app.response_store.time", lambda: now[0])
+    store = MemoryResponseStore(retention_seconds=10)
+    store.create(_record("old"))
+    now[0] = 10
+    store.create(_record("new"))
+    assert len(store._store) == 1
+    assert store.get("tA", "new") is not None
+
+
+def test_memory_replacing_record_preserves_expiry_order(monkeypatch):
+    now = [0]
+    monkeypatch.setattr("app.response_store.time", lambda: now[0])
+    store = MemoryResponseStore(retention_seconds=10)
+    store.create(_record("renewed"))
+    now[0] = 1
+    store.create(_record("expired"))
+    now[0] = 2
+    store.create(_record("renewed"))
+    now[0] = 11
+    store.create(_record("new"))
+    assert len(store._store) == 2
+    assert store.get("tA", "renewed") is not None
+
+
+@pytest.mark.parametrize("operation", ["get", "delete"])
+def test_memory_record_is_absent_at_expiry(monkeypatch, operation):
+    now = [0]
+    monkeypatch.setattr("app.response_store.time", lambda: now[0])
+    store = MemoryResponseStore(retention_seconds=10)
+    store.create(_record())
+    now[0] = 10
+    assert not getattr(store, operation)("tA", "resp-1")
+
+
 def test_build_response_store_selects_backend():
     memory = build_response_store(SimpleNamespace(responses_store_backend="memory", responses_retention_seconds=3600))
     assert isinstance(memory, MemoryResponseStore)

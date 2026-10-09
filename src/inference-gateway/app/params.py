@@ -146,4 +146,9 @@ def apply_param_policy(payload: dict[str, Any], endpoint: str, extra_forwarded: 
 
 
 def _int_above_one(value: Any) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool) and value > 1
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            return False
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 1

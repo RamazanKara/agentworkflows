@@ -306,8 +306,8 @@ class GatewayClient:
         """Stream a chat completion, yielding assistant content deltas as they arrive.
 
         Parses the OpenAI-compatible SSE stream and yields the text of each
-        ``choices[0].delta.content`` chunk; terminal ``[DONE]`` and non-text events are
-        skipped. A terminal gateway ``error`` event raises :class:`GatewayStreamError`
+        ``choices[0].delta.content`` chunk until terminal ``[DONE]``. Non-text events
+        are skipped. A terminal gateway ``error`` event raises :class:`GatewayStreamError`
         so a truncated stream is never mistaken for a completed one. An error status
         raises :class:`GatewayError` with the gateway's reason. The streaming path is not
         retried: once bytes flow, a retry would produce a second, different answer.
@@ -323,7 +323,9 @@ class GatewayClient:
                 if not line or not line.startswith("data:"):
                     continue
                 data = line[len("data:") :].strip()
-                if not data or data == "[DONE]":
+                if data == "[DONE]":
+                    return
+                if not data:
                     continue
                 try:
                     parsed = json.loads(data)
