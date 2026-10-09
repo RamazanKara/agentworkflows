@@ -79,7 +79,7 @@ def append_audit_view(request: Request, event: dict[str, Any]) -> None:
         try:
             get_storage(request).append_audit(event, request.app.state.audit_chain_count, None)
         except Exception:
-            logging.getLogger("uvicorn.error").exception("audit event could not be stored")
+            logging.getLogger("uvicorn.error").error("audit event could not be stored")
         return
     state = request.app.state
     if not hasattr(state, "audit_view_heads"):
@@ -102,7 +102,7 @@ def append_audit_view(request: Request, event: dict[str, Any]) -> None:
     except Exception:
         # Keep the original log available during an outage; advancing the view head
         # before the write makes a lost append visible to subsequent verification.
-        logging.getLogger("uvicorn.error").exception("audit view event could not be stored")
+        logging.getLogger("uvicorn.error").error("audit view event could not be stored")
 
 
 def read_entries(request: Request, cursor: str | None = None, oldest_first: bool = False) -> Iterator[dict[str, Any]]:

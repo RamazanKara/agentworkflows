@@ -88,3 +88,25 @@ class RestoreVerificationTests(unittest.TestCase):
             self.manifest(directory)
             with self.assertRaisesRegex(ValueError, "no receipt chains"):
                 recovery.verify_backup(directory)
+
+    def test_missing_and_empty_database_rejected_even_with_matching_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            self.fixture(directory)
+            database = directory / "temporal.dump"
+            database.write_bytes(b"")
+            self.manifest(directory)
+            with self.assertRaisesRegex(ValueError, "empty"):
+                recovery.verify_backup(directory)
+            database.unlink()
+            with self.assertRaises(FileNotFoundError):
+                recovery.verify_backup(directory)
+
+
+    def test_dependency_fault_is_reversed_when_verification_fails(self):
+        commands = []
+        with patch.object(recovery, "run", side_effect=lambda *args: commands.append(args)), patch.object(
+            recovery, "request", side_effect=AssertionError("probe failure")
+        ), self.assertRaisesRegex(AssertionError, "probe failure"):
+            recovery.check_dependency_outages(["docker", "compose", "-p", "isolated-test"])
+        self.assertIn(("docker", "compose", "-p", "isolated-test", "start", "budget-redis"), commands)

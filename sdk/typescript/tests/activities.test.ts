@@ -60,13 +60,14 @@ describe('governed activities', () => {
     [429, 'sandbox_token_budget_exceeded', false],
   ])('maps %i %s to a Temporal failure', async (status, reason, nonRetryable) => {
     fetchMock.mockResolvedValueOnce(ok()).mockResolvedValueOnce(new Response(JSON.stringify({
-      detail: { reason, message: 'Denied by policy' },
+      detail: { reason, message: 'private-response-payload fixture-worker' },
     }), { status, headers: { 'X-Request-ID': 'req-1', 'Retry-After': '60' } }));
     const error = await environment().run(activities.call.bind(activities), call).catch((error: unknown) => error);
     expect(error).toMatchObject({ type: reason, nonRetryable, message: expect.stringContaining('req-1') });
     expect(error).toHaveProperty('cause', undefined);
     if (!nonRetryable) expect(error).toHaveProperty('nextRetryDelay', 60_000);
     expect(String(error)).not.toContain('fixture-worker');
+    expect(String(error)).not.toContain('private-response-payload');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 

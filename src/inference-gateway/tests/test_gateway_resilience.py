@@ -1,4 +1,8 @@
 import asyncio
+import socketserver
+import threading
+from time import monotonic
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -495,3 +499,113 @@ def test_moderations_rejects_oversized_input():
 
     assert response.status_code == 400
     assert response.json()["detail"]["reason"] == "input_too_large"
+
+
+@pytest.mark.parametrize("value", ["inf", "NaN", "1e309", "-1", "not-a-delay"])
+def test_retry_after_rejects_unbounded_or_invalid_delay(value):
+    assert RuntimeClient._retry_after_seconds(httpx.Response(503, headers={"Retry-After": value})) is None
+
+
+def test_retry_delay_honors_header_with_a_timeout_ceiling(monkeypatch):
+    sleep = AsyncMock()
+    monkeypatch.setattr("app.runtime_client.sleep", sleep)
+    monkeypatch.setattr("app.runtime_client.random.random", lambda: 0)
+    client = RuntimeClient(_retry_settings(request_timeout_seconds=5))
+    asyncio.run(client._sleep_before_retry(0, httpx.Response(503, headers={"Retry-After": "3"})))
+    assert sleep.call_args.args == (3,)
+    asyncio.run(client._sleep_before_retry(0, httpx.Response(503, headers={"Retry-After": "999999"})))
+    assert sleep.call_args.args == (5,)
+
+
+def test_partial_streams_are_not_retried_and_open_then_recover_circuit(monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr("app.runtime_client.time", lambda: now[0])
+    calls = []
+
+    class PartialStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b'data: {"partial":true}\n\n'
+            raise httpx.ReadError("connection lost after accepted work")
+
+    def respond(request):
+        calls.append(request)
+        if len(calls) <= 2:
+            return httpx.Response(200, stream=PartialStream())
+        return httpx.Response(200, content=b"data: [DONE]\n\n")
+
+    async def exercise():
+        client = RuntimeClient(_retry_settings(runtime_circuit_failure_threshold=2, runtime_circuit_reset_seconds=10))
+        client._client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+        try:
+            for _ in range(2):
+                chunks = []
+                with pytest.raises(httpx.ReadError):
+                    async for chunk in client.stream_chat_completions({"messages": []}):
+                        chunks.append(chunk)
+                assert chunks == [b'data: {"partial":true}\n\n']
+            with pytest.raises(httpx.ConnectError, match="circuit is open"):
+                async for _ in client.stream_chat_completions({"messages": []}):
+                    pass
+            assert len(calls) == 2
+            now[0] += 11
+            assert [chunk async for chunk in client.stream_chat_completions({"messages": []})] == [b"data: [DONE]\n\n"]
+            assert client._failures["ollama"] == 0 and "ollama" not in client._opened_until
+        finally:
+            await client.aclose()
+
+    asyncio.run(exercise())
+
+
+def test_read_timeout_does_not_duplicate_accepted_inference():
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        raise httpx.ReadTimeout("generation accepted but response stalled")
+
+    async def exercise():
+        client = RuntimeClient(_retry_settings(runtime_max_retries=3))
+        client._client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+        try:
+            with pytest.raises(httpx.ReadTimeout):
+                await client.chat_completions({"messages": []})
+        finally:
+            await client.aclose()
+
+    asyncio.run(exercise())
+    assert len(calls) == 1
+
+
+def test_slow_redis_socket_times_out_and_fails_closed():
+    release = threading.Event()
+
+    class Blackhole(socketserver.BaseRequestHandler):
+        def handle(self):
+            release.wait(5)
+
+    with socketserver.ThreadingTCPServer(("127.0.0.1", 0), Blackhole) as server:
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        settings = _tool_settings(
+            sandbox_budget_enabled=True, sandbox_request_budget=100, sandbox_budget_backend="redis",
+            sandbox_budget_redis_url=f"redis://127.0.0.1:{server.server_address[1]}/0",
+            sandbox_budget_redis_timeout_seconds=0.05,
+        )
+        app = create_app(settings)
+        connection = app.state.budget_tracker.client
+        try:
+            runtime = FakeRuntimeClient(response={"choices": []})
+            app.state.runtime_client = runtime
+            app.state.budget_tracker = RedisSandboxBudgetTracker(settings, client=connection)
+            started = monotonic()
+            response = TestClient(app).post(
+                "/v1/chat/completions", json={"messages": [{"role": "user", "content": "probe"}]}
+            )
+            assert monotonic() - started < 2
+            assert response.status_code == 503 and runtime.calls == 0
+            assert "127.0.0.1" not in response.text
+        finally:
+            connection.close()
+            release.set()
+            server.shutdown()
+            thread.join(timeout=2)

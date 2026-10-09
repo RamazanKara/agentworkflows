@@ -22,7 +22,7 @@ export class GatewayActivities {
         const retryable = [429, 500, 502, 503, 504].includes(error.statusCode) &&
           !['workflow_store_required', 'provider_not_configured', 'tool_not_configured'].includes(error.reason ?? '');
         throw ApplicationFailure.create({
-          message: `${error.message}. Gateway request ID: ${error.requestId ?? 'unavailable'}`,
+          message: `Gateway activity failed (${error.statusCode}). Gateway request ID: ${error.requestId ?? 'unavailable'}`,
           type: error.reason ?? 'GatewayError', nonRetryable: !retryable,
           ...(retryable && error.retryAfter !== undefined ? { nextRetryDelay: error.retryAfter * 1000 } : {}),
         });

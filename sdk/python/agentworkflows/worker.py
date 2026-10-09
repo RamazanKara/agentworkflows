@@ -29,8 +29,11 @@ async def serve(
         raise ValueError("Set AGENTWORKFLOWS_API_KEY to your team's worker key (demo-worker for Compose).")
     team = os.getenv("AGENTWORKFLOWS_TEAM", "demo")
     queue = os.getenv("TEMPORAL_TASK_QUEUE", f"{team}-workflows")
-    client = await Client.connect(
-        os.getenv("TEMPORAL_ADDRESS", "localhost:7233"), namespace=os.getenv("TEMPORAL_NAMESPACE", "default")
+    client = await asyncio.wait_for(
+        Client.connect(
+            os.getenv("TEMPORAL_ADDRESS", "localhost:7233"), namespace=os.getenv("TEMPORAL_NAMESPACE", "default")
+        ),
+        timeout=10,
     )
     activities = GatewayActivities(os.getenv("AGENTWORKFLOWS_URL", "http://127.0.0.1:8080"), key, agents=agents)
     stopping = asyncio.Event()

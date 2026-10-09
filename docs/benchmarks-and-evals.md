@@ -32,6 +32,42 @@ The release gates check request count, error rate, p95 latency, and p99 latency.
 
 ## Reference Serving Benchmark
 
+### rc.3 native gateway baseline (2026-10-09)
+
+The recorded report is `loadtest/baselines/rc3-windows.json`: Windows 11 build 26200,
+Python 3.12.14, 16 logical CPUs, one Uvicorn process, 10 concurrent clients,
+500 requests per route after 10 warmups. An independent second run passed the regression
+checker. Both runs returned HTTP 200 for all 4,000 measured requests.
+
+| Endpoint | Baseline requests/s | Baseline p95 ms | Second run requests/s | Second run p95 ms |
+| --- | ---: | ---: | ---: | ---: |
+| `GET /healthz` | 235.08 | 54.96 | 403.86 | 18.00 |
+| `GET /readyz` | 112.71 | 115.65 | 201.12 | 63.88 |
+| `GET /v1/models` | 189.10 | 84.88 | 335.22 | 20.84 |
+| `GET /v1/usage` | 169.66 | 118.36 | 337.69 | 68.31 |
+| `GET /v1/sandbox/budget` | 175.09 | 70.89 | 342.37 | 76.64 |
+| `POST /v1/chat/completions` | 77.12 | 170.62 | 134.52 | 93.55 |
+| `POST /v1/responses` | 87.32 | 161.02 | 106.59 | 137.82 |
+| `POST /v1/messages` | 100.70 | 140.24 | 116.38 | 103.13 |
+
+```sh
+python loadtest/gateway-sanity.py
+python loadtest/check-regression.py loadtest/baselines/rc3-windows.json results/loadtest/gateway-sanity.json
+```
+
+The checker fails on any failed/missing request, p95 above 125% of baseline or throughput
+below 80%. It also rejects invalid/nonfinite measurements, changed workloads and mismatched
+platform/Python/CPU-count/runtime metadata. Establish a separate baseline on other hardware;
+keep an accepted baseline unchanged when evaluating a candidate. The JSON records p50/p99 too.
+
+This is a shared-host smoke measurement; the spread between these two runs shows substantial
+host noise. It does not establish a performance change from the earlier candidate or a capacity
+SLO. Authentication is enabled; audit output, caching, rate limits, budget enforcement and OTLP
+export are disabled, with memory accounting and a constant fake model response. Redis,
+PostgreSQL, Temporal, streaming, TLS and real providers are excluded. The harness records
+transport failures as errors instead of losing the report. Run the Compose workflow harness
+and Linux load checks below for deployment evidence.
+
 ### 1.0 candidate native gateway sanity (2026-10-09)
 
 Run `python loadtest/gateway-sanity.py` from an environment containing the gateway's

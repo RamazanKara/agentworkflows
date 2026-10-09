@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0-rc.3 - Unreleased
+
+- Add dependency outage, slow-response and partial-write tests for gateway and worker;
+  exercise lost Temporal replies, stable retry identities, SQL rollback and Redis migrations.
+  Extend the isolated restore drill with Redis/Postgres/Temporal stop and pause faults.
+- Bound worker connection startup and runtime retry delays; preserve circuit failures
+  across truncated streams. Disable automatic Redis accounting-write retries after lost replies.
+- Check historical 0.2.0 and rc.2 config/Helm values; correct the future-schema rejection drill.
+- Extend the native Python load harness with recorded baseline evidence and a regression
+  checker enforcing zero errors, p95 within +25% and throughput within -20%.
+- Add offline backup verification, reject empty backup files and correct the recovery
+  runbook's durable Redis, gateway PostgreSQL, Temporal and encryption-key backup scope.
+- Bound HTTP method labels, forward the gateway trace span to local/cloud runtimes, and
+  redact storage-driver and worker response payloads from operational failure logs.
+- Fix runbook link mapping for the docs site; record native checks and remaining WSL drills.
+  Package and chart versions remain 0.9.0; no release artifacts are published.
+
 ## 1.0.0-rc.2 - Unreleased
 
 - Add a versioned console gallery for the six bundled templates, idempotent installation

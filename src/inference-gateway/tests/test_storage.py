@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 from app.audit_view import check_entry
@@ -16,6 +17,7 @@ from app.storage_migrations import migrate
 from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 from psycopg import OperationalError
+from psycopg_pool import PoolTimeout
 
 from tests.test_audit_view import record
 from tests.test_managed_keys import AuthRedis
@@ -110,6 +112,29 @@ def test_sql_errors_fail_closed_without_redis_fallback(team_gateway):
         asyncio.run(storage_call(request, "get_settings", "team"))
     assert error.value.status_code == 503
     assert error.value.detail["reason"] == "storage_unavailable"
+
+
+@pytest.mark.parametrize("failure", [OperationalError, PoolTimeout])
+def test_postgres_failure_after_temporal_start_recovers_same_run(team_gateway, monkeypatch, failure):
+    _, app = team_gateway
+    app.state.storage = RecordStore(app.state.settings)
+    original = app.state.storage.save_run
+    attempts = []
+
+    def fail_once(*args):
+        attempts.append(args)
+        if len(attempts) == 1:
+            raise failure("postgresql://user:private-password@private-host/db")
+        return original(*args)
+
+    monkeypatch.setattr(app.state.storage, "save_run", fail_once)
+    client, _ = team_gateway
+    request_id = str(uuid4())
+    first = start(client, request_id=request_id)
+    assert first.status_code == 503 and "private-password" not in first.text
+    recovered = start(client, request_id=request_id)
+    assert recovered.status_code == 201 and len(app.state.temporal_client.executions) == 1
+    assert start(client, request_id=request_id).json()["run_id"] == recovered.json()["run_id"]
 
 
 def test_storage_configuration_and_lazy_pool(monkeypatch):

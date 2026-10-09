@@ -21,6 +21,61 @@ Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: `make lint test-gateway test-scripts`. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.
 
+## rc.3 reliability pass
+
+2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0 and Helm 3.18.6.
+Package/chart versions remain 0.9.0. No commit, push, publication or `gh` command was run;
+no dependency pins changed.
+
+| Native check | Result |
+| --- | --- |
+| Gateway suite excluding live-provider tests | 1,110 passed, 14 skipped: eight PostgreSQL, five Redis migration checks and one SDK-environment-only approval check. |
+| Python SDK | 205 passed, 3 optional-framework skips. |
+| TypeScript SDK build/lint/tests | Passed; 79 tests. |
+| Console build/Playwright | Passed; 76 tests. The managed preview teardown hung on Windows; the final successful run used the same tests with only `webServer` disabled in an ignored temporary config, as described below. |
+| Script tests | 51 passed, including backup verification, fault cleanup, regression thresholds and 19 umbrella Helm tests. |
+| Helm | All nine charts passed strict lint and template rendering after dependency builds. Four historical-value render tests passed in the gateway suite. |
+| OpenAPI/config contracts, chart docs, dashboards | Passed. |
+| Docs | Strict MkDocs build and repository Markdown link/Make-target checks passed. |
+| Load | Two runs of 4,000 HTTP requests, zero errors; the second passed p95 +25% / throughput -20% thresholds against the recorded baseline. See [measurements and scope](benchmarks-and-evals.md#rc3-native-gateway-baseline-2026-10-09). |
+| Ruff | All changed Python files pass. Full lint still finds the existing E501 at `src/inference-gateway/tests/test_approval_policies.py:67`; the format check reports repository drift. |
+| Full repository hygiene | Link checks pass; two pre-existing failures remain: gateway/RAG tracing copies differ, and `scripts/first-approved-run.py` is tracked as 100644 instead of 100755. Both were verified against HEAD and left unchanged. |
+
+The native tests inject lost replies before/after Temporal accepts a start, partial Redis index
+writes, SQL connection/pool errors, slow Redis sockets, truncated provider streams and worker
+transport/startup timeouts. They check fail-closed behavior, bounded waits, stable retry IDs,
+circuit recovery, redaction and W3C context propagation. Historical config and values fixtures
+come from the actual 0.2.0 and rc.2 commits. Native tests do not prove live restore, SQL DDL
+rollback, Redis Lua migrations, Temporal recovery or collector delivery.
+
+### rc.3 caller checks in WSL
+
+Use a Linux checkout/venv with Docker, Helm, kind and kubectl. Run the real dependency stop/pause
+matrix and recovery checks in the disposable projects created by the scripts:
+
+```sh
+make test-gateway test-scripts
+make workflow-upgrade-test workflow-helm-upgrade-test workflow-restore-drill
+make compose-up compose-smoke workflow-loadtest
+make loadtest-local
+```
+
+Set `TEST_REDIS_URL` and `TEST_POSTGRES_DSN` to disposable stores (the PostgreSQL user must be
+able to create/drop test schemas), then run from the gateway test environment:
+
+```sh
+PYTHONPATH=src/inference-gateway src/inference-gateway/.venv/bin/python -m pytest -q \
+  src/inference-gateway/tests/test_upgrade.py src/inference-gateway/tests/test_postgres_integration.py
+```
+
+For operator backups, run `python3 scripts/workflow-recovery.py verify --directory /secure/aw-backup`
+and an isolated restore drill using the [backup/restore runbook](../runbooks/disaster-recovery.md).
+Verification of checksums/receipt chains works natively; it does not establish database restorability.
+The default helper covers Redis-backed gateway state and Temporal databases; optional gateway
+PostgreSQL, object data and original encryption/signing keys require the documented coordinated backup.
+Also verify [OTLP collector delivery and dashboards](../runbooks/observability.md) against the real
+stack. Container/cluster checks and live providers were not run in this native pass.
+
 ## rc.2 lifecycle pass
 
 2026-10-09, native Windows, Python 3.12.14, Node 24.19.0, portable Helm 3.18.6.

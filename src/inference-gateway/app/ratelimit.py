@@ -85,6 +85,8 @@ class RedisRateLimiter:
                 decode_responses=True,
                 socket_timeout=settings.sandbox_budget_redis_timeout_seconds,
                 socket_connect_timeout=settings.sandbox_budget_redis_timeout_seconds,
+                # A lost write reply must not replay accounting mutations.
+                retry=redis.retry.Retry(redis.backoff.NoBackoff(), 0),
             )
         self.client = client
 

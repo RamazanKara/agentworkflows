@@ -68,7 +68,10 @@ def verify_backup(directory):
     if manifest.get("version") != 1 or set(manifest["sha256"]) != set(FILES):
         raise ValueError("Unsupported or incomplete backup manifest")
     for name in FILES:
-        if hashlib.sha256((directory / name).read_bytes()).hexdigest() != manifest["sha256"][name]:
+        content = (directory / name).read_bytes()
+        if not content:
+            raise ValueError(f"Backup file is empty: {name}")
+        if hashlib.sha256(content).hexdigest() != manifest["sha256"][name]:
             raise ValueError(f"Backup checksum mismatch: {name}")
     verify_receipts(directory)
 
@@ -303,7 +306,7 @@ def schema_versions(compose):
 def check_migrations(compose):
     code = """
 import os, redis
-from app.state_migrations import migrate
+from app.state_migrations import SCHEMA_VERSION, migrate
 r = redis.Redis.from_url(os.environ['SANDBOX_BUDGET_REDIS_URL'], decode_responses=True)
 prefix = 'hardening-migration-probe'
 r.set(prefix + ':retained', 'receipt', ex=600)
@@ -311,14 +314,15 @@ try:
     migrate(r, prefix)
     migrate(r, prefix)
     assert r.get(prefix + ':retained') == 'receipt' and 590 <= r.ttl(prefix + ':retained') <= 600
-    r.set(prefix + ':schema-version', '2')
+    future = str(SCHEMA_VERSION + 1)
+    r.set(prefix + ':schema-version', future)
     try:
         migrate(r, prefix)
     except (redis.ResponseError, RuntimeError):
         pass
     else:
         raise AssertionError('Accepted a newer schema')
-    assert r.get(prefix + ':schema-version') == '2'
+    assert r.get(prefix + ':schema-version') == future
 finally:
     r.delete(prefix + ':schema-version', prefix + ':retained')
 """
@@ -349,6 +353,40 @@ def check_shutdown(compose):
     result = wait_run(run_id, "completed")
     assert len(result["timeline"]) == 1 and result["budget"]["tokens"] == 7
     assert count() == before + 1, "Graceful termination repeated a provider call"
+
+
+def check_dependency_outages(compose):
+    results = []
+    for dependency in ("budget-redis", "temporal", "temporal-postgres"):
+        for fault in ("stop", "pause"):
+            body = {
+                "workflow": "SupportTriageWorkflow", "request_id": str(uuid4()),
+                "input": {"ticket": "Dependency recovery probe", "model": "demo-openai"},
+            }
+            run(*compose, fault, dependency)
+            started = time.monotonic()
+            try:
+                assert request("/healthz")["status"] == "ok", "Dependency failure broke liveness"
+                try:
+                    request("/v1/workflow-runs", body)
+                except HTTPError as exc:
+                    assert exc.code == 503, f"{dependency}/{fault}: expected retryable 503, got {exc.code}"
+                else:
+                    raise AssertionError(f"{dependency}/{fault}: unavailable dependency accepted a new run")
+                elapsed = time.monotonic() - started
+                assert elapsed < 30, f"{dependency}/{fault}: failure exceeded the HTTP deadline"
+            finally:
+                run(*compose, "unpause" if fault == "pause" else "start", dependency)
+                run(*compose, "up", "-d", "--wait", "--wait-timeout", "180", *SERVICES)
+            recovered = request("/v1/workflow-runs", body)
+            assert request("/v1/workflow-runs", body)["run_id"] == recovered["run_id"]
+            finished = wait_run(recovered["run_id"], "completed")
+            models = [row for row in finished["timeline"] if row["action"] == "model_call"]
+            assert len(models) == 1 and models[0]["status_code"] == 200 and models[0]["receipt_id"]
+            assert finished["budget"]["tokens"] == 7 and finished["budget"]["cost_usd"] == 0.011
+            results.append({"dependency": dependency, "fault": fault, "failure_seconds": round(elapsed, 3),
+                            "run_id": recovered["run_id"], "model_receipts": 1})
+    return results
 
 
 def drill(upgrade):
@@ -421,6 +459,7 @@ def drill(upgrade):
         assert len(models) == 2, "Upgrade/restore replayed a completed model step"
         check_migrations(current)
         check_shutdown(current)
+        dependency_faults = [] if upgrade else check_dependency_outages(current)
         # Re-backup also checks the restored/new chain against all pre-upgrade lifetimes.
         backup(current, out / "verified", out / "backup/receipts.jsonl")
         report = {
@@ -433,6 +472,7 @@ def drill(upgrade):
             "receipt_chain_verified": True,
             "graceful_inflight_step": True,
             "migration_replay_and_future_rejection": True,
+            "dependency_faults": dependency_faults,
         }
         (out / "result.json").write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report, indent=2))
@@ -442,7 +482,7 @@ def drill(upgrade):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("backup", "restore", "drill", "upgrade"))
+    parser.add_argument("action", choices=("backup", "restore", "verify", "drill", "upgrade"))
     parser.add_argument("--project", help="Explicit Compose project; restore refuses nonempty stores")
     parser.add_argument("--directory", type=Path, help="New backup directory, or the backup to restore")
     parser.add_argument(
@@ -451,6 +491,11 @@ def main():
     args = parser.parse_args()
     if args.action in {"drill", "upgrade"}:
         drill(args.action == "upgrade")
+    elif args.action == "verify":
+        if not args.directory:
+            parser.error("verify requires --directory")
+        verify_backup(args.directory)
+        print("Backup checksums and receipt chains verified; a restore drill is still required.")
     else:
         if not args.project or not args.directory:
             parser.error("backup/restore require --project and --directory")

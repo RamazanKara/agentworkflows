@@ -27,9 +27,10 @@ Two complementary mechanisms ship in `deploy/backup`:
   - `ollama` -- local model store
   - `restore-drill` -- restore-drill evidence consumed by the smoke test
 
-  Stateless / re-pullable runtime namespaces (`inference`, `vllm`) are intentionally excluded: they
-  hold no unique data and are reconstructed by GitOps plus image/model pulls. The `budget` namespace
-  is excluded because its Redis is ephemeral cache (see the data-loss table below).
+  This schedule does **not** cover gateway/workflow state in `budget`, `inference` or `workflows`.
+  Redis is durable application state when workflows are enabled. Optional gateway PostgreSQL,
+  Temporal databases, file/object storage and encryption/signing keys need the coordinated backup
+  procedure below. The stateless model runtimes can be reconstructed from images and model pulls.
 
 - **restore-drill** (`deploy/backup/restore-drill`, runbook [restore-drill.md](restore-drill.md)).
   This *validates* recoverability; it is not itself a backup. The Kubernetes CronJob
@@ -75,7 +76,9 @@ than trusting this estimate; the platform gives you the drill to do exactly that
 | Agent-workspace PVCs | `ai-agents` | Velero daily (PVC contents) | Up to 24h of uncommitted workspace state | Anything pushed to a Git remote is not lost; only un-pushed local working state is. |
 | Argo CD / GitOps state | `argocd` | Velero daily; also reconstructable from Git | Effectively zero for desired state | The Git repo is the source of truth; Velero restores app/sync state faster than re-bootstrapping. |
 | Ollama model store | `ollama` | Velero daily; also re-pullable | Up to 24h, but re-pullable | Models are re-pullable from the registry/model store, so this is convenience, not unique data. |
-| Budget Redis | `budget` | **Not backed up** | All in-flight budget counters | Ephemeral cache by design. Budgets re-accrue from zero after recovery; decide budget posture deliberately (see [budget-controls.md](budget-controls.md)). |
+| Gateway/budget Redis | `budget` (or the installation namespace) | Coordinated RDB/AOF backup; excluded from shipped Velero schedule | Since the last consistent snapshot | Contains accounting, sessions, secrets and, with the Redis storage backend, runs, settings, keys and receipts. Never silently reset it. |
+| Gateway PostgreSQL (optional) | `inference` or external | Coordinated `pg_dump -Fc` or managed-store snapshot | Since the last consistent snapshot | Gateway records and schema version; Redis accounting is still required. |
+| Temporal PostgreSQL | `workflows` or external | Both `temporal` and `temporal_visibility` databases | Since the last consistent snapshot | Preserve workflow history and visibility together; independent of gateway SQL schema. |
 | Inference / vLLM runtimes | `inference`, `vllm` | **Not backed up** (stateless) | None (no unique data) | Reconstructed by GitOps + image/model re-pull. |
 
 ## Whole-Platform Recovery Sequence
@@ -113,14 +116,14 @@ fighting the restore (see [upgrade.md](upgrade.md)).
    data stores:* the runtimes are stateless and re-pullable, so they are deliberately last among the
    serving components -- there is nothing to "restore," only to warm up. This is typically the
    slowest step (large model weights); start the pulls as early as the cluster allows but do not
-   gate the data restores on it. Confirm the gateway has ready endpoints
+   gate the data restores on it. Confirm the model runtime has ready endpoints
    (see [incident-inference-runtime.md](incident-inference-runtime.md)).
 
-5. **Budget Redis last.** Let GitOps recreate the `budget` Redis. *Why last:* it is ephemeral cache
-   that is not backed up, so there is nothing to restore -- counters re-accrue from zero. The
-   gateway can serve before budgets are warm; decide the interim budget posture deliberately rather
-   than silently disabling enforcement (see [budget-controls.md](budget-controls.md)). Recovering it
-   last avoids spending recovery time on a store with no recoverable data.
+5. **Gateway and workflow state before reopening ingress.** Restore Redis, both Temporal databases,
+   optional gateway PostgreSQL, object data and the original encryption/signing keys from one
+   recovery point. Keep gateway and workers stopped until the stores are verified, then start
+   Temporal, gateway and workers in that order. Run the checks below before accepting new work;
+   restoring only Redis or only Temporal can repeat completed effects or lose budget holds.
 
 After all steps, run the smoke and evidence checks before declaring recovery: `make eval` (and
 `make loadtest`) against the gateway, RAG retrieval smoke, and -- for the recovered vector store --
@@ -151,7 +154,51 @@ posture beyond a single-cluster rebuild:
 
 - [Incident response index](incident-response.md) -- severity tiers and the SEV1 path that routes here.
 - [Restore drill](restore-drill.md) -- backup-tooling smoke and the real Qdrant data-recovery drill.
-- [Budget controls](budget-controls.md) -- budget posture while the Redis cache is cold.
+- [Budget controls](budget-controls.md) -- budget posture while Redis recovers.
 - [Inference runtime incident](incident-inference-runtime.md) -- bringing runtimes back to ready.
 - [Upgrade & rollback](upgrade.md) -- pausing Argo CD automation during a controlled change.
 - [Runbooks index](README.md) -- the full runbook catalog.
+
+
+## Gateway and worker backup verification
+
+For the default Redis-backed Compose installation, the existing script stops workers, gateway
+and Temporal, exports both PostgreSQL databases and Redis, collects receipts, records SHA-256
+checksums and an audit anchor, then restarts the source even if backup fails. Quiesce external
+writers and ingress first. Protect the backup directory as sensitive data and copy it off-host;
+retain its manifest and audit anchor independently so rewritten backups cannot replace the trust
+anchor. The shipped daily Velero schedule does not set an RPO for these additional stores.
+
+```sh
+python3 scripts/workflow-recovery.py backup --project source-project --directory /secure/aw-backup --receipts /secure/retained-receipts.jsonl
+python3 scripts/workflow-recovery.py verify --directory /secure/aw-backup
+python3 scripts/workflow-recovery.py restore --project new-isolated-restore --directory /secure/aw-backup
+```
+
+Use the actual source Compose project and a new, empty restore project. `restore` refuses running
+consumers or nonempty stores. `verify` is read-only and runs natively without Docker: it rejects
+missing/empty files, checksum mismatches and broken receipt chains. It does **not** prove that a
+database can be restored. The default helper covers Redis-backed gateway records and Temporal;
+it does not back up optional gateway PostgreSQL, external stores, object files or deployment secrets.
+
+For those installations, quiesce **all** gateway/worker/Temporal replicas and other writers, take
+consistent Redis and database snapshots, and capture object data plus Secret-manager versions as
+one recovery point. Use a protected PostgreSQL service file for credentials, for example
+`PGSERVICE=aw-gateway pg_dump -Fc --file=gateway.dump`; verify with `pg_restore --list gateway.dump`
+and an actual restore into an isolated empty database. Hash these additional artifacts in the
+operator's manifest. Preserve `WORKFLOW_SECRETS_KEY`, session/credential signing keys, authentication
+configuration and provider-secret references; restored encrypted values need the original key.
+
+Before reopening traffic, compare retained run IDs, settings revisions, revocations, budgets and
+receipt heads with the captured inventory; verify `GET /v1/team/audit/verify`, resolve a seeded
+workflow secret through an authorized activity, and resume a pending approval. A restored completed
+step must keep its receipt and must not cause another provider/tool call. Keep another team as an
+isolation control. Record backup time, restore time, observed data loss, checks and failures.
+
+In a disposable Linux/WSL environment, `make workflow-restore-drill` runs an actual restore,
+compares state and budgets, resumes an approval, checks receipt continuity and worker shutdown,
+then stops and pauses Redis, Temporal and Temporal PostgreSQL in turn. Each fault must return a
+bounded 503 while liveness stays healthy, and recovery with the same request ID must produce one
+model receipt and charge. Faults are reversed in `finally`; only the drill's named volumes are
+removed. Evidence is written under `.out/aw-hardening-*/result.json`. This must pass before a
+backup is accepted as recoverable; native unit tests and checksum verification alone are insufficient.

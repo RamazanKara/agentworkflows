@@ -209,10 +209,10 @@ def test_open_audit_chain_survives_an_unreadable_head_store(caplog):
 
     class BrokenStore:
         def load(self):
-            raise OSError("head store unreachable")
+            raise OSError("postgresql://user:private-audit-password@internal/db")
 
         def save(self, head):
-            raise OSError("head store unreachable")
+            raise OSError("postgresql://user:private-audit-password@internal/db")
 
     app.state.chain_store = BrokenStore()
 
@@ -221,6 +221,8 @@ def test_open_audit_chain_survives_an_unreadable_head_store(caplog):
     # Serving must not depend on the head store; the chain simply starts unlinked.
     assert event["previous_chain_id"] is None
     assert app.state.audit_chain_count == 1
+    assert "private-audit-password" not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)
 
 
 def test_chain_start_is_suppressed_when_auditing_is_disabled(caplog):

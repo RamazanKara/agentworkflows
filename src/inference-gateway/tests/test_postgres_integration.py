@@ -235,3 +235,31 @@ def test_real_audit_hashes_restart_heads_paging_and_retention_boundary(postgres)
         )
     tampered = list(postgres.audit_entries("team", None, True))
     assert check_entry(tampered[1], tampered[0]) == "record_hash_mismatch"
+
+
+
+def test_real_statement_timeout_releases_connection_and_recovers(postgres):
+    with pytest.raises(psycopg.errors.QueryCanceled), postgres.pool.connection() as connection:
+        connection.execute("SET LOCAL statement_timeout = 30")
+        connection.execute("SELECT pg_sleep(1)")
+    assert postgres.health()
+    assert postgres.change_settings("after-timeout", 0, {"revision": 1})
+
+
+def test_real_failed_schema_upgrade_rolls_back_ddl_and_can_be_retried(postgres, monkeypatch, tmp_path):
+    from app import storage_migrations
+
+    migrate(postgres.pool, 0)
+    original = storage_migrations.MIGRATIONS
+    migration = (original / "001.up.sql").read_text(encoding="utf-8")
+    (tmp_path / "001.up.sql").write_text(migration + "; SELECT 1/0;", encoding="utf-8")
+    monkeypatch.setattr(storage_migrations, "MIGRATIONS", tmp_path)
+    with pytest.raises(psycopg.errors.DivisionByZero):
+        migrate(postgres.pool)
+    with postgres.pool.connection() as connection:
+        assert connection.execute("SELECT version FROM aw_schema_version").fetchall() == []
+        assert connection.execute("SELECT to_regclass('aw_runs')").fetchone() == (None,)
+    monkeypatch.setattr(storage_migrations, "MIGRATIONS", original)
+    migrate(postgres.pool)
+    migrate(postgres.pool)
+    assert postgres.health()

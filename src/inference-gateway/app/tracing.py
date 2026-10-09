@@ -52,14 +52,15 @@ async def trace_request(
     from opentelemetry.trace import SpanKind, StatusCode
 
     context = extract(dict(request.headers))
+    method = request_method(request)
     with tracer.start_as_current_span(
-        request.method,
+        method,
         context=context,
         kind=SpanKind.SERVER,
         record_exception=False,
         set_status_on_exception=False,
     ) as span:
-        span.set_attribute("http.request.method", request.method)
+        span.set_attribute("http.request.method", method)
         try:
             response = await dispatch()
             span.set_attribute("http.response.status_code", response.status_code)
@@ -71,13 +72,18 @@ async def trace_request(
             raise
         finally:
             route = request_route(request)
-            span.update_name(f"{request.method} {route}")
+            span.update_name(f"{method} {route}")
             span.set_attribute("http.route", route)
 
 
 def request_route(request: Request) -> str:
     route = request.scope.get("route")
     return getattr(route, "path", "/unmatched")
+
+
+def request_method(request: Request) -> str:
+    known = {"GET", "HEAD", "POST", "PUT", "DELETE", "CONNECT", "OPTIONS", "TRACE", "PATCH"}
+    return request.method if request.method in known else "_OTHER"
 
 
 def signal_endpoint(endpoint: str, signal: str) -> str:
@@ -142,7 +148,7 @@ async def measure_request(
         return response
     finally:
         attributes = {
-            "http.request.method": request.method,
+            "http.request.method": request_method(request),
             "http.route": request_route(request),
             "http.response.status_code": code,
         }

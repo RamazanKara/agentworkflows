@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-09T16:15:34.086742+00:00",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.14",
+  "cpu_count": 16,
+  "runtime": "local fake; no provider, Redis, Temporal or TLS",
+  "results": [
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 235.08,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 39.9,
+      "p95_ms": 54.96,
+      "p99_ms": 102.23
+    },
+    {
+      "method": "GET",
+      "path": "/readyz",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 112.71,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 87.48,
+      "p95_ms": 115.65,
+      "p99_ms": 152.38
+    },
+    {
+      "method": "GET",
+      "path": "/v1/models",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 189.1,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 31.7,
+      "p95_ms": 84.88,
+      "p99_ms": 665.86
+    },
+    {
+      "method": "GET",
+      "path": "/v1/usage",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 169.66,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 32.66,
+      "p95_ms": 118.36,
+      "p99_ms": 631.27
+    },
+    {
+      "method": "GET",
+      "path": "/v1/sandbox/budget",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 175.09,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 25.11,
+      "p95_ms": 70.89,
+      "p99_ms": 1060.19
+    },
+    {
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 77.12,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 126.09,
+      "p95_ms": 170.62,
+      "p99_ms": 234.54
+    },
+    {
+      "method": "POST",
+      "path": "/v1/responses",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 87.32,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 111.79,
+      "p95_ms": 161.02,
+      "p99_ms": 178.18
+    },
+    {
+      "method": "POST",
+      "path": "/v1/messages",
+      "requests": 500,
+      "concurrency": 10,
+      "rps": 100.7,
+      "statuses": {
+        "200": 500
+      },
+      "p50_ms": 98.14,
+      "p95_ms": 140.24,
+      "p99_ms": 155.86
+    }
+  ]
+}

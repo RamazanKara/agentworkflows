@@ -16,6 +16,8 @@ def on_page_markdown(markdown: str, page: Any, config: Any, files: Any) -> str:
     if page.file.src_uri.startswith("runbooks/"):
         # The mirror is already inside docs/, unlike the repository source.
         return markdown.replace("](../docs/", "](../")
+    if "/" not in page.file.src_uri:
+        return markdown.replace("](../runbooks/", "](runbooks/")
     return markdown
 
 

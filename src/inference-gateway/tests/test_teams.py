@@ -297,6 +297,60 @@ def start(client, role="builder", **body):
     return client.post("/v1/workflow-runs", headers=auth(role), json={"input": {"topic": "test"}, **body})
 
 
+@pytest.mark.parametrize("accepted", [False, True])
+def test_temporal_lost_reply_retries_same_intent_without_duplicate_run(team_gateway, monkeypatch, accepted):
+    from temporalio.service import RPCError, RPCStatusCode
+
+    client, app = team_gateway
+    temporal = app.state.temporal_client
+    original = temporal.start_workflow
+    attempts = []
+
+    async def fail_once(*args, **kwargs):
+        attempts.append(kwargs)
+        assert kwargs["rpc_timeout"].total_seconds() == 10
+        if len(attempts) == 1:
+            if accepted:
+                await original(*args, **kwargs)
+            raise RPCError("secret-temporal-address", RPCStatusCode.DEADLINE_EXCEEDED, b"")
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(temporal, "start_workflow", fail_once)
+    request_id = str(uuid4())
+    first = start(client, request_id=request_id)
+    assert first.status_code == 503 and "secret-temporal-address" not in first.text
+    second = start(client, request_id=request_id)
+    assert second.status_code == 201
+    assert start(client, request_id=request_id).json()["run_id"] == second.json()["run_id"]
+    assert len(temporal.executions) == 1
+    assert len({attempt["id"] for attempt in attempts}) == 1
+    assert start(client, request_id=request_id, input={"topic": "changed"}).status_code == 409
+
+
+def test_partial_redis_metadata_write_is_repaired_on_start_retry(team_gateway, monkeypatch):
+    from redis.exceptions import TimeoutError as RedisTimeoutError
+
+    client, app = team_gateway
+    store = app.state.budget_tracker.client
+    original = store.zadd
+    calls = []
+
+    def fail_once(key, values):
+        calls.append(key)
+        if len(calls) == 1:
+            raise RedisTimeoutError("private-redis-address")
+        return original(key, values)
+
+    monkeypatch.setattr(store, "zadd", fail_once)
+    request_id = str(uuid4())
+    first = start(client, request_id=request_id)
+    assert first.status_code == 503 and "private-redis-address" not in first.text
+    recovered = start(client, request_id=request_id)
+    assert recovered.status_code == 201 and len(app.state.temporal_client.executions) == 1
+    runs = client.get("/v1/workflow-runs", headers=auth("builder")).json()["runs"]
+    assert [run["run_id"] for run in runs] == [recovered.json()["run_id"]]
+
+
 @pytest.mark.parametrize(("role", "code"), [("admin", 201), ("builder", 201), ("approver", 403), ("viewer", 403)])
 def test_start_roles_and_verified_team(team_gateway, role, code):
     client, _ = team_gateway

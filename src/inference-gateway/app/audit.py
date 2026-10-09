@@ -153,6 +153,7 @@ class RedisChainStore:
                 decode_responses=True,
                 socket_timeout=settings.audit_chain_store_timeout_seconds,
                 socket_connect_timeout=settings.audit_chain_store_timeout_seconds,
+                retry=redis.retry.Retry(redis.backoff.NoBackoff(), 0),
             )
         self.client = client
 
@@ -287,7 +288,7 @@ def persist_audit_head(app: FastAPI) -> None:
         )
     except Exception:
         AUDIT_CHAIN_PERSIST.labels("error").inc()
-        logging.getLogger("uvicorn.error").exception("audit chain head could not be persisted")
+        logging.getLogger("uvicorn.error").error("audit chain head could not be persisted")
         return
     state.audit_head_persisted_count = state.audit_chain_count
     AUDIT_CHAIN_PERSIST.labels("ok").inc()
@@ -307,7 +308,7 @@ def open_audit_chain(app: FastAPI) -> dict[str, Any]:
     except Exception:
         # An unreadable head store must not stop the gateway from serving; the chain
         # simply starts without a predecessor, which the record states plainly.
-        logging.getLogger("uvicorn.error").exception("audit chain head could not be read")
+        logging.getLogger("uvicorn.error").error("audit chain head could not be read")
         previous = None
     event = chain_start_event(state.audit_chain_id, previous)
     event["ts"] = time()

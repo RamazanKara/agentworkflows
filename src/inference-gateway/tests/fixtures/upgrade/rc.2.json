@@ -1,0 +1,152 @@
+{
+  "version": "rc.2",
+  "source_commit": "479710d6f3ae4bac45774c072d7ea097c0516729",
+  "environment": {
+    "OTEL_METRICS_ENABLED": {
+      "field": "otel_metrics_enabled",
+      "value": false
+    },
+    "OTEL_TRACING_ENABLED": {
+      "field": "otel_tracing_enabled",
+      "value": false
+    },
+    "REQUEST_TIMEOUT_SECONDS": {
+      "field": "request_timeout_seconds",
+      "value": 120.0
+    },
+    "RUNTIME_BACKEND": {
+      "field": "runtime_backend",
+      "value": "ollama"
+    },
+    "RUNTIME_CIRCUIT_FAILURE_THRESHOLD": {
+      "field": "runtime_circuit_failure_threshold",
+      "value": 0
+    },
+    "RUNTIME_CIRCUIT_RESET_SECONDS": {
+      "field": "runtime_circuit_reset_seconds",
+      "value": 30.0
+    },
+    "RUNTIME_MAX_RETRIES": {
+      "field": "runtime_max_retries",
+      "value": 2
+    },
+    "RUNTIME_RETRY_BACKOFF_SECONDS": {
+      "field": "runtime_retry_backoff_seconds",
+      "value": 0.1
+    },
+    "SANDBOX_BUDGET_BACKEND": {
+      "field": "sandbox_budget_backend",
+      "value": "memory"
+    },
+    "SANDBOX_BUDGET_KEY_PREFIX": {
+      "field": "sandbox_budget_key_prefix",
+      "value": "agentworkflows:sandbox-budget"
+    },
+    "SANDBOX_BUDGET_REDIS_TIMEOUT_SECONDS": {
+      "field": "sandbox_budget_redis_timeout_seconds",
+      "value": 0.5
+    },
+    "SANDBOX_BUDGET_REDIS_URL": {
+      "field": "sandbox_budget_redis_url",
+      "value": "redis://budget-redis.budget.svc.cluster.local:6379/0"
+    },
+    "STORAGE_BACKEND": {
+      "field": "storage_backend",
+      "value": "redis"
+    },
+    "STORAGE_POSTGRES_POOL_SIZE": {
+      "field": "storage_postgres_pool_size",
+      "value": 5
+    },
+    "STORAGE_POSTGRES_TIMEOUT_SECONDS": {
+      "field": "storage_postgres_timeout_seconds",
+      "value": 3.0
+    },
+    "TEMPORAL_ADDRESS": {
+      "field": "temporal_address",
+      "value": ""
+    }
+  },
+  "gateway_values": {
+    "runtime": {
+      "backend": "ollama",
+      "modelId": "qwen3.5:0.8b",
+      "ollamaBaseUrl": "http://ollama.ollama.svc.cluster.local:11434",
+      "vllmBaseUrl": "http://vllm.vllm.svc.cluster.local:8000",
+      "requestTimeoutSeconds": "120",
+      "maxRetries": 2,
+      "retryBackoffSeconds": "0.1",
+      "circuitFailureThreshold": 0,
+      "circuitResetSeconds": "30",
+      "allowedModels": [
+        "qwen3.5:0.8b"
+      ]
+    },
+    "budget": {
+      "enabled": true,
+      "backend": "memory",
+      "requestLimit": 1000,
+      "promptCharLimit": "2000000",
+      "estimatedTokenLimit": 750000,
+      "estimatedCharsPerToken": 4,
+      "windowSeconds": 86400,
+      "redisUrl": "redis://budget-redis.budget.svc.cluster.local:6379/0",
+      "redisTimeoutSeconds": "0.5",
+      "keyPrefix": "agentworkflows:sandbox-budget"
+    },
+    "storage": {
+      "backend": "redis",
+      "postgres": {
+        "existingSecret": {
+          "name": "",
+          "key": "dsn"
+        },
+        "poolSize": 5,
+        "timeoutSeconds": 3,
+        "bundled": {
+          "enabled": false,
+          "image": "postgres:16-alpine",
+          "storage": "10Gi"
+        }
+      }
+    },
+    "workflows": {
+      "temporalAddress": ""
+    },
+    "observability": {
+      "metrics": {
+        "enabled": false
+      },
+      "tracing": {
+        "enabled": false,
+        "otlpEndpoint": "",
+        "serviceName": "inference-gateway"
+      }
+    }
+  },
+  "worker_values": {
+    "worker": {
+      "replicaCount": 1,
+      "terminationGracePeriodSeconds": 210,
+      "podDisruptionBudget": {
+        "enabled": false,
+        "minAvailable": 1
+      },
+      "team": "demo",
+      "image": "ghcr.io/ramazankara/agentworkflows/workflow-worker:v0.5.1",
+      "gatewayUrl": "http://inference-gateway.inference.svc.cluster.local:8080",
+      "existingSecret": "workflow-gateway-key",
+      "workspaces": [],
+      "resources": {
+        "requests": {
+          "cpu": "100m",
+          "memory": "128Mi"
+        },
+        "limits": {
+          "cpu": "1",
+          "memory": "512Mi"
+        }
+      }
+    }
+  }
+}

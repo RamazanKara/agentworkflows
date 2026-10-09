@@ -182,4 +182,4 @@ the normal CSRF token.
 Every successful save/reset emits a hash-chained `team_settings_changed` audit
 event with actor, revision and each touched field's before/after value and source.
 Rejected changes do not emit change events. Verify them with the existing
-[audit-chain runbook](runbooks/audit-chain.md).
+[audit-chain runbook](../runbooks/audit-chain.md).

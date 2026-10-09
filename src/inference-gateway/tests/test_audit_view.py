@@ -240,3 +240,18 @@ def test_disabled_view_is_explicit_and_store_failures_are_503(team_gateway, monk
         response = client.get(PATH + suffix, headers=auth("admin"))
         assert response.status_code == 503
         assert response.json()["detail"]["reason"] == "audit_view_unavailable"
+
+
+@pytest.mark.parametrize("team", ["team", ""])
+def test_audit_store_failure_logs_no_driver_payload(team_gateway, monkeypatch, caplog, team):
+    _, app = team_gateway
+
+    def fail(*args):
+        raise OSError("postgresql://user:private-password@internal/db SQL contained private-prompt")
+
+    monkeypatch.setattr(app.state.storage, "append_audit", fail)
+    record(app, sandbox_id=team)
+    errors = [entry for entry in caplog.records if entry.name == "uvicorn.error"]
+    assert errors and all(entry.exc_info is None for entry in errors)
+    assert "could not be stored" in caplog.text
+    assert "private-password" not in caplog.text and "private-prompt" not in caplog.text

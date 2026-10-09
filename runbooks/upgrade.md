@@ -159,3 +159,23 @@ Record the from/to tags, the `argocd app history` entry used (if any), the
 commit that moved `CUSTOMER_REVISION`, smoke and gate results
 (`make eval`, `make loadtest`, `make release-gate-strict`), and -- if automation
 was paused -- when it was disabled and re-enabled.
+
+
+## rc.3 compatibility checks
+
+The gateway tests contain selected reliability configuration and Helm values captured from the
+actual 0.2.0 and rc.2 commits (source hashes are in `tests/fixtures/upgrade`). With Helm on PATH
+and `helm dependency build deploy/charts/workflows` complete, run
+`python -m pytest src/inference-gateway/tests/test_upgrade.py src/inference-gateway/tests/test_storage.py`.
+These checks load legacy environment values and render current gateway/worker charts with old
+values, retaining store connections, task queues, timeouts and Secret references.
+
+Set `TEST_REDIS_URL` and `TEST_POSTGRES_DSN` to disposable stores and also run
+`src/inference-gateway/tests/test_postgres_integration.py`. The Redis checks use unique key prefixes
+and cover unversioned/0/1/2 state, TTL preservation, interrupted migration replies and future-version
+refusal. PostgreSQL checks use disposable schemas and verify timeout recovery and transactional DDL
+rollback before retry. No schema version changes in rc.3. SQL down migration 1 remains destructive.
+
+On Linux/WSL, `make workflow-upgrade-test` upgrades actual 0.2.0 Compose state and
+`make workflow-helm-upgrade-test` upgrades charts and images in disposable kind. These live checks
+prove properties that native config parsing and Helm rendering cannot establish.

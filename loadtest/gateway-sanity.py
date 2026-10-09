@@ -53,6 +53,7 @@ async def main():
         "STORAGE_BACKEND": "redis", "TEMPORAL_ADDRESS": "", "MODEL_ROUTING_POLICY_PATH": "",
         "SANDBOX_POLICY_PATH": "", "API_KEY_RECORDS_PATH": "", "JWT_AUTH_ENABLED": "false",
         "OIDC_ISSUER": "", "METRICS_PORT": "0", "RESPONSE_CACHE_ENABLED": "false",
+        "OTEL_TRACING_ENABLED": "false", "OTEL_METRICS_ENABLED": "false",
     }
     processes = []
     with (output / "gateway-sanity.log").open("w", encoding="utf-8") as log:
@@ -92,9 +93,13 @@ async def main():
                     async def worker(method=method, path=path, body=body, latencies=latencies, statuses=statuses):
                         for _ in range(COUNT // CONCURRENCY):
                             started = perf_counter()
-                            response = await client.request(method, path, json=body)
+                            try:
+                                response = await client.request(method, path, json=body)
+                                status = str(response.status_code)
+                            except httpx.HTTPError:
+                                status = "transport_error"
                             latencies.append((perf_counter() - started) * 1000)
-                            statuses[response.status_code] = statuses.get(response.status_code, 0) + 1
+                            statuses[status] = statuses.get(status, 0) + 1
 
                     started = perf_counter()
                     await asyncio.gather(*(worker() for _ in range(CONCURRENCY)))
@@ -112,7 +117,7 @@ async def main():
                     "runtime": "local fake; no provider, Redis, Temporal or TLS", "results": rows,
                 }
                 (output / "gateway-sanity.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-                if any(set(row["statuses"]) != {200} for row in rows):
+                if any(set(row["statuses"]) != {"200"} for row in rows):
                     raise RuntimeError("Load test returned unsuccessful responses; see gateway-sanity.json")
         finally:
             for process in processes:

@@ -74,3 +74,21 @@ For live verification enable both signals, perform a run/cancel/retry, wait one 
 interval, inspect the collector for both signals and verify the Grafana panels. This live
 collector/Tempo/Prometheus check requires your container or cluster environment.
 See [Python exporters](https://opentelemetry.io/docs/languages/python/exporters/) for transport setup.
+
+
+The rc.3 review keeps the existing metric names and dashboard queries. Unknown HTTP methods collapse
+to `_OTHER`; unmatched paths collapse to `/unmatched`. Request IDs, workflow run/step IDs, prompts,
+query strings and credentials must never become metric labels. Sandbox Prometheus labels retain
+the existing 2,000-value cap; team gauges are scoped to configured teams and removed on erasure.
+Use `max` for replicated shared-state gauges and `sum(rate(...))` for per-process counters.
+
+With tracing enabled, an inbound W3C parent creates a gateway SERVER span; the outgoing runtime
+request uses that span as its parent. Cloud routes receive only W3C trace context and their own
+provider credentials, without tenant headers or baggage. Tracing does not automatically instrument
+Temporal history or SDK activities; validate collector delivery and any separately configured
+Temporal instrumentation in the deployment. Spans omit exception payloads and raw URL paths.
+
+Audit-store failures still produce ERROR logs and chain-persist error metrics, but omit driver
+tracebacks that may contain DSNs or SQL data. Worker activity errors retain status, machine reason
+and gateway request ID while omitting response bodies; use the retained, access-controlled audit
+trail for investigation. Native regression tests cover these redaction and propagation boundaries.

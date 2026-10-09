@@ -96,7 +96,7 @@ def test_activity_policy_errors_do_not_retry(monkeypatch, status, reason, retrya
         requests.append(request)
         if request.method == "PUT":
             return httpx.Response(200, json={})
-        return httpx.Response(status, json={"detail": {"reason": reason, "message": "fixture"}})
+        return httpx.Response(status, json={"detail": {"reason": reason, "message": "private-response-payload"}})
 
     original = httpx.AsyncClient
     monkeypatch.setattr(
@@ -111,7 +111,7 @@ def test_activity_policy_errors_do_not_retry(monkeypatch, status, reason, retrya
         asyncio.run(environment.run(GatewayActivities("http://gateway", "team-key").call, Call("model", {})))
     assert error.value.non_retryable is not retryable
     assert requests[1].headers["X-Workflow-Step-ID"] == "draft"
-    assert "team-key" not in str(error.value)
+    assert "team-key" not in str(error.value) and "private-response-payload" not in str(error.value)
 
 
 def test_approval_only_applies_to_one_waiting_draft():
@@ -362,3 +362,56 @@ def test_document_answer_abstains_without_evidence(monkeypatch, sources):
     result = asyncio.run(DocumentQAWorkflow().run(DocumentQARequest("unanswerable")))
     assert result == {"answer": "I don't know from the supplied documents.", "citations": []}
     assert text.await_count == (1 if sources else 0)
+
+
+@pytest.mark.parametrize("failure", [httpx.ConnectError, httpx.ReadTimeout])
+def test_activity_transport_failure_keeps_identity_on_retry_and_redacts_error(monkeypatch, failure):
+    posts = []
+
+    def respond(request):
+        if request.method == "PUT":
+            return httpx.Response(200, json={})
+        posts.append(request)
+        if len(posts) == 1:
+            raise failure("http://worker-key:private-secret@gateway/internal", request=request)
+        return httpx.Response(200, json={"choices": []})
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        "agentworkflows.activities.httpx.AsyncClient",
+        lambda **kw: original(transport=httpx.MockTransport(respond), **kw),
+    )
+    environment = ActivityEnvironment()
+    environment.info = replace(environment.info, workflow_run_id="run-one", activity_id="draft", attempt=1)
+    activities = GatewayActivities("http://gateway", "worker-key")
+    with pytest.raises(ApplicationError) as error:
+        asyncio.run(environment.run(activities.call, Call("model", {})))
+    assert error.value.type == "GatewayUnavailable" and not error.value.non_retryable
+    assert "private-secret" not in str(error.value) and "worker-key" not in str(error.value)
+    environment.info = replace(environment.info, attempt=2)
+    assert asyncio.run(environment.run(activities.call, Call("model", {}))) == {"choices": []}
+    assert len(posts) == 2
+    for request in posts:
+        assert request.headers["X-Workflow-Run-ID"] == "run-one"
+        assert request.headers["X-Workflow-Step-ID"] == "draft"
+
+
+def test_worker_startup_has_a_deadline_when_temporal_stalls(monkeypatch):
+    from agentworkflows import worker
+
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "worker-key")
+    deadlines = []
+    original = asyncio.wait_for
+
+    async def connect(*args, **kwargs):
+        await asyncio.Event().wait()
+
+    async def bounded(awaitable, timeout):
+        deadlines.append(timeout)
+        return await original(awaitable, timeout=0.01)
+
+    monkeypatch.setattr(worker.Client, "connect", connect)
+    monkeypatch.setattr(worker.asyncio, "wait_for", bounded)
+    with pytest.raises(TimeoutError):
+        asyncio.run(worker.serve([]))
+    assert deadlines == [10]

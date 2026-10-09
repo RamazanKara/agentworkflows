@@ -4,6 +4,7 @@ import random
 import socket
 from asyncio import sleep
 from dataclasses import replace
+from math import isfinite
 from time import time
 from typing import Any
 
@@ -115,6 +116,11 @@ class RuntimeClient:
         self, payload: dict[str, Any], backend: str, endpoint: str, headers: dict[str, str] | None
     ) -> tuple[str, dict[str, Any], dict[str, str] | None, ModelRoute | None]:
         body = self._chat_completion_body(payload)
+        headers = dict(headers or {})
+        if self.settings.otel_tracing_enabled:
+            from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+
+            TraceContextTextMapPropagator().inject(headers)
         if backend not in CLOUD_BACKENDS:
             return f"{self._base_url(backend)}/v1/{endpoint}", body, headers, None
         route = self.policy.resolve(body["model"], self.settings.model_id)
@@ -131,6 +137,7 @@ class RuntimeClient:
         if endpoint == "chat/completions" and not any(key in body for key in ("max_tokens", "max_completion_tokens")):
             body["max_completion_tokens"] = self.settings.max_completion_tokens
         url, body, auth = cloud_request(route, body, endpoint, self.settings.max_completion_tokens)
+        auth.update({key: value for key, value in headers.items() if key.lower() in {"traceparent", "tracestate"}})
         return url, body, auth, route
 
     def _base_url(self, backend: str | None = None) -> str:
@@ -175,7 +182,7 @@ class RuntimeClient:
             value = float(raw.strip())
         except ValueError:
             return None
-        return value if value >= 0 else None
+        return value if isfinite(value) and value >= 0 else None
 
     async def _sleep_before_retry(self, attempt: int, response: httpx.Response | None) -> None:
         """Sleep with exponential backoff + equal jitter, honoring ``Retry-After``.
@@ -186,10 +193,9 @@ class RuntimeClient:
         """
         base = self.settings.runtime_retry_backoff_seconds * (2**attempt)
         retry_after = self._retry_after_seconds(response)
-        if retry_after is not None:
-            base = max(base, retry_after)
         delay = (base / 2.0) + random.random() * (base / 2.0)
-        await sleep(delay)
+        delay = max(delay, retry_after or 0)
+        await sleep(min(delay, self.settings.request_timeout_seconds))
 
     async def _post_json_with_retry(
         self,
@@ -334,11 +340,11 @@ class RuntimeClient:
                         await self._sleep_before_retry(attempt, response)
                         continue
                     response.raise_for_status()
-                    self._record_success(circuit)
                     chunks = cloud_stream(response, route) if route else response.aiter_bytes()
                     async for chunk in chunks:
                         streamed = True
                         yield chunk
+                    self._record_success(circuit)
                     return
             except httpx.HTTPStatusError as exc:
                 if is_runtime_fault(exc.response.status_code):

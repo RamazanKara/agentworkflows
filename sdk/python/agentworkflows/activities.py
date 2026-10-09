@@ -114,7 +114,7 @@ class GatewayActivities:
             retry_after = exc.response.headers.get("Retry-After", "")
             delay = timedelta(seconds=int(retry_after)) if retryable and retry_after.isdigit() else None
             raise ApplicationError(
-                f"{exc}. Gateway request ID: {exc.request_id or 'unavailable'}",
+                f"Gateway activity failed ({exc.status_code}). Gateway request ID: {exc.request_id or 'unavailable'}",
                 type=exc.reason or "GatewayError",
                 non_retryable=not retryable,
                 next_retry_delay=delay,
