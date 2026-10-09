@@ -106,3 +106,13 @@ documentation, and regression coverage. Container acceptance is separate from na
 | Deployment | Compose, hardened Helm settings, and a kind trial exist in separate guides. | Teams cannot identify one supported path or recover an installation confidently. | Consolidate one-command source Compose, validate a single-tenant Helm reference, expose deployment readiness, and document backup/restore and ordered upgrades with explicit caller acceptance commands. | Implemented: configuration API, console checklist, both SDKs, single-tenant Helm profile and recovery/upgrade guide. Native Helm rendering passed (20 tests, 8 subtests); Compose/kind and managed-service drills require the caller. |
 
 Final rc.4 native verification (after rebasing onto rc.3): gateway 1,139 passed/18 skipped; Python SDK 219 passed/3 skipped; TypeScript 86 passed; console build and 82 tests passed. Changed Python files and contracts pass. Container/live-provider/recovery acceptance remains open, and existing repository Ruff/format/MkDocs failures remain unchanged. See [verification and caller commands](release-verification.md#rc4-adoption-pass).
+
+## 1.0.0-rc.5 adoption pass — plan recorded before implementation
+
+The rc.4 pass closed first-run, templates, invitations, alert rules and deployment readiness.
+A review of the code path a developer takes after the sample run found the next blockers.
+Each gap below was written here before it was built, ranked by how early it stops a team.
+
+| Gap | Symptom for a new team | Why it blocks adoption | Plan | Status |
+| --- | --- | --- | --- | --- |
+| Bring your own workflow | A developer writes a workflow and a worker, but the gateway refuses it as `workflow_not_allowed` until an operator adds a `workflows:` block to the YAML or Helm values and restarts the gateway. Only the nine bundled templates can be used from the product. | The headline promise, "turn your script into a durable, governed job", ends at a ticket to the platform team. Developers evaluating the product stop at their first custom workflow. | Let a team admin register a workflow type from the console, API, CLI and both SDKs. Registration can only narrow the operator's envelope: models, providers and tools must already be approved for the team; egress is derived from those routes and tools; limits are capped by the team's own limits; operator-defined and built-in names are reserved. Revision-checked, audited, removable, and read through the same effective policy as YAML workflows. The SDKs can register straight from a workflow class and its input schema. | In progress |
