@@ -2497,6 +2497,11 @@ Without chart-managed TLS ingress, supply the explicit HTTPS callback and Secure
 setting yourself. Scopes must include <code>openid</code>; missing roles use <code>defaultRole</code> (viewer).
 The client secret is referenced from the existing Secret, not copied into Helm values.
 OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.</p>
+<p>On the v0.8.0 source build, <code>inference-gateway.auth.oidc.groupsClaim</code> and
+<code>groupRoleMappings</code> can derive roles from existing company groups. See the
+<a href="../workflows/#sso-group-to-role-mapping">mapping example and acceptance checks</a>.
+Mappings are scoped by team; nonempty mappings deny unmapped or conflicting
+memberships. Members &amp; keys shows the current team's sign-in policy to admins.</p>
 <h2 id="gateway-availability-and-resources">Gateway availability and resources<a class="headerlink" href="#gateway-availability-and-resources" title="Permanent link">&para;</a></h2>
 <p>The default is one gateway replica with requests of <code>100m</code> CPU / <code>128Mi</code> memory and
 limits of <code>500m</code> / <code>512Mi</code>, a starting point for a small team using cloud providers.

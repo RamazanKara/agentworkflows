@@ -621,6 +621,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#company-group-access-v080-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Company group access (v0.8.0 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2167,6 +2178,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#company-group-access-v080-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Company group access (v0.8.0 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2501,6 +2523,15 @@ transport errors propagate and can leave partial output. Retention and status
 changes continue during export; this is not a transactional snapshot or backup.
 Expired runs/content are not recovered, and the stored start input is omitted.
 Downloaded files need their own retention policy. See <a href="../sdk-reference/#cli">CLI and SDK paging</a>.</p>
+<h2 id="company-group-access-v080-candidate">Company group access (v0.8.0 candidate)<a class="headerlink" href="#company-group-access-v080-candidate" title="Permanent link">&para;</a></h2>
+<p>Build the gateway from this checkout using the Python Quickstart's
+<a href="../quickstart/">source-build path</a> and install this checkout's TypeScript SDK for
+unreleased features. With an unrestricted team-admin credential,
+<code>await client.teamSSO()</code> inspects the same sign-in policy shown in Members &amp; keys.
+See the <a href="../sdk-reference/#company-group-access-v080">typed contract and example</a>.
+Configure your existing identity provider using the
+<a href="../workflows/#sso-group-to-role-mapping">group mapping guide</a>; the local fixture
+workflow does not require SSO.</p>
 <h2 id="trigger-history-and-usage-csv-v070-candidate">Trigger history and usage CSV (v0.7.0 candidate)<a class="headerlink" href="#trigger-history-and-usage-csv-v070-candidate" title="Permanent link">&para;</a></h2>
 <p>Use the checkout SDK and a gateway built from this checkout. Run history is available
 from each console trigger; <code>runs({ workflow, trigger, project, cursor })</code> and

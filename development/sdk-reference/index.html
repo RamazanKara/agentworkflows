@@ -1295,6 +1295,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#company-group-access-v080" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Company group access (v0.8.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2084,6 +2095,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#company-group-access-v080" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Company group access (v0.8.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2291,7 +2313,7 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 <p><code>runs start</code> also accepts <code>--project</code> and <code>--request-id UUID</code>. If a start response is lost,
 reuse the request ID printed on stderr with <strong>identical input</strong> to avoid duplicate runs.
 Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport failure, <strong>2</strong> usage/input/scaffold error.</p>
-<p>Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.7.0 checkout SDK and gateway,
+<p>Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.8.0 checkout SDK and gateway,
 not the v0.5.1 wheel or images. <code>runs list</code> and <code>runs export</code> accept <code>--project</code>,
 <code>--workflow</code>, <code>--status</code>, <code>--cursor</code> and <code>--limit</code> (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have <code>next_cursor</code>.
@@ -2346,6 +2368,31 @@ verifier. See <a href="../audit-log/">audit log</a> for boundaries and verificat
 steps for every starter. Install from this checkout to get its current template set.
 Scaffolds include <code>input-schema.json</code> and a schema declaration in <code>workflow.py</code>. Copy the
 schema to the workflow policy's <code>inputSchema</code> to enable console forms and gateway validation.</p>
+<h2 id="company-group-access-v080">Company group access (v0.8.0)<a class="headerlink" href="#company-group-access-v080" title="Permanent link">&para;</a></h2>
+<p>Gateway v0.8.0 adds <code>GET /v1/team/sso</code> for a team admin credential without a project
+restriction. It returns <code>TeamSSO</code>: team ID, enabled state, provider hostname,
+<code>role_source</code> (<code>groups</code> or <code>claim</code>), team/project claim names, and only the current
+team's group-to-role mappings. In group mode, <code>role_claim</code> and <code>default_role</code> are
+null; in claim mode, <code>groups_claim</code> is null and mappings are empty. No secrets,
+other teams' mappings or user group memberships are returned. A disabled provider
+has <code>enabled: false</code> and <code>provider_name: null</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"https://agents.example.com"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">admin_key</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">policy</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">team_sso</span><span class="p">()</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">policy</span><span class="p">[</span><span class="s2">"role_source"</span><span class="p">],</span> <span class="n">policy</span><span class="p">[</span><span class="s2">"group_role_mappings"</span><span class="p">])</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'https://agents.example.com'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">adminKey</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">policy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">teamSSO</span><span class="p">();</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">policy</span><span class="p">.</span><span class="nx">role_source</span><span class="p">,</span><span class="w"> </span><span class="nx">policy</span><span class="p">.</span><span class="nx">group_role_mappings</span><span class="p">);</span>
+</code></pre></div>
+<p>Both helpers use the SDK's authenticated GET retries and preserve 401/403 errors.
+This is an inspection API; an operator configures mappings through Helm or
+environment variables. See <a href="../workflows/#sso-group-to-role-mapping">group access semantics and acceptance</a>.
+Members &amp; keys displays the same policy. The API does not log users into their
+identity provider, create groups or change memberships.</p>
 <h2 id="trigger-history-and-usage-csv-v070-candidate">Trigger history and usage CSV (v0.7.0 candidate)<a class="headerlink" href="#trigger-history-and-usage-csv-v070-candidate" title="Permanent link">&para;</a></h2>
 <p><code>runs list</code> and <code>runs export</code> accept <code>--trigger NAME</code> together with <code>--workflow WORKFLOW</code>.
 The API uses <code>GET /v1/workflow-runs?workflow=WORKFLOW&amp;trigger=NAME</code>; retain both filters
@@ -2354,18 +2401,18 @@ Run metadata includes <code>trigger: {name, kind}</code> for cron/webhook launch
 v0.7.0. Older/manual runs and manual retries have no trigger provenance. History survives
 removal of the trigger's configuration, until run retention expires. Rejected deliveries
 do not have a run; inspect their audit receipts instead.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"local-development-only"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">page</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">runs</span><span class="p">(</span><span class="n">workflow</span><span class="o">=</span><span class="s2">"DailyReportWorkflow"</span><span class="p">,</span> <span class="n">trigger</span><span class="o">=</span><span class="s2">"daily"</span><span class="p">)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"usage.csv"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_usage</span><span class="p">())</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"local-development-only"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">page</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">runs</span><span class="p">(</span><span class="n">workflow</span><span class="o">=</span><span class="s2">"DailyReportWorkflow"</span><span class="p">,</span> <span class="n">trigger</span><span class="o">=</span><span class="s2">"daily"</span><span class="p">)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"usage.csv"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_usage</span><span class="p">())</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">writeFile</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:fs/promises'</span><span class="p">;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">gateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="s1">'local-development-only'</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">runs</span><span class="p">({</span><span class="w"> </span><span class="nx">workflow</span><span class="o">:</span><span class="w"> </span><span class="s1">'DailyReportWorkflow'</span><span class="p">,</span><span class="w"> </span><span class="nx">trigger</span><span class="o">:</span><span class="w"> </span><span class="s1">'daily'</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">await</span><span class="w"> </span><span class="nx">writeFile</span><span class="p">(</span><span class="s1">'usage.csv'</span><span class="p">,</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">exportUsage</span><span class="p">(),</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">writeFile</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:fs/promises'</span><span class="p">;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kd">const</span><span class="w"> </span><span class="nx">gateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="s1">'local-development-only'</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">runs</span><span class="p">({</span><span class="w"> </span><span class="nx">workflow</span><span class="o">:</span><span class="w"> </span><span class="s1">'DailyReportWorkflow'</span><span class="p">,</span><span class="w"> </span><span class="nx">trigger</span><span class="o">:</span><span class="w"> </span><span class="s1">'daily'</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">await</span><span class="w"> </span><span class="nx">writeFile</span><span class="p">(</span><span class="s1">'usage.csv'</span><span class="p">,</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">exportUsage</span><span class="p">(),</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
 </code></pre></div>
 <p><code>GET /v1/usage/export</code> returns UTF-8 <code>text/csv</code> with an attachment filename and
 <code>Cache-Control: no-store</code>. All team roles may export. A project-bound credential sees
@@ -2540,14 +2587,14 @@ ISO-8601 string with a timezone.</p>
 <p>Audit filter names are <code>from_time</code>, <code>to</code>, <code>event_type</code>, <code>actor</code>, <code>project</code>, <code>run_id</code>,
 <code>cursor</code>, and <code>limit</code>. Both time bounds are inclusive Unix seconds. All filters
 are optional; <code>limit</code> defaults to 50 on the gateway and cannot exceed 200.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_ADMIN_KEY"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">team_settings</span><span class="p">()</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">saved</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">update_team_settings</span><span class="p">({</span><span class="s2">"cost_limit_usd"</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">gateway</span><span class="o">.</span><span class="n">reset_team_setting</span><span class="p">(</span><span class="s2">"cost_limit_usd"</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">saved</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"audit-log.jsonl"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="n">output</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_audit</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="s2">"team_settings_changed"</span><span class="p">))</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_ADMIN_KEY"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">team_settings</span><span class="p">()</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">saved</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">update_team_settings</span><span class="p">({</span><span class="s2">"cost_limit_usd"</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">gateway</span><span class="o">.</span><span class="n">reset_team_setting</span><span class="p">(</span><span class="s2">"cost_limit_usd"</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">saved</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"audit-log.jsonl"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">output</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_audit</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="s2">"team_settings_changed"</span><span class="p">))</span>
 </code></pre></div>
 <p>Admin mutations do not retry ambiguous HTTP failures or read timeouts. Settings
 conflicts and validation failures surface as <code>GatewayError</code> with the original
