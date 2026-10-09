@@ -48,6 +48,17 @@ test('audit list expands escaped JSON and links to the run', async ({ page }) =>
   await expect(page.locator('pre')).toHaveCount(0);
 });
 
+test('audit actors use current key display names and label unnamed keys without IDs', async ({ page }) => {
+  await page.route('**/v1/team/keys', route => route.fulfill({ json: { keys: [{ key_id: 'worker-key-123', name: 'Research worker' }] } }));
+  await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: [
+    { ...auditEntry(1), event: { ...auditEntry().event, principal: { key_id: 'worker-key-123', name: 'Previous key name' } } },
+    { ...auditEntry(2), event: { ...auditEntry().event, principal: { key_id: 'retired-key-456' } } },
+  ], next_cursor: null } }));
+  await login(page, 'admin', '/console/#audit');
+  await expect(page.locator('td[data-label="Actor"]')).toHaveText(['Research workerAPI key', 'Unnamed keyAPI key']);
+  await expect(page.locator('.audit-table')).not.toContainText(/worker-key|retired-key|Previous key name/);
+});
+
 test('audit filters and cursor pagination use the applied range', async ({ page }) => {
   const queries: URLSearchParams[] = [];
   await page.route('**/v1/team/audit?*', route => {
@@ -164,7 +175,7 @@ test('schema forms render all supported field types and submit typed values', as
     inputSchema: { type: 'object', description: 'A schema supplied by the team.', properties: {
       title: { type: 'string', description: 'Name this request', examples: ['Example title'] },
       body: { type: 'string', examples: ['First line\nSecond line'] },
-      count: { type: 'integer', default: 2 },
+      count: { type: 'integer', default: 10000, minimum: 1, maximum: 20000 },
       price: { type: 'number', default: 1.5 },
       enabled: { type: 'boolean', default: false },
       mode: { type: 'string', enum: ['fast', 'thorough'], default: 'fast' },
@@ -183,6 +194,7 @@ test('schema forms render all supported field types and submit typed values', as
   await page.getByRole('link', { name: 'Run workflow', exact: true }).click();
   await expect(page.getByLabel('Workflow input (JSON)')).toHaveCount(0);
   await expect(page.getByText('A schema supplied by the team.')).toBeVisible();
+  await expect(page.getByLabel('Count', { exact: true })).toHaveValue('10,000');
   await page.getByRole('button', { name: 'Start run' }).click();
   expect(submissions).toHaveLength(0);
   await page.getByLabel('Title', { exact: true }).fill('Form test');
@@ -190,13 +202,16 @@ test('schema forms render all supported field types and submit typed values', as
   await page.getByText('More options', { exact: true }).click();
   await expect(page.getByLabel('Body', { exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');
   await page.getByLabel('Body', { exact: true }).fill('<script>untrusted</script>\nSecond line');
-  await page.getByLabel('Count', { exact: true }).fill('3');
+  await page.getByLabel('Count', { exact: true }).fill('3.5');
+  await page.getByRole('button', { name: 'Start run' }).click();
+  expect(submissions).toHaveLength(0);
+  await page.getByLabel('Count', { exact: true }).fill('12,345');
   await page.getByLabel('Price', { exact: true }).fill('2.25');
   await page.getByLabel('Mode', { exact: true }).selectOption({ label: 'thorough' });
   await page.getByLabel('Tags', { exact: true }).fill('one\nthree');
   await page.getByRole('button', { name: 'Start run' }).click();
   await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
-  expect(submissions[0].input).toEqual({ title: 'Form test', body: '<script>untrusted</script>\nSecond line', count: 3, price: 2.25, enabled: false, mode: 'thorough', priority: 2, tags: ['one', 'three'] });
+  expect(submissions[0].input).toEqual({ title: 'Form test', body: '<script>untrusted</script>\nSecond line', count: 12345, price: 2.25, enabled: false, mode: 'thorough', priority: 2, tags: ['one', 'three'] });
 });
 
 test('schema validation errors identify fields and switching workflows clears form values', async ({ page }) => {
@@ -328,7 +343,7 @@ test('model prompts read as a transcript and the answer is previewed on the step
   await expect(page.locator('.step-preview')).toHaveText('Vendor A wins on cost.');
   await page.getByText('Prompt and response', { exact: true }).click();
   await expect(page.locator('.transcript .speaker')).toHaveText(['System', 'User']);
-  await expect(page.locator('.transcript pre').last()).toHaveText('Compare <b>two</b> vendors.');
+  await expect(page.locator('.transcript .prose').last()).toHaveText('Compare <b>two</b> vendors.');
   await expect(page.locator('.step-content').last()).toHaveText('Vendor A wins on cost.');
 });
 
@@ -341,8 +356,12 @@ for (const width of [360, 393, 1440]) {
     page.on('pageerror', error => errors.push(error.message));
     const capture = async (name: string) => {
       await expect(page.locator('main .loading')).toHaveCount(0);
-      await expect(page.locator('main')).not.toContainText(/aaaaaaaa|demo-openai|demo-anthropic/);
+      await expect(page).toHaveTitle(/ · AgentWorkflows Console$/);
+      await expect(page.locator('main h1')).toBeVisible();
+      await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+      await expect(page.locator('main')).not.toContainText(/aaaaaaaa|demo-openai|demo-anthropic|example\.com/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(await page.locator('.dot-list').evaluateAll(lists => lists.every(list => list.scrollWidth <= list.clientWidth))).toBe(true);
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       await page.screenshot({ path: `../../../.out/console-v0.6.0/${width}-${name}.png`, fullPage: true });
     };
@@ -353,7 +372,7 @@ for (const width of [360, 393, 1440]) {
     const timeline = [
       { step_id: 'research', action: 'tool_call', provider: 'tool', model: '', tool: 'research', tokens: 0, cost_usd: .01, duration_ms: 320,
         input: JSON.stringify({ topic: 'Agent workflow evaluation' }),
-        output: JSON.stringify({ sources: [{ title: 'Evaluation guide', url: 'https://example.com/research/agent-workflows/evaluation-and-human-approvals' }] }) },
+        output: JSON.stringify({ sources: [{ title: 'Evaluation guide', url: 'https://docs.insights.internal/research/agent-workflows/evaluation-and-human-approvals' }] }) },
       { step_id: 'analyze', action: 'model_call', provider: 'openai', model: models[0].id, tool: '', tokens: 1800, cost_usd: .02, duration_ms: 1420,
         input: JSON.stringify([{ role: 'user', content: 'Compare practical ways to evaluate agent workflows for our team.' }]),
         output: 'Track task completion, answer quality, cost per run and the time reviewers spend correcting drafts.' },
@@ -403,6 +422,8 @@ for (const width of [360, 393, 1440]) {
       id: `${step.timestamp * 1000}-0`, chain_id: step.chain_id, sequence: index + 1, event: step.receipt,
     })).reverse(), next_cursor: null } }));
     await login(page);
+    await expect(page.locator('.identity .team')).toHaveText('Insights');
+    page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
     const labels = page.locator('.model-list li > span.muted');
     await expect(labels).toHaveText(['OpenAI', 'Anthropic']);
     const styles = await labels.evaluateAll(nodes => nodes.map(node => {
@@ -412,6 +433,13 @@ for (const width of [360, 393, 1440]) {
     await expect(page.locator('.model-list code')).toHaveText(models.map(model => model.id));
     await expect(page.locator('.model-list .badge')).toHaveText(['Key missing', 'Key missing']);
     if (width < 760) {
+      const chips = await page.locator('.model-list li').evaluateAll(nodes => nodes.map(node => {
+        const provider = node.querySelector('.muted')!.getBoundingClientRect();
+        const badge = node.querySelector('.badge')!.getBoundingClientRect();
+        return { height: node.getBoundingClientRect().height, together: provider.top < badge.bottom && badge.top < provider.bottom };
+      }));
+      expect(chips[0].height).toBe(chips[1].height);
+      expect(chips.every(chip => chip.together)).toBe(true);
       const menu = await page.getByRole('button', { name: 'Open menu' }).boundingBox();
       const brand = await page.locator('.sidebar .brand').boundingBox();
       expect(Math.abs(menu!.y + menu!.height / 2 - brand!.y - brand!.height / 2)).toBeLessThanOrEqual(1);
@@ -425,8 +453,13 @@ for (const width of [360, 393, 1440]) {
     await expect(helm).toContainText('# Release and namespace are "aw", as in\n# the install guide. Change if needed.');
     await expect(page.getByText('Tokens in this 24-hour window', { exact: true })).toBeVisible();
     if (width < 760) {
-      await expect(helm).toHaveCSS('white-space', 'pre-wrap');
-      expect(await helm.evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight)).toBe(true);
+      await expect(helm).toHaveCSS('white-space', 'pre');
+      await expect(helm).toHaveCSS('overflow-wrap', 'normal');
+      expect(await helm.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+      expect(await helm.locator('..').evaluate(node => getComputedStyle(node, '::after').backgroundImage)).toContain('linear-gradient');
+      await helm.evaluate(node => { node.scrollLeft = node.scrollWidth; });
+      expect(await helm.evaluate(node => node.scrollLeft + node.clientWidth >= node.scrollWidth - 1)).toBe(true);
+      await helm.evaluate(node => { node.scrollLeft = 0; });
       for (const provider of ['openai', 'anthropic']) await expect(helm).toContainText(`existingSecret=${provider}-api-key`);
     }
     await capture('providers');
@@ -456,11 +489,16 @@ for (const width of [360, 393, 1440]) {
     await expect(page.getByRole('heading', { name: 'By provider' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'By workflow table' }).locator('tbody td')).toHaveText(['3', '4,200', '$0.06']);
     await expect(page.getByText('Tokens in this 24-hour window', { exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Spending period' })).toContainText('This month (UTC)');
+    await expect(page.getByRole('region', { name: 'Spending period' })).not.toContainText('24-hour window');
+    await expect(page.getByLabel('Research · Token limit per run')).toHaveValue('10,000');
     await capture('costs');
     await page.goto('/console/#keys');
     await expect(page.getByRole('rowheader', { name: 'Maya Chen You' })).toBeVisible();
     await capture('members-keys');
     await page.goto(`/console/#run/${runId}`);
+    await expect(page.locator('.draft h3')).toHaveText('Briefing: Agent workflow evaluation');
+    await expect(page.locator('.step-preview h3')).toHaveText('Briefing: Agent workflow evaluation');
     await expect(page.locator('.metrics dd')).toHaveText(['4,200 of 10,000', '$0.06 of $5.00', '3']);
     await expect(page.locator('.step-number')).toHaveText(['01', '02', '03']);
     expect(await page.locator('.step-number').first().evaluate(node => {
@@ -480,15 +518,28 @@ for (const width of [360, 393, 1440]) {
       await json.evaluate(node => { node.scrollLeft = 0; });
     }
     await capture('run-detail');
+    await page.getByText('Prompt and response', { exact: true }).last().click();
+    await expect(page.locator('.step-content h3')).toHaveText('Briefing: Agent workflow evaluation');
+    await capture('run-step-output');
+    await page.goto('/console/#approvals');
+    await expect(page.locator('.review h2')).toHaveText('Briefing: Agent workflow evaluation');
+    await capture('approvals');
     await page.goto('/console/#team');
     await expect(page.getByLabel('Team monthly budget (USD)', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Model for research')).toHaveValue(models[0].id);
     await expect(page.getByLabel('Model for research').locator('option')).toHaveText(['gpt-4.1-mini · OpenAI', 'claude-haiku-4-5 · Anthropic']);
-    expect(await page.locator('.workflow-card > summary small').innerText()).toBe('$5.00\u00a0per\u00a0run ·\u00a0Approval\u00a0on\u00a0every\u00a0run ·\u00a0OpenAI,\u00a0Anthropic');
+    await expect(page.locator('.workflow-card > summary .dot-list > span')).toHaveText(['$5.00 per run', 'Approval on every run', 'OpenAI, Anthropic']);
+    await expect(page.getByLabel('Research · Token limit per run')).toHaveValue('10,000');
+    if (width === 1440) {
+      const columns = await page.locator('.workflow-card .card-row').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').filter(size => parseFloat(size) > 0));
+      expect(columns).toHaveLength(2);
+    }
     await capture('team-settings');
     await page.goto('/console/#audit');
     await expect(page.locator('.audit-table').getByText('Model call', { exact: true })).toHaveCount(2);
     await expect(page.locator('.audit-table').getByText('Agent action', { exact: true })).toHaveCount(1);
+    await expect(page.locator('.audit-table td[data-label="Actor"]')).toHaveText(['Research workerAPI key', 'Research workerAPI key', 'Research workerAPI key']);
+    await expect(page.locator('.audit-table')).not.toContainText('key-rese');
     await capture('audit');
     expect(errors).toEqual([]);
   });
@@ -716,7 +767,7 @@ test('team switching clears prior team data and reload restores the active sessi
   await page.reload();
   await expect(page.getByRole('navigation')).toBeVisible();
   await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Signed in as' })).toHaveText(/demo\s*Admin/);
+  await expect(page.getByRole('region', { name: 'Signed in as' })).toHaveText(/Demo\s*Admin/);
 });
 
 test('mobile navigation, keyboard skip link and bounded table scrolling', async ({ page }) => {
@@ -887,7 +938,7 @@ test('a stale session can be replaced after reload using its CSRF cookie', async
   const request = page.waitForRequest(value => value.url().endsWith('/v1/auth/session') && value.method() === 'POST');
   await login(page);
   expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
-  await expect(page.getByRole('region', { name: 'Signed in as' })).toHaveText(/demo\s*Admin/);
+  await expect(page.getByRole('region', { name: 'Signed in as' })).toHaveText(/Demo\s*Admin/);
 });
 
 test('company sign-in failures return as a readable message and a clean URL', async ({ page }) => {
@@ -926,7 +977,7 @@ test('approval cards use the draft heading as the title without repeating it', a
   await login(page, 'approver');
   await page.getByRole('link', { name: 'Approvals', exact: true }).click();
   await expect(page.locator('.review h2').first()).toHaveText('Briefing: agent evaluation');
-  await expect(page.locator('.review pre.draft').first()).toHaveText('The first paragraph.');
+  await expect(page.locator('.review .draft').first()).toHaveText('The first paragraph.');
 });
 
 for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
@@ -938,9 +989,12 @@ for (const surface of ['Team settings', 'Providers & budgets', 'Costs']) {
     await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('125');
     await page.getByLabel('Project default monthly budget (USD)', { exact: true }).fill('40');
     await page.getByLabel('Research · Budget per run (USD)', { exact: true }).fill('3');
+    await page.getByLabel('Research · Token limit per run', { exact: true }).fill('12,345');
+    await page.getByLabel('Team monthly budget (USD)', { exact: true }).focus();
+    await expect(page.getByLabel('Research · Token limit per run', { exact: true })).toHaveValue('12,345');
     const request = page.waitForRequest(value => value.url().endsWith('/v1/team/settings') && value.method() === 'PATCH');
     await page.getByRole('button', { name: 'Save settings' }).click();
-    expect((await request).postDataJSON()).toEqual({ fields: { cost_limit_usd: 125, 'project_budgets.default': 40, 'workflows.ResearchWorkflow.cost_limit_usd': 3 } });
+    expect((await request).postDataJSON()).toEqual({ fields: { cost_limit_usd: 125, 'project_budgets.default': 40, 'workflows.ResearchWorkflow.cost_limit_usd': 3, 'workflows.ResearchWorkflow.token_limit': 12345 } });
     expect((await request).headers()['if-match']).toBe('0');
     expect((await request).headers()['x-csrf-token']).toBe('csrf-fixture');
     await expect(page.getByRole('status')).toContainText('Settings saved.');

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createElement, useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, date, label, missingKeys, money, noProviderKeys, number, providerList, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
-import { Badge, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, Metrics, NumberInput, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
 const canApprove = (session: Session) => ['admin', 'approver'].includes(session.team.role);
@@ -43,7 +43,7 @@ export function Runs({ session }: { session: Session }) {
       ['Cost of these runs', money(rows.reduce((sum, run) => sum + run.budget.cost_usd, 0))],
     ]}/>
     <button className="secondary filter-toggle" aria-expanded={filters} aria-controls="run-filters" onClick={() => setFilters(value => !value)}>
-      {filters ? 'Hide filters' : ['Filters', project, filter && label(filter), workflow && workflowName(workflow)].filter(Boolean).join(' · ')}</button>
+      {filters ? 'Hide filters' : <DotList items={['Filters', project, filter && label(filter), workflow && workflowName(workflow)]}/>}</button>
     <div id="run-filters" className={filters ? 'filters panel' : 'filters panel collapsed'}>
       <label>Project<select value={project} onChange={e => setProject(e.target.value)}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
       <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
@@ -118,7 +118,7 @@ function schemaInput(schema: InputSchema, form: FormData): Record<string, unknow
     else if (raw !== '' || schema.required?.includes(name)) {
       const text = String(raw ?? '');
       input[name] = property.type === 'array' ? text.split(/\r?\n/).filter(line => line.length > 0)
-        : property.type === 'number' || property.type === 'integer' ? Number(text) : text;
+        : property.type === 'number' || property.type === 'integer' ? Number(text.replaceAll(',', '')) : text;
     }
   }
   return input;
@@ -142,6 +142,7 @@ function SchemaFields({ schema, models, onMore }: { schema: InputSchema; models:
 function SchemaField({ name, property, required, models }: { name: string; property: InputProperty; required: boolean; models: string[] }) {
   const id = `field-${name}`;
   const value = property.default;
+  const [numeric, setNumeric] = useState<number | ''>(typeof value === 'number' ? value : '');
   const example = property.examples?.[0];
   const help = [property.description && `${id}-help`, property.type === 'array' && `${id}-lines`].filter(Boolean).join(' ') || undefined;
   const common = { id, name: `input.${name}`, required, 'aria-describedby': help };
@@ -154,7 +155,8 @@ function SchemaField({ name, property, required, models }: { name: string; prope
     </select>
     : modelChoice ? <select {...common} defaultValue={models.includes(String(value)) ? String(value) : models[0]}>{models.map(model => <option key={model}>{model}</option>)}</select>
     : property.type === 'array' || multiline ? <textarea {...common} minLength={property.minLength} defaultValue={fieldText(value)} placeholder={fieldText(example)} rows={multiline ? 6 : 4} spellCheck={!multiline}/>
-    : <input {...common} type={['number', 'integer'].includes(property.type) ? 'number' : 'text'} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} minLength={property.minLength} pattern={property.pattern} defaultValue={fieldText(value)} placeholder={fieldText(example)}/>;
+    : ['number', 'integer'].includes(property.type) ? <NumberInput {...common} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} value={numeric} onChange={setNumeric} placeholder={fieldText(example)}/>
+    : <input {...common} type="text" minLength={property.minLength} pattern={property.pattern} defaultValue={fieldText(value)} placeholder={fieldText(example)}/>;
   const usd = /_usd$/.test(name) && property.type === 'number';
   return <div className="field">
     {property.type !== 'boolean' && <label htmlFor={id}>{fieldLabel(name, property)}{usd && <span className="visually-hidden"> in US dollars</span>}</label>}
@@ -163,9 +165,17 @@ function SchemaField({ name, property, required, models }: { name: string; prope
     {property.type === 'array' && <small id={`${id}-lines`}>One item per line.</small>}
     {example !== undefined && value === undefined && property.type !== 'boolean' && !property.enum && <button type="button" className="link" onClick={() => {
       const element = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
-      if (element) { element.value = fieldText(example); element.focus(); }
+      if (['number', 'integer'].includes(property.type)) setNumeric(Number(example));
+      else if (element) { element.value = fieldText(example); element.focus(); }
     }}>Use the example</button>}
   </div>;
+}
+
+function Prose({ text }: { text: string }) {
+  return <>{text.split(/(^#{1,6}[ \t]+.*$)/m).filter(part => part.trim()).map((part, index) => {
+    const heading = /^(#{1,6})[ \t]+(.+)$/.exec(part);
+    return heading ? createElement(`h${Math.min(heading[1].length + 2, 6)}`, { key: index }, heading[2]) : <p key={index}>{part.trim()}</p>;
+  })}</>;
 }
 
 function Review({ session, run, onDone, title = 'Review the draft', eyebrow, meta, draft = run.progress?.draft }: { session: Session; run: Run; onDone: () => void; title?: string; eyebrow?: string; meta?: ReactNode; draft?: string }) {
@@ -181,7 +191,7 @@ function Review({ session, run, onDone, title = 'Review the draft', eyebrow, met
     finally { setBusy(false); }
   }
   return <section className="review panel">{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{meta}
-    <pre className="draft">{draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}</pre>
+    <div className="draft prose"><Prose text={draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}/></div>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
     {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">An approver or admin must review this draft. Use Switch account to sign in as one.</p>}
   </section>;
@@ -218,7 +228,7 @@ export function Approvals({ session }: { session: Session }) {
     {!busy && !error && !rows.length && <div className="panel"><Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a className="tap" href="#runs">Explore workflow runs</a></Empty></div>}
     {rows.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
       eyebrow={workflowName(run.workflow)} title={heading || 'Review the draft'} draft={body}
-      meta={<p className="muted review-meta"><span>Project {run.project}</span><span>Started <span className="nowrap">{date(run.created_at)}</span></span><span>{money(run.budget.cost_usd)} so far</span><a className="tap" href={`#run/${run.run_id}`}>Open run</a></p>}/>; })}
+      meta={<p className="muted review-meta"><DotList items={[`Project ${run.project}`, `Started ${date(run.created_at)}`, `${money(run.budget.cost_usd)} so far`, <a className="tap" href={`#run/${run.run_id}`}>Open run</a>]}/></p>}/>; })}
   </>;
 }
 
@@ -308,7 +318,7 @@ function timelineGroups(steps: Step[]) {
 }
 
 function Receipt({ step }: { step: Step }) {
-  return <details><summary>Receipt</summary><p className="muted">Receipt <code>{step.receipt_id.slice(0, 12)}</code> · chain <code>{step.chain_id}</code></p><pre className="json">{JSON.stringify(step.receipt, null, 2)}</pre></details>;
+  return <details><summary>Receipt</summary><p className="muted"><DotList items={[<>Receipt <code>{step.receipt_id.slice(0, 12)}</code></>, <>Chain <code>{step.chain_id}</code></>]}/></p><pre className="json">{JSON.stringify(step.receipt, null, 2)}</pre></details>;
 }
 
 function StepCard({ step }: { step: Step }) {
@@ -323,11 +333,11 @@ function StepCard({ step }: { step: Step }) {
   const [open, setOpen] = useState(false);
   const answer = step.content?.output ? preview(step.content.output) : '';
   return <article className="panel step"><div className="section-heading"><h3>{stepTitle(step)}</h3>{step.status_code && step.status_code >= 400 ? <Badge value="failed"/> : <Badge value="succeeded"/>}</div>
-    <p className="muted">{date(step.timestamp)} · {number(step.duration_ms)} ms</p>
+    <p className="muted"><DotList items={[date(step.timestamp), `${number(step.duration_ms)} ms`]}/></p>
     {tool ? <dl className="step-facts"><div><dt>Tool</dt><dd>{step.tool || '—'}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>
       : (step.provider || step.tokens > 0 || step.cost_usd > 0) && <dl className="step-facts"><div><dt>Provider</dt><dd>{step.provider ? providerName(step.provider) : '—'}</dd></div><div><dt>Model</dt><dd>{step.model || '—'}</dd></div><div><dt>Tokens</dt><dd>{number(tokens)}</dd></div><div><dt>Cost</dt><dd>{money(cost)}</dd></div></dl>}
     {failed.length > 0 && <p className="note-warn">{failed.map(a => `${providerName(a.provider || '')}${a.status_code ? ` returned ${a.status_code}` : ' failed'}`).join(', ')}, so the gateway sent this step to {providerName(step.provider)}.{held > 0 && ` ${money(held)} and ${number(heldTokens)} tokens stay held for the failed ${providerName(failed[0].provider || '')} attempt because it reported no usage. The run totals and Costs include them.`}</p>}
-    {answer && !open && <blockquote className="step-preview">{answer}</blockquote>}
+    {answer && !open && <blockquote className="step-preview prose"><Prose text={answer}/></blockquote>}
     <details onToggle={e => setOpen(e.currentTarget.open)}><summary>{tool ? 'Arguments and result' : 'Prompt and response'}</summary>
       {step.content ? <>
         <p className="muted">{step.content.redaction === 'redacted' ? 'Saved with sensitive values masked.' : 'Saved in full after the gateway’s checks.'}</p>
@@ -354,11 +364,11 @@ function Content({ text, empty }: { text: string | null; empty: string }) {
   const value = parsed(text);
   if (Array.isArray(value) && value.length && value.every(m => m && typeof m === 'object' && 'role' in m)) {
     return <ol className="transcript">{(value as { role: string; content: unknown }[]).map((message, i) => <li key={i}>
-      <span className={`speaker ${message.role}`}>{label(String(message.role))}</span><pre className="step-content prose">{messageText(message.content)}</pre>
+      <span className={`speaker ${message.role}`}>{label(String(message.role))}</span><div className="step-content prose"><Prose text={messageText(message.content)}/></div>
     </li>)}</ol>;
   }
   return value !== null && typeof value === 'object' ? <div className="code-scroll"><pre className="step-content json">{JSON.stringify(value, null, 2)}</pre></div>
-    : <pre className="step-content prose">{typeof value === 'string' ? value : text}</pre>;
+    : <div className="step-content prose"><Prose text={typeof value === 'string' ? value : text}/></div>;
 }
 
 const channelName: Record<string, string> = { slack: 'Slack', webhook: 'Webhook', email: 'Email' };

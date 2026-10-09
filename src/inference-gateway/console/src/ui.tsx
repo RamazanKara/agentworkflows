@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { label } from './api';
 
 export function Icon({ name }: { name: string }) {
@@ -37,6 +37,27 @@ export function Badge({ value, text }: { value: string; text?: string }) {
 }
 export function Metrics({ items, compact }: { items: [string, ReactNode][]; compact?: boolean }) {
   return <dl className={compact ? 'metrics compact' : 'metrics'}>{items.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>;
+}
+export function DotList({ items }: { items: ReactNode[] }) {
+  return <span className="dot-list">{items.filter(Boolean).map((item, index) => <span key={index}>{item}</span>)}</span>;
+}
+export function NumberInput({ value, onChange, min, max, step, ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
+  value: number | ''; onChange: (value: number | '') => void;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const raw = editing ?? String(value);
+  const numeric = Number(raw);
+  const valid = raw === '' || (Number.isFinite(numeric) && (min === undefined || numeric >= Number(min))
+    && (max === undefined || numeric <= Number(max)) && (step !== 1 || Number.isInteger(numeric)));
+  return <input {...props} className="number-input" type="text" inputMode={step === 1 ? 'numeric' : 'decimal'}
+    value={editing ?? (value === '' ? '' : value.toLocaleString('en-US', { maximumFractionDigits: 20 }))}
+    ref={input => { input?.setCustomValidity(valid ? '' : `Enter ${step === 1 ? 'a whole number' : 'a number'}${min !== undefined ? ` of at least ${min}` : ''}${max !== undefined ? ` and at most ${max}` : ''}.`); }}
+    onBlur={() => { if (valid) setEditing(null); }}
+    onChange={event => {
+      const text = event.target.value.replaceAll(',', '');
+      setEditing(text);
+      if (text === '' || Number.isFinite(Number(text))) onChange(text === '' ? '' : Number(text));
+    }}/>;
 }
 export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
   return <header className="page-heading"><div><h1 tabIndex={-1}>{title}</h1>{subtitle && <p>{subtitle}</p>}</div><div className="actions">{children}</div></header>;

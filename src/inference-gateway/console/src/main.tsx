@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { api, label, type AuthConfig, type BrowserSession, type RunPage, type Session, type Team } from './api';
-import { ErrorMessage, Icon, Loading } from './ui';
+import { DotList, ErrorMessage, Icon, Loading } from './ui';
 import { Approvals, RunDetail, Runs, StartRun } from './runs';
 import { Costs, GetStarted, Providers } from './team';
 import { TeamConfiguration } from './settings';
@@ -134,15 +134,16 @@ function App() {
       setAdding(false); setExpired(false); setError('');
     }}/>;
   const active = route.startsWith('run/') || route === 'new' || route.startsWith('new/') ? 'runs' : route;
+  const teamName = label(session.team.team_id.replaceAll('-', ' '));
   // Phones get a compact top bar; the menu button opens the same navigation as the desktop sidebar.
   return <div className={menu ? 'shell menu-open' : 'shell'} onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
     <a className="skip" href="#main" onClick={e => { e.preventDefault(); main.current?.focus(); }}>Skip to content</a>
     <aside className="sidebar">
       <a href="#start" className="brand"><Icon name="brand"/><span>AgentWorkflows</span></a>
-      <section className="identity" aria-label="Signed in as">{session.name && <span className="who">{session.name}</span>}<span className="team">{session.team.team_id}</span><span className="role">{label(session.team.role)}</span></section>
+      <section className="identity" aria-label="Signed in as">{session.name && <span className="who">{session.name}</span>}<span className="team">{teamName}</span><span className="role">{label(session.team.role)}</span></section>
       <button className="menu-button" aria-expanded={menu} aria-controls="app-menu" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu(value => !value)}><Icon name={menu ? 'close' : 'menu'}/></button>
       <div id="app-menu" className="app-menu">
-        <p className="menu-who">{session.name && <strong>{session.name}</strong>}<span>{session.team.team_id} · {label(session.team.role)}</span></p>
+        <p className="menu-who">{session.name && <strong>{session.name}</strong>}<DotList items={[teamName, label(session.team.role)]}/></p>
         <nav aria-label="Main navigation">{navigation.filter(([id]) => !['keys', 'audit'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
           <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}
         </nav>

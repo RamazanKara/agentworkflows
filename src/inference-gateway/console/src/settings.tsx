@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { api, date, label as titleCase, money, number, providerName, useData, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
-import { ErrorMessage, Loading, PageHeader } from './ui';
+import { DotList, ErrorMessage, Loading, NumberInput, PageHeader } from './ui';
 
 // Field keys: cost_limit_usd, project_budgets.<project>, workflows.<Workflow>.<field>, model_routes.<alias>.
 type Kind = 'usd' | 'tokens' | 'flag' | 'role' | 'route' | 'providers';
@@ -170,7 +170,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
         {error && <div className="save-error"><ErrorMessage message={error}/>{conflict && <button className="secondary" type="button" onClick={reload}>Reload settings</button>}</div>}
         <p role="status">{changes ? <button type="button" className="link" onClick={showFirstChange}>{changes} unsaved {changes === 1 ? 'change' : 'changes'}</button>
           : justSaved ? <span className="saved">Settings saved. They apply to the next request.</span>
-          : settings.updated_at ? `Last changed by ${settings.updated_by} · ${date(settings.updated_at)}` : 'Using your team policy. Nothing changed here yet.'}</p>
+          : settings.updated_at ? <DotList items={[`Last changed by ${settings.updated_by}`, date(settings.updated_at)]}/> : 'Using your team policy. Nothing changed here yet.'}</p>
         {changes > 0 && <button type="button" className="secondary" disabled={busy} onClick={discard}>Discard</button>}
         {(changes > 0 || !justSaved) && <button type="submit" disabled={!changes || busy || conflict}>{busy ? 'Saving…' : 'Save settings'}</button>}
       </div>
@@ -196,10 +196,9 @@ function SettingsGroup({ title, note, nested, children }: { title: string; note:
 }
 
 function WorkflowCard({ workflow, summary: parts, custom, unsaved, open, children }: { workflow: string; summary: string[]; custom: boolean; unsaved: boolean; open: boolean; children: ReactNode }) {
-  // Each part keeps to one line; lines break only between parts.
   return <details className="workflow-card" open={open}><summary>
     <span className="workflow-card-title">{workflowName(workflow)}{unsaved ? <Unsaved/> : custom && <Custom/>}</span>
-    <small>{parts.map((part, index) => <span key={index}>{index > 0 && ' ·\u00a0'}{part.replaceAll(' ', '\u00a0')}</span>)}</small>
+    <small><DotList items={parts}/></small>
   </summary>{children}</details>;
 }
 
@@ -226,9 +225,9 @@ function SettingControl({ field, state, value, pending, resetting, error, provid
   else if (choices) control = <><label htmlFor={id}>{name}</label><select id={id} value={String(value)} onChange={event => onChange(event.target.value)}>
     {choices.map(option => <option key={option} value={option}>{type === 'role' ? titleCase(option) : owners[option] ? `${option} · ${owners[option]}` : option}</option>)}</select></>;
   else {
-    const input = <input id={id} type="number" inputMode="decimal" min="0" max={type === 'tokens' ? 1000000000 : 1000000} step={type === 'tokens' ? 1 : 'any'} placeholder="No limit"
-      value={value === null ? '' : String(value)} required={pending && !resetting} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
-      onChange={event => onChange(event.target.value === '' ? '' : Number(event.target.value))}/>;
+    const input = <NumberInput id={id} min={0} max={type === 'tokens' ? 1000000000 : 1000000} step={type === 'tokens' ? 1 : 'any'} placeholder="No limit"
+      value={value === null || value === '' ? '' : Number(value)} required={pending && !resetting} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={described}
+      onChange={onChange}/>;
     control = <><label htmlFor={id}>{name}</label>{type === 'usd' ? <div className="prefixed"><span aria-hidden="true">$</span>{input}</div> : input}</>;
   }
   return <div className={['setting', pending && 'pending', type === 'flag' && 'flag'].filter(Boolean).join(' ')}>

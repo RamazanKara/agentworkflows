@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type Usage } from './api';
-import { Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 import { SettingsPanel } from './settings';
 
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
@@ -70,10 +70,13 @@ function SpendTiles({ usage, budget }: { usage?: Usage; budget?: Budget }) {
   const spent = spend?.reserved_and_spent_usd ?? usage?.estimated_cost;
   const held = spend?.reserved_and_spent_usd != null ? spend.reserved_and_spent_usd - (usage?.estimated_cost || 0) : 0;
   const period = spend?.period === 'month' ? 'this month' : scope(spend?.window_seconds);
-  return <Metrics items={[
+  return <div className="spend-tiles"><section aria-label="Spending period">
+    <p className="scope"><DotList items={[spend?.period === 'month' ? 'This month (UTC)' : spend?.window_seconds === 86400 ? 'Today (UTC)' : spend?.window_seconds ? `Since ${date(spend.window_start)}` : 'Since the gateway started', spend?.project && `Project ${spend.project}`]}/></p>
+    <Metrics items={[
     [`Spent ${period}`, spent == null ? '—' : <>{money(spent)}{spend?.cost_limit_usd != null ? <> <small className="inline">of {money(spend.cost_limit_usd)}</small>{spend.cost_limit_usd > 0 && <Usage value={spent} limit={spend.cost_limit_usd}/>}</> : <small>No team limit</small>}{held >= 0.005 && <small>Includes {money(held)} held for running work</small>}</>],
+  ]}/></section><section aria-label="Token budget window"><p className="scope">Token budget</p><Metrics items={[
     [`Tokens in ${tokenWindow(budget?.window_seconds)}`, budget ? <>{number(budget.usage.estimated_tokens)}{budget.limits.estimated_tokens ? <> <small className="inline">of {number(budget.limits.estimated_tokens)}</small><Usage value={budget.usage.estimated_tokens} limit={budget.limits.estimated_tokens}/></> : <small>No token limit</small>}</> : '—'],
-  ]}/>;
+  ]}/></section></div>;
 }
 
 export function Costs({ session }: { session: Session }) {
@@ -85,7 +88,6 @@ export function Costs({ session }: { session: Session }) {
     <ErrorMessage message={result.error} retry={() => setRevision(v => v + 1)}/>
     {!result.data && !result.error && <Loading/>}
     {spend && <>
-      <p className="scope">{spend.period === 'month' ? 'This month (UTC)' : spend.window_seconds === 86400 ? 'Today (UTC)' : spend.window_seconds ? `Since ${date(spend.window_start)}` : 'Since the gateway started'}{spend.project && ` · Project ${spend.project}`}</p>
       <SpendTiles usage={result.data} budget={budget.data}/>
       {spend.project && <p className="callout">This sign-in is limited to one project. Team-wide spend is hidden; the tables cover your project only.</p>}
       {Object.keys(spend.providers).length || Object.keys(spend.workflows || {}).length ? <>
@@ -127,7 +129,7 @@ function ProviderSettings({ session }: { session: Session }) {
   const [target, variable] = manual[0] ? [manual[0][0], manual[0][1].environment_variable] : missing ? [missing[0], missing[1].environment_variable] : ['openai', 'OPENAI_API_KEY'];
   // A listed model means the gateway already has a route for that provider.
   const routed = Boolean(models.data?.data.some(model => model.owned_by === target));
-  // Lines stay near 40 characters so the block reads on a phone. Release and namespace follow the install guide.
+  // Release and namespace follow the install guide; each --set value stays on one line.
   const helmCommands = ['# Release and namespace are "aw", as in', '# the install guide. Change if needed.',
     ...helm.flatMap(provider => [
       `read -rs -p '${providerName(provider)} key: ' KEY; echo`,
@@ -167,10 +169,10 @@ function ProviderSettings({ session }: { session: Session }) {
           <li>Restart the gateway, then refresh this page.</li></ol>
         {manual.length > 1 && <p className="muted">Then repeat for {providerList(manual.slice(1).map(([provider]) => provider))}.</p>}
       </>}
-      <p className="setup-links">{helm.length > 0 && <><a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Kubernetes install guide</a> · </>}<a href={`${guide}#teams-projects-and-roles`}>Secret instructions</a>{manual.length > 0 && !routed && <> · <a href={routes}>Cloud routes and prices</a></>}</p>
+      <p className="setup-links"><DotList items={[helm.length > 0 && <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/install-kubernetes.md#add-a-provider-key">Kubernetes install guide</a>, <a href={`${guide}#teams-projects-and-roles`}>Secret instructions</a>, manual.length > 0 && !routed && <a href={routes}>Cloud routes and prices</a>]}/></p>
     </section> : <section className="setup panel"><h2>Provider keys</h2>
       <p>Store provider keys in the gateway’s environment or Kubernetes Secrets. New model routes, prices and network access are configured by your operator. Model routes are chosen in <a href="#team">Team settings</a>.</p>
-      <p className="setup-links"><a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a> · <a href={routes}>Cloud routes and prices</a></p>
+      <p className="setup-links"><DotList items={[<a href={`${guide}#teams-projects-and-roles`}>Team setup and Secret instructions</a>, <a href={routes}>Cloud routes and prices</a>]}/></p>
     </section>}
     <SettingsPanel session={session} budgetsOnly onSaved={() => setRevision(v => v + 1)}/>
     <p className="muted">Approval rules and model routes are in <a href="#team">Team settings</a>.</p>

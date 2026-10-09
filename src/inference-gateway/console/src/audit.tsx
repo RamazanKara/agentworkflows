@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, date, label, money, providerName, shortId, workflowName, type Session } from './api';
-import { Badge, Empty, ErrorMessage, Icon, Loading, PageHeader } from './ui';
+import { api, date, label, money, providerName, shortId, useData, workflowName, type Session } from './api';
+import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, PageHeader } from './ui';
 
 type SettingSnapshot = { value?: unknown } | unknown;
 type AuditEvent = {
@@ -30,16 +30,16 @@ const reasons: Record<string, string> = {
 };
 const reason = (code: string) => reasons[code] || label(code);
 // The actor filter matches the event's actor or the principal's subject or key ID; a managed key also carries its name.
-const actor = (event: AuditEvent) => {
+const actor = (event: AuditEvent, names: Record<string, string>) => {
   const id = event.actor || event.principal?.sub || event.principal?.key_id;
-  const name = event.principal?.name;
-  return { id, name: name && name !== id ? name : undefined };
+  const key = event.principal?.key_id || (id && names[id] ? id : undefined);
+  return { name: (key && names[key]) || event.principal?.name || (key ? 'Unnamed key' : id) || '—', key: Boolean(key) };
 };
-// "Research · approval threshold: $0.00 → $0.50"
+// "Research approval threshold: $0.00 → $0.50"
 const settingName = (field: string) => {
   const [scope, middle, leaf] = field.split('.');
   return scope === 'cost_limit_usd' ? 'Team monthly budget' : scope === 'project_budgets' ? `Project ${middle} budget`
-    : scope === 'model_routes' ? `Model for ${middle}` : scope === 'workflows' ? `${workflowName(middle)} · ${label(leaf.replace(/_usd$/, '')).toLowerCase()}` : field;
+    : scope === 'model_routes' ? `Model for ${middle}` : scope === 'workflows' ? `${workflowName(middle)} ${label(leaf.replace(/_usd$/, '')).toLowerCase()}` : field;
 };
 const settingValue = (field: string, snapshot: SettingSnapshot) => {
   const value = snapshot && typeof snapshot === 'object' && 'value' in snapshot ? snapshot.value : snapshot;
@@ -53,8 +53,8 @@ const details = (event: AuditEvent): ReactNode => {
     return fields.length === 1 ? <>{settingName(fields[0])}: <span className="nowrap">{settingValue(fields[0], event.before?.[fields[0]])} → {settingValue(fields[0], event.after?.[fields[0]])}</span></>
       : `${fields.length} settings changed`;
   }
-  if (event.event === 'team_key') return [event.action_type && label(event.action_type), event.key?.name].filter(Boolean).join(' · ');
-  return [event.action_type && label(event.action_type) !== eventName(event.event) && label(event.action_type), event.provider && providerName(event.provider)].filter(Boolean).join(' · ');
+  if (event.event === 'team_key') return <DotList items={[event.action_type && label(event.action_type), event.key?.name]}/>;
+  return <DotList items={[event.action_type && label(event.action_type) !== eventName(event.event) && label(event.action_type), event.provider && providerName(event.provider)]}/>;
 };
 const fields = [['from', 'From', 'datetime-local', ''], ['to', 'To', 'datetime-local', ''], ['event_type', 'Event type', 'text', ''],
   ['actor', 'Actor', 'text', 'Key ID, worker or user ID'], ['project', 'Project', 'text', 'Any project'], ['run_id', 'Run ID', 'text', 'Full run ID']] as const;
@@ -78,6 +78,8 @@ export function AuditLog({ session }: { session: Session }) {
 }
 
 function AuditViewer({ session }: { session: Session }) {
+  const keys = useData<{ keys: { key_id: string; name: string }[] }>(session.csrfToken, '/v1/team/keys');
+  const keyNames = Object.fromEntries((keys.data?.keys || []).map(key => [key.key_id, key.name]));
   const [filters, setFilters] = useState(initialFilters);
   const [query, setQuery] = useState(snapshot);
   const [cursor, setCursor] = useState('');
@@ -155,7 +157,7 @@ function AuditViewer({ session }: { session: Session }) {
   const checkedAt = (at: number) => {
     const from = Number(range.get('from')) || 0;
     const to = Number(range.get('to'));
-    return from ? `Covers ${date(from)} to ${date(to)} · checked ${date(at)}` : at - to > 60 ? `Covers events up to ${date(to)} · checked ${date(at)}` : `Checked ${date(at)}`;
+    return from ? `Covers ${date(from)} to ${date(to)}. Checked ${date(at)}.` : at - to > 60 ? `Covers events up to ${date(to)}. Checked ${date(at)}.` : `Checked ${date(at)}`;
   };
   const brokenIndex = page?.events.findIndex(isBroken) ?? -1;
   const showBroken = () => {
@@ -170,7 +172,7 @@ function AuditViewer({ session }: { session: Session }) {
   </PageHeader>
     {!off && !nothing && <>
       <button className="secondary filter-toggle" aria-expanded={showFilters} aria-controls="audit-filters" onClick={() => setShowFilters(value => !value)}>
-        {showFilters ? 'Hide filters' : applied ? `Filters · ${applied} applied` : 'Filters'}</button>
+        {showFilters ? 'Hide filters' : <DotList items={['Filters', applied > 0 && `${applied} applied`]}/>}</button>
       <form id="audit-filters" className={showFilters ? 'panel filters audit-filters' : 'panel filters audit-filters collapsed'} onSubmit={event => { event.preventDefault(); apply(); }}>
         {fields.map(([name, text, type, hint]) => <div className="field" key={name}><label htmlFor={`audit-${name}`}>{text}</label>
           {name === 'event_type' ? <select id="audit-event_type" value={filters.event_type} disabled={Boolean(busy)} onChange={event => setFilters(previous => ({ ...previous, event_type: event.target.value }))}>
@@ -199,16 +201,16 @@ function AuditViewer({ session }: { session: Session }) {
             {page.events.some(isBroken) && <button className="link" onClick={showBroken}>Show the event</button>}
           </> : <p>{verification.checked} {verification.checked === 1 ? 'event' : 'events'} checked. None were changed, removed or reordered.</p>}
           {verification.boundaries.map(boundary => <p className="muted" key={`${boundary.chain_id}:${boundary.sequence}`}>This check starts at event {boundary.sequence} in chain {boundary.chain_id}. {boundary.reason === 'time_range' ? 'Earlier events are outside the selected time range.' : 'Older events were removed by retention, so they aren’t included.'}</p>)}
-          <p className="muted">{broken && `Reason: ${broken.reason} · `}{checkedAt(Date.now() / 1000)}</p>
+          <p className="muted">{broken && `Reason: ${broken.reason}. `}{checkedAt(Date.now() / 1000)}</p>
         </>}
       </section>}
       {page.events.length ? <section className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Audit events table"><table className="stack audit-table">
         <thead><tr><th>Event</th><th>Time</th><th>Actor</th><th>Project</th><th>Run</th><th><span className="visually-hidden">Details</span></th></tr></thead>
-        <tbody>{page.events.map(entry => { const who = actor(entry.event); const detail = details(entry.event); const open = expanded === entry.id; return <Fragment key={entry.id}>
+        <tbody>{page.events.map(entry => { const who = actor(entry.event, keyNames); const detail = details(entry.event); const open = expanded === entry.id; return <Fragment key={entry.id}>
           <tr id={`row-${entry.id}`} className={[open && 'open', isBroken(entry) && 'broken'].filter(Boolean).join(' ') || undefined}>
             <td><span className="event-name"><strong>{eventName(entry.event.event)}</strong>{entry.event.decision === 'denied' && <Badge value="failed" text="Denied"/>}{isBroken(entry) && <Badge value="failed" text="Chain break"/>}{brokenIndex > 0 && page.events.indexOf(entry) < brokenIndex && <Badge value="unverified" text="Not verified"/>}</span>{detail && <small>{detail}</small>}</td>
             <td data-label="Time">{date(entry.event.ts)}</td>
-            <td data-label="Actor">{who.name || who.id || '—'}{who.name && who.id && <small title={who.id}>Key {shortId(who.id)}</small>}</td>
+            <td data-label="Actor">{who.name}{who.key && <small>API key</small>}</td>
             <td data-label="Project" className={entry.event.project ? undefined : 'empty-cell'}>{entry.event.project || '—'}</td>
             <td data-label="Run" className={entry.event.workflow_run_id ? undefined : 'empty-cell'}>{entry.event.workflow_run_id ? <a className="run-link" href={`#run/${encodeURIComponent(entry.event.workflow_run_id)}`}><code>{shortId(entry.event.workflow_run_id)}</code></a> : '—'}</td>
             <td className="row-action"><button className="link" aria-expanded={open} aria-controls={`event-${entry.id}`} onClick={() => setExpanded(open ? undefined : entry.id)}>{open ? 'Hide JSON' : 'Show JSON'}</button></td></tr>

@@ -7,9 +7,11 @@
   retention and readiness checks. Redis remains required for live budgets, sessions,
   captured content and coordination; the bundled PostgreSQL server is for development.
 - Console: show every model route name and its available key state on Get started,
-  matching Team settings. Keep workflow summaries together, use teal tabular step
-  numbers, tighten workflow cards, widen phone step content and wrap provider setup
-  commands. Clarify missing-key warnings and seed the token window explicitly.
+  matching Team settings, with consistent phone chip heights. Keep summary and link
+  items together without stray separators, remove empty workflow columns, format
+  draft headings and number inputs, and use readable team and API-key names. Use teal
+  tabular step numbers and scroll JSON and provider commands with a phone edge fade.
+  Separate token windows from monthly spend and clarify missing-key warnings.
 - Release screenshots cover 360, 393 and 1440 px with realistic setup and connected-team
   fixtures. Costs, token totals, calls, receipts and worker-key usage share one run.
 - Add stable cursor paging for run history and approvals, including equal timestamps,
