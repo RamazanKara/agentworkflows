@@ -804,6 +804,8 @@
       
         
       
+        
+      
     
     
     
@@ -1004,6 +1006,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
   
 
     
@@ -2078,6 +2108,12 @@ once a new revision is in Git, Argo CD applies it without a manual sync and
 reverts any out-of-band change. That makes the promotion lever simple but
 unforgiving: the thing you change in Git is the thing that ships.</p>
 <h2 id="what-moves-when-you-upgrade">What Moves When You Upgrade<a class="headerlink" href="#what-moves-when-you-upgrade" title="Permanent link">&para;</a></h2>
+<p>The optional gateway PostgreSQL store has its own transactional schema migrations;
+Temporal's PostgreSQL is separate. Redis remains the default. See
+<a href="../../postgresql-storage/#upgrade-and-rollback">gateway storage upgrade and rollback</a>
+before changing backends: import existing Redis records with the offline command; all replicas must
+select the same backend, and SQL down migration 1 deletes gateway records. Include
+the optional database in backups in addition to the existing Redis/Temporal stores.</p>
 <p>A release bumps several pinned references together. <code>make production-check</code>
 enforces that they all match the latest <code>CHANGELOG.md</code> version:</p>
 <ul>

@@ -16,7 +16,7 @@
         <link rel="prev" href="../local-evaluation/">
       
       
-        <link rel="next" href="../kubernetes-production-checklist/">
+        <link rel="next" href="../postgresql-storage/">
       
       
         
@@ -812,6 +812,8 @@
       
         
       
+        
+      
     
     
     
@@ -1100,6 +1102,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#store-gateway-records-in-postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store gateway records in PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#add-a-provider-key" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1213,6 +1226,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2164,6 +2205,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#store-gateway-records-in-postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store gateway records in PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#add-a-provider-key" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2336,6 +2388,10 @@ team and project. In another terminal, <code>curl -fsS http://127.0.0.1:8080/rea
 Redis and Temporal. Missing provider credentials leave the console
 available; <strong>Providers &amp; budgets</strong> identifies the missing key and Secret setup.
 Inference still rejects requests until a provider key is configured.</p>
+<h2 id="store-gateway-records-in-postgresql">Store gateway records in PostgreSQL<a class="headerlink" href="#store-gateway-records-in-postgresql" title="Permanent link">&para;</a></h2>
+<p>For optional durable gateway records, follow <a href="../postgresql-storage/">PostgreSQL gateway storage</a>.
+It supports an external DSN Secret or a separate bundled PostgreSQL for development.
+Redis remains the default and is still used for live accounting and sessions.</p>
 <h2 id="add-a-provider-key">Add a provider key<a class="headerlink" href="#add-a-provider-key" title="Permanent link">&para;</a></h2>
 <p>Create a Secret in the same namespace. This Bash example reads the key without echoing it:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'OpenAI API key: '</span><span class="w"> </span>OPENAI_API_KEY<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
@@ -2698,13 +2754,13 @@ disposable namespace, remove all remaining data and stop its port-forward:</p>
         
         
           
-          <a href="../kubernetes-production-checklist/" class="md-footer__link md-footer__link--next" aria-label="Next: Kubernetes production checklist">
+          <a href="../postgresql-storage/" class="md-footer__link md-footer__link--next" aria-label="Next: PostgreSQL gateway storage">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Kubernetes production checklist
+                PostgreSQL gateway storage
               </div>
             </div>
             <div class="md-footer__button md-icon">

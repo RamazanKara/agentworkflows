@@ -812,6 +812,8 @@
       
         
       
+        
+      
     
     
     
@@ -1250,6 +1252,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
   
 
     
@@ -2478,6 +2508,10 @@ checks. <code>redacted</code> additionally applies the gateway's configured secr
 redactors to the stored text; <code>full</code> stores the admitted request and guarded result as-is.
 Neither mode bypasses DLP. Each input/output field is limited to <code>CONTENT_MAX_BYTES</code>
 (default 16,384 UTF-8 bytes), after redaction.</p>
+<p>Admins can change team and workflow capture modes in <strong>Team settings</strong>, without a
+redeploy. Both SDKs expose <code>set_content_capture</code> / <code>setContentCapture</code> with a settings
+revision. Changes affect future steps and preserve existing content TTLs; see
+<a href="../team-settings/">capture settings and spend alerts</a>.</p>
 <p>Run timeline steps expose <code>content: {input, output, truncated: {input, output}, redaction}</code>.
 Input and output are text (structured values are JSON text); an unfinished/failed call can
 have a null output. A retried step shows its latest captured attempt. Content is separate
@@ -2568,6 +2602,13 @@ expiry, and revocation status. Creation displays the new <code>aw_</code> key on
 save it securely before leaving the page. The store retains only its SHA-256 digest and
 metadata, including creator and timestamps. Last use is written at most once per minute.
 Every create, update, and revoke produces a hash-chained audit receipt.</p>
+<p>Choose <strong>Edit</strong> next to an existing key to change its name, role, project or expiry.
+Expiry in the editor is UTC; blank clears it, and a past date immediately disables
+access. Revoked keys and your currently signed-in key have no edit control.
+Errors keep your draft for review. SDK equivalents are
+<code>gateway.update_key(key_id, name="Build bot", role="builder", project="engineering", expires_at=None)</code>
+and <code>gateway.updateKey(keyId, { name: 'Build bot', role: 'builder', project: 'engineering', expires_at: null })</code>.
+These edit access metadata without reissuing or exposing the secret.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>list
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>alice<span class="w"> </span>--role<span class="w"> </span>builder<span class="w"> </span>--project<span class="w"> </span>briefing
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>agentworkflows<span class="w"> </span>keys<span class="w"> </span>update<span class="w"> </span>KEY_ID<span class="w"> </span>--role<span class="w"> </span>viewer<span class="w"> </span>--expires-at<span class="w"> </span><span class="m">2027</span>-01-01T00:00:00Z

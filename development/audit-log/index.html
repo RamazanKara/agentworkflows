@@ -812,6 +812,8 @@
       
         
       
+        
+      
     
     
     
@@ -1095,6 +1097,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
   
 
     
@@ -2101,11 +2131,14 @@ export promptly when collecting evidence.</p>
 configure <code>SANDBOX_BUDGET_REDIS_URL</code> and enable Redis persistence. Keep
 <code>AUDIT_LOG_ENABLED=true</code>. Existing Redis-backed teams need no additional service.
 Without that configuration the page says <strong>Audit log is turned off</strong> and shows how to
-enable it. Redis read failures return 503 instead of an empty or verified trail.</p>
+enable it. Storage read failures return 503 instead of an empty or verified trail.</p>
+<p>With <code>STORAGE_BACKEND=postgres</code>, the same APIs and verification use
+<a href="../postgresql-storage/">PostgreSQL gateway storage</a>. PostgreSQL also persists original
+events and process chain heads; the operator log format remains unchanged.</p>
 <p><code>AUDIT_VIEW_RETENTION_SECONDS</code> defaults to <strong>7776000</strong> (90 days). In Helm, use
 <code>inference-gateway.traceability.auditViewRetentionSeconds</code> in the umbrella chart,
 or <code>traceability.auditViewRetentionSeconds</code> in the gateway chart. Each team is
-also limited to <strong>100,000 events</strong>. The earlier limit wins. Writes and reads trim
+also limited to <strong>100,000 events</strong> in Redis. The earlier limit wins. Redis writes and reads trim
 old entries; an inactive team's stream expires after the retention interval.
 Only events written after this feature is enabled are available; logs are not backfilled.</p>
 <h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>

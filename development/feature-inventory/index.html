@@ -810,6 +810,8 @@
       
         
       
+        
+      
     
     
     
@@ -1010,6 +1012,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
   
 
     
@@ -2057,6 +2087,12 @@ configured.</p>
 <td>Temporal with dedicated Postgres; worker-SIGKILL recovery smoke</td>
 </tr>
 <tr>
+<td>Gateway durable storage</td>
+<td>Shipped</td>
+<td>Redis; PostgreSQL opt-in</td>
+<td><a href="../postgresql-storage/">PostgreSQL store</a> for runs, receipts, terminal snapshots, audit, settings and managed-key metadata; live budgets, sessions and captured content still require Redis</td>
+</tr>
+<tr>
 <td>Governed tool execution</td>
 <td>Shipped</td>
 <td>Deny unless configured in team policy</td>
@@ -2246,7 +2282,7 @@ configured.</p>
 <td>Audit chain head persistence</td>
 <td>Shipped</td>
 <td>Memory (no continuity)</td>
-<td><code>file</code> or <code>redis</code> backend needed for cross-restart linkage; storage is operator-provided</td>
+<td><code>file</code> or <code>redis</code> head backend, or the opt-in PostgreSQL gateway store, preserves cross-restart linkage; storage is operator-provided</td>
 </tr>
 <tr>
 <td>Team web console</td>

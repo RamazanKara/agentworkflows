@@ -812,6 +812,8 @@
       
         
       
+        
+      
     
     
     
@@ -966,6 +968,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#monthly-spend-limits-and-alerts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monthly spend limits and alerts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-and-conflicts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1084,6 +1097,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
   
 
     
@@ -2021,6 +2062,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#monthly-spend-limits-and-alerts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monthly spend limits and alerts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#api-and-conflicts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2057,11 +2109,16 @@
 
 
 <h1 id="team-settings">Team settings<a class="headerlink" href="#team-settings" title="Permanent link">&para;</a></h1>
-<p>Team admins can change budgets, approval rules, allowed providers and model alias
-selections in <strong>Team settings</strong> or <strong>Providers &amp; budgets</strong> in the console. <strong>Costs</strong>
-also includes the budget editor. Other roles see effective values without editing
+<p>Team admins can change budgets, content capture, approval rules, allowed providers and model alias
+selections in <strong>Team settings</strong> in the console. <strong>Providers &amp; budgets</strong> and <strong>Costs</strong>
+include the budget editor. Other roles see effective values without editing
 controls. Provider API keys stay in Kubernetes Secrets or gateway environment
 variables; this API does not accept credentials, connection URLs or new routes.</p>
+<p>Model choices use the same route IDs and provider names shown in <strong>Get started</strong>.
+For admins, <strong>Ready</strong> means the provider key is configured (or the route is
+simulated), and <strong>Key missing</strong> means it still needs a key. This is a configuration
+check, not a live provider test. Costs and Providers name the configured token
+window separately from the UTC calendar-month spending budget.</p>
 <h2 id="defaults-and-overrides">Defaults and overrides<a class="headerlink" href="#defaults-and-overrides" title="Permanent link">&para;</a></h2>
 <p><code>SandboxPolicySet</code> remains the bootstrap and policy default. Overrides live in one
 JSON document per team in the existing budget Redis, at
@@ -2069,9 +2126,11 @@ JSON document per team in the existing budget Redis, at
 <code>revision</code>, <code>updated_by</code>, <code>updated_at</code> and <code>overrides</code>. Enable Redis persistence and
 include these documents in backups. No new environment variables or Helm values
 are required.</p>
-<p>Every request reads effective settings from Redis over the loaded YAML defaults;
+<p>With <code>STORAGE_BACKEND=postgres</code>, the same documents and revision checks use
+<a href="../postgresql-storage/">PostgreSQL gateway storage</a>. Include that database in backups.</p>
+<p>Every request reads effective settings from the selected store over the loaded YAML defaults;
 there is no process cache. Changes are visible across gateway replicas without
-restarting. Redis outages fail closed with 503. YAML changes still require the
+restarting. Storage outages fail closed with 503. YAML changes still require the
 normal configuration rollout, and do not erase overrides. <strong>Reset to policy
 default</strong> removes one override and uses the current loaded YAML default.</p>
 <table>
@@ -2087,6 +2146,16 @@ default</strong> removes one override and uses the current loaded YAML default.<
 <td><code>cost_limit_usd</code></td>
 <td><code>budgets.costLimitUsd</code></td>
 <td>Team budget in USD per UTC calendar month</td>
+</tr>
+<tr>
+<td><code>soft_cost_limit_usd</code></td>
+<td><code>budgets.softCostLimitUsd</code> (unset)</td>
+<td>Advisory monthly threshold; never blocks calls</td>
+</tr>
+<tr>
+<td><code>capture_content</code></td>
+<td><code>captureContent</code> (default <code>none</code>)</td>
+<td>Default step capture: <code>none</code>, <code>redacted</code>, or <code>full</code></td>
 </tr>
 <tr>
 <td><code>project_budgets.&lt;project&gt;</code></td>
@@ -2124,6 +2193,11 @@ default</strong> removes one override and uses the current loaded YAML default.<
 <td>Provider names eligible for this workflow</td>
 </tr>
 <tr>
+<td><code>workflows.&lt;name&gt;.capture_content</code></td>
+<td>Workflow <code>captureContent</code>, otherwise team default</td>
+<td>Override capture for this workflow's future steps</td>
+</tr>
+<tr>
 <td><code>model_routes.&lt;alias&gt;</code></td>
 <td>Alias assignment in <code>model-routing.yaml</code></td>
 <td>Canonical ID of an existing route</td>
@@ -2133,7 +2207,61 @@ default</strong> removes one override and uses the current loaded YAML default.<
 <p>Dollar overrides must be finite numbers between 0 and 1,000,000; token overrides
 must be integers between 0 and 1,000,000,000. Zero is a spending/token ceiling,
 not unlimited. An absent team/project YAML limit means unlimited; reset to restore
-that default. Booleans and strings are not accepted as numbers.</p>
+that default. <code>null</code> explicitly disables either team soft or hard limit; the soft
+limit cannot exceed a configured hard limit. Booleans and strings are not accepted
+as numbers.</p>
+<p>Capture changes affect future steps only. Existing captured text retains its TTL;
+changing to <code>none</code> does not delete it, and enabling capture cannot recover earlier
+content. An explicit workflow setting (including <code>none</code>) overrides the team value.
+Resetting a workflow override restores its YAML value, or the current team default
+when YAML has no workflow value. Redaction, byte limits, access checks and retention
+continue to apply; see <a href="../workflows/#workflow-forms-and-step-content">step content</a>.</p>
+<h2 id="monthly-spend-limits-and-alerts">Monthly spend limits and alerts<a class="headerlink" href="#monthly-spend-limits-and-alerts" title="Permanent link">&para;</a></h2>
+<p>In <strong>Costs</strong> or <strong>Team settings</strong>, set the team monthly soft limit and monthly budget
+(hard limit). Both include conservative reservations across providers and tools.
+Soft limits allow work to continue. A reservation that would exceed the hard team
+or project budget returns <strong>429</strong>, with <code>detail.reason</code> equal to
+<code>team_cost_budget_exceeded</code> or <code>project_cost_budget_exceeded</code>, before calling the
+provider. <code>Retry-After</code> is the number of seconds to the next UTC calendar month.
+An admin can raise the limit sooner; editing a limit never resets spend. Actual
+reported usage can exceed an estimate and block subsequent calls; these are
+configured-price controls, not provider invoice guarantees.</p>
+<p><code>GET /v1/team/spend</code> returns <code>team_id</code>, <code>window_start</code>, <code>window_end</code>,
+<code>soft_limit_usd</code>, <code>hard_limit_usd</code>, <code>reserved_and_spent_usd</code>, <code>status</code>
+(<code>ok</code>, <code>soft_limit</code>, <code>hard_limit</code>), and <code>alerts</code>. All unrestricted team roles can
+read it; project-bound credentials receive 403 and should use <code>/v1/usage</code>.
+Settings writes retain the admin and revision requirements below.</p>
+<p>An alert is retained once per level per UTC month. Each has <code>id</code>, <code>level</code>,
+<code>limit_usd</code>, <code>reserved_and_spent_usd</code>, <code>requested_usd</code>, <code>created_at</code>,
+<code>webhook_status</code> (<code>disabled</code>, <code>pending</code>, <code>delivered</code>, <code>failed</code>) and <code>attempts</code>.
+Reservations can trigger alerts even when settlement later reduces the charge.
+Hard-limit refusal records the rejected reservation separately as <code>requested_usd</code>.
+The <strong>Costs → Spend alerts</strong> panel remains available without email or a webhook;
+Refresh loads current status. Historical alerts for the month remain visible after
+limits change, alongside current status. New months use new counters and alerts.</p>
+<p>For outgoing delivery, reuse the team's reviewed <code>notifications.webhookEnv</code> and
+<code>notifications.consoleUrl</code> configuration. The gateway checks every 30 seconds,
+independently of Temporal, including after a limit is lowered. No email is sent for
+spend alerts. Webhooks receive <code>event: team_spend_soft_limit</code> or
+<code>team_spend_hard_limit</code>, team identity, the alert fields and a console link.
+The <code>Idempotency-Key</code> header equals the alert ID. Delivery is at least once:
+receivers must deduplicate it. Redis stores attempts and retry times across replicas
+and restarts; up to five attempts use exponential backoff starting at 30 seconds.
+Retries cover the current month. After five failures the console reports failure;
+operators should inspect destination configuration. Webhook failures never disable
+budget enforcement. Preserve Redis persistence and backups during PostgreSQL cutover.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">team_settings</span><span class="p">()</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">set_spend_limits</span><span class="p">(</span><span class="n">soft_limit_usd</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">hard_limit_usd</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">team_spend</span><span class="p">()[</span><span class="s2">"alerts"</span><span class="p">])</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">gateway</span><span class="o">.</span><span class="n">set_content_capture</span><span class="p">(</span><span class="s2">"redacted"</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">],</span> <span class="n">workflow</span><span class="o">=</span><span class="s2">"ResearchWorkflow"</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">let</span><span class="w"> </span><span class="nx">settings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">teamSettings</span><span class="p">();</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nx">settings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">setSpendLimits</span><span class="p">({</span><span class="w"> </span><span class="nx">softLimitUsd</span><span class="o">:</span><span class="w"> </span><span class="kt">80</span><span class="p">,</span><span class="w"> </span><span class="nx">hardLimitUsd</span><span class="o">:</span><span class="w"> </span><span class="kt">100</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">((</span><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">teamSpend</span><span class="p">()).</span><span class="nx">alerts</span><span class="p">);</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">await</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">setContentCapture</span><span class="p">(</span><span class="s1">'redacted'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="p">,</span><span class="w"> </span><span class="nx">workflow</span><span class="o">:</span><span class="w"> </span><span class="s1">'ResearchWorkflow'</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p>Use <code>update_team_settings</code> / <code>updateTeamSettings</code> to combine other fields in the
+same atomic change; <code>reset_team_setting</code> / <code>resetTeamSetting</code> restores policy.</p>
 <p>Team and project reservations are checked atomically against the same monthly
 counter across providers and tools. Editing a limit does not clear spend. Token
 and request counters retain their configured <code>SANDBOX_BUDGET_WINDOW_SECONDS</code>.
@@ -2163,11 +2291,11 @@ and a <code>fields</code> map. Each entry has <code>value</code>, <code>source</
 <code>policy_default</code>. For example, a budget field can be
 <code>"cost_limit_usd": {"value": 50, "source": "policy", "policy_default": 50}</code>.</p>
 <p>Send only edited fields in a PATCH, using the revision from GET in <code>If-Match</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="err">PATCH /v1/team/settings</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="err">If-Match: 0</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="err">Content-Type: application/json</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="err">{"fields":{"cost_limit_usd":100,"project_budgets.default":40,"workflows.ResearchWorkflow.approver_role":"admin","model_routes.research":"anthropic"}}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">PATCH /v1/team/settings</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="err">If-Match: 0</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="err">Content-Type: application/json</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="err">{"fields":{"cost_limit_usd":100,"project_budgets.default":40,"workflows.ResearchWorkflow.approver_role":"admin","model_routes.research":"anthropic"}}</span>
 </code></pre></div>
 <p>The names above are examples; use the field names and route IDs returned by your
 gateway. Validation is atomic: 422 includes <code>detail.fields</code> entries with <code>field</code>

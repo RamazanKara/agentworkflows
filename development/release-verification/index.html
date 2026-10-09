@@ -810,6 +810,8 @@
       
         
       
+        
+      
     
     
     
@@ -1010,6 +1012,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
   
 
     
@@ -2129,12 +2159,22 @@
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>test-typescript<span class="w"> </span>test-console
 </code></pre></div>
 <p>Build Helm dependencies, then run <code>helm lint</code> and <code>helm template</code> for the charts
-being shipped. The console suite captures fixture-based screens at 393 and 1440
+being shipped. The console suite captures fixture-based screens at 360, 393 and 1440
 CSS pixels in <code>.out/console-v0.6.0/</code>; inspect them yourself after the tests pass.
 To repeat only those captures after a console build, run
 <code>npm test -- --grep 'release console layouts'</code> from <code>src/inference-gateway/console</code>.
-These cover Get started, provider setup, costs, step JSON, settings and audit;
-the separate Compose smoke test exercises the live gateway.</p>
+These cover Get started, provider setup, costs, members and keys, step JSON,
+settings, audit and the phone menu. Inspect chips, links, command wrapping and
+horizontal step-JSON scrolling at both phone widths. Setup variants show zero
+usage while keys are missing. The connected insights team has one Research run
+awaiting approval: three calls and receipts, 4,200 tokens and $0.06, matching the
+step sums and cost tables. These are synthetic UI fixtures; the separate Compose
+smoke test exercises the live gateway.</p>
+<p>On native Windows without WSL, run the console's <code>npm run build</code> and <code>npm test</code>,
+the TypeScript SDK's <code>npm run build</code>, <code>npm run lint</code> and <code>npm test</code>, and Python
+Ruff, SDK tests and contract scripts from their installed environments. The Bash
+gates still need a Linux caller: <code>make lint test-gateway test-scripts</code>. Screenshot
+tests do not verify live providers, Redis, Temporal or PostgreSQL integration.</p>
 <p>Set the release and repository once:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.5.1
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REPOSITORY</span><span class="o">=</span>RamazanKara/agentworkflows

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/scope-and-non-goals/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/postgresql-storage/">
       
       
-        <link rel="prev" href="../security-overview/">
+        <link rel="prev" href="../install-kubernetes/">
       
       
-        <link rel="next" href="../workflows/">
+        <link rel="next" href="../kubernetes-production-checklist/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Scope and non-goals - AgentWorkflows</title>
+        <title>PostgreSQL gateway storage - AgentWorkflows</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#scope-and-non-goals" class="md-skip">
+        <a href="#postgresql-gateway-storage" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Scope and non-goals
+              PostgreSQL gateway storage
             
           </span>
         </div>
@@ -303,12 +303,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../concepts/" class="md-tabs__link">
           
   
@@ -327,10 +325,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../workflows/" class="md-tabs__link">
           
   
@@ -546,10 +546,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -569,22 +567,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -602,7 +597,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -757,37 +752,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Scope and non-goals
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../scope-and-non-goals/" class="md-nav__link">
         
   
   
@@ -803,81 +771,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#in-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        In scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#protocol-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protocol limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#operator-owned-work" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operator-owned work
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#out-of-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Out of scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-and-compliance-boundary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security and compliance boundary
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -894,8 +787,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -923,19 +818,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -953,7 +851,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1136,10 +1034,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../postgresql-storage/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1155,6 +1080,98 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retention-and-audit-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retention and audit verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-and-rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade and rollback
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upgrade and rollback">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-existing-redis-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import existing Redis records
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2073,10 +2090,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#in-scope" class="md-nav__link">
+  <a href="#install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        In scope
+        Install
       
     </span>
   </a>
@@ -2084,10 +2101,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#protocol-limits" class="md-nav__link">
+  <a href="#configuration-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Protocol limits
+        Configuration reference
       
     </span>
   </a>
@@ -2095,10 +2112,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#operator-owned-work" class="md-nav__link">
+  <a href="#retention-and-audit-verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Operator-owned work
+        Retention and audit verification
       
     </span>
   </a>
@@ -2106,21 +2123,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#out-of-scope" class="md-nav__link">
+  <a href="#upgrade-and-rollback" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Out of scope
+        Upgrade and rollback
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upgrade and rollback">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-existing-redis-records" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import existing Redis records
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#security-and-compliance-boundary" class="md-nav__link">
+  <a href="#tests" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Security and compliance boundary
+        Tests
       
     </span>
   </a>
@@ -2144,7 +2178,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/scope-and-non-goals.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/postgresql-storage.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2152,69 +2186,212 @@
   
 
 
-<h1 id="scope-and-non-goals">Scope and non-goals<a class="headerlink" href="#scope-and-non-goals" title="Permanent link">&para;</a></h1>
-<p>This page defines the current checkout's boundary. For per-feature defaults, use the <a href="../feature-inventory/">feature inventory</a>.</p>
-<p>AgentWorkflows is cloud-first. Temporal provides durable execution and approval signals;
-the gateway governs model/tool activities and per-run budgets. Self-hosted models remain optional.</p>
-<h2 id="in-scope">In scope<a class="headerlink" href="#in-scope" title="Permanent link">&para;</a></h2>
-<p>The repository contains and tests:</p>
-<ul>
-<li>the inference gateway and RAG service under <code>src/</code>;</li>
-<li>the Temporal workflow SDK and example under <code>sdk/python/</code>, with Compose and Helm/GitOps deployment;</li>
-<li>Helm charts for those services, Ollama, vLLM, Redis, Qdrant, and agent workspaces;</li>
-<li>local and customer Argo CD application manifests;</li>
-<li>Kubernetes policy, tenant templates, model catalog records, eval definitions, and SLO inputs;</li>
-<li>API and configuration contracts;</li>
-<li>validation, evidence, release, and supply-chain scripts;</li>
-<li>operational runbooks and customer handoff documentation.</li>
-</ul>
-<p>The gateway implements these protocol families:</p>
-<ul>
-<li>OpenAI-style chat completions, legacy completions, embeddings, moderations, models, Files, Batch, and Responses;</li>
-<li>the project-specific synchronous <code>/v1/batch-inference</code>, usage, and sandbox-budget endpoints;</li>
-<li>an Anthropic Messages translation endpoint, with streaming.</li>
-</ul>
-<p>The generated <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json">OpenAPI contract</a> is the route-level reference.</p>
-<h2 id="protocol-limits">Protocol limits<a class="headerlink" href="#protocol-limits" title="Permanent link">&para;</a></h2>
-<p>This is not a complete OpenAI or Anthropic API implementation.</p>
-<ul>
-<li>Chat completions and Anthropic Messages support streaming. Legacy completions and Responses do not.</li>
-<li>Responses supports the synchronous request shape, function tools with multi-turn <code>function_call</code> / <code>function_call_output</code> items, and <code>input_image</code> parts. Optional stored state supports <code>store</code>, <code>previous_response_id</code>, retrieve, delete, and input-items routes. Background responses and built-in tools (web search, file search) are not implemented.</li>
-<li>The asynchronous Batch implementation accepts chat completions, completions, and embeddings. <code>completion_window</code> is treated as an expiry bound, not a scheduling or pricing commitment.</li>
-<li>Audio, image generation, fine-tuning, and a general training API are not implemented.</li>
-<li>Translated Messages and Responses payloads preserve supported text and tool fields but do not promise byte-for-byte parity with upstream services.</li>
-</ul>
-<h2 id="operator-owned-work">Operator-owned work<a class="headerlink" href="#operator-owned-work" title="Permanent link">&para;</a></h2>
-<p>The project does not:</p>
-<ul>
-<li>create or upgrade a Kubernetes cluster;</li>
-<li>provision networks, load balancers, GPU nodes, or cloud databases;</li>
-<li>run an identity provider or secret manager;</li>
-<li>provide a production ingress, certificate authority, logging service, backup destination, or incident team;</li>
-<li>select, host, license, or validate customer model weights;</li>
-<li>classify customer data or decide whether a use case is regulated;</li>
-<li>size replicas, GPU memory, context windows, storage, retention, or SLOs for a customer workload;</li>
-<li>operate the resulting platform.</li>
-</ul>
-<p>The customer values are examples that must be reviewed. Their placeholders, large GPU defaults, and single-node stateful services are not production recommendations.</p>
-<h2 id="out-of-scope">Out of scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
-<p>The project is not intended to become:</p>
-<ul>
-<li>a managed Kubernetes operations service;</li>
-<li>a desktop Ollama application;</li>
-<li>a cloud-infrastructure provisioning framework;</li>
-<li>a distributed training platform;</li>
-<li>a general multi-node serving operator;</li>
-<li>a full billing system;</li>
-<li>a general-purpose identity provider.</li>
-</ul>
-<p>Hosted delivery and team administration are product goals, not current capabilities.
-The optional <code>/console</code> uses the authenticated workflow API for team runs, approvals, receipts,
-and costs. Admins inspect provider/budget configuration there; membership, provider keys,
-and policy edits remain reviewed deployment configuration. See the <a href="../workflows/#web-console">console guide</a>.</p>
-<h2 id="security-and-compliance-boundary">Security and compliance boundary<a class="headerlink" href="#security-and-compliance-boundary" title="Permanent link">&para;</a></h2>
-<p>The repository includes controls and crosswalks, not certifications. NetworkPolicy does not encrypt traffic. A container sandbox without a configured gVisor, Kata, or equivalent <code>RuntimeClass</code> does not provide a separate kernel boundary. Hash-chained logs are not durable or rollback-resistant until their heads are anchored outside the process. Checked-in sample evidence proves report shape, not the state of a release or deployment.</p>
-<p>Whether a deployment meets a law, standard, or internal policy depends on its use case, configuration, operations, and current evidence. See the <a href="../security-overview/">security overview</a>, <a href="../threat-model/">threat model</a>, and <a href="../production-readiness/">production readiness matrix</a>.</p>
+<h1 id="postgresql-gateway-storage">PostgreSQL gateway storage<a class="headerlink" href="#postgresql-gateway-storage" title="Permanent link">&para;</a></h1>
+<p>The gateway can use PostgreSQL for run metadata, start intents, step receipts,
+terminal results and budget summaries, audit events and chain heads, team settings,
+and managed API-key metadata. <code>STORAGE_BACKEND=redis</code> remains the default, including
+the existing YAML-only behavior when budget Redis is not enabled.</p>
+<p>Redis is still required for live budgets, sessions, memberships, captured step
+content, notifications, trigger coordination and expiring worker credentials.
+Temporal retains its own execution database. Use a separate gateway database;
+do not run these migrations against Temporal's schema. PostgreSQL 16 is the
+development chart target.</p>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<p>Provision a database and a role that owns its schema. The gateway creates and
+migrates its <code>aw_*</code> tables at startup. Give each deployment its own database or
+schema and keep <code>SANDBOX_BUDGET_KEY_PREFIX</code> consistent across replicas; it also
+scopes SQL records. Configure TLS in the DSN, for example <code>sslmode=verify-full</code>
+with the appropriate CA available in the gateway container.</p>
+<p>Store the DSN in a Kubernetes Secret, without putting it in Helm values:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'Gateway PostgreSQL DSN: '</span><span class="w"> </span>PG_DSN<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$PG_DSN</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>gateway-postgres<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span><span class="nv">dsn</span><span class="o">=</span>/dev/stdin
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">unset</span><span class="w"> </span>PG_DSN
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.backend<span class="o">=</span>postgres<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.postgres.existingSecret.name<span class="o">=</span>gateway-postgres<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.postgres.existingSecret.key<span class="o">=</span>dsn<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>Use an image built from this change; older published gateway images do not read
+these settings. With the component chart, omit the <code>inference-gateway.</code> prefix.
+When using the umbrella NetworkPolicy, allow the database address and port in
+<code>networkPolicy.externalEgress</code>. With the component NetworkPolicy, use its
+<code>networkPolicy.runtimeEgress</code> namespace/port rules.</p>
+<p>For disposable development, the component chart can provision a separate
+single-replica PostgreSQL StatefulSet, Secret and 10 GiB PVC:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.backend<span class="o">=</span>postgres<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.postgres.existingSecret.name<span class="o">=</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.postgres.bundled.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>The bundled server is for development; configure external PostgreSQL for managed
+backups, failover and production TLS. Its generated password is reused on upgrades.
+Keep its Secret with its PVC: deleting only the Secret generates a different
+password that the existing database will not accept.</p>
+<h2 id="configuration-reference">Configuration reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Environment variable</th>
+<th>Default</th>
+<th>Component Helm value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STORAGE_BACKEND</code></td>
+<td><code>redis</code></td>
+<td><code>storage.backend</code> (<code>redis</code> or <code>postgres</code>)</td>
+</tr>
+<tr>
+<td><code>STORAGE_POSTGRES_DSN</code></td>
+<td>empty</td>
+<td><code>storage.postgres.existingSecret.name</code> and <code>.key</code> (default key <code>dsn</code>)</td>
+</tr>
+<tr>
+<td><code>STORAGE_POSTGRES_POOL_SIZE</code></td>
+<td><code>5</code></td>
+<td><code>storage.postgres.poolSize</code></td>
+</tr>
+<tr>
+<td><code>STORAGE_POSTGRES_TIMEOUT_SECONDS</code></td>
+<td><code>3</code></td>
+<td><code>storage.postgres.timeoutSeconds</code></td>
+</tr>
+<tr>
+<td><code>RUN_RECORD_RETENTION_SECONDS</code></td>
+<td><code>2592000</code> (30 days)</td>
+<td><code>workflowRecords.runRecordRetentionSeconds</code></td>
+</tr>
+<tr>
+<td><code>AUDIT_VIEW_RETENTION_SECONDS</code></td>
+<td><code>7776000</code> (90 days)</td>
+<td><code>traceability.auditViewRetentionSeconds</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/config-contracts/inference-gateway.config.json">configuration contract</a>
+is the machine-readable reference. The pool opens one connection per gateway
+process and grows to the configured positive maximum. Size the database connection
+limit for all processes and rolling upgrades. The timeout bounds pool acquisition,
+startup and SQL statements; libpq connection attempts have a minimum two-second
+timeout. See <a href="https://www.psycopg.org/psycopg3/docs/advanced/pool.html">Psycopg pooling</a>.</p>
+<p><code>/readyz</code> reports <code>dependencies.gateway_store</code> and returns 503 when PostgreSQL is
+unavailable. <code>/healthz</code> remains a process liveness check. SQL startup failures stop
+startup. Reads, settings writes and key authentication fail closed on storage
+errors; there is no fallback to Redis that could expose stale settings or keys.</p>
+<h2 id="retention-and-audit-verification">Retention and audit verification<a class="headerlink" href="#retention-and-audit-verification" title="Permanent link">&para;</a></h2>
+<p>Each gateway runs a sweep every 60 seconds. A transaction-scoped advisory lock
+allows one sweep per storage scope at a time. Terminal run deadlines are fixed
+from Temporal's close time, and are never extended by subsequent reads. Expiring
+a run removes its metadata, snapshot and step receipts, and its start intent.
+Reads hide expired rows even before the sweep. Existing Redis content retention
+still applies. Settings and key records, including revocations, are not expired.</p>
+<p>The existing workflow refresh observes terminal executions and stores their
+result and final budget summary. Once saved, these remain readable even when
+Temporal history expires. Live runs and operations still need Temporal and Redis.
+Keep Temporal retention long enough for the gateway to observe completion; if
+history disappears before observation, the gateway cannot reconstruct a result
+and starts the final run-retention window when it observes that absence.</p>
+<p>Audit rows expire by storage time using <code>AUDIT_VIEW_RETENTION_SECONDS</code>. PostgreSQL
+uses the time bound, without Redis's 100,000-event cap. Retained audit JSON preserves
+the original receipt hashes, per-process sequences and per-team projection hashes.
+Events and their persisted head are written in one transaction. Startup receipts
+link to a persisted predecessor. Concurrent replicas retain separate process chains.
+The console, both SDKs, cursors and verification response shapes are unchanged.</p>
+<p>Audit appends retain the existing best-effort behavior: if storage fails, the
+operator log still receives the receipt. Advancing the in-memory projection before
+the write makes an interior lost append detectable on subsequent verification.
+Retained prefixes are reported as boundaries; missing tails and a complete rewrite
+still require independently anchored operator logs. Use <code>scripts/audit-verify.py</code>
+with complete logs, not a team-only export.</p>
+<h2 id="upgrade-and-rollback">Upgrade and rollback<a class="headerlink" href="#upgrade-and-rollback" title="Permanent link">&para;</a></h2>
+<p>An ordinary upgrade leaves Redis selected and does not copy or delete records.
+Selecting PostgreSQL starts a separate record store. Use the offline import below
+before cutover; backend selection alone does not import anything. Do not mix
+backend selections across replicas. There is no live import or dual-write mode.</p>
+<h3 id="import-existing-redis-records">Import existing Redis records<a class="headerlink" href="#import-existing-redis-records" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Drain active workflows. Stop <strong>all</strong> gateway replicas, workers and other writers,
+   including background refresh processes. Back up Redis, Temporal and the gateway
+   database. Keep the same Redis for live accounting, sessions and captured content.</li>
+<li>Use an empty gateway PostgreSQL scope, or the partial destination from an earlier
+   attempt. Set <code>SANDBOX_BUDGET_REDIS_URL</code>, <code>SANDBOX_BUDGET_KEY_PREFIX</code> and
+   <code>STORAGE_POSTGRES_DSN</code> in the operator environment. Keep the existing
+   <code>AUDIT_CHAIN_STORE_*</code> settings: the importer reads that persisted head too,
+   including when it resides in a separate Redis or a file. DSNs are not CLI arguments.</li>
+<li>From <code>src/inference-gateway</code>, initialize SQL tables without starting a gateway,
+   then run preflight:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">'from app.settings import Settings; from app.postgres_storage import PostgresStorage; s = PostgresStorage(Settings.from_env()); s.open(); s.close()'</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>python<span class="w"> </span>-m<span class="w"> </span>app.redis_import<span class="w"> </span>--dry-run
+</code></pre></div>
+<ol>
+<li>With writers still stopped, import and repeat preflight:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python<span class="w"> </span>-m<span class="w"> </span>app.redis_import<span class="w"> </span>--apply
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>python<span class="w"> </span>-m<span class="w"> </span>app.redis_import<span class="w"> </span>--dry-run
+</code></pre></div>
+<ol>
+<li>Require a final <code>verified</code> progress record and exit status zero. Inspect counts,
+   settings revisions, key revocations, representative runs and audit verification.
+   Switch <strong>every</strong> gateway to <code>STORAGE_BACKEND=postgres</code>, then restart gateways and
+   workers. Keep the source backup and operator audit logs for their retention period.</li>
+</ol>
+<p>The command emits JSON progress and counts, never credentials or run inputs. Dry-run
+performs no Redis or SQL record writes and does not run migrations. It checks the
+entire retained source, receipt hashes, team projection links, available consecutive
+process links, persisted heads and destination conflicts before import. The source
+is checked again before and after copying; a changing source fails the command.
+Natural TTL expiration can also change a long-running preflight: rerun with writers
+stopped, or rehearse against a consistent backup first. Plan operator memory for the
+retained dataset, which is read into memory for preflight.</p>
+<p>Each record is committed independently; a run and its ordered timeline commit in
+one transaction. If interrupted, rerun the same command. Identical existing records
+are skipped, and conflicting records stop import without overwriting them. A SQL
+advisory lock serializes importers for the same scope. Do not start destination
+gateways until verification finishes; the import lock does not stop application
+writers. Original absolute run deadlines and audit storage timestamps are preserved,
+so import does not renew retention. Managed keys retain their digests, roles, project,
+expiry, revocation and last-used metadata. Settings keep their original revision.</p>
+<p>Audit receipt JSON and projection hashes are preserved, then read back and verified
+in PostgreSQL. Redis retains team projections, not a complete process-wide log:
+trimmed prefixes and interleaved events missing from those projections remain
+verification boundaries. Import cannot recover those events, prove missing tails,
+or recreate expired history. Independently verify complete operator logs with
+<code>scripts/audit-verify.py</code>. Redis has no terminal-result snapshots to import; these
+are populated by the gateway from Temporal after cutover while history is available.</p>
+<p>Migrations in <code>app/sql/NNN.up.sql</code> and <code>.down.sql</code> are versioned in
+<code>aw_schema_version</code>. A database-wide advisory lock serializes startup migrations;
+DDL and version updates commit together. Repeated up/down calls do nothing at the
+target version. A newer or noncontiguous schema version is rejected.</p>
+<p>Back up the gateway database alongside Redis and Temporal with writers quiesced.
+Restore all three consistently before restarting gateways and workers. The existing
+Redis/Temporal backup scripts do not yet include the optional gateway database;
+include it explicitly with your PostgreSQL backup tooling and rehearse a restore.</p>
+<p>Do not downgrade SQL as part of a normal image rollback. Schema version 1 down is
+destructive: it drops all gateway record tables. Only in a disposable database,
+with all gateway processes stopped and the DSN in the environment, run from
+<code>src/inference-gateway</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">'import os; from psycopg_pool import ConnectionPool; from app.storage_migrations import migrate; p = ConnectionPool(os.environ["STORAGE_POSTGRES_DSN"], open=True); migrate(p, target=0); p.close()'</span>
+</code></pre></div>
+<p>Switching back to Redis exposes its old records, including old settings and key
+state. Quiesce traffic and restore/reconcile the chosen store before enabling it;
+never use a backend switch as an automatic outage fallback.</p>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<p>The normal gateway suite uses fakes and requires no database or testcontainers.
+For real SQL, use a disposable PostgreSQL database whose role can create schemas:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TEST_POSTGRES_DSN</span><span class="o">=</span><span class="s1">'postgresql://test:test@127.0.0.1:5432/gateway_test'</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>src/inference-gateway/tests/test_postgres_integration.py
+</code></pre></div>
+<p>Each test creates a unique schema and drops only that schema afterwards. These
+tests exercise up/down/up migrations, schema version rejection, concurrent settings
+updates, key revocation, scoped paging, retention cascades, audit hash round trips,
+and dry-run, interrupted import, resume, repeat import and destination conflicts.
+<code>tests/test_redis_import.py</code> covers source verification and import orchestration with
+fakes; it does not substitute for the real SQL test.
+On Windows use <code>$env:TEST_POSTGRES_DSN</code> and your Windows Python environment. The
+Linux/WSL repository gates remain <code>make lint</code>, <code>make test-gateway</code>, and
+<code>make test-scripts</code>; WSL is not required by the fake or SQL tests themselves.</p>
 
 
 
@@ -2252,7 +2429,7 @@ and policy edits remain reviewed deployment configuration. See the <a href="../w
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../security-overview/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Security overview">
+          <a href="../install-kubernetes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Install on Kubernetes">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2262,20 +2439,20 @@ and policy edits remain reviewed deployment configuration. See the <a href="../w
                 Previous
               </span>
               <div class="md-ellipsis">
-                Security overview
+                Install on Kubernetes
               </div>
             </div>
           </a>
         
         
           
-          <a href="../workflows/" class="md-footer__link md-footer__link--next" aria-label="Next: Durable workflows and teams">
+          <a href="../kubernetes-production-checklist/" class="md-footer__link md-footer__link--next" aria-label="Next: Kubernetes production checklist">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Durable workflows and teams
+                Kubernetes production checklist
               </div>
             </div>
             <div class="md-footer__button md-icon">
