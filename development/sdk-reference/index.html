@@ -2199,8 +2199,12 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 <td>Start a workflow (default ResearchWorkflow); input can also be inline JSON</td>
 </tr>
 <tr>
-<td><code>runs list --project PROJECT --offset OFFSET</code></td>
-<td>List runs; both options are optional; use returned next_offset for pagination</td>
+<td><code>runs list --project PROJECT --cursor CURSOR</code></td>
+<td>One run page; options are optional; pass next_cursor with the same filters for older runs</td>
+</tr>
+<tr>
+<td><code>runs export --status completed --output runs.jsonl</code></td>
+<td>Export full retained run details as JSON Lines; status/output are optional</td>
 </tr>
 <tr>
 <td><code>runs inspect RUN_ID</code></td>
@@ -2231,6 +2235,28 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 <p><code>runs start</code> also accepts <code>--project</code> and <code>--request-id UUID</code>. If a start response is lost,
 reuse the request ID printed on stderr with <strong>identical input</strong> to avoid duplicate runs.
 Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport failure, <strong>2</strong> usage/input/scaffold error.</p>
+<p>Run cursors and export require the v0.6.0 checkout SDK and gateway (unreleased),
+not the v0.5.1 wheel or images. <code>runs list</code> and <code>runs export</code> accept <code>--project</code>,
+<code>--workflow</code>, <code>--status</code>, <code>--cursor</code> and <code>--limit</code> (1–100, default 20). Limit bounds
+records scanned before filtering; an empty page can still have <code>next_cursor</code>.
+Continue until it is null. Cursors use creation time and run ID, so new runs and
+expired entries do not shift subsequent pages, including tied timestamps. Keep
+project and filters unchanged; otherwise the API returns 422 <code>run_cursor_invalid</code>.
+Legacy <code>--offset</code>/<code>next_offset</code> remain available; don't combine them with cursors.</p>
+<p>Exports follow all pages, fetch each run's result, budget and timeline, and include
+step input/output only while retained and allowed by capture policy. They omit the
+stored start input. Files are UTF-8; omit <code>--output</code> or use <code>-</code> for stdout. A read or
+write failure exits 1 and can leave a partial file. Retention and run status changes
+continue during export: this is not a transactional snapshot or backup, and it does
+not recover expired runs or content. Each call enforces the credential's team and
+project access. Store exports according to your content policy; server expiry does
+not remove downloaded files.</p>
+<p>The Python methods are <code>runs(**filters) -&gt; RunPage</code> and
+<code>export_runs(**filters) -&gt; Iterator[str]</code>, with <code>RunFilters</code>, <code>RunStatus</code> and
+<code>RunPage</code> in <code>agentworkflows.types</code>. Each exported string is one full run detail
+object followed by a newline. <code>GatewayError</code>/transport errors propagate on failed
+reads, including when a run expires between its listing and detail request. Export
+rejects gateways without cursor support with an upgrade message before writing rows.</p>
 <p>Key creation and updates accept <code>--expires-at</code> as ISO-8601 with a timezone, for example
 <code>2027-01-01T00:00:00Z</code>. On updates, <code>--expires-at ''</code> clears expiry and <code>--project ''</code>
 clears a project binding. Commands return JSON; keep the <code>key_id</code> for future changes and

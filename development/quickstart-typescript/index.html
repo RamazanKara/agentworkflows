@@ -610,6 +610,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-history-and-export-v060-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run history and export (v0.6.0 checkout)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-and-stop" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2104,6 +2115,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-history-and-export-v060-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run history and export (v0.6.0 checkout)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verify-and-stop" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2398,6 +2420,35 @@ and verification results; a disabled view has <code>ok: null</code>, and export 
 partial output. Retention continues during paging; these team exports are not
 complete process logs for the operator verifier. See <a href="../audit-log/">audit log</a>
 for range boundaries and what verification proves.</p>
+<h2 id="run-history-and-export-v060-checkout">Run history and export (v0.6.0 checkout)<a class="headerlink" href="#run-history-and-export-v060-checkout" title="Permanent link">&para;</a></h2>
+<p>Use the source-built gateway from the <a href="../quickstart/#1-install-and-start">Python quickstart</a>
+and install/build <code>sdk/typescript</code> from this checkout; the v0.5.1 release tarball
+does not include these methods. <code>runs({ project, workflow, status, cursor, limit })</code>
+returns a typed <code>RunPage</code>. All filters are optional. Pass <code>next_cursor</code> with the
+same project and filters until it is null, including on empty pages. <code>limit</code>
+bounds scanned records before filtering (1–100, default 20). Cursors remain stable
+when newer runs arrive or records expire; legacy <code>offset</code> remains supported.</p>
+<p><code>exportRuns(filters)</code> yields newline-terminated JSON strings containing each
+retained run's full details, results and timeline, including captured content
+still retained by policy. It follows every cursor page. The package exports
+<code>RunFilters</code> and <code>RunPage</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">gateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.AGENTWORKFLOWS_API_KEY</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="p">});</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">open</span><span class="p">(</span><span class="s1">'runs.jsonl'</span><span class="p">,</span><span class="w"> </span><span class="s1">'w'</span><span class="p">);</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">exportRuns</span><span class="p">({</span><span class="w"> </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="s1">'completed'</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="p">}</span>
+</code></pre></div>
+<p>As in the audit example, import <code>GatewayClient</code> and <code>open</code> above. Gateway and
+transport errors propagate and can leave partial output. Retention and status
+changes continue during export; this is not a transactional snapshot or backup.
+Expired runs/content are not recovered, and the stored start input is omitted.
+Downloaded files need their own retention policy. See <a href="../sdk-reference/#cli">CLI and SDK paging</a>.</p>
 <h2 id="verify-and-stop">Verify and stop<a class="headerlink" href="#verify-and-stop" title="Permanent link">&para;</a></h2>
 <p>From <code>sdk/typescript</code>, run <code>npm run build</code>, <code>npm run lint</code>, and <code>npm test</code>. Vitest
 uses at most two workers. The equivalent repository target is <code>make test-typescript</code>.
@@ -2414,11 +2465,11 @@ remove this disposable trial's containers and volumes from the repository root:<
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Bash (Linux/macOS)</label><label for="__tabbed_2_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
 </code></pre></div>
 </div>
 </div>

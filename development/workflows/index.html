@@ -2865,6 +2865,16 @@ The API reports the current month. Retain run metadata/timeline keys with Tempor
 and audit evidence. Expired Temporal executions return 404; retained receipts remain in
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
 Temporal; restrict access and retention for both stores.</p>
+<p>In the v0.6.0 checkout (unreleased), <code>GET /v1/workflow-runs</code> returns <code>next_cursor</code>
+alongside the legacy <code>next_offset</code>. Send that cursor with unchanged project,
+workflow and status filters to continue toward older runs. Empty filtered pages
+can have a continuation: <code>limit</code> bounds records scanned before filtering, keeping
+Temporal calls bounded. Cursor order uses creation time and run ID, so concurrent
+starts and pruning do not shift pages. <code>agentworkflows runs export --output runs.jsonl</code>
+and both SDKs follow these pages and export full retained run details. Retention and
+status changes continue while exporting; missing details fail the export, possibly
+after partial output. See <a href="../sdk-reference/#cli">paging and export</a> for limits.
+Gateway run/audit records remain Redis-backed; this does not add a PostgreSQL store.</p>
 <p>The <strong>AgentWorkflows Team Operations</strong> Grafana dashboard sits beside existing dashboards
 in <code>deploy/observability/dashboards</code>: throughput, failures, run states, approvals waiting,
 and shared spend. State/spend gauges refresh every 30 seconds; queries use <code>max</code> across
