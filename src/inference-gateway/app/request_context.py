@@ -352,7 +352,9 @@ async def authenticate_credential(
         _resolve_api_key(request, settings, request.app.state.key_record_set, digest)
         if settings.api_key_auth_enabled else ApiKeyOutcome(False, None, False)
     )
-    if not outcome.valid and not outcome.expired and digest and request.app.state.budget_tracker.backend == "redis":
+    if not outcome.valid and not outcome.expired and digest and (
+        request.app.state.budget_tracker.backend == "redis" or request.app.state.storage.backend == "postgres"
+    ):
         from app.managed_keys import lookup_key
 
         record = await lookup_key(request, digest)

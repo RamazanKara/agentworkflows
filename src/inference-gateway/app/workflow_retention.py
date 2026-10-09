@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import Request
 
+from app.storage import storage_call
 from app.workflow_budget import redis_call, run_key
 from app.workflow_content import content_key
 
@@ -16,6 +17,7 @@ async def retain_run(request: Request, run_id: str, data: dict[str, Any], closed
     settings = request.app.state.settings
     base = run_key(request, run_id)
     deadline = int((closed_at.timestamp() if closed_at else time()) + settings.run_record_retention_seconds)
+    deadline = await storage_call(request, "expire_run", request.state.sandbox_id, run_id, deadline)
     await redis_call(request, "setnx", base + ":retention", str(deadline))
     deadline = int(await redis_call(request, "get", base + ":retention") or deadline)
     keys = [

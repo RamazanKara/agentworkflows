@@ -87,6 +87,10 @@ class Settings:
     temporal_address: str = ""
     audit_log_enabled: bool = True
     audit_view_retention_seconds: int = 7776000
+    storage_backend: str = "redis"
+    storage_postgres_dsn: str = ""
+    storage_postgres_pool_size: int = 5
+    storage_postgres_timeout_seconds: float = 3.0
     # Where the audit chain head is persisted so a restart continues the chain of chains
     # instead of starting an unlinked one. "memory" keeps the pre-continuity behavior and
     # is the default, because durable storage is the operator's to provide.
@@ -219,6 +223,14 @@ class Settings:
     admin_console_enabled: bool = False
 
     def __post_init__(self) -> None:
+        if self.storage_backend not in {"redis", "postgres"}:
+            raise ValueError("storage_backend must be either 'redis' or 'postgres'")
+        if self.storage_backend == "postgres" and not self.storage_postgres_dsn.strip():
+            raise ValueError("STORAGE_POSTGRES_DSN is required when STORAGE_BACKEND=postgres")
+        if self.storage_postgres_pool_size <= 0:
+            raise ValueError("storage_postgres_pool_size must be greater than zero")
+        if not 0 < self.storage_postgres_timeout_seconds <= 60:
+            raise ValueError("storage_postgres_timeout_seconds must be greater than zero and at most 60")
         """Validate budget, auth, JWT, and runtime resilience fields after init."""
         for name, value in (
             ("sandbox_request_budget", self.sandbox_request_budget),
@@ -381,6 +393,10 @@ class Settings:
             audit_log_enabled=_bool_from_env("AUDIT_LOG_ENABLED", True),
             audit_chain_store_backend=os.getenv("AUDIT_CHAIN_STORE_BACKEND", "memory").strip().lower(),
             audit_view_retention_seconds=_positive_int_from_env("AUDIT_VIEW_RETENTION_SECONDS", 7776000),
+            storage_backend=os.getenv("STORAGE_BACKEND", "redis"),
+            storage_postgres_dsn=os.getenv("STORAGE_POSTGRES_DSN", ""),
+            storage_postgres_pool_size=_positive_int_from_env("STORAGE_POSTGRES_POOL_SIZE", 5),
+            storage_postgres_timeout_seconds=_positive_float_from_env("STORAGE_POSTGRES_TIMEOUT_SECONDS", 3.0),
             audit_chain_store_path=os.getenv(
                 "AUDIT_CHAIN_STORE_PATH", "/var/lib/inference-gateway/audit-chain-head.json"
             ),

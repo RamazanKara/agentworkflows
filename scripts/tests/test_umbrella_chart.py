@@ -45,6 +45,36 @@ def gateway_env(docs):
     HELM and yaml and (CHART / "charts").exists(), "Helm, PyYAML and built chart dependencies required"
 )
 class UmbrellaChartTests(unittest.TestCase):
+    def test_external_gateway_postgres_secret_and_defaults(self):
+        default = gateway_env(self.render())
+        self.assertEqual(default["STORAGE_BACKEND"]["value"], "redis")
+        values = {"inference-gateway": {"storage": {
+            "backend": "postgres", "postgres": {"existingSecret": {"name": "gateway-db", "key": "url"}},
+        }}}
+        docs = self.render(values)
+        env = gateway_env(docs)
+        self.assertEqual(env["STORAGE_POSTGRES_DSN"]["valueFrom"]["secretKeyRef"], {
+            "name": "gateway-db", "key": "url",
+        })
+        self.assertFalse(any(doc["metadata"]["name"] == "inference-gateway-postgres" for doc in docs))
+        self.assertIn("existingSecret.name", self.render({"inference-gateway": {"storage": {
+            "backend": "postgres",
+        }}}, valid=False))
+
+    def test_bundled_gateway_postgres_and_network_policy(self):
+        values = {"networkPolicy": {"enabled": True}, "inference-gateway": {"storage": {
+            "backend": "postgres", "postgres": {"bundled": {"enabled": True}},
+        }}}
+        docs = self.render(values)
+        name = "inference-gateway-postgres"
+        env = gateway_env(docs)
+        self.assertEqual(env["STORAGE_POSTGRES_DSN"]["valueFrom"]["secretKeyRef"], {"name": name, "key": "dsn"})
+        self.assertIn("dsn", resource(docs, "Secret", name)["data"])
+        self.assertEqual(resource(docs, "StatefulSet", name)["spec"]["replicas"], 1)
+        self.assertEqual(resource(docs, "NetworkPolicy", name)["spec"]["ingress"][0]["ports"][0]["port"], 5432)
+        values["inference-gateway"]["storage"]["postgres"]["existingSecret"] = {"name": "external"}
+        self.assertIn("no external", self.render(values, valid=False))
+
     def render(self, values=None, *, valid=True):
         with tempfile.TemporaryDirectory() as directory:
             overrides = Path(directory) / "values.yaml"

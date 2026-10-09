@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, replace
 from time import time
@@ -13,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.audit import chain_audit_event, emit_audit_record
 from app.policy import VALID_BACKENDS, ModelRoutingPolicy, SandboxPolicy
+from app.storage import storage_call
 from app.teams import require_role
 
 WORKFLOW_FIELDS = (
@@ -57,21 +57,15 @@ class EffectiveTeamSettings:
         }
 
 
-def settings_key(request: Request) -> str:
-    return f"{request.app.state.settings.sandbox_budget_key_prefix}:team-settings:{request.state.sandbox_id}"
-
-
 async def effective_team_settings(request: Request) -> EffectiveTeamSettings:
-    from app.workflow_budget import redis_call
-
     team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
     routing = request.app.state.model_routing_policy
     document = {"revision": 0, "updated_by": None, "updated_at": None, "overrides": {}}
     # Legacy memory-backed sandboxes keep their YAML-only behavior.
-    if team and request.app.state.budget_tracker.backend == "redis":
-        raw = await redis_call(request, "get", settings_key(request))
-        if raw:
-            document = json.loads(raw)
+    if team and (
+        request.app.state.storage.backend == "postgres" or request.app.state.budget_tracker.backend == "redis"
+    ):
+        document = await storage_call(request, "get_settings", request.state.sandbox_id) or document
     return layer_settings(team, routing, document)
 
 
@@ -184,8 +178,6 @@ def match_revision(value: str) -> int:
 async def change_settings(
     request: Request, response: Response, revision: int, changes: dict[str, Any], reset: str | None = None
 ) -> dict[str, Any]:
-    from app.workflow_budget import redis_call
-
     principal = require_settings_admin(request)
     current = await effective_team_settings(request)
     if reset is not None:
@@ -204,8 +196,8 @@ async def change_settings(
         "updated_at": time(),
         "overrides": overrides,
     }
-    if current.document["revision"] != revision or not await redis_call(
-        request, "eval", CHANGE, 1, settings_key(request), revision, json.dumps(document, allow_nan=False)
+    if current.document["revision"] != revision or not await storage_call(
+        request, "change_settings", request.state.sandbox_id, revision, document,
     ):
         raise HTTPException(
             409,

@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from collections.abc import Callable, Iterator
-from time import time
+from time import time as time
 from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
+from psycopg import Error as PostgresError
 from pydantic import BaseModel, Field
 from redis.exceptions import RedisError
 
 from app.audit import AUDIT_GENESIS, advance_chain
+from app.storage import get_storage
 from app.teams import require_role
 
 MAX_EVENTS = 100_000
@@ -65,16 +66,20 @@ class AuditVerification(BaseModel):
     boundaries: list[AuditPosition] = Field(default_factory=list)
 
 
-def view_key(request: Request) -> str:
-    return f"{request.app.state.settings.sandbox_budget_key_prefix}:audit:{request.state.sandbox_id}"
-
-
 def view_enabled(request: Request) -> bool:
-    return request.app.state.budget_tracker.backend == "redis" and request.app.state.settings.audit_log_enabled
+    return (
+        get_storage(request).backend == "postgres" or request.app.state.budget_tracker.backend == "redis"
+    ) and request.app.state.settings.audit_log_enabled
 
 
 def append_audit_view(request: Request, event: dict[str, Any]) -> None:
-    if not view_enabled(request) or not event.get("sandbox_id"):
+    if not view_enabled(request):
+        return
+    if not event.get("sandbox_id"):
+        try:
+            get_storage(request).append_audit(event, request.app.state.audit_chain_count, None)
+        except Exception:
+            logging.getLogger("uvicorn.error").exception("audit event could not be stored")
         return
     state = request.app.state
     if not hasattr(state, "audit_view_heads"):
@@ -93,10 +98,7 @@ def append_audit_view(request: Request, event: dict[str, Any]) -> None:
     entry["view_prev_hash"], entry["view_hash"] = advance_chain(previous, entry)
     state.audit_view_heads[team] = (count + 1, entry["view_hash"])
     try:
-        state.budget_tracker.client.eval(
-            APPEND, 1, view_key(request), json.dumps(entry, sort_keys=True),
-            MAX_EVENTS, state.settings.audit_view_retention_seconds,
-        )
+        get_storage(request).append_audit(event, state.audit_chain_count, entry)
     except Exception:
         # Keep the original log available during an outage; advancing the view head
         # before the write makes a lost append visible to subsequent verification.
@@ -104,25 +106,7 @@ def append_audit_view(request: Request, event: dict[str, Any]) -> None:
 
 
 def read_entries(request: Request, cursor: str | None = None, oldest_first: bool = False) -> Iterator[dict[str, Any]]:
-    client = request.app.state.budget_tracker.client
-    key = view_key(request)
-    cutoff = max(0, int((time() - request.app.state.settings.audit_view_retention_seconds) * 1000))
-    client.xtrim(key, minid=f"{cutoff}-0", approximate=False)
-    tail = client.xrevrange(key, count=1)
-    if not tail:
-        return
-    upper = f"({cursor}" if cursor else tail[0][0]
-    # Verification needs one retained snapshot: trimming between read batches could
-    # otherwise make a normal retention boundary look like a missing interior event.
-    while rows := (
-        client.xrange(key, max=upper)
-        if oldest_first else client.xrevrange(key, max=upper, count=READ_BATCH)
-    ):
-        for stream_id, fields in rows:
-            yield {**json.loads(fields["entry"]), "id": stream_id}
-        if oldest_first:
-            return
-        upper = f"({rows[-1][0]}"
+    yield from get_storage(request).audit_entries(request.state.sandbox_id, cursor, oldest_first)
 
 
 def actor_of(event: dict[str, Any]) -> str | None:
@@ -218,9 +202,9 @@ def require_audit_admin(request: Request, response: Response, start: float | Non
 async def read_view(function: Callable[..., dict[str, Any]], *args: Any) -> dict[str, Any]:
     try:
         return await asyncio.to_thread(function, *args)
-    except (RedisError, OSError) as exc:
+    except (RedisError, PostgresError, OSError) as exc:
         raise HTTPException(503, detail={
-            "reason": "audit_view_unavailable", "message": "Audit view Redis is unavailable. Retry after recovery.",
+            "reason": "audit_view_unavailable", "message": "Audit storage is unavailable. Retry after recovery.",
         }) from exc
 
 

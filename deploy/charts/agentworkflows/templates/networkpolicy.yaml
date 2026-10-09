@@ -32,6 +32,15 @@ spec:
         - protocol: TCP
           port: http
   egress:
+    {{- if $gateway.Values.storage.postgres.bundled.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "inference-gateway.fullname" $gateway }}-postgres
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - {protocol: TCP, port: 5432}
+    {{- end }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -85,6 +94,27 @@ spec:
         - protocol: TCP
           port: {{ .port }}
     {{- end }}
+{{- if $gateway.Values.storage.postgres.bundled.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "inference-gateway.fullname" $gateway }}-postgres
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "inference-gateway.fullname" $gateway }}-postgres
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "inference-gateway.selectorLabels" $gateway | nindent 14 }}
+      ports:
+        - {protocol: TCP, port: 5432}
+  egress: []
+{{- end }}
 {{- if index .Values "budget-redis" "enabled" }}
 ---
 apiVersion: networking.k8s.io/v1

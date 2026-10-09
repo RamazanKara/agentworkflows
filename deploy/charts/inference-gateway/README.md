@@ -215,6 +215,14 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `serviceAccount.name` | `""` |
 | `serviceMonitor.enabled` | `true` |
 | `serviceMonitor.interval` | `30s` |
+| `storage.backend` | `redis` |
+| `storage.postgres.bundled.enabled` | `false` |
+| `storage.postgres.bundled.image` | `postgres:16-alpine` |
+| `storage.postgres.bundled.storage` | `10Gi` |
+| `storage.postgres.existingSecret.key` | `dsn` |
+| `storage.postgres.existingSecret.name` | `""` |
+| `storage.postgres.poolSize` | `5` |
+| `storage.postgres.timeoutSeconds` | `3` |
 | `terminationGracePeriodSeconds` | `210` |
 | `tests.enabled` | `true` |
 | `tests.image.digest` | `sha256:9532d8c39891ca2ecde4d30d7710e01fb739c87a8b9299685c63704296b16028` |

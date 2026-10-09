@@ -58,6 +58,14 @@ inference-gateway:
     existingSecret:
       name: ""
       key: url
+  storage:
+    backend: redis
+    postgres:
+      existingSecret:
+        name: ""
+        key: dsn
+      bundled:
+        enabled: false
   deployment:
     create: false
   workflows:

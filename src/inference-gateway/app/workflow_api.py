@@ -16,6 +16,7 @@ from app.governance import effective_settings, governed, request_classification,
 from app.guardrails import _apply_output_guardrail, _apply_prompt_secret_mode
 from app.policy import DATA_CLASSIFICATIONS
 from app.settings import AdmissionPolicyError, Settings
+from app.storage import storage_call
 from app.team_settings import effective_team_settings
 from app.workflow_budget import INIT, RunBudget, effective_run_limits, nanodollars, redis_call, reserve_run, run_key
 from app.workflow_content import capture_field, capture_input, capture_mode
@@ -66,9 +67,9 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
                     403, detail="Worker workflow ID must be team/project/id; start runs through the workflow API."
                 )
             project = project_access(request, parts[1])
-            intent = await redis_call(request, "get", f"{settings.sandbox_budget_key_prefix}:start:{workflow_id}")
+            intent = await storage_call(request, "get_intent", workflow_id)
             if intent:
-                await save_metadata(request, str(run_id), json.loads(intent))
+                await save_metadata(request, str(run_id), intent)
         policy = team.workflows.get(budget.workflow) if team else None
         if team and team.workflows and policy is None:
             raise HTTPException(
@@ -108,7 +109,7 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
         if team and team.projects:
             from app.teams import project_access
 
-            metadata = await redis_call(request, "get", run_key(request, str(run_id)) + ":metadata")
+            metadata = await storage_call(request, "get_run", request.state.sandbox_id, str(run_id))
             if metadata:
                 return await describe_run(request, str(run_id))
         raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))

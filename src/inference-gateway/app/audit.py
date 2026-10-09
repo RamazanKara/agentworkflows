@@ -316,6 +316,8 @@ def open_audit_chain(app: FastAPI) -> dict[str, Any]:
     state.audit_chain_count = 1
     if state.settings.audit_log_enabled:
         emit_audit_record(event)
+        if state.settings.storage_backend == "postgres":
+            state.storage.append_audit(event, 1, None)
     persist_audit_head(app)
     return event
 

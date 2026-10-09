@@ -114,9 +114,10 @@ See the [template gallery](docs/templates.md) and [decision guide](docs/decision
   JSON Lines using either SDK or the CLI. Existing offset clients remain compatible.
 - Production Helm controls for TLS ingress, HA, NetworkPolicies and external stores.
 
-Run metadata, captured content, budgets, settings and the audit view still use Redis;
-Temporal's PostgreSQL stores workflow execution history, not these gateway records.
-A PostgreSQL system of record for gateway runs and audit remains the next storage item.
+The v0.6.x work adds an optional [PostgreSQL gateway store](docs/postgresql-storage.md)
+for run history, audit events and heads, settings and API-key metadata. Redis remains
+the default and still holds live budgets, sessions and captured content. Temporal's
+PostgreSQL remains separate. Validate storage cutover and recovery for each deployment.
 
 ## Next: deployment validation and integration coverage
 

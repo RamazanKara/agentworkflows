@@ -21,6 +21,7 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 from temporalio.service import RPCError, RPCStatusCode
 
 from app.audit import chain_audit_event, emit_audit_record
+from app.storage import storage_call
 from app.team_settings import effective_team_settings
 from app.teams import project_access, require_role
 from app.workflow_budget import effective_run_limits, redis_call, run_key
@@ -96,13 +97,9 @@ async def temporal_client(app: FastAPI) -> Any:
     return app.state.temporal_client
 
 
-def index_key(request: Request, project: str) -> str:
-    return f"{request.app.state.settings.sandbox_budget_key_prefix}:runs:{request.state.sandbox_id}:{project}"
-
-
 async def run_metadata(request: Request, run_id: str) -> dict[str, Any]:
-    raw = await redis_call(request, "get", run_key(request, run_id) + ":metadata")
-    if not raw:
+    data = await storage_call(request, "get_run", request.state.sandbox_id, run_id)
+    if not data:
         raise HTTPException(
             404,
             detail={
@@ -110,14 +107,12 @@ async def run_metadata(request: Request, run_id: str) -> dict[str, Any]:
                 "message": "Run not found in your team; use agentworkflows runs list.",
             },
         )
-    data: dict[str, Any] = json.loads(raw)
     project_access(request, data["project"])
     return data
 
 
 async def save_metadata(request: Request, run_id: str, data: dict[str, Any]) -> None:
-    await redis_call(request, "setnx", run_key(request, run_id) + ":metadata", json.dumps(data))
-    await redis_call(request, "zadd", index_key(request, data["project"]), {run_id: data["created_at"]})
+    await storage_call(request, "save_run", request.state.sandbox_id, run_id, data)
 
 
 async def record_step(request: Request) -> None:
@@ -128,7 +123,7 @@ async def record_step(request: Request) -> None:
     if not team or not team.projects:
         return
     try:
-        await redis_call(request, "rpush", run_key(request) + ":timeline", json.dumps(event))
+        await storage_call(request, "append_step", request.state.sandbox_id, request.state.workflow_run_id, event)
     except HTTPException:
         logging.getLogger("uvicorn.error").warning("Run timeline write failed; use the retained audit log.")
 
@@ -140,41 +135,54 @@ async def execution(request: Request, run_id: str) -> tuple[Any, dict[str, Any]]
 
 
 async def describe_run(request: Request, run_id: str, *, timeline: bool = True) -> dict[str, Any]:
-    handle, data = await execution(request, run_id)
-    description = await handle.describe(rpc_timeout=RPC_TIMEOUT)
-    if description.status.name.lower() in TERMINAL_STATES:
-        deadline = await retain_run(request, run_id, data, description.close_time)
-        if deadline <= time():
-            raise HTTPException(404, detail={"reason": "workflow_run_missing", "message": "Run retention expired."})
-    result = {k: v for k, v in data.items() if k not in {"input", "fingerprint"}}
-    result.update(run_id=run_id, status=description.status.name.lower())
-    if result["status"] == "completed":
-        value = await handle.result(rpc_timeout=RPC_TIMEOUT)
-        if timeline:
-            result["result"] = value
-        # A completed run can still end in a reviewer's rejection; lists show that outcome.
-        if isinstance(value, dict) and isinstance(value.get("status"), str):
-            result["outcome"] = value["status"]
-    if result["status"] == "running":
+    data = await run_metadata(request, run_id)
+    result = await storage_call(request, "get_snapshot", request.state.sandbox_id, run_id)
+    if result is None:
+        client = await temporal_client(request.app)
+        handle = client.get_workflow_handle(data["workflow_id"], run_id=run_id)
         try:
-            result["progress"] = await handle.query("status", rpc_timeout=RPC_TIMEOUT)
+            description = await handle.describe(rpc_timeout=RPC_TIMEOUT)
         except RPCError as exc:
-            if exc.status not in {RPCStatusCode.INVALID_ARGUMENT, RPCStatusCode.DEADLINE_EXCEEDED}:
-                raise
-            result["progress"] = {"stage": "worker_unavailable", "message": "Check the team's worker and task queue."}
-    raw = await redis_call(request, "hgetall", run_key(request, run_id))
-    team = (await effective_team_settings(request)).team
-    policy = team.workflows.get(data["workflow"]) if team else None
-    result["budget"] = {
-        "tokens": int(raw.get("tokens", 0)),
-        "cost_usd": int(raw.get("cost", 0)) / 1_000_000_000,
-        **effective_run_limits(raw, policy),
-    }
+            if exc.status == RPCStatusCode.NOT_FOUND and request.app.state.storage.backend == "postgres":
+                await retain_run(request, run_id, data, None)
+            raise
+        if description.status.name.lower() in TERMINAL_STATES:
+            deadline = await retain_run(request, run_id, data, description.close_time)
+            if deadline <= time():
+                raise HTTPException(404, detail={"reason": "workflow_run_missing", "message": "Run retention expired."})
+        result = {k: v for k, v in data.items() if k not in {"input", "fingerprint"}}
+        result.update(run_id=run_id, status=description.status.name.lower())
+        if result["status"] == "completed":
+            value = await handle.result(rpc_timeout=RPC_TIMEOUT)
+            result["result"] = value
+            # A completed run can still end in a reviewer's rejection; lists show that outcome.
+            if isinstance(value, dict) and isinstance(value.get("status"), str):
+                result["outcome"] = value["status"]
+        if result["status"] == "running":
+            try:
+                result["progress"] = await handle.query("status", rpc_timeout=RPC_TIMEOUT)
+            except RPCError as exc:
+                if exc.status not in {RPCStatusCode.INVALID_ARGUMENT, RPCStatusCode.DEADLINE_EXCEEDED}:
+                    raise
+                result["progress"] = {
+                    "stage": "worker_unavailable", "message": "Check the team's worker and task queue.",
+                }
+        raw = await redis_call(request, "hgetall", run_key(request, run_id))
+        team = (await effective_team_settings(request)).team
+        policy = team.workflows.get(data["workflow"]) if team else None
+        result["budget"] = {
+            "tokens": int(raw.get("tokens", 0)),
+            "cost_usd": int(raw.get("cost", 0)) / 1_000_000_000,
+            **effective_run_limits(raw, policy),
+        }
+        if result["status"] in TERMINAL_STATES:
+            await storage_call(request, "save_snapshot", request.state.sandbox_id, run_id, result)
+    if not timeline:
+        result.pop("result", None)
     if timeline:
-        rows = await redis_call(request, "lrange", run_key(request, run_id) + ":timeline", 0, -1)
+        rows = await storage_call(request, "run_steps", request.state.sandbox_id, run_id)
         result["timeline"] = []
-        for row in rows:
-            event = json.loads(row)
+        for event in rows:
             charge = event.get("workflow_charge") or {}
             attempts = event.get("routing_attempts", [])
             charges = [a.get("charged") or a.get("reserved") for a in attempts]
@@ -237,9 +245,7 @@ async def start_run(request: Request, body: StartRun) -> dict[str, Any]:
         "created_at": time(),
         "submitted_by": principal,
     }
-    intent_key = f"{request.app.state.settings.sandbox_budget_key_prefix}:start:{workflow_id}"
-    await redis_call(request, "setnx", intent_key, json.dumps(data))
-    data = json.loads(await redis_call(request, "get", intent_key))
+    data = await storage_call(request, "save_intent", workflow_id, data)
     if data["fingerprint"] != fingerprint:
         raise HTTPException(
             409,
@@ -331,7 +337,7 @@ def register_operation_routes(app: FastAPI) -> None:
     ) -> dict[str, Any]:
         selected = project_access(request, project)
         scope = {"team": request.state.sandbox_id, "project": selected, "workflow": workflow, "status": status}
-        key = index_key(request, selected)
+        position = None
         # Page the underlying index before filtering, keeping Temporal fan-out bounded.
         # Continuations advance even when this page has no matching runs.
         if cursor:
@@ -344,12 +350,7 @@ def register_operation_routes(app: FastAPI) -> None:
                     "reason": "run_cursor_invalid",
                     "message": "Use next_cursor with the same project and filters, without a nonzero offset.",
                 }) from exc
-            values = await redis_call(
-                request, "eval", RUN_PAGE, 1, key, position.created_at, str(position.run_id), limit,
-            )
-            ids = [(values[i], float(values[i + 1])) for i in range(0, len(values), 2)]
-        else:
-            ids = await redis_call(request, "zrevrange", key, offset, offset + limit, withscores=True)
+        ids = await storage_call(request, "page_runs", request.state.sandbox_id, selected, offset, limit + 1, position)
         rows = []
         removed = 0
         for run_id, _ in ids[:limit]:
@@ -360,7 +361,7 @@ def register_operation_routes(app: FastAPI) -> None:
             except HTTPException as exc:
                 if exc.status_code != 404 or exc.detail.get("reason") != "workflow_run_missing":
                     raise
-                await redis_call(request, "zrem", index_key(request, selected), run_id)
+                await storage_call(request, "remove_run_index", request.state.sandbox_id, selected, run_id)
                 removed += 1
                 continue
             except RPCError as exc:
@@ -504,15 +505,17 @@ def register_operation_routes(app: FastAPI) -> None:
                     for project in team.projects:
                         offset = 0
                         while True:
-                            ids = await redis_call(request, "zrange", index_key(request, project), offset, offset + 99)
+                            ids = await storage_call(request, "page_runs", team.sandbox_id, project, offset, 100)
                             removed = 0
-                            for run_id in ids:
+                            for run_id, _ in ids:
                                 try:
                                     row = await describe_run(request, run_id, timeline=False)
                                     await notify_run(request, row)
                                 except (HTTPException, RPCError, OSError):
-                                    if not await redis_call(request, "get", run_key(request, run_id) + ":metadata"):
-                                        await redis_call(request, "zrem", index_key(request, project), run_id)
+                                    if not await storage_call(request, "get_run", team.sandbox_id, run_id):
+                                        await storage_call(
+                                            request, "remove_run_index", team.sandbox_id, project, run_id,
+                                        )
                                         removed += 1
                                         continue
                                     logging.getLogger("uvicorn.error").warning(

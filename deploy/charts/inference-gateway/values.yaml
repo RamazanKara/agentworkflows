@@ -20,6 +20,19 @@ redis:
     name: ""
     key: url
 
+storage:
+  backend: redis
+  postgres:
+    existingSecret:
+      name: ""
+      key: dsn
+    poolSize: 5
+    timeoutSeconds: 3
+    bundled:
+      enabled: false
+      image: postgres:16-alpine
+      storage: 10Gi
+
 image:
   repository: ghcr.io/ramazankara/agentworkflows/inference-gateway
   # First-party image: release CI pins the published digest (set image.digest) after build.

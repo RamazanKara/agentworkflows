@@ -27,12 +27,16 @@ The view uses the existing budget Redis: set `SANDBOX_BUDGET_BACKEND=redis`,
 configure `SANDBOX_BUDGET_REDIS_URL` and enable Redis persistence. Keep
 `AUDIT_LOG_ENABLED=true`. Existing Redis-backed teams need no additional service.
 Without that configuration the page says **Audit log is turned off** and shows how to
-enable it. Redis read failures return 503 instead of an empty or verified trail.
+enable it. Storage read failures return 503 instead of an empty or verified trail.
+
+With `STORAGE_BACKEND=postgres`, the same APIs and verification use
+[PostgreSQL gateway storage](postgresql-storage.md). PostgreSQL also persists original
+events and process chain heads; the operator log format remains unchanged.
 
 `AUDIT_VIEW_RETENTION_SECONDS` defaults to **7776000** (90 days). In Helm, use
 `inference-gateway.traceability.auditViewRetentionSeconds` in the umbrella chart,
 or `traceability.auditViewRetentionSeconds` in the gateway chart. Each team is
-also limited to **100,000 events**. The earlier limit wins. Writes and reads trim
+also limited to **100,000 events** in Redis. The earlier limit wins. Redis writes and reads trim
 old entries; an inactive team's stream expires after the retention interval.
 Only events written after this feature is enabled are available; logs are not backfilled.
 

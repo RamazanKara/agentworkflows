@@ -58,6 +58,26 @@ spec:
           image: {{ include "inference-gateway.image" .Values.image | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
+            - name: STORAGE_BACKEND
+              value: {{ .Values.storage.backend | quote }}
+            - name: STORAGE_POSTGRES_POOL_SIZE
+              value: {{ .Values.storage.postgres.poolSize | quote }}
+            - name: STORAGE_POSTGRES_TIMEOUT_SECONDS
+              value: {{ .Values.storage.postgres.timeoutSeconds | quote }}
+            - name: STORAGE_POSTGRES_DSN
+              {{- if eq .Values.storage.backend "postgres" }}
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.storage.postgres.bundled.enabled }}
+                  name: {{ include "inference-gateway.fullname" . }}-postgres
+                  key: dsn
+                  {{- else }}
+                  name: {{ required "storage.postgres.existingSecret.name is required for external PostgreSQL" .Values.storage.postgres.existingSecret.name | quote }}
+                  key: {{ .Values.storage.postgres.existingSecret.key | quote }}
+                  {{- end }}
+              {{- else }}
+              value: ""
+              {{- end }}
             {{- if .Values.workflows.temporalAddress }}
             - name: TEMPORAL_ADDRESS
               value: {{ .Values.workflows.temporalAddress | quote }}

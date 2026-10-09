@@ -65,6 +65,10 @@ provider Secrets, image compatibility, upgrades and uninstalling.
 | `inference-gateway.sandboxPolicy.policy.enabled` | `true` |
 | `inference-gateway.sandboxPolicy.policy.policies` | `[{"budgets": {"costLimitUsd": 50, "estimatedTokenLimit": 200000}, "projects": ["default"], "providerCredentials": {"a...` |
 | `inference-gateway.serviceMonitor.enabled` | `false` |
+| `inference-gateway.storage.backend` | `redis` |
+| `inference-gateway.storage.postgres.bundled.enabled` | `false` |
+| `inference-gateway.storage.postgres.existingSecret.key` | `dsn` |
+| `inference-gateway.storage.postgres.existingSecret.name` | `""` |
 | `inference-gateway.traceability.auditChainStore.backend` | `redis` |
 | `inference-gateway.traceability.auditChainStore.redisUrl` | `redis://budget-redis:6379/0` |
 | `inference-gateway.traceability.defaultSandboxId` | `default` |

@@ -3,6 +3,34 @@
   "title": "inference-gateway values",
   "type": "object",
   "properties": {
+    "storage": {
+      "type": "object",
+      "properties": {
+        "backend": { "type": "string", "enum": ["redis", "postgres"] },
+        "postgres": {
+          "type": "object",
+          "properties": {
+            "existingSecret": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "key": { "type": "string", "minLength": 1 }
+              }
+            },
+            "poolSize": { "type": "integer", "minimum": 1 },
+            "timeoutSeconds": { "type": "number", "exclusiveMinimum": 0, "maximum": 60 },
+            "bundled": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "image": { "type": "string", "minLength": 1 },
+                "storage": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
     "traceability": {
       "type": "object",
       "properties": {

@@ -1473,6 +1473,57 @@
     },
     {
       "aliases": [],
+      "allowed_values": [
+        "redis",
+        "postgres"
+      ],
+      "app_default": "redis",
+      "chart_default": "redis",
+      "chart_value": "storage.backend",
+      "description": "Backend for gateway run history, audit events and heads, team settings and managed API-key metadata. Redis accounting and sessions remain separate.",
+      "field": "storage_backend",
+      "name": "STORAGE_BACKEND",
+      "sensitive": false,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "storage.postgres.existingSecret.name",
+      "description": "PostgreSQL connection string from the referenced Secret's dsn key. Required with the postgres backend; never put credentials in Helm values.",
+      "field": "storage_postgres_dsn",
+      "name": "STORAGE_POSTGRES_DSN",
+      "sensitive": true,
+      "type": "string"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 5,
+      "chart_default": 5,
+      "chart_value": "storage.postgres.poolSize",
+      "description": "Maximum PostgreSQL connections per gateway process; minimum pool size is one.",
+      "field": "storage_postgres_pool_size",
+      "name": "STORAGE_POSTGRES_POOL_SIZE",
+      "sensitive": false,
+      "type": "integer"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": 3.0,
+      "chart_default": 3,
+      "chart_value": "storage.postgres.timeoutSeconds",
+      "description": "Pool acquisition/startup and SQL statement timeout in seconds, greater than zero and at most 60. libpq connection timeout is at least two seconds.",
+      "field": "storage_postgres_timeout_seconds",
+      "name": "STORAGE_POSTGRES_TIMEOUT_SECONDS",
+      "sensitive": false,
+      "type": "float"
+    },
+    {
+      "aliases": [],
       "allowed_values": [],
       "app_default": "",
       "chart_default": "",

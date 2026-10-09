@@ -68,6 +68,7 @@ from app.settings import (
     validate_sandbox_id,
 )
 from app.state_migrations import migrate
+from app.storage import RedisStorage
 from app.tracing import configure_tracing, trace_request
 from app.workflow_api import bind_workflow, register_workflow_routes
 from app.workflow_credentials import bind_step_credential
@@ -114,6 +115,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.runtime_client = RuntimeClient(resolved)
     app.router.add_event_handler("shutdown", app.state.runtime_client.aclose)
     app.state.budget_tracker = build_sandbox_budget_tracker(resolved)
+    app.state.storage = RedisStorage(app.state)
+    if resolved.storage_backend == "postgres":
+        from app.postgres_storage import PostgresStorage
+
+        app.state.storage = PostgresStorage(resolved)
+
+        async def _storage_startup() -> None:
+            await asyncio.to_thread(app.state.storage.open)
+
+            async def retention() -> None:
+                while True:
+                    try:
+                        await asyncio.to_thread(app.state.storage.retain)
+                    except Exception:
+                        logging.getLogger("uvicorn.error").warning("Gateway storage retention failed; will retry.")
+                    await asyncio.sleep(60)
+
+            app.state.storage_retention_task = asyncio.create_task(retention())
+
+        app.router.add_event_handler("startup", _storage_startup)
 
     async def _migrate_state() -> None:
         if app.state.budget_tracker.backend == "redis":
@@ -133,7 +154,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # same id twice and the verifier would splice two unrelated chains into one and report
     # the seam as tampering.
     app.state.audit_chain_id = f"{os.getenv('HOSTNAME', 'gateway')}:{int(time())}:{uuid4().hex[:8]}"
-    app.state.chain_store = build_chain_store(resolved)
+    app.state.chain_store = app.state.storage if resolved.storage_backend == "postgres" else build_chain_store(resolved)
     app.state.background_tasks = set()
 
     async def _audit_chain_startup() -> None:
@@ -465,7 +486,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             dependency_ready &= await redis_dependency("budget_store", app.state.budget_tracker)
         if resolved.rate_limit_enabled and not resolved.rate_limit_fail_open:
             dependency_ready &= await redis_dependency("rate_limit_store", app.state.rate_limiter)
-        if resolved.audit_chain_store_backend == "redis":
+        if resolved.storage_backend == "postgres":
+            try:
+                reachable = bool(await asyncio.to_thread(app.state.storage.health))
+            except Exception:
+                reachable = False
+            dependencies["gateway_store"] = {"status": "ok" if reachable else "unavailable", "backend": "postgres"}
+            dependency_ready &= reachable
+        elif resolved.audit_chain_store_backend == "redis":
             dependency_ready &= await redis_dependency("audit_store", app.state.chain_store)
         if resolved.temporal_address:
             from app.workflow_operations import temporal_client
@@ -529,6 +557,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_responses_routes(app, resolved)
     register_workflow_routes(app, resolved)
     register_container_routes(app, resolved)
+
+    if resolved.storage_backend == "postgres":
+        async def _storage_shutdown() -> None:
+            task = app.state.storage_retention_task
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+            await asyncio.to_thread(app.state.storage.close)
+
+        app.router.add_event_handler("shutdown", _storage_shutdown)
 
     _install_openapi_contract(app, resolved)
     return app

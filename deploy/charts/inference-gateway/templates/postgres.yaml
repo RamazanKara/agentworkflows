@@ -1,0 +1,126 @@
+{{- if .Values.storage.postgres.bundled.enabled }}
+{{- if or (ne .Values.storage.backend "postgres") .Values.storage.postgres.existingSecret.name }}
+{{- fail "bundled PostgreSQL requires storage.backend=postgres and no external storage.postgres.existingSecret.name" }}
+{{- end }}
+{{- $name := printf "%s-postgres" (include "inference-gateway.fullname" .) }}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
+{{- $password := randAlphaNum 40 }}
+{{- if $existing }}
+{{- $password = index $existing.data "password" | b64dec }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+type: Opaque
+data:
+  password: {{ $password | b64enc | quote }}
+  dsn: {{ printf "postgresql://agentworkflows:%s@%s:5432/agentworkflows" $password $name | b64enc | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+  selector:
+    app.kubernetes.io/name: {{ $name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+spec:
+  serviceName: {{ $name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: {{ .Values.storage.postgres.bundled.image | quote }}
+          env:
+            - name: POSTGRES_USER
+              value: agentworkflows
+            - name: POSTGRES_DB
+              value: agentworkflows
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $name }}
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, agentworkflows, -d, agentworkflows]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: {{ .Values.storage.postgres.bundled.storage }}
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "inference-gateway.selectorLabels" . | nindent 14 }}
+      ports:
+        - {protocol: TCP, port: 5432}
+  egress: []
+{{- end }}
+{{- end }}

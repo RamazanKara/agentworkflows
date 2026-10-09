@@ -51,6 +51,12 @@ Redis and Temporal. Missing provider credentials leave the console
 available; **Providers & budgets** identifies the missing key and Secret setup.
 Inference still rejects requests until a provider key is configured.
 
+## Store gateway records in PostgreSQL
+
+For optional durable gateway records, follow [PostgreSQL gateway storage](postgresql-storage.md).
+It supports an external DSN Secret or a separate bundled PostgreSQL for development.
+Redis remains the default and is still used for live accounting and sessions.
+
 ## Add a provider key
 
 Create a Secret in the same namespace. This Bash example reads the key without echoing it:

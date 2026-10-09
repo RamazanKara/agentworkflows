@@ -15,9 +15,12 @@ JSON document per team in the existing budget Redis, at
 include these documents in backups. No new environment variables or Helm values
 are required.
 
-Every request reads effective settings from Redis over the loaded YAML defaults;
+With `STORAGE_BACKEND=postgres`, the same documents and revision checks use
+[PostgreSQL gateway storage](postgresql-storage.md). Include that database in backups.
+
+Every request reads effective settings from the selected store over the loaded YAML defaults;
 there is no process cache. Changes are visible across gateway replicas without
-restarting. Redis outages fail closed with 503. YAML changes still require the
+restarting. Storage outages fail closed with 503. YAML changes still require the
 normal configuration rollout, and do not erase overrides. **Reset to policy
 default** removes one override and uses the current loaded YAML default.
 

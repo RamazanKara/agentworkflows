@@ -1,7 +1,6 @@
-"""Team-managed credentials in the gateway's existing Redis state."""
+"""Team-managed credential metadata; only digests are persisted."""
 
 import hashlib
-import json
 import secrets
 from time import time
 from typing import Annotated, Any, Literal
@@ -13,8 +12,8 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validato
 from app.audit import chain_audit_event, emit_audit_record
 from app.key_records import KeyRecord
 from app.settings import validate_sandbox_id
+from app.storage import storage_call
 from app.teams import project_access, require_role
-from app.workflow_budget import redis_call
 
 Role = Literal["admin", "builder", "approver", "viewer"]
 Name = Annotated[str, Field(min_length=1, max_length=128, pattern=r"\S")]
@@ -75,21 +74,14 @@ class KeyUpdate(KeyCreate):
     role: Role | None = None
 
 
-def store_keys(request: Request) -> tuple[str, str, str]:
-    prefix = request.app.state.settings.sandbox_budget_key_prefix + ":keys"
-    return prefix + ":records", prefix + ":digests", prefix + ":team:" + request.state.sandbox_id
-
-
 def public_record(record: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in record.items() if key != "sha256"}
 
 
 async def lookup_key(request: Request, digest: str) -> KeyRecord | None:
-    records, digests, _ = store_keys(request)
-    raw = await redis_call(request, "eval", LOOKUP, 2, records, digests, digest, time())
-    if not raw:
+    record = await storage_call(request, "lookup_key", digest, time())
+    if not record:
         return None
-    record = json.loads(raw)
     if record["revoked_at"] is not None:
         raise HTTPException(401, detail={"reason": "api_key_revoked", "message": "This API key was revoked."})
     return KeyRecord(
@@ -119,15 +111,13 @@ async def change_key(request: Request, key_id: str, changes: dict[str, Any], act
     principal = require_role(request, "admin")
     if principal.get("key_id") == key_id and ("revoked_at" in changes or changes.get("role", "admin") != "admin"):
         raise HTTPException(409, detail="You cannot revoke or demote the key you are currently using.")
-    raw = await redis_call(
-        request, "eval", CHANGE, 1, store_keys(request)[0], key_id, request.state.sandbox_id,
-        principal.get("project") or "", json.dumps(changes),
+    record = await storage_call(
+        request, "change_key", request.state.sandbox_id, key_id, principal.get("project") or "", changes,
     )
-    if raw is None:
+    if record is None:
         raise HTTPException(404, detail="Key not found in your team or project.")
-    if raw == "revoked":
+    if record == "revoked":
         raise HTTPException(409, detail="This key is already revoked.")
-    record = json.loads(raw)
     key_receipt(request, action, record)
     return public_record(record)
 
@@ -136,10 +126,8 @@ def register_key_routes(app: FastAPI) -> None:
     @app.get("/v1/team/keys", tags=["teams"])
     async def list_keys(request: Request) -> dict[str, Any]:
         principal = require_role(request, "admin")
-        records, _, team = store_keys(request)
-        ids = await redis_call(request, "smembers", team)
-        rows = await redis_call(request, "hmget", records, sorted(ids)) if ids else []
-        keys = [public_record(json.loads(row)) for row in rows if row]
+        rows = await storage_call(request, "list_keys", request.state.sandbox_id)
+        keys = [public_record(row) for row in rows]
         if principal.get("project"):
             keys = [row for row in keys if row["project"] == principal["project"]]
         return {"keys": sorted(keys, key=lambda row: row["created_at"], reverse=True)}
@@ -156,9 +144,7 @@ def register_key_routes(app: FastAPI) -> None:
             "expires_at": body.expires_at.timestamp() if body.expires_at else None,
             "last_used_at": None, "revoked_at": None,
         }
-        await redis_call(
-            request, "eval", CREATE, 3, *store_keys(request), record["key_id"], record["sha256"], json.dumps(record),
-        )
+        await storage_call(request, "create_key", record)
         key_receipt(request, "create", record)
         return {**public_record(record), "key": key}
 

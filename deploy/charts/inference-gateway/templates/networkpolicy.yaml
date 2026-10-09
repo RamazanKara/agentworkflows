@@ -41,6 +41,15 @@ spec:
           port: metrics
     {{- end }}
   egress:
+    {{- if .Values.storage.postgres.bundled.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "inference-gateway.fullname" . }}-postgres
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - {protocol: TCP, port: 5432}
+    {{- end }}
     {{- if .Values.networkPolicy.allowDns }}
     - to:
         - namespaceSelector:

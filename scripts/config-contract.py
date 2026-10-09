@@ -43,6 +43,10 @@ class ServiceContract:
 
 
 GATEWAY_VARS = (
+    ConfigVar("STORAGE_BACKEND", "storage_backend", "string", "redis", "storage.backend", "redis", "Backend for gateway run history, audit events and heads, team settings and managed API-key metadata. Redis accounting and sessions remain separate.", allowed_values=("redis", "postgres")),
+    ConfigVar("STORAGE_POSTGRES_DSN", "storage_postgres_dsn", "string", "", "storage.postgres.existingSecret.name", "", "PostgreSQL connection string from the referenced Secret's dsn key. Required with the postgres backend; never put credentials in Helm values.", sensitive=True),
+    ConfigVar("STORAGE_POSTGRES_POOL_SIZE", "storage_postgres_pool_size", "integer", 5, "storage.postgres.poolSize", 5, "Maximum PostgreSQL connections per gateway process; minimum pool size is one."),
+    ConfigVar("STORAGE_POSTGRES_TIMEOUT_SECONDS", "storage_postgres_timeout_seconds", "float", 3.0, "storage.postgres.timeoutSeconds", 3, "Pool acquisition/startup and SQL statement timeout in seconds, greater than zero and at most 60. libpq connection timeout is at least two seconds."),
     ConfigVar("TEMPORAL_ADDRESS", "temporal_address", "string", "", "workflows.temporalAddress", "", "Temporal frontend host:port for workflow operations. When set, readiness also checks Temporal; empty uses the in-cluster workflow endpoint on demand."),
     ConfigVar("RUNTIME_BACKEND", "runtime_backend", "string", "ollama", "runtime.backend", "ollama", "Runtime adapter used by the gateway.", allowed_values=("ollama", "vllm")),
     ConfigVar("MODEL_ID", "model_id", "string", "qwen3.5:0.8b", "runtime.modelId", "qwen3.5:0.8b", "Default model used when requests omit a model."),
