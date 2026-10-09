@@ -15,7 +15,9 @@ export class GatewayActivities {
     } catch (error) {
       if (context.cancellationSignal.aborted) return await context.cancelled;
       if (error instanceof GatewayError) {
-        if (path.endsWith('/approval-waiting') && error.statusCode === 404) return { queued: false } as T;
+        if (path.endsWith('/approval-waiting') && error.statusCode === 404) return {
+          queued: false, policy_version: 1, approval_required: true, required_approvals: 1, approval_timeout_seconds: 604800,
+        } as T;
         if (error.reason === 'trigger_paused') return { paused: true } as T;
         const retryable = [429, 500, 502, 503, 504].includes(error.statusCode) &&
           !['workflow_store_required', 'provider_not_configured', 'tool_not_configured'].includes(error.reason ?? '');
@@ -39,7 +41,7 @@ export class GatewayActivities {
     }
     const runId = info.workflowExecution.runId;
     if (call.kind === 'approval_waiting') {
-      return this.request('POST', `/v1/workflow-runs/${runId}/approval-waiting`);
+      return this.request('POST', `/v1/workflow-runs/${runId}/approval-waiting`, Object.keys(call.payload).length ? call.payload : undefined);
     }
     await this.request('PUT', `/v1/workflow-runs/${runId}`, { ...call.budget, workflow: info.workflowType },
       { 'X-Workflow-ID': info.workflowExecution.workflowId });

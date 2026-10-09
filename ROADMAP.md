@@ -158,6 +158,24 @@ Template installation/versioning, multi-approver escalation, per-workflow secret
 and broader SDK parity remain open. Existing cron, cancellation/retry, approval
 expiry, trigger history and CSV export are unchanged.
 
+## Milestone 15: shared approval decisions — v0.9.0, unreleased
+
+Selected scope: multi-approver policies with configurable expiry. Teams need more than
+one verified review before consequential workflow steps. This fits the existing durable
+approval gate, settings store and role model without a new service or secret store.
+
+- Snapshot approval requirements, role, quorum and expiry when a run starts.
+- Count 1–10 distinct reviewers; reject duplicate or late votes; any rejection ends review.
+- Enforce the same durable deadline (60 seconds–7 days) in Python and TypeScript.
+- Edit policies in Team settings or Helm; show count/deadline and partial reviews in
+  the console. Version the worker gate API and preserve old workflow replay behavior.
+- Cover policy validation, role boundaries, retries, expiry, rejection, SDK compatibility
+  and console flows. Use the source-build Quickstart for deployment acceptance.
+
+Escalation, versioned template installation and per-workflow secrets remain open.
+Cron, cancellation/retry, trigger history, CSV export and SSO mapping already exist.
+Live OpenTelemetry acceptance and broader SDK parity remain separate integration work.
+
 ## Next: deployment validation and integration coverage
 
 Deployment-specific identity, networking, storage failover and retention remain operator

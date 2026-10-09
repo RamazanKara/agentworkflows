@@ -168,6 +168,18 @@ export interface Receipt {
   receipt: Record<string, unknown>;
 }
 
+export interface ApprovalProgress {
+  stage: string;
+  draft?: string;
+  reviewer?: string;
+  run_id?: string;
+  approval_policy_version?: 1;
+  required_approvals?: number;
+  approved_by?: string[];
+  expires_at?: string;
+  approver_role?: 'admin' | 'approver';
+}
+
 export interface WorkflowRun {
   run_id: string;
   workflow_id: string;
@@ -175,7 +187,7 @@ export interface WorkflowRun {
   project: string;
   trigger?: { name: string; kind: 'cron' | 'webhook' };
   status: 'running' | 'completed' | 'failed' | 'canceled' | 'terminated' | 'continued_as_new' | 'timed_out';
-  progress?: { stage: string; draft?: string; reviewer?: string; run_id?: string };
+  progress?: ApprovalProgress;
   result?: unknown;
   budget: RunBudget & { tokens: number; cost_usd: number };
   timeline?: Receipt[];

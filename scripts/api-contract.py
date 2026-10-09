@@ -39,7 +39,7 @@ CONTRACTS = {
     "inference-gateway": ServiceContract(
         service_dir=ROOT / "src/inference-gateway",
         title="AgentWorkflows Inference Gateway",
-        version="0.8.0",
+        version="0.9.0",
         snapshot=ROOT / "platform/api-contracts/inference-gateway.openapi.json",
         routes={
             "/healthz": RouteContract("get"),
@@ -175,6 +175,12 @@ CONTRACTS = {
             }
         ),
         required_schemas={
+            "ApprovalGateRequest": {"properties": {"policy_version"}, "required": {"policy_version"}},
+            "ApprovalGate": {
+                "properties": {"queued", "policy_version", "approval_required", "required_approvals",
+                               "approval_timeout_seconds", "approver_role"},
+                "required": {"queued"},
+            },
             "TeamSSO": {
                 "properties": {"team_id", "enabled", "provider_name", "role_source", "team_claim", "project_claim",
                                "role_claim", "default_role", "groups_claim", "group_role_mappings"},
@@ -260,7 +266,7 @@ CONTRACTS = {
     "rag-service": ServiceContract(
         service_dir=ROOT / "src/rag-service",
         title="AgentWorkflows RAG Service",
-        version="0.8.0",
+        version="0.9.0",
         snapshot=ROOT / "platform/api-contracts/rag-service.openapi.json",
         routes={
             "/healthz": RouteContract("get"),

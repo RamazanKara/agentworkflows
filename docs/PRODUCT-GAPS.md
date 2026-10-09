@@ -71,3 +71,22 @@ operator tasks. One-click/versioned templates, multi-approver escalation,
 per-workflow secrets, broader SDK parity and live trace export remain open. Cron,
 approval expiry, console cancellation/retry, trigger history and CSV export were
 already implemented and are not counted again in this milestone.
+
+
+## v0.9.0: shared approval decisions (unreleased)
+
+Selected scope: **multi-approver approval policies with configurable expiry**. This
+closes the team-review gap using the existing Temporal approval gate, revision-checked
+settings and authenticated reviewer identities. No new service or dependency is needed.
+
+A run saves its approval rules at launch. One to ten distinct identities must approve;
+each can vote once, any rejection ends the gate, and expiry is configurable from one
+minute to seven days. Python and TypeScript implement the same behavior; the console
+edits the policy and displays quorum progress and deadlines. Helm uses the existing
+workflow policy values. The default remains one reviewer and seven days.
+
+Acceptance includes API/worker contracts, duplicate delivery, role and project boundaries,
+expiry/rejection, legacy worker compatibility, SDK and console tests, and source-build
+Quickstart verification where Docker is available. Escalation, versioned one-click
+installation and per-workflow secrets remain open. OpenTelemetry live export and broader
+SDK parity remain integration work. Already-implemented features are not counted again.

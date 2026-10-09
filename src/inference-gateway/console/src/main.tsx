@@ -108,7 +108,7 @@ function App() {
     const configuration = api<AuthConfig>('', '/v1/auth/config', options).then(setConfig);
     const restore = api<BrowserSession>('', '/v1/auth/session', options).then(async value => {
       const team = await api<Team>(value.csrf_token, '/v1/team', options);
-      if (!controller.signal.aborted) setSession({ csrfToken: value.csrf_token, team, id: ++sequence.current, name: value.principal.name, keyId: value.principal.key_id });
+      if (!controller.signal.aborted) setSession({ csrfToken: value.csrf_token, team, id: ++sequence.current, name: value.principal.name, keyId: value.principal.key_id, reviewerId: value.principal.sub || value.principal.key_id });
     });
     Promise.allSettled([configuration, restore]).then(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
@@ -130,7 +130,7 @@ function App() {
     message={expired ? 'Your session expired. Sign in again to continue.' : signinError}
     cancel={session ? () => setAdding(false) : undefined}
     onSignIn={(csrfToken, team, principal) => {
-      setSession({ csrfToken, team, id: ++sequence.current, name: principal.name, keyId: principal.key_id });
+      setSession({ csrfToken, team, id: ++sequence.current, name: principal.name, keyId: principal.key_id, reviewerId: principal.sub || principal.key_id });
       setAdding(false); setExpired(false); setError('');
     }}/>;
   const active = route.startsWith('run/') || route === 'new' || route.startsWith('new/') ? 'runs' : route.split('?')[0];

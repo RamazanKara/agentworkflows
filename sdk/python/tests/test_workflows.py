@@ -155,7 +155,7 @@ def test_research_publishes_only_after_review(monkeypatch, approved):
     monkeypatch.setattr(WorkflowGateway, "text", AsyncMock(return_value="draft"))
     event = AsyncMock(return_value={"queued": True})
     monkeypatch.setattr(WorkflowGateway, "_call", event)
-    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: True)
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda name: name == "approval-notification-v1")
     monkeypatch.setattr("agentworkflows.workflows.workflow.info", lambda: SimpleNamespace(run_id="run"))
 
     async def review(condition, *, timeout):
@@ -178,6 +178,111 @@ def test_approval_timeout_is_actionable_and_not_retryable(monkeypatch):
     with pytest.raises(ApplicationError, match="start a new review") as exc:
         asyncio.run(ResearchWorkflow().approval("draft"))
     assert exc.value.non_retryable
+
+
+@pytest.mark.parametrize("reject", [False, True])
+def test_quorum_counts_distinct_reviewers_and_rejection_ends_gate(monkeypatch, reject):
+    from datetime import UTC, datetime
+
+    instance = ResearchWorkflow()
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: True)
+    monkeypatch.setattr("agentworkflows.workflows.workflow.now", lambda: datetime(2026, 10, 9, tzinfo=UTC))
+    event = AsyncMock(return_value={"policy_version": 1, "required_approvals": 2, "approval_timeout_seconds": 60})
+    monkeypatch.setattr(WorkflowGateway, "_call", event)
+
+    async def review(condition, *, timeout):
+        assert timeout.total_seconds() == 60
+        assert instance.review(True, " reviewer-a ")
+        assert not condition()
+        assert not instance.review(True, "reviewer-a")
+        assert not instance.review(False, "reviewer-a")
+        assert not instance.review(True, " reviewer-a ")
+        assert not instance.review(True, " ")
+        assert instance.review(not reject, "reviewer-b")
+        assert condition()
+        assert not instance.review(True, "reviewer-c")
+
+    monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", review)
+    assert asyncio.run(instance.approval("draft")) is not reject
+    assert instance.approved_by == (["reviewer-a"] if reject else ["reviewer-a", "reviewer-b"])
+    assert event.call_args.args[0].payload == {"policy_version": 1}
+
+
+def test_quorum_deadline_rejects_late_votes_and_sets_expired(monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime(2026, 10, 9, tzinfo=UTC)
+    instance = ResearchWorkflow()
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: True)
+    monkeypatch.setattr("agentworkflows.workflows.workflow.now", lambda: now)
+    monkeypatch.setattr(WorkflowGateway, "_call", AsyncMock(return_value={
+        "policy_version": 1, "required_approvals": 2, "approval_timeout_seconds": 60,
+    }))
+
+    async def wait(condition, *, timeout):
+        nonlocal now
+        assert instance.review(True, "first")
+        now += timedelta(seconds=60)
+        assert not instance.review(True, "late")
+        assert not instance.review(False, "late")
+        assert not condition()
+        raise TimeoutError
+
+    monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", wait)
+    with pytest.raises(ApplicationError, match="Approval expired"):
+        asyncio.run(instance.approval("draft"))
+    assert instance.stage == "expired"
+    assert instance.approved_by == ["first"]
+
+
+def test_policy_gate_rejects_early_votes_and_honors_automatic_approval(monkeypatch):
+    from datetime import UTC, datetime
+
+    instance = ResearchWorkflow()
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: True)
+    monkeypatch.setattr("agentworkflows.workflows.workflow.now", lambda: datetime(2026, 10, 9, tzinfo=UTC))
+
+    async def configure(self, call):
+        assert not instance.review(True, "early")
+        return {"policy_version": 1, "required_approvals": 2, "approval_required": False}
+
+    async def wait(condition, **kwargs):
+        assert condition()
+
+    monkeypatch.setattr(WorkflowGateway, "_call", configure)
+    monkeypatch.setattr("agentworkflows.workflows.workflow.wait_condition", wait)
+    assert asyncio.run(instance.approval("draft"))
+    assert instance.reviewer == "team policy" and instance.approved_by == []
+
+
+def test_new_worker_requires_versioned_gateway(monkeypatch):
+    monkeypatch.setattr("agentworkflows.workflows.workflow.patched", lambda _: True)
+    monkeypatch.setattr(WorkflowGateway, "_call", AsyncMock(return_value={"queued": True}))
+    with pytest.raises(ApplicationError, match="Upgrade the gateway"):
+        asyncio.run(ResearchWorkflow().approval("draft"))
+
+
+def test_approval_activity_requests_policy_without_initializing_budget(monkeypatch):
+    requests = []
+    gate = {"policy_version": 1, "required_approvals": 2, "approval_timeout_seconds": 60, "queued": True}
+
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(200, json=gate)
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        "agentworkflows.activities.httpx.AsyncClient",
+        lambda **kw: original(transport=httpx.MockTransport(respond), **kw),
+    )
+    environment = ActivityEnvironment()
+    environment.info = replace(environment.info, workflow_run_id="ebf9363a-7912-4a62-89b4-b0a28c169731")
+    result = asyncio.run(environment.run(
+        GatewayActivities("http://gateway", "worker").call, Call("approval_waiting", {"policy_version": 1}),
+    ))
+    assert result == gate and len(requests) == 1
+    assert requests[0].url.path.endswith("/approval-waiting")
+    assert json.loads(requests[0].content) == {"policy_version": 1}
 
 
 def test_worker_requires_key_before_connecting(monkeypatch):

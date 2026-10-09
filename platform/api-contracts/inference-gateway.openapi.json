@@ -38,6 +38,70 @@
         "title": "Approval",
         "type": "object"
       },
+      "ApprovalGate": {
+        "properties": {
+          "approval_required": {
+            "default": true,
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "approval_timeout_seconds": {
+            "default": 604800,
+            "title": "Approval Timeout Seconds",
+            "type": "integer"
+          },
+          "approver_role": {
+            "default": "approver",
+            "enum": [
+              "admin",
+              "approver"
+            ],
+            "title": "Approver Role",
+            "type": "string"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "const": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version"
+          },
+          "queued": {
+            "title": "Queued",
+            "type": "boolean"
+          },
+          "required_approvals": {
+            "default": 1,
+            "title": "Required Approvals",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "queued"
+        ],
+        "title": "ApprovalGate",
+        "type": "object"
+      },
+      "ApprovalGateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "policy_version": {
+            "const": 1,
+            "title": "Policy Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "policy_version"
+        ],
+        "title": "ApprovalGateRequest",
+        "type": "object"
+      },
       "AuditEntry": {
         "properties": {
           "chain_id": {
@@ -1894,7 +1958,7 @@
   "info": {
     "description": "OpenAI-compatible private inference gateway with sandbox traceability, admission controls, budget enforcement, redacted audit events, and runtime routing to Ollama or vLLM.",
     "title": "AgentWorkflows Inference Gateway",
-    "version": "0.8.0"
+    "version": "0.9.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4786,14 +4850,29 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApprovalGateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Waiting V1 Workflow Runs  Run Id  Approval Waiting Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ApprovalGate"
                 }
               }
             },

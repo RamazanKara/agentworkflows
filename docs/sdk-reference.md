@@ -44,7 +44,7 @@ The equivalent module entry point is `python -m agentworkflows.cli`.
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
 
-Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.8.0 checkout SDK and gateway,
+Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.9.0 checkout SDK and gateway,
 not the v0.5.1 wheel or images. `runs list` and `runs export` accept `--project`,
 `--workflow`, `--status`, `--cursor` and `--limit` (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have `next_cursor`.
@@ -299,3 +299,36 @@ before a start intent or Temporal execution is created; defaults are not inserte
 The [authenticated API table](workflows.md#authenticated-workflow-api) documents the run
 endpoints. The full [OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json)
 is checked in and can be viewed at `/docs` on the running gateway when enabled.
+
+
+## Approval quorum and expiry (v0.9.0)
+
+Upgrade the gateway before workers. Both SDKs' `ApprovalWorkflow.approval(draft)`
+read the run's saved policy through a versioned worker activity. No workflow-code
+change is needed for an existing approval gate. `review` accepts a vote, while
+`approval` resolves only after quorum or rejection; expiry raises `ApprovalExpired`.
+The TypeScript `ApprovalProgress` type includes the quorum, reviewer IDs and deadline.
+Python exposes the same fields in the status query and `GatewayClient.run()` response.
+
+Use the existing settings helpers to change the policy for new runs:
+
+```python
+settings = client.team_settings()
+client.update_team_settings({
+    "workflows.ResearchWorkflow.required_approvals": 2,
+    "workflows.ResearchWorkflow.approval_timeout_seconds": 3600,
+}, revision=settings["revision"])
+```
+
+```typescript
+const settings = await client.teamSettings();
+await client.updateTeamSettings({
+  'workflows.ResearchWorkflow.required_approvals': 2,
+  'workflows.ResearchWorkflow.approval_timeout_seconds': 3600,
+}, { revision: settings.revision });
+```
+
+`approve_run` / `approveRun` retain their existing signature. A successful positive
+vote can leave the run waiting for other reviewers; inspect the run before assuming
+it completed. Repeating a vote never adds a reviewer. See [approval policies](workflows.md#approval-policies)
+for identity, replay, automatic decisions and upgrade boundaries.

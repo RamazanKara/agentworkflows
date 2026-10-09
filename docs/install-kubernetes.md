@@ -441,3 +441,14 @@ kind delete cluster --name aw
 
 Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
 `temporal-postgres-auth` Secret or delete the old claim before a fresh evaluation install.
+
+
+### Approval policies (v0.9.0 source build)
+
+Build and roll out the v0.9.0 gateway before upgrading the worker image/SDK. Under the
+existing workflow policy in `inference-gateway.sandboxPolicy.policy.policies`, use
+`requiredApprovals: 2` and `approvalTimeoutSeconds: 3600` to require two distinct
+reviewers within an hour. The shipped Research defaults remain one/seven days.
+Team settings offers the same controls without a rollout and overrides YAML values.
+A new run snapshots the policy; an existing waiting run keeps its original rules.
+See [approval policies](workflows.md#approval-policies) for the full semantics.

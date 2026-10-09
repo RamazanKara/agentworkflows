@@ -2,7 +2,7 @@
 
 Use this checklist before trusting a public release in a customer-owned cluster.
 
-For the unreleased v0.6.0 checkout, run the local gate before tagging:
+For the unreleased v0.9.0 checkout, run the local gate before tagging:
 
 ```bash
 make lint test-gateway test-scripts api-contract config-contract chart-docs

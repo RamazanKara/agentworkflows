@@ -216,8 +216,8 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
 async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str] | None = None) -> dict[str, Any]:
     principal = require_role(request, "admin", "builder")
     project = project_access(request, body.project)
-    team = request.app.state.sandbox_policy_set.policies[request.state.sandbox_id]
-    if body.workflow not in team.workflows:
+    team = (await effective_team_settings(request)).team
+    if team is None or body.workflow not in team.workflows:
         raise HTTPException(
             403,
             detail={"reason": "workflow_not_allowed", "message": "Choose a workflow from GET /v1/workflow-policies."},
@@ -246,6 +246,13 @@ async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str]
         "fingerprint": fingerprint,
         "created_at": time(),
         "submitted_by": principal,
+        "approval_policy": {
+            field: getattr(team.workflows[body.workflow], field)
+            for field in (
+                "approval_required", "approval_threshold_usd", "approver_role",
+                "required_approvals", "approval_timeout_seconds",
+            )
+        },
         **origin,
     }
     data = await storage_call(request, "save_intent", workflow_id, data)
@@ -448,8 +455,9 @@ def register_operation_routes(app: FastAPI) -> None:
         handle, data = await execution(request, str(run_id))
         team = (await effective_team_settings(request)).team
         policy = team.workflows.get(data["workflow"]) if team else None
-        if policy and principal["role"] != "admin":
-            require_role(request, policy.approver_role)
+        approval_policy = data.get("approval_policy", {})
+        if principal["role"] != "admin":
+            require_role(request, approval_policy.get("approver_role", policy.approver_role if policy else "approver"))
         reviewer = principal.get("sub") or principal.get("key_id")
         update_id = hashlib.sha256(json.dumps([str(run_id), reviewer, body.approved]).encode()).hexdigest()
         try:
@@ -462,6 +470,13 @@ def register_operation_routes(app: FastAPI) -> None:
                 accepted = False
                 if description.status.name == "RUNNING":
                     progress = await handle.query("status", rpc_timeout=RPC_TIMEOUT)
+                    if (
+                        approval_policy.get("required_approvals", 1) > 1
+                        or approval_policy.get("approval_timeout_seconds", 604800) != 604800
+                    ) and progress.get("approval_policy_version") != 1:
+                        raise HTTPException(
+                            409, detail="Upgrade the worker SDK to 0.9.0 for this approval policy."
+                        ) from None
                     if progress.get("stage") == "awaiting_approval":
                         accepted = await handle.execute_update(
                             "review", args=[body.approved, reviewer], id=update_id, rpc_timeout=RPC_TIMEOUT

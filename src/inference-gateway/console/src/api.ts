@@ -13,8 +13,8 @@ export type Team = {
   notifications?: { channels: string[]; budget_threshold: number };
   provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
 };
-export type Session = { csrfToken: string; team: Team; id: number; name?: string; keyId?: string };
-export type BrowserSession = { csrf_token: string; principal: { key_id?: string; name?: string }; sandbox_id: string };
+export type Session = { csrfToken: string; team: Team; id: number; name?: string; keyId?: string; reviewerId?: string };
+export type BrowserSession = { csrf_token: string; principal: { key_id?: string; sub?: string; name?: string }; sandbox_id: string };
 export type AuthConfig = { api_key: boolean; jwt: boolean; oidc: { enabled: boolean; provider_name: string; login_url: string } };
 export type TeamSSO = {
   team_id: string; enabled: boolean; provider_name: string | null; role_source: 'groups' | 'claim';
@@ -36,6 +36,7 @@ export type InputSchema = {
 export type Policy = {
   allowedModels: string[]; allowedProviders: string[]; tokenLimit: number; costLimitUsd: number;
   approvalRequired?: boolean; approvalThresholdUsd?: number; approverRole?: string;
+  requiredApprovals?: number; approvalTimeoutSeconds?: number;
   inputSchema?: InputSchema | null; captureContent?: 'none' | 'redacted' | 'full';
 };
 export type Step = {
@@ -49,7 +50,7 @@ export type Step = {
 export type Run = {
   run_id: string; workflow: string; project: string; created_at: number; status: string;
   trigger?: { name: string; kind: 'cron' | 'webhook' };
-  progress?: { stage: string; draft?: string; message?: string };
+  progress?: { stage: string; draft?: string; message?: string; required_approvals?: number; approved_by?: string[]; expires_at?: string; approver_role?: string };
   budget: { tokens: number; cost_usd: number; token_limit: number; cost_limit_usd: number };
   timeline?: Step[];
   result?: unknown;

@@ -41,6 +41,8 @@ default** removes one override and uses the current loaded YAML default.
 | `workflows.<name>.approval_required` | `workflows.<name>.approvalRequired` (default `true`) | Require review at the workflow's approval gate |
 | `workflows.<name>.approval_threshold_usd` | `workflows.<name>.approvalThresholdUsd` (default `0`) | Require review when run spend at the gate is at least this amount |
 | `workflows.<name>.approver_role` | `workflows.<name>.approverRole` (default `approver`) | `approver` or `admin`; admins can always review |
+| `workflows.<name>.required_approvals` | `workflows.<name>.requiredApprovals` (default `1`) | Integer 1–10 distinct verified reviewers |
+| `workflows.<name>.approval_timeout_seconds` | `workflows.<name>.approvalTimeoutSeconds` (default `604800`) | Integer 60–604800 seconds from the review gate |
 | `workflows.<name>.allowed_providers` | `workflows.<name>.allowedProviders` | Provider names eligible for this workflow |
 | `workflows.<name>.capture_content` | Workflow `captureContent`, otherwise team default | Override capture for this workflow's future steps |
 | `model_routes.<alias>` | Alias assignment in `model-routing.yaml` | Canonical ID of an existing route |
@@ -127,9 +129,11 @@ Approval settings govern the existing SDK `ApprovalWorkflow` review gate. A run
 below the threshold, or with approval disabled, receives an audited automatic
 decision there. Spend includes conservative reservations for unreported calls.
 These settings do not insert a review step into workflow code that has no gate.
-Changing the threshold affects subsequent gate checks, not decisions already
-made or reviews already waiting. The current approver role is checked when a human
-submits a decision, including for waiting runs.
+Since v0.9.0, all approval fields are saved with the run at launch; changing them
+only affects new runs. A retried start keeps its saved policy, while retrying a failed
+run creates a new run using current settings. Existing gates from older releases retain
+their one-reviewer/seven-day behavior. See [approval policies](workflows.md#approval-policies)
+for upgrade order, reviewer identity and deadline semantics.
 
 Routes, prices, credentials, model allowlists and egress stay in YAML. Selecting an
 alias target cannot bypass those controls; select a route the workflow already

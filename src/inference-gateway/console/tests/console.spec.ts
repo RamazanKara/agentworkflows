@@ -143,7 +143,9 @@ const settings = (): TeamSettings => ({
     'workflows.ResearchWorkflow.cost_limit_usd': { value: 5, policy_default: 5, source: 'policy' },
     'workflows.ResearchWorkflow.approval_required': { value: true, policy_default: true, source: 'policy' },
     'workflows.ResearchWorkflow.approval_threshold_usd': { value: 0, policy_default: 0, source: 'policy' },
-    'workflows.ResearchWorkflow.approver_role': { value: 'approver', policy_default: 'approver', source: 'policy' },
+      'workflows.ResearchWorkflow.approver_role': { value: 'approver', policy_default: 'approver', source: 'policy' },
+      'workflows.ResearchWorkflow.required_approvals': { value: 1, policy_default: 1, source: 'policy' },
+      'workflows.ResearchWorkflow.approval_timeout_seconds': { value: 604800, policy_default: 604800, source: 'policy' },
     'workflows.ResearchWorkflow.allowed_providers': { value: ['openai', 'anthropic'], policy_default: ['openai', 'anthropic'], source: 'policy' },
     'workflows.ResearchWorkflow.capture_content': { value: 'none', policy_default: 'none', source: 'policy' },
     'model_routes.research': { value: 'demo-openai', policy_default: 'demo-openai', source: 'policy' },
@@ -1299,4 +1301,57 @@ test('key access editing submits changed fields and preserves drafts after a con
   await page.getByRole('button', { name: 'Save key', exact: true }).click();
   await expect(page.getByText('Build bot updated. Access changes apply immediately.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Edit Build bot', exact: true })).toBeVisible();
+});
+
+
+for (const width of [393, 1440]) {
+  test(`partial approvals stay visible with quorum and deadline at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const current: Run = run({ progress: { stage: 'awaiting_approval', draft: 'A draft for review.',
+      required_approvals: 2, approved_by: [] as string[], expires_at: '2099-10-09T12:00:00Z', approver_role: 'approver' } });
+    await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: new URL(route.request().url()).searchParams.get('project') === 'default' ? [current] : [], next_cursor: null } }));
+    await page.route(`**/v1/workflow-runs/${id}/approve`, route => {
+      expect(route.request().postDataJSON()).toEqual({ approved: true });
+      current.progress!.approved_by!.push('admin');
+      return route.fulfill({ json: { approved: true, reviewer: 'admin' } });
+    });
+    await login(page, 'admin', '/console/#approvals');
+    await expect(page.getByText(/0 of 2 approvals received/)).toBeVisible();
+    await page.getByRole('button', { name: 'Approve', exact: true }).click();
+    await expect(page.getByText(/1 of 2 approvals received/)).toBeVisible();
+    await expect(page.getByText(/You have already approved/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Reject', exact: true })).toBeDisabled();
+    await expect(page.getByText(/Expires.*2099/)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+test('approval deadline and admin-only policy disable unavailable decisions', async ({ page }) => {
+  const current: Run = run({ progress: { stage: 'awaiting_approval', draft: 'Review', required_approvals: 2,
+    approved_by: [], expires_at: '2020-01-01T00:00:00Z', approver_role: 'admin' } });
+  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: new URL(route.request().url()).searchParams.get('project') === 'default' ? [current] : [], next_cursor: null } }));
+  await login(page, 'approver', '/console/#approvals');
+  await expect(page.getByText(/An admin must review/)).toBeVisible();
+  await expect(page.getByText(/deadline has passed/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
+});
+
+test('team settings saves quorum and expiry together at the current revision', async ({ page }) => {
+  await login(page, 'admin', '/console/#team');
+  const count = page.getByLabel('Research · Required reviewers', { exact: true });
+  const expiry = page.getByLabel('Research · Approval expiry (seconds)', { exact: true });
+  await expect(count).toHaveValue('1');
+  await expect(expiry).toHaveValue('604,800');
+  await count.fill('2');
+  await expiry.fill('3600');
+  const saved = page.waitForRequest(request => request.url().endsWith('/v1/team/settings') && request.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  const request = await saved;
+  expect(request.headers()['if-match']).toBe('0');
+  expect(request.postDataJSON()).toEqual({ fields: {
+    'workflows.ResearchWorkflow.required_approvals': 2,
+    'workflows.ResearchWorkflow.approval_timeout_seconds': 3600,
+  } });
+  await expect(page.getByText(/Settings saved/)).toBeVisible();
 });

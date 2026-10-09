@@ -132,6 +132,8 @@ inference-gateway:
               allowedEgress: [http://research-tools:8000, https://api.openai.com, https://api.anthropic.com]
               tokenLimit: 10000
               costLimitUsd: 5
+              requiredApprovals: 1
+              approvalTimeoutSeconds: 604800
   auth:
     enabled: true
     oidc:

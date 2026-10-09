@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.9.0 - Unreleased
+
+- Add per-workflow approval quorums (1–10 distinct verified identities) and expiry
+  (60 seconds–7 days). Snapshot approval rules at run creation; settings changes
+  affect new runs. Each identity votes once, any rejection ends the gate, and
+  duplicate delivery cannot advance the quorum. Defaults remain one reviewer/seven days.
+- Apply the same durable quorum and deadline behavior in Python and TypeScript
+  workflow SDKs. Preserve replay of existing gates with Temporal patch markers;
+  reject advanced policies on old workers. Upgrade gateway before SDK workers.
+- Configure policies in Team settings and Helm, and show approval counts, deadlines,
+  and already-reviewed drafts in the console. Keep partial approvals visible.
+  Add the versioned worker gate contract, regression tests and a two-reviewer trial.
+- Advance source, SDK and chart versions to 0.9.0. Keep published Quickstart image
+  defaults on v0.5.1; verify this candidate with the documented source-build path.
+
 ## v0.8.0 - Unreleased
 
 - Map company OIDC groups to team roles with exact, team-scoped matches. Nonempty

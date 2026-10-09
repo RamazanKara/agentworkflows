@@ -1,9 +1,9 @@
 import {
   ApplicationFailure, condition, defineQuery, defineSignal, defineUpdate,
-  proxyActivities, setHandler, sleep, workflowInfo,
+  patched, proxyActivities, setHandler, sleep, workflowInfo,
 } from '@temporalio/workflow';
 import type { ActivityOptions } from '@temporalio/workflow';
-import type { Call, ChatCompletion, GovernedActivities, TriggerRequest, TriggerResult } from './types';
+import type { ApprovalProgress, Call, ChatCompletion, GovernedActivities, TriggerRequest, TriggerResult } from './types';
 
 export type InputProperty = {
   type: 'string' | 'number' | 'integer' | 'boolean' | 'array';
@@ -85,13 +85,18 @@ export class WorkflowGateway {
 
 export const approveSignal = defineSignal<[boolean, string]>('approve');
 export const reviewUpdate = defineUpdate<boolean, [boolean, string]>('review');
-export const statusQuery = defineQuery<{ stage: string; draft?: string; reviewer?: string; run_id?: string }>('status');
+export const statusQuery = defineQuery<ApprovalProgress>('status');
 
 export class ApprovalWorkflow {
   stage = 'running';
   draft = '';
   decision: boolean | undefined;
   reviewer = '';
+  requiredApprovals = 1;
+  approvedBy: string[] = [];
+  expiresAt?: number;
+  approverRole: 'admin' | 'approver' = 'approver';
+  approvalPolicyVersion?: 1;
 
   constructor() {
     setHandler(approveSignal, (approved, reviewer) => this.approve(approved, reviewer));
@@ -105,16 +110,30 @@ export class ApprovalWorkflow {
     }
     this.draft = draft;
     this.stage = 'awaiting_approval';
+    const versioned = patched('approval-policy-v1');
+    if (versioned) this.stage = 'configuring_approval';
     const activities = proxyActivities<GovernedActivities>({
       startToCloseTimeout: '3 minutes', scheduleToCloseTimeout: '15 minutes',
       retry: { initialInterval: '1 second', backoffCoefficient: 2, maximumInterval: '30 seconds', maximumAttempts: 5 },
     });
-    await activities['agentworkflows.call']({
-      kind: 'approval_waiting', payload: {}, tool: '',
+    const gate = await activities['agentworkflows.call']({
+      kind: 'approval_waiting', payload: versioned ? { policy_version: 1 } : {}, tool: '',
       budget: { token_limit: 10_000, cost_limit_usd: 5 }, data_classification: 'internal',
     });
-    if (!await condition(() => this.decision !== undefined, '7 days')) {
-      throw ApplicationFailure.nonRetryable('Approval expired after seven days; start a new review.', 'ApprovalExpired');
+    let timeout = 604800;
+    if (versioned) {
+      if (gate.policy_version !== 1) throw ApplicationFailure.nonRetryable('Upgrade the gateway to 0.9.0 before the worker SDK.', 'ApprovalPolicyUnsupported');
+      this.approvalPolicyVersion = 1;
+      this.requiredApprovals = Number(gate.required_approvals ?? 1);
+      this.approverRole = gate.approver_role === 'admin' ? 'admin' : 'approver';
+      timeout = Number(gate.approval_timeout_seconds ?? 604800);
+      this.expiresAt = Date.now() + timeout * 1000;
+      this.stage = 'awaiting_approval';
+      if (gate.approval_required === false) { this.decision = true; this.reviewer = 'team policy'; }
+    }
+    if (!await condition(() => this.decision !== undefined, versioned ? timeout * 1000 : '7 days')) {
+      this.stage = 'expired';
+      throw ApplicationFailure.nonRetryable('Approval expired; start a new review.', 'ApprovalExpired');
     }
     this.stage = this.decision ? 'approved' : 'rejected';
     return this.decision === true;
@@ -122,20 +141,29 @@ export class ApprovalWorkflow {
 
   approve(approved: boolean, reviewer: string): void {
     if (this.stage === 'awaiting_approval' && this.decision === undefined &&
-        typeof approved === 'boolean' && typeof reviewer === 'string' && reviewer.trim()) {
-      this.decision = approved;
+        typeof approved === 'boolean' && typeof reviewer === 'string' && reviewer.trim() &&
+        !this.approvedBy.includes(reviewer.trim()) && (this.expiresAt === undefined || Date.now() < this.expiresAt)) {
       this.reviewer = reviewer.trim();
+      if (approved) this.approvedBy.push(this.reviewer);
+      if (!approved || this.approvedBy.length >= this.requiredApprovals) this.decision = approved;
     }
   }
 
   review(approved: boolean, reviewer: string): boolean {
-    if (this.stage !== 'awaiting_approval' || this.decision !== undefined) return false;
+    if (this.stage !== 'awaiting_approval' || this.decision !== undefined || this.approvedBy.includes(reviewer)) return false;
+    const count = this.approvedBy.length;
     this.approve(approved, reviewer);
-    return this.decision !== undefined;
+    return this.decision !== undefined || this.approvedBy.length > count;
   }
 
-  status(): { stage: string; draft: string; reviewer: string; run_id: string } {
-    return { stage: this.stage, draft: this.draft, reviewer: this.reviewer, run_id: workflowInfo().runId };
+  status(): ApprovalProgress {
+    return {
+      stage: this.stage, draft: this.draft, reviewer: this.reviewer, run_id: workflowInfo().runId,
+      ...(this.approvalPolicyVersion ? {
+        approval_policy_version: this.approvalPolicyVersion, required_approvals: this.requiredApprovals,
+        approved_by: [...this.approvedBy], expires_at: new Date(this.expiresAt!).toISOString(), approver_role: this.approverRole,
+      } : {}),
+    };
   }
 }
 

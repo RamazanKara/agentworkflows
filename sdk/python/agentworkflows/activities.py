@@ -60,10 +60,13 @@ class GatewayActivities:
         try:
             async with httpx.AsyncClient(base_url=self.base_url, headers=headers, timeout=120) as client:
                 if call.kind == "approval_waiting":
-                    response = await client.post(f"/v1/workflow-runs/{info.workflow_run_id}/approval-waiting")
+                    response = await client.post(
+                        f"/v1/workflow-runs/{info.workflow_run_id}/approval-waiting", json=call.payload or None
+                    )
                     # Legacy direct-Temporal runs are not indexed in the console.
                     if response.status_code == 404:
-                        return {"queued": False}
+                        return {"queued": False, "policy_version": 1, "approval_required": True,
+                                "required_approvals": 1, "approval_timeout_seconds": 604800}
                     _raise_for_status(response)
                     return response.json()
                 initialized = await client.put(

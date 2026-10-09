@@ -353,6 +353,10 @@ class WorkflowPolicy(BaseModel):
     approval_required: bool = Field(default=True, alias="approvalRequired", strict=True)
     approval_threshold_usd: float = Field(default=0, alias="approvalThresholdUsd", ge=0, allow_inf_nan=False)
     approver_role: Literal["admin", "approver"] = Field(default="approver", alias="approverRole")
+    required_approvals: int = Field(default=1, alias="requiredApprovals", ge=1, le=10, strict=True)
+    approval_timeout_seconds: int = Field(
+        default=604800, alias="approvalTimeoutSeconds", ge=60, le=604800, strict=True
+    )
     agents: dict[str, WorkspaceAgent] = Field(default_factory=dict)
     triggers: dict[str, WorkflowTrigger] = Field(default_factory=dict)
     capture_content: Literal["none", "redacted", "full"] = Field(default="none", alias="captureContent")

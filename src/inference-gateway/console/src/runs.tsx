@@ -186,18 +186,25 @@ function Review({ session, run, onDone, title = 'Review the draft', eyebrow, met
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const progress = run.progress;
+  const reviewed = progress?.approved_by?.includes(session.reviewerId || '');
+  const expired = progress?.expires_at ? Date.parse(progress.expires_at) <= Date.now() : false;
+  const allowed = canApprove(session) && (progress?.approver_role !== 'admin' || session.team.role === 'admin');
   async function decide(approved: boolean) {
     setBusy(true); setError('');
     try {
       await api(session.csrfToken, `/v1/workflow-runs/${run.run_id}/approve`, { method: 'POST', body: JSON.stringify({ approved }) });
-      setNotice(approved ? 'Approved. The workflow can continue.' : 'Rejected. The publish step will not run.'); onDone();
+      setNotice(approved ? (progress?.required_approvals || 1) > 1 ? 'Approval recorded. Waiting for the required reviewers.' : 'Approved. The workflow can continue.' : 'Rejected. The publish step will not run.'); onDone();
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
   }
   return <section className="review panel">{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{meta}
+    {progress?.required_approvals !== undefined && <p className="callout">{progress.approved_by?.length || 0} of {progress.required_approvals} approvals received.{progress.expires_at && <> Expires {date(Date.parse(progress.expires_at) / 1000)}.</>} Any rejection stops approval.</p>}
+    {reviewed && <p>You have already approved this draft. Another reviewer must approve.</p>}
+    {expired && <p>The approval deadline has passed. Refresh to see the final run status.</p>}
     <div className="draft prose"><Prose text={draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}/></div>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
-    {canApprove(session) ? <div className="actions"><button disabled={busy || !!notice || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">An approver or admin must review this draft. Use Switch account to sign in as one.</p>}
+    {allowed ? <div className="actions"><button disabled={busy || !!notice || reviewed || expired || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice || reviewed || expired} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">{progress?.approver_role === 'admin' ? 'An admin' : 'An approver or admin'} must review this draft. Use Switch account to sign in as one.</p>}
   </section>;
 }
 
@@ -230,7 +237,7 @@ export function Approvals({ session }: { session: Session }) {
     <ErrorMessage message={error} retry={() => setRevision(v => v + 1)}/>
     {busy && <Loading/>}
     {!busy && !error && !rows.length && <div className="panel"><Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a className="tap" href="#runs">Explore workflow runs</a></Empty></div>}
-    {rows.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={() => setRows(values => values.filter(r => r.run_id !== run.run_id))}
+    {rows.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={() => (run.progress?.required_approvals || 1) > 1 ? setRevision(v => v + 1) : setRows(values => values.filter(r => r.run_id !== run.run_id))}
       eyebrow={workflowName(run.workflow)} title={heading || 'Review the draft'} draft={body}
       meta={<p className="muted review-meta"><DotList items={[`Project ${run.project}`, `Started ${date(run.created_at)}`, `${money(run.budget.cost_usd)} so far`, <a className="tap" href={`#run/${run.run_id}`}>Open run</a>]}/></p>}/>; })}
   </>;

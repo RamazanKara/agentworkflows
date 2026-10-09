@@ -97,9 +97,19 @@ describe('governed activities', () => {
   it('notifies approval without resetting a custom budget, tolerating legacy unindexed runs', async () => {
     fetchMock.mockResolvedValue(new Response('{}', { status: 404 }));
     await expect(environment().run(activities.call.bind(activities), { ...call, kind: 'approval_waiting' as const }))
-      .resolves.toEqual({ queued: false });
+      .resolves.toMatchObject({ queued: false, policy_version: 1, required_approvals: 1 });
     expect(fetchMock.mock.calls[0][0]).toBe(`http://gateway.test/v1/workflow-runs/${runId}/approval-waiting`);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('requests a versioned approval policy without initializing a new budget', async () => {
+    const gate = { policy_version: 1, required_approvals: 2, approval_timeout_seconds: 60, queued: true };
+    fetchMock.mockResolvedValue(ok(gate));
+    await expect(environment().run(activities.call.bind(activities), {
+      ...call, kind: 'approval_waiting' as const, payload: { policy_version: 1 },
+    })).resolves.toEqual(gate);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ policy_version: 1 });
   });
 
   it('fires governed triggers, polls their runs, and handles paused triggers', async () => {

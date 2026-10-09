@@ -21,6 +21,8 @@ WORKFLOW_FIELDS = (
     "approval_required",
     "approval_threshold_usd",
     "approver_role",
+    "required_approvals",
+    "approval_timeout_seconds",
     "allowed_providers",
 )
 APPROVER_ROLES = ("admin", "approver")
@@ -162,6 +164,12 @@ def validate_changes(settings: EffectiveTeamSettings, changes: dict[str, Any]) -
         elif field.endswith(".approval_required"):
             if not isinstance(value, bool):
                 message = "Use true or false."
+        elif field.endswith(".required_approvals"):
+            if type(value) is not int or not 1 <= value <= 10:
+                message = "Use an integer between 1 and 10 distinct reviewers."
+        elif field.endswith(".approval_timeout_seconds"):
+            if type(value) is not int or not 60 <= value <= 604800:
+                message = "Use an integer between 60 and 604800 seconds (seven days)."
         elif field.endswith(".token_limit"):
             if type(value) is not int or not 0 <= value <= 1_000_000_000:
                 message = "Use an integer between 0 and 1000000000."

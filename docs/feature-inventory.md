@@ -17,7 +17,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | Workflow policy | Shipped | Configured under each team | Provider/model/tool/egress allowlists and immutable run budget caps |
 | Container agent steps | Shipped | Existing Kubernetes workspace required | Hardened workspace checks, scoped expiring credentials, one attempt, and completion receipts |
 | Workflow token/cost budgets | Shipped | 10,000 tokens / $5 per run in SDK | Immutable team-scoped Redis counters; unknown attempts retain reservations |
-| Human approvals | Shipped | Signal + query in example | Durable wait with expiry; verified approver identity and production Temporal authorization remain operator-owned |
+| Human approvals | v0.9.0 candidate adds quorum and configurable expiry | One reviewer, seven days | 1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Escalation and production Temporal authorization remain operator-owned |
 | OpenAI chat completions | Shipped | On | Gateway tests, OpenAPI contract, local smoke |
 | Legacy completions | Shipped | On, non-streaming | Gateway tests; streaming rejected explicitly |
 | Embeddings | Shipped | On | Gateway tests; same auth, budget, audit, and model policy |

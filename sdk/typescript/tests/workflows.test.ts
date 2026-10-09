@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { condition, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
+import { condition, patched, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import { AgentWorkflowsTrigger, ApprovalWorkflow, Budget, WorkflowGateway, withInputSchema } from '../src/workflows';
 import { CodeReviewWorkflow, SupportTriageWorkflow } from '../src/examples/workflows';
 
@@ -7,11 +7,11 @@ const mocks = vi.hoisted(() => ({ call: vi.fn(), trigger: vi.fn(), condition: vi
 vi.mock('@temporalio/workflow', async (original) => ({
   ...await original<typeof import('@temporalio/workflow')>(),
   proxyActivities: vi.fn(() => ({ 'agentworkflows.call': mocks.call, 'agentworkflows.trigger': mocks.trigger })),
-  condition: mocks.condition, setHandler: vi.fn(), sleep: vi.fn(async () => undefined),
+  patched: vi.fn(() => false), condition: mocks.condition, setHandler: vi.fn(), sleep: vi.fn(async () => undefined),
   workflowInfo: () => ({ runId: 'run-id' }),
 }));
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(patched).mockReturnValue(false); });
 
 it('declares serializable input schemas without wrapping or changing workflow calls', async () => {
   const schema = { type: 'object' as const, properties: { name: { type: 'string' as const } }, required: ['name'] };
@@ -117,4 +117,61 @@ it('ends paused scheduled actions without polling', async () => {
   mocks.trigger.mockResolvedValueOnce({ paused: true });
   await expect(AgentWorkflowsTrigger({ workflow: 'DailyReportWorkflow', trigger: 'daily' })).resolves.toEqual({ paused: true });
   expect(sleep).not.toHaveBeenCalled();
+});
+
+
+it.each([true, false])('requires two distinct reviewers and applies rejection (approved=%s)', async (approved) => {
+  vi.mocked(patched).mockReturnValue(true);
+  const gate = new ApprovalWorkflow();
+  mocks.call.mockImplementationOnce(async () => {
+    expect(gate.review(true, 'early')).toBe(false);
+    return { policy_version: 1, required_approvals: 2, approval_timeout_seconds: 60 };
+  });
+  mocks.condition.mockImplementationOnce(async () => {
+    expect(gate.review(true, ' first ')).toBe(true);
+    expect(gate.decision).toBeUndefined();
+    expect(gate.review(true, 'first')).toBe(false);
+    expect(gate.review(false, 'first')).toBe(false);
+    expect(gate.review(true, ' first ')).toBe(false);
+    expect(gate.review(approved, 'second')).toBe(true);
+    expect(gate.review(true, 'third')).toBe(false);
+    return true;
+  });
+  expect(await gate.approval('draft')).toBe(approved);
+  expect(gate.status()).toMatchObject({ required_approvals: 2, approved_by: approved ? ['first', 'second'] : ['first'], approval_policy_version: 1 });
+  expect(mocks.call.mock.calls[0][0].payload).toEqual({ policy_version: 1 });
+  expect(condition).toHaveBeenCalledWith(expect.any(Function), 60000);
+});
+
+it('rejects votes exactly at expiry and retains partial approval on timeout', async () => {
+  vi.mocked(patched).mockReturnValue(true);
+  const gate = new ApprovalWorkflow();
+  mocks.call.mockResolvedValue({ policy_version: 1, required_approvals: 2, approval_timeout_seconds: 60 });
+  mocks.condition.mockImplementationOnce(async () => {
+    expect(gate.review(true, 'first')).toBe(true);
+    const now = vi.spyOn(Date, 'now').mockReturnValue(gate.expiresAt!);
+    try {
+      expect(gate.review(true, 'late')).toBe(false);
+      expect(gate.review(false, 'late')).toBe(false);
+    } finally { now.mockRestore(); }
+    return false;
+  });
+  await expect(gate.approval('draft')).rejects.toMatchObject({ nonRetryable: true, type: 'ApprovalExpired' });
+  expect(gate.status()).toMatchObject({ stage: 'expired', approved_by: ['first'] });
+});
+
+it('applies automatic approval without human quorum', async () => {
+  vi.mocked(patched).mockReturnValue(true);
+  const gate = new ApprovalWorkflow();
+  mocks.call.mockResolvedValue({ policy_version: 1, required_approvals: 2, approval_required: false });
+  mocks.condition.mockImplementationOnce(async () => gate.decision === true);
+  expect(await gate.approval('draft')).toBe(true);
+  expect(gate.reviewer).toBe('team policy');
+  expect(gate.approvedBy).toEqual([]);
+});
+
+it('requires the versioned gateway before the worker upgrade', async () => {
+  vi.mocked(patched).mockReturnValue(true);
+  mocks.call.mockResolvedValue({ queued: true });
+  await expect(new ApprovalWorkflow().approval('draft')).rejects.toMatchObject({ nonRetryable: true, type: 'ApprovalPolicyUnsupported' });
 });

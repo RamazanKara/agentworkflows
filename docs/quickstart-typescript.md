@@ -324,3 +324,13 @@ remove this disposable trial's containers and volumes from the repository root:
     ```powershell
     wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml down -v
     ```
+
+
+## Multi-reviewer approval (v0.9.0 candidate)
+
+Build the gateway from this checkout and use the v0.9.0 SDK worker before enabling
+nondefault approval policies. In **Team settings / Code review**, set Required
+reviewers to `2` and Approval expiry (seconds) to `3600`, then start a new review.
+The first positive vote leaves it waiting; a second distinct reviewer completes the
+quorum. Any rejection ends review, and expiry fails the run with `ApprovalExpired`.
+Both SDKs use the same [approval contract](workflows.md#approval-policies).

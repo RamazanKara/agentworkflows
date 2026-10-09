@@ -682,6 +682,7 @@ class GatewayClient:
         return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/retry", {})
 
     def approve_run(self, run_id: str, *, approved: bool = True) -> dict[str, Any]:
+        """Record your vote; inspect the run for quorum completion or a pending review."""
         return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/approve", {"approved": approved}, creates_state=True)
 
     def sandbox_budget(self) -> dict[str, Any]:

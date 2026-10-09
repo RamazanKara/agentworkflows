@@ -293,10 +293,11 @@ def test_fallback_rechecks_provider_settings_after_a_slow_attempt(settings_gatew
     assert calls == ["primary"]
 
 
-def test_approval_role_is_effective_for_existing_runs(settings_gateway):
+def test_approval_role_is_saved_when_run_starts(settings_gateway):
     client, _ = settings_gateway
-    _, path, _ = initialized_run(client)
     assert update(client, {WORKFLOW + "approver_role": "admin"}).status_code == 200
+    _, path, _ = initialized_run(client)
+    assert update(client, {WORKFLOW + "approver_role": "approver"}, revision=1).status_code == 200
     response = client.post(path + "/approve", headers=auth("approver"), json={})
     assert response.status_code == 403 and response.json()["detail"]["reason"] == "team_role_required"
     assert client.post(path + "/approve", headers=auth("admin"), json={}).status_code == 200
@@ -306,10 +307,11 @@ def test_approval_role_is_effective_for_existing_runs(settings_gateway):
     ({"approval_required": False}, True), ({"approval_threshold_usd": 1}, True),
     ({"approval_required": True, "approval_threshold_usd": 0}, False),
 ])
-def test_approval_requirement_and_threshold_apply_at_existing_review_gate(settings_gateway, changes, automatic):
+def test_approval_requirement_and_threshold_are_saved_at_start(settings_gateway, changes, automatic):
     client, app = settings_gateway
-    run, path, _ = initialized_run(client)
     assert update(client, {WORKFLOW + key: value for key, value in changes.items()}).status_code == 200
+    run, path, _ = initialized_run(client)
+    assert update(client, {WORKFLOW + "approval_required": not automatic}, revision=1).status_code == 200
     response = client.post(path + "/approval-waiting", headers=auth("worker"))
     assert response.status_code == 200, response.text
     assert response.json()["queued"] is not automatic

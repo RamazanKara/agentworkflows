@@ -871,3 +871,59 @@ namespaces/deployments for stronger trust boundaries, and restrict signals and u
 | `mcp_protocol_unsupported` | Use Streamable HTTP with MCP 2025-03-26 tool support |
 | `workspace_busy` / `agent_failed` | Wait for the previous step to finish, or inspect the workspace before explicitly starting another run |
 | Approval cannot be submitted | Wait for `awaiting_approval`; use an approver/admin key and the exact run ID |
+
+
+## Approval policies
+
+The v0.9.0 gateway and both workflow SDKs support **1–10 distinct reviewers** and
+**60–604800 seconds** of approval time. Defaults are one reviewer and seven days.
+Use **Team settings** to edit Required reviewers and Approval expiry, or add these
+fields to an existing workflow policy (preserve its models, tools, egress and budgets):
+
+```yaml
+requiredApprovals: 2
+approvalTimeoutSeconds: 3600
+approvalRequired: true
+approvalThresholdUsd: 0
+approverRole: approver
+```
+
+In the umbrella chart these fields live under
+`inference-gateway.sandboxPolicy.policy.policies[].workflows.<Workflow>`; see the
+existing ResearchWorkflow in `deploy/charts/agentworkflows/values.yaml`. Runtime
+settings overrides take precedence over YAML defaults. There is no new service,
+secret, environment variable or datastore migration.
+
+All approval fields are saved when the gateway starts a run, including cron/webhook
+starts. Settings changes apply to new runs; repeating a start's request ID keeps its
+original rules. Retrying a failed/canceled run starts a new run with current rules.
+The deadline starts when the worker receives the approval policy at its review step.
+The enclosing eight-day run execution timeout can end a run earlier.
+
+Each verified subject (`sub`, otherwise `key_id`) can decide once. A positive vote
+counts toward the quorum; any eligible reviewer's rejection ends the gate immediately.
+An admin can review but still contributes only one vote. A repeated delivery of the
+same identity/decision is idempotent; changing a recorded vote is refused. Separate
+keys count as separate identities, so use individual SSO accounts for human review
+and restrict who can create keys. This is not proof of separate natural persons.
+
+`POST /v1/workflow-runs/{run_id}/approve` still accepts only `{"approved": true|false}`.
+Its `approved` result describes that reviewer's vote, not the final quorum outcome.
+Inspect the run's `progress.required_approvals`, `approved_by`, `expires_at` (UTC), and
+`approver_role`. The console shows counts/deadlines and keeps partial reviews visible.
+Deadlines and duplicate decisions are enforced by synchronous Temporal update handlers,
+so gateway replicas cannot race past the quorum. Expiry fails the run with
+`ApprovalExpired`; votes at or after the deadline cannot revive it.
+
+Approval disabled or spend below the saved threshold still yields an audited automatic
+decision without a human quorum. These settings govern `ApprovalWorkflow.approval()`;
+they do not insert gates into arbitrary workflow code. Workers and direct Temporal
+access remain trusted operator surfaces. Approval escalation is not implemented.
+
+Upgrade the gateway first, then Python/TypeScript workers, before enabling nondefault
+quorum/expiry. New SDKs request `{"policy_version": 1}` from the worker-only
+`/approval-waiting` endpoint and wait for its policy before accepting reviews. Advanced
+policies reject old workers instead of falling back to one reviewer. Temporal patch
+markers preserve replay of already-started legacy gates with their original single
+reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
+[two-reviewer Quickstart](quickstart.md#try-a-two-reviewer-policy-v090-source-build).

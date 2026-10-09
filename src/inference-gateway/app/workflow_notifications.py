@@ -10,12 +10,12 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from time import time
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import AnyHttpUrl
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict
 
 from app.policy import SMTPNotification, TeamNotifications
 from app.team_settings import effective_team_settings
@@ -25,6 +25,20 @@ from app.workflow_operations import RPC_TIMEOUT, execution, operation_receipt, r
 
 CLAIM = "return redis.call('SET', KEYS[1], ARGV[1], 'NX', 'EX', 120)"
 RELEASE = "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0"
+
+
+class ApprovalGateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    policy_version: Literal[1]
+
+
+class ApprovalGate(BaseModel):
+    queued: bool
+    approval_required: bool = True
+    policy_version: Literal[1] | None = None
+    required_approvals: int = 1
+    approval_timeout_seconds: int = 604800
+    approver_role: Literal["admin", "approver"] = "approver"
 
 
 def channels(config: TeamNotifications) -> list[str]:
@@ -171,25 +185,41 @@ def register_notification_routes(app: FastAPI) -> None:
         "/v1/workflow-runs/{run_id}/approval-waiting",
         tags=["workflows"],
         summary="Worker-only durable approval notification event",
+        response_model=ApprovalGate,
     )
-    async def waiting(request: Request, run_id: UUID) -> dict[str, Any]:
+    async def waiting(request: Request, run_id: UUID, body: ApprovalGateRequest | None = None) -> dict[str, Any]:
         principal = require_role(request, "admin", "builder")
         if "workflows:execute" not in principal.get("scopes", []):
             raise HTTPException(403, detail="Approval events require the team worker credential.")
         data = await run_metadata(request, str(run_id))
         team = (await effective_team_settings(request)).team
         policy = team.workflows.get(data["workflow"]) if team else None
+        approval = data.get("approval_policy") or {
+            "approval_required": policy.approval_required if policy else True,
+            "approval_threshold_usd": policy.approval_threshold_usd if policy else 0,
+            "approver_role": policy.approver_role if policy else "approver",
+            "required_approvals": 1,
+            "approval_timeout_seconds": 604800,
+        }
+        if body is None and (approval["required_approvals"] > 1 or approval["approval_timeout_seconds"] != 604800):
+            raise HTTPException(409, detail="Upgrade the worker SDK to 0.9.0 for this approval policy.")
         raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))
         spent = int(raw.get("cost", 0)) / 1_000_000_000
-        if policy and (not policy.approval_required or spent < policy.approval_threshold_usd):
-            handle, _ = await execution(request, str(run_id))
-            accepted = await handle.execute_update(
-                "review", args=[True, "team policy"], id=f"{run_id}:policy-approval", rpc_timeout=RPC_TIMEOUT,
-            )
-            if not accepted:
-                raise HTTPException(409, detail="The run is not waiting at its approval gate.")
+        required = approval["approval_required"] and spent >= approval["approval_threshold_usd"]
+        result = {
+            "queued": required, "approval_required": required, "policy_version": 1 if body else None,
+            **{field: approval[field] for field in ("required_approvals", "approval_timeout_seconds", "approver_role")},
+        }
+        if not required:
+            if body is None:
+                handle, _ = await execution(request, str(run_id))
+                accepted = await handle.execute_update(
+                    "review", args=[True, "team policy"], id=f"{run_id}:policy-approval", rpc_timeout=RPC_TIMEOUT,
+                )
+                if not accepted:
+                    raise HTTPException(409, detail="The run is not waiting at its approval gate.")
             await operation_receipt(request, str(run_id), "approval", approved=True, automatic=True,
-                                    approval_threshold_usd=policy.approval_threshold_usd, cost_usd=spent)
-            return {"queued": False, "approval_required": False}
+                                    approval_threshold_usd=approval["approval_threshold_usd"], cost_usd=spent)
+            return result
         await queue_event(request, str(run_id), "awaiting_approval")
-        return {"queued": True}
+        return result

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from temporalio import workflow
@@ -128,17 +128,38 @@ class ApprovalWorkflow:
         self.draft = ""
         self.decision: bool | None = None
         self.reviewer = ""
+        self.required_approvals = 1
+        self.approved_by: list[str] = []
+        self.expires_at: datetime | None = None
+        self.approver_role = "approver"
+        self.approval_policy_version: int | None = None
 
     async def approval(self, draft: str) -> bool:
         self.draft = draft
         self.stage = "awaiting_approval"
+        timeout = 604800
         if workflow.patched("approval-notification-v1"):
-            await WorkflowGateway()._call(Call("approval_waiting", {}))
+            versioned = workflow.patched("approval-policy-v1")
+            if versioned:
+                self.stage = "configuring_approval"
+            gate = await WorkflowGateway()._call(Call("approval_waiting", {"policy_version": 1} if versioned else {}))
+            if versioned:
+                if gate.get("policy_version") != 1:
+                    raise ApplicationError("Upgrade the gateway to 0.9.0 before the worker SDK.", non_retryable=True)
+                self.approval_policy_version = 1
+                self.required_approvals = gate.get("required_approvals", 1)
+                self.approver_role = gate.get("approver_role", "approver")
+                timeout = gate.get("approval_timeout_seconds", 604800)
+                self.expires_at = workflow.now() + timedelta(seconds=timeout)
+                self.stage = "awaiting_approval"
+                if gate.get("approval_required") is False:
+                    self.decision, self.reviewer = True, "team policy"
         try:
-            await workflow.wait_condition(lambda: self.decision is not None, timeout=timedelta(days=7))
+            await workflow.wait_condition(lambda: self.decision is not None, timeout=timedelta(seconds=timeout))
         except TimeoutError:
+            self.stage = "expired"
             raise ApplicationError(
-                "Approval expired after seven days; start a new review.", non_retryable=True
+                "Approval expired; start a new review.", non_retryable=True, type="ApprovalExpired"
             ) from None
         self.stage = "approved" if self.decision else "rejected"
         return bool(self.decision)
@@ -150,18 +171,33 @@ class ApprovalWorkflow:
             self.stage == "awaiting_approval"
             and self.decision is None
             and isinstance(approved, bool)
+            and isinstance(reviewer, str)
             and reviewer.strip()
+            and reviewer.strip() not in self.approved_by
+            and (self.expires_at is None or workflow.now() < self.expires_at)
         ):
-            self.decision = approved
             self.reviewer = reviewer.strip()
+            if approved:
+                self.approved_by.append(self.reviewer)
+            if not approved or len(self.approved_by) >= self.required_approvals:
+                self.decision = approved
 
     @workflow.query
     def status(self) -> dict[str, Any]:
-        return {"stage": self.stage, "draft": self.draft, "reviewer": self.reviewer, "run_id": workflow.info().run_id}
+        return {
+            "stage": self.stage, "draft": self.draft, "reviewer": self.reviewer, "run_id": workflow.info().run_id,
+            **({
+                "approval_policy_version": self.approval_policy_version,
+                "required_approvals": self.required_approvals, "approved_by": list(self.approved_by),
+                "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+                "approver_role": self.approver_role,
+            } if self.approval_policy_version else {}),
+        }
 
     @workflow.update
     def review(self, approved: bool, reviewer: str) -> bool:
-        if self.stage != "awaiting_approval" or self.decision is not None:
+        if self.stage != "awaiting_approval" or self.decision is not None or reviewer in self.approved_by:
             return False
+        count = len(self.approved_by)
         self.approve(approved, reviewer)
-        return self.decision is not None
+        return self.decision is not None or len(self.approved_by) > count
