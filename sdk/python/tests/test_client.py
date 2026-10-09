@@ -800,3 +800,75 @@ def test_spend_and_capture_methods_use_revision_checked_settings(monkeypatch):
         {"fields": {"workflows.ResearchWorkflow.capture_content": "none"}},
     ]
     assert [request.headers["If-Match"] for request in requests[1:]] == ["0", '"1"', "2"]
+
+
+def test_onboarding_and_provider_rotation_contract(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"version": 2})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        client.onboarding()
+        client.set_provider_key("openai", "new-key", expected_version=1)
+    assert [(r.method, r.url.path) for r in requests] == [
+        ("GET", "/v1/team/onboarding"),
+        ("PUT", "/v1/team/providers/openai/key"),
+    ]
+    assert json.loads(requests[1].content) == {"value": "new-key", "expected_version": 1}
+
+
+def test_invitation_methods_do_not_retry_acceptance(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(503 if request.url.path.endswith("/accept") else 200, json={})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        client.invitations()
+        client.create_invitation("Maya", role="approver", project="private")
+        client.revoke_invitation("abc")
+        with pytest.raises(GatewayError):
+            client.accept_invitation("single-use-token")
+    assert len(requests) == 4
+    assert json.loads(requests[1].content) == {"name": "Maya", "role": "approver", "project": "private"}
+    assert requests[2].method == "DELETE"
+    assert requests[3].url.path == "/v1/auth/invitations/accept"
+
+
+def test_alert_rules_preserve_revision_and_surface_conflict(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(409 if request.method == "PUT" else 200, json={"detail": "Reload alert rules."})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        client.alert_rules()
+        with pytest.raises(GatewayError, match="Reload alert rules"):
+            client.set_alert_rules(
+                {"events": ["failed"], "channels": ["webhook"], "budget_threshold": 0.8, "slow_step_ms": 1000},
+                revision=2,
+            )
+    assert len(requests) == 2 and requests[1].headers["If-Match"] == "2"
+
+
+def test_deployment_readiness_preserves_operator_actions(monkeypatch):
+    body = {
+        "checks": [{"id": "encryption", "configured": False, "action": "Configure encryption."}],
+        "verification_required": ["Restore a backup."],
+    }
+
+    def handler(request):
+        assert request.url.path == "/v1/team/deployment"
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        return httpx.Response(200, json=body)
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        assert client.deployment() == body

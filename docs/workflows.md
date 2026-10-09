@@ -927,3 +927,58 @@ policies reject old workers instead of falling back to one reviewer. Temporal pa
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
 [two-reviewer Quickstart](quickstart.md#try-a-two-reviewer-policy).
+
+## Invite teammates without company sign-in
+
+In **Members & keys → Invite a teammate**, choose a name, role, and project. Create and
+copy the invitation link, then share it privately. The recipient opens it and chooses
+**Accept invitation** to sign in. Links expire after 24 hours and can be redeemed once;
+a lost acceptance response requires a new invitation. The console grants 90 days of
+access; admins can edit or revoke the resulting credential in Members & keys.
+
+A link is a bearer invitation: anyone holding it can receive the chosen access. The
+display name is assigned by the admin, not verified by an email provider. Use OIDC for
+company-verified identity and group-based access. Invitations do not change SSO policy
+or identity-provider group membership. Delivery is an explicit copy/share step.
+
+The API lists pending, accepted, revoked, and expired invitations without tokens or key
+values. Invitation credentials are encrypted with a key derived from the random link
+secret using a separate derivation from its lookup digest. Redis stores ciphertext and
+metadata; the key store retains only credential hashes. Metadata expires after 30 days.
+Revoking an invitation also revokes its credential and sessions; team erasure removes
+both invitation metadata and encrypted delivery state.
+
+Contracts: `GET/POST /v1/team/invitations`, `DELETE /v1/team/invitations/{id}`, and
+`POST /v1/auth/invitations/accept` with `{"token":"…"}`. Creation uses the same
+name/role/project/credential expiry fields as key creation. Acceptance returns a
+`CreatedKey` once and does not retry automatically. Python exposes `invitations()`,
+`create_invitation()`, `revoke_invitation()`, `accept_invitation()`; TypeScript uses
+`invitations()`, `createInvitation()`, `revokeInvitation()`, `acceptInvitation()`.
+
+## Alert rules and failed runs
+
+Team admins open **Team settings → Alert rules** to choose waiting approvals, failures,
+run budget thresholds, and slow model/tool steps. Select Slack, email, or webhook from the
+operator-approved destinations. Choose the percentage of a run's token/dollar budget and
+the slow-step threshold in milliseconds. Clear events or destinations to pause delivery.
+A missing destination points to operator setup instead of accepting a URL that bypasses
+the deployment's network policy.
+
+The existing gateway sweep checks retained runs every 30 seconds. Events persist, and
+each run/event/channel has a stable delivery ID. Delivery retries up to five times with
+backoff. Already delivered events are not resent after a rule edit; enabling a rule can
+deliver retained events. Inspect attempted, retrying, delivered, or failed notification
+receipts in the run timeline. External services may duplicate a delivery after an ambiguous
+transport failure; webhook receivers should deduplicate by the supplied idempotency key.
+Destinations and their credentials remain in the existing team notification policy.
+
+A failed run now includes `error.code` and safe recovery guidance. The console points to
+step receipts and worker logs and explains what to check before a retry. Gateway responses
+do not copy exception messages that could contain inputs or credentials. Each existing
+model/tool timeline step still shows its measured latency, cost, HTTP status, and receipt.
+
+API: `GET/PUT /v1/team/alert-rules`; PUT requires the current `If-Match` revision and
+`events`, `channels`, `budget_threshold` (0–1, exclusive of zero), and `slow_step_ms`.
+Changes conflict with concurrent team settings edits rather than overwriting them.
+Python: `alert_rules()`, `set_alert_rules(rules, revision=...)`.
+TypeScript: `alertRules()`, `setAlertRules(rules, revision)`.

@@ -192,8 +192,16 @@ def _auth_required(path: str) -> bool:
     # /console/* is the static admin console (ADR 0013): the page is public HTML/JS; the API
     # calls it makes to /v1/* carry the operator's key and are governed like any other request.
     return path not in {
-        "/healthz", "/readyz", "/metrics", "/docs", "/openapi.json",
-        "/v1/auth/config", "/v1/auth/login", "/v1/auth/callback", "/v1/auth/session",
+        "/healthz",
+        "/readyz",
+        "/metrics",
+        "/docs",
+        "/openapi.json",
+        "/v1/auth/config",
+        "/v1/auth/login",
+        "/v1/auth/callback",
+        "/v1/auth/session",
+        "/v1/auth/invitations/accept",
     } and not path.startswith("/console")
 
 

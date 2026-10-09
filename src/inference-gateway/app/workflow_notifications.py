@@ -101,8 +101,11 @@ async def send_notification(config: TeamNotifications, channel: str, payload: di
 
 
 async def notify_run(request: Request, row: dict[str, Any]) -> None:
-    team = request.app.state.sandbox_policy_set.policies[request.state.sandbox_id]
-    config = team.notifications
+    from app.alert_rules import effective_alert_rules
+
+    settings, rules = await effective_alert_rules(request)
+    team = settings.team
+    config = team.notifications if team else None
     if not config:
         return
     run_id = row["run_id"]
@@ -113,13 +116,27 @@ async def notify_run(request: Request, row: dict[str, Any]) -> None:
         await queue_event(request, run_id, status)
     budget = row["budget"]
     if any(
-        budget[limit] and budget[used] >= budget[limit] * config.budget_threshold
+        budget[limit] and budget[used] >= budget[limit] * rules.budget_threshold
         for used, limit in (("tokens", "token_limit"), ("cost_usd", "cost_limit_usd"))
     ):
         await queue_event(request, run_id, "budget_threshold")
+    if "slow_step" in rules.events:
+        from app.storage import storage_call
+
+        steps = await storage_call(request, "run_steps", request.state.sandbox_id, run_id)
+        if any(
+            step.get("latency_ms", 0) >= rules.slow_step_ms
+            for step in steps
+            if step.get("action_type") in {"model_call", "tool_exec"}
+        ):
+            await queue_event(request, run_id, "slow_step")
     events = await redis_call(request, "hgetall", run_key(request, run_id) + ":notifications")
     for event in events:
+        if event not in rules.events:
+            continue
         for channel in channels(config):
+            if channel not in rules.channels:
+                continue
             key = run_key(request, run_id) + f":notification:{event}:{channel}"
             claim = str(uuid4())
             if not await redis_call(request, "eval", CLAIM, 1, key + ":lock", claim):

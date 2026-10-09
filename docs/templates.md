@@ -4,20 +4,21 @@
 
 Open **Workflow templates** in the console. A team admin can install any bundled template
 whose worker and team policy are already configured with one click, then select **Run**.
-The six shipped templates (including Research) have immutable catalog version `0.9.0`.
+The gallery has nine templates. The original six retain version `0.9.0`; release notes,
+meeting actions, and security questionnaire start at `1.0.0-rc.4`.
 Installation pins that version in the team's revisioned settings and records an audit entry;
 repeating the same installation is idempotent. New runs retain the template ID and version.
 Unknown versions return 422; an unapproved workflow returns 409.
 
 This installs the catalog selection, not remote executable code. The Compose worker already
-registers all six implementations. For Kubernetes, register the implementation in your worker
+registers all nine implementations. For Kubernetes, register the implementation in your worker
 and approve `inference-gateway.sandboxPolicy.policy.policies[].workflows` in Helm first;
 the gallery never expands model, tool or egress permissions. Operator policy remains authoritative.
 Source changes still require a worker deployment. The existing scaffold command below is
 the way to edit a template. See [lifecycle API and SDK methods](team-lifecycle.md).
 
 Pick one team task, run its fixture, then adapt its inputs and tools. Each walkthrough takes
-about five minutes after the [quickstart](quickstart.md). All five run in the same Compose
+about five minutes after the [quickstart](quickstart.md). All nine run in the same Compose
 trial without credentials for any external service, a GPU, or framework extras.
 
 | Team task | `--template` | What you can inspect |
@@ -27,6 +28,9 @@ trial without credentials for any external service, a GPU, or framework extras.
 | [Weekly report from several sources](#weekly-report) | `weekly-report` | Changes, support and incident snapshots alongside the report |
 | [Incident summary from logs](#incident-summary) | `incident-summary` | UTC timeline, log references, mitigation and open questions |
 | [Document Q&A with citations](#document-qa) | `document-qa` | Answer, source links and the exact retrieved excerpts |
+| [Release notes](#release-notes) | `release-notes` | Turn merged changes into release notes with a reviewer decision. |
+| [Meeting actions](#meeting-actions) | `meeting-actions` | Extract decisions, owners, and due dates from a meeting transcript. |
+| [Security questionnaire](#security-questionnaire) | `security-questionnaire` | Draft evidence-backed questionnaire answers and flag unsupported claims. |
 
 ## Before you start
 
@@ -303,3 +307,84 @@ The approval base implements the signal, query, update, and expiry behavior used
 run API. `text` schedules the same governed model activity as the lower-level `model` method.
 See [SDK reference](sdk-reference.md) for defaults and [bring your agent](workflows.md#bring-your-agent)
 for OpenAI, Anthropic, Agents SDK, LangGraph, MCP, and sandboxed code steps.
+
+## Release notes {#release-notes}
+
+**For:** release managers preparing a customer-facing change summary.
+Version `1.0.0-rc.4`; Python and TypeScript workers both implement `ReleaseNotesWorkflow`.
+
+In the console, choose **Templates → Release notes → Install template → Run**.
+Or scaffold and run from code:
+
+```sh
+agentworkflows init my-release-notes --template release-notes
+agentworkflows runs start ReleaseNotesWorkflow --input '@my-release-notes/input.json'
+agentworkflows runs inspect RUN_ID
+agentworkflows runs approve RUN_ID
+```
+
+Input field: `changes` (required text); `model` defaults to `demo-openai`.
+Example: REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint.
+
+The draft turn merged changes into release notes with a reviewer decision.
+It waits for human approval and returns `approved`, `release_notes`, and `reviewer`.
+Rejection returns `approved: false`; it sends no external message or publication.
+Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
+further constrained by team policy.
+
+**Adapt it:** supply sanitized merged changes with stable issue/PR IDs; have the reviewer check breaking changes and migration instructions against the diff before publishing.
+The local fake produces a labeled synthetic draft. A real model is needed to assess quality.
+
+## Meeting actions {#meeting-actions}
+
+**For:** team leads turning a transcript into an actionable follow-up.
+Version `1.0.0-rc.4`; Python and TypeScript workers both implement `MeetingActionsWorkflow`.
+
+In the console, choose **Templates → Meeting actions → Install template → Run**.
+Or scaffold and run from code:
+
+```sh
+agentworkflows init my-meeting-actions --template meeting-actions
+agentworkflows runs start MeetingActionsWorkflow --input '@my-meeting-actions/input.json'
+agentworkflows runs inspect RUN_ID
+agentworkflows runs approve RUN_ID
+```
+
+Input field: `transcript` (required text); `model` defaults to `demo-openai`.
+Example: 09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is still open.
+
+The draft extract decisions, owners, and due dates from a meeting transcript.
+It waits for human approval and returns `approved`, `action_plan`, and `reviewer`.
+Rejection returns `approved: false`; it sends no external message or publication.
+Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
+further constrained by team policy.
+
+**Adapt it:** supply a transcript with timestamps and consent to process it; verify every proposed owner and deadline before transferring actions to your task tracker.
+The local fake produces a labeled synthetic draft. A real model is needed to assess quality.
+
+## Security questionnaire {#security-questionnaire}
+
+**For:** security teams answering vendor questionnaires from retained evidence.
+Version `1.0.0-rc.4`; Python and TypeScript workers both implement `SecurityQuestionnaireWorkflow`.
+
+In the console, choose **Templates → Security questionnaire → Install template → Run**.
+Or scaffold and run from code:
+
+```sh
+agentworkflows init my-security-questionnaire --template security-questionnaire
+agentworkflows runs start SecurityQuestionnaireWorkflow --input '@my-security-questionnaire/input.json'
+agentworkflows runs inspect RUN_ID
+agentworkflows runs approve RUN_ID
+```
+
+Input field: `evidence` (required text); `model` defaults to `demo-openai`.
+Example: Q1: Are approvals required? E1: The team policy requires two reviewers before publication. Q2: Is SOC 2 certification current? No certification evidence supplied.
+
+The draft draft evidence-backed questionnaire answers and flag unsupported claims.
+It waits for human approval and returns `approved`, `answers`, and `reviewer`.
+Rejection returns `approved: false`; it sends no external message or publication.
+Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
+further constrained by team policy.
+
+**Adapt it:** supply numbered questions and authoritative evidence excerpts with IDs; require a security reviewer to check each cited statement. Missing evidence must remain an explicit gap, especially certification claims.
+The local fake produces a labeled synthetic draft. A real model is needed to assess quality.

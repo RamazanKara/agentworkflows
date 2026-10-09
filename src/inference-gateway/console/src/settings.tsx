@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { AlertSettings } from './alerts';
 import { api, date, label as titleCase, money, number, providerName, useData, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
 import { DotList, ErrorMessage, Loading, NumberInput, PageHeader } from './ui';
 
@@ -53,7 +54,7 @@ function group(fields: string[], budgetsOnly: boolean): Groups {
 const rows = (fields: string[]) => cardRows.map(row => fields.filter(field => row.includes(leaf(field)))).filter(row => row.length > 0);
 
 export function TeamConfiguration({ session }: { session: Session }) {
-  return <><PageHeader title="Team settings" subtitle="Budgets, approval rules and model routes. Changes apply to the next request; no restart."/><SettingsPanel session={session}/></>;
+  return <><PageHeader title="Team settings" subtitle="Budgets, approval rules and model routes. Changes apply to the next request; no restart."/><SettingsPanel session={session}/>{session.team.role === 'admin' && <AlertSettings session={session}/>}</>;
 }
 
 export function SettingsPanel({ session, budgetsOnly = false, onSaved }: { session: Session; budgetsOnly?: boolean; onSaved?: () => void }) {

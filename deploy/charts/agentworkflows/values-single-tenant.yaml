@@ -1,0 +1,93 @@
+# Layer reviewed tenant hostnames, egress CIDRs and source-built image digests over this file.
+# External egress is denied until explicitly supplied. Secrets must already exist.
+networkPolicy:
+  enabled: true
+  ingressControllerNamespace: ingress-nginx
+  externalEgress: []
+
+budget-redis:
+  enabled: false
+
+inference-gateway:
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  antiAffinity:
+    enabled: true
+  adminConsole:
+    cookieSecure: true
+  ingress:
+    enabled: true
+    className: nginx
+    host: agents.example.com
+    tls:
+      enabled: true
+      secretName: agents-tls
+  redis:
+    existingSecret:
+      name: agents-redis
+      key: url
+  storage:
+    backend: postgres
+    postgres:
+      existingSecret:
+        name: agents-records
+        key: dsn
+  workflowSecrets:
+    existingSecret:
+      name: agents-encryption
+      key: fernet-key
+  auth:
+    oidc:
+      issuer: https://identity.example.com
+      clientId: agentworkflows
+      existingSecret:
+        name: agents-oidc
+        key: oidc-client-secret
+      redirectUrl: https://agents.example.com/v1/auth/callback
+      teamClaim: team
+      groupsClaim: groups
+      scopes: openid profile email groups
+      groupRoleMappings:
+        default:
+          Agents Administrators: admin
+          Agents Builders: builder
+          Agents Reviewers: approver
+          Agents Viewers: viewer
+
+workflows:
+  postgres:
+    enabled: false
+    existingSecret: agents-temporal-db
+  worker:
+    replicaCount: 2
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+  temporal:
+    server:
+      replicaCount: 2
+      config:
+        persistence:
+          datastores:
+            default:
+              sql:
+                createDatabase: false
+                manageSchema: true
+                connectAddr: temporal-db.internal:5432
+                existingSecret: agents-temporal-db
+                tls:
+                  enabled: true
+                  enableHostVerification: true
+                  serverName: temporal-db.internal
+            visibility:
+              sql:
+                createDatabase: false
+                manageSchema: true
+                connectAddr: temporal-db.internal:5432
+                existingSecret: agents-temporal-db
+                tls:
+                  enabled: true
+                  enableHostVerification: true
+                  serverName: temporal-db.internal

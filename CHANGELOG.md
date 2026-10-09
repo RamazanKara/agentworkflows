@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.0-rc.4 - Unreleased
+
+- Rewrite the product README and docs landing page around team outcomes, a console
+  walkthrough, an honest build-it-yourself comparison, and architecture/privacy boundaries.
+- Add a first-run console wizard and readiness API, encrypted team provider-key
+  provisioning with version checks, and a sample workflow through approval and receipts.
+- Expand the versioned gallery to nine workflows with release notes, meeting actions,
+  and evidence-backed security questionnaire drafts in Python and TypeScript.
+- Add single-use, 24-hour invitations with scoped roles/projects, revocation, audit,
+  and console acceptance; refresh member access and expose company sign-in testing.
+- Add revision-checked Slack/email/webhook alert rules for approvals, failures, budget
+  thresholds and slow steps, plus safe failure details in the existing run timeline.
+- Add deployment configuration checks, a hardened single-tenant Helm reference, and
+  coordinated backup/restore and upgrade guidance. Reuse Compose and kind trial scripts.
+- Extend API contracts and both SDKs, test each adoption gap, and refresh console
+  captures at 360, 393 and 1440 pixels. Container acceptance is recorded separately
+  from native checks; package/chart versions remain 0.9.0.
+
 ## 1.0.0-rc.3 - Unreleased
 
 - Add dependency outage, slow-response and partial-write tests for gateway and worker;

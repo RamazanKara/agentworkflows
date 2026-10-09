@@ -190,6 +190,7 @@ def portable_settings(document: dict[str, Any] | None) -> dict[str, Any] | None:
 
     return {
         **document,
+        "provider_keys": {name: metadata(name, record) for name, record in document.get("provider_keys", {}).items()},
         "workflow_secrets": {
             workflow: [metadata(name, record) for name, record in records.items()]
             for workflow, records in document.get("workflow_secrets", {}).items()

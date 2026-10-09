@@ -338,3 +338,20 @@ await client.updateTeamSettings({
 vote can leave the run waiting for other reviewers; inspect the run before assuming
 it completed. Repeating a vote never adds a reviewer. See [approval policies](workflows.md#approval-policies)
 for identity, replay, automatic decisions and upgrade boundaries.
+
+## Team adoption APIs (rc.4 candidate)
+
+| Task | Python | TypeScript | HTTP |
+| --- | --- | --- | --- |
+| First-run readiness | `onboarding()` | `onboarding()` | `GET /v1/team/onboarding` |
+| Save provider key | `set_provider_key(provider, value, expected_version=0)` | `setProviderKey(provider, value, 0)` | `PUT /v1/team/providers/{provider}/key` |
+| Invitations | `invitations()`, `create_invitation(name, role="viewer")`, `revoke_invitation(id)` | `invitations()`, `createInvitation(name, {role: "viewer"})`, `revokeInvitation(id)` | `GET/POST /v1/team/invitations`, `DELETE /v1/team/invitations/{id}` |
+| Redeem invitation once | `accept_invitation(token)` | `acceptInvitation(token)` | `POST /v1/auth/invitations/accept` |
+| Alert rules | `alert_rules()`, `set_alert_rules(rules, revision=revision)` | `alertRules()`, `setAlertRules(rules, revision)` | `GET/PUT /v1/team/alert-rules` |
+| Deployment settings | `deployment()` | `deployment()` | `GET /v1/team/deployment` |
+
+Invitation creation and redemption never automatically retry: a lost response can
+contain the only copy of a token or key. Ask an admin to revoke uncertain access and
+issue a fresh invitation. See [invitations and alerts](workflows.md),
+[provider onboarding](quickstart.md#60-second-console-walkthrough), and
+[deployment checks](single-tenant.md#install-and-verify) for roles, boundaries and examples.

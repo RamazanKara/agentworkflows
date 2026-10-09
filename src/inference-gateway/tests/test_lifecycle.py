@@ -279,3 +279,28 @@ def test_team_administration_denies_unprivileged_callers(team_gateway, path):
     client, _ = team_gateway
     for role in ("viewer", "builder", "approver", "worker", "project", "other"):
         assert client.get(path, headers=auth(role)).status_code == 403
+
+
+@pytest.mark.parametrize(
+    "template_id, workflow",
+    [
+        ("release-notes", "ReleaseNotesWorkflow"),
+        ("meeting-actions", "MeetingActionsWorkflow"),
+        ("security-questionnaire", "SecurityQuestionnaireWorkflow"),
+    ],
+)
+def test_new_gallery_versions_keep_operator_policy_authoritative(team_gateway, template_id, workflow):
+    client, app = team_gateway
+    catalog = client.get("/v1/workflow-templates", headers=auth("viewer")).json()
+    assert len(catalog) == 9
+    template = next(item for item in catalog if item["id"] == template_id)
+    assert template["version"] == "1.0.0-rc.4" and not template["installable"]
+    path = f"/v1/workflow-templates/{template_id}/install"
+    assert client.post(path, headers=auth("admin"), json={"version": "0.9.0"}).status_code == 422
+    assert client.post(path, headers=auth("admin"), json={"version": template["version"]}).status_code == 409
+    team = app.state.sandbox_policy_set.policies["team"]
+    team.workflows[workflow] = team.workflows["ResearchWorkflow"]
+    installed = client.post(path, headers=auth("admin"), json={"version": template["version"]})
+    assert installed.status_code == 200
+    assert client.post(path, headers=auth("admin"), json={"version": template["version"]}).json() == installed.json()
+    assert app.state.storage.get_settings("team")["revision"] == 1

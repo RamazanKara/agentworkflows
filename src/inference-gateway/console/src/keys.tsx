@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Invitations } from './invitations';
 import { api, label, useData, type Session, type Team, type TeamSSO } from './api';
 import { Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh } from './ui';
 
@@ -62,9 +63,10 @@ function KeyManagement({ session }: { session: Session }) {
           <p className="muted">Unmapped groups grant no access. If matching groups grant different roles, sign-in is denied. Membership updates apply at the next sign-in; sessions end when the ID token expires.</p>
         </> : <p>Roles come from the <code>{config.data.role_claim}</code> claim, with <strong>{label(config.data.default_role!)}</strong> when it is absent.</p>}
         <p className="muted">Your operator manages sign-in policy in the gateway configuration. Policy changes require a new sign-in.</p>
-        <a href="https://ramazankara.github.io/agentworkflows/workflows/#sso-group-to-role-mapping">Company sign-in setup</a>
+        <div className="actions"><a href="/v1/auth/login">Test company sign-in</a><a href="https://ramazankara.github.io/agentworkflows/workflows/#sso-group-to-role-mapping">Company sign-in setup</a></div>
       </>}
     </section>}
+    <Invitations session={session} onChanged={() => setRevision(value => value + 1)}/>
     <ErrorMessage message={error || result.error}/><p role="status" className="status">{message}</p>
     {editing && <KeyEditor key={editing.key_id} record={editing} session={session} onCancel={() => setEditing(undefined)} onSaved={name => {
       setEditing(undefined); setMessage(`${name} updated. Access changes apply immediately.`); setRevision(value => value + 1);

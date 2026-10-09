@@ -569,9 +569,9 @@ def test_provider_credentials_are_team_scoped_and_not_forwarded_as_client_auth(m
     )
     for team in ("a", "b"):
         monkeypatch.setenv(f"TEAM_{team.upper()}", f"fake-{team}")
-        _, _, headers, _ = runtime._request_parts(
+        _, _, headers, _ = asyncio.run(runtime._request_parts(
             {"model": "primary", "messages": []}, "openai", "chat/completions", {"X-Sandbox-ID": team}
-        )
+        ))
         assert headers["Authorization"] == f"Bearer fake-{team}"
         assert "X-Sandbox-ID" not in headers
     assert asyncio.run(runtime.health("openai"))["status"] == "configured"

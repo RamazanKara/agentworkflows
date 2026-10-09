@@ -189,6 +189,7 @@ export interface WorkflowRun {
   status: 'running' | 'completed' | 'failed' | 'canceled' | 'terminated' | 'continued_as_new' | 'timed_out';
   progress?: ApprovalProgress;
   result?: unknown;
+  error?: { code: string; message: string };
   budget: RunBudget & { tokens: number; cost_usd: number };
   timeline?: Receipt[];
 }
@@ -244,3 +245,31 @@ export interface TeamDataExport {
   external_follow_up: string[];
 }
 export interface TeamTelemetry { traces_enabled: boolean; metrics_enabled: boolean; protocol: string; service_name: string }
+
+export interface ProviderSetup { provider: string; configured: boolean; version: number; can_save: boolean }
+export interface Onboarding {
+  providers: ProviderSetup[];
+  sample: { template_id: string; version: string; workflow: string; installed: boolean; input: Record<string, unknown>; ready: boolean } | null;
+  blockers: string[];
+}
+
+export interface Invitation {
+  invitation_id: string; key_id: string; name: string; role: ManagedKey['role']; project: string | null;
+  created_at: number; expires_at: number; accepted_at: number | null; revoked_at: number | null;
+}
+
+export interface AlertRules {
+  events: ('awaiting_approval' | 'failed' | 'budget_threshold' | 'slow_step')[];
+  channels: ('slack' | 'email' | 'webhook')[];
+  budget_threshold: number;
+  slow_step_ms: number;
+}
+export interface TeamAlertRules extends AlertRules {
+  revision: number;
+  available_channels: AlertRules['channels'];
+}
+
+export interface DeploymentReadiness {
+  checks: { id: string; name: string; configured: boolean; action: string }[];
+  verification_required: string[];
+}

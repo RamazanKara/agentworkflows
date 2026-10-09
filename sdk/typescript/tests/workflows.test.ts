@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { condition, patched, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import { AgentWorkflowsTrigger, ApprovalWorkflow, Budget, WorkflowGateway, withInputSchema } from '../src/workflows';
-import { CodeReviewWorkflow, SupportTriageWorkflow } from '../src/examples/workflows';
+import { CodeReviewWorkflow, SupportTriageWorkflow, ReleaseNotesWorkflow, MeetingActionsWorkflow, SecurityQuestionnaireWorkflow } from '../src/examples/workflows';
 
 const mocks = vi.hoisted(() => ({ call: vi.fn(), trigger: vi.fn(), condition: vi.fn<() => Promise<boolean>>() }));
 vi.mock('@temporalio/workflow', async (original) => ({
@@ -174,4 +174,20 @@ it('requires the versioned gateway before the worker upgrade', async () => {
   vi.mocked(patched).mockReturnValue(true);
   mocks.call.mockResolvedValue({ queued: true });
   await expect(new ApprovalWorkflow().approval('draft')).rejects.toMatchObject({ nonRetryable: true, type: 'ApprovalPolicyUnsupported' });
+});
+
+it.each([
+  [ReleaseNotesWorkflow, { changes: 'REL-42 fixed approval expiry' }, 'release_notes'],
+  [MeetingActionsWorkflow, { transcript: '09:02 Leo owns the rollout checklist' }, 'action_plan'],
+  [SecurityQuestionnaireWorkflow, { evidence: 'Q1: approval? E1: two reviewers required' }, 'answers'],
+] as const)('requires review for each added team template', async (workflow, input, field) => {
+  mocks.call.mockResolvedValueOnce({ choices: [{ message: { content: 'grounded draft' } }] }).mockResolvedValueOnce({ queued: true });
+  mocks.condition.mockImplementationOnce(async () => {
+    const handler = vi.mocked(setHandler).mock.calls.find(([definition]) => definition.name === 'review')?.[1];
+    (handler as (approved: boolean, reviewer: string) => boolean)(true, 'reviewer');
+    return true;
+  });
+  const result = await workflow(input as { changes: string; transcript: string; evidence: string });
+  expect(result).toMatchObject({ approved: true, reviewer: 'reviewer', [field]: 'grounded draft' });
+  expect(mocks.call.mock.calls.map(([call]) => call.kind)).toEqual(['model', 'approval_waiting']);
 });

@@ -47,6 +47,19 @@ class AuthRedis(TeamRedis):
 
     def eval(self, script, numkeys, *values):
         keys, args = values[:numkeys], values[numkeys:]
+        from app.invitations import ACCEPT
+
+        if script == ACCEPT:
+            secret, raw = self.get(keys[0]), self.get(keys[1])
+            if not secret or not raw:
+                return None
+            invite = json.loads(raw)
+            if invite["accepted_at"] is not None or invite["revoked_at"] is not None or invite["expires_at"] <= args[0]:
+                return None
+            invite["accepted_at"] = args[0]
+            self.data[keys[1]] = json.dumps(invite)
+            self.delete(keys[0])
+            return secret
         if script == managed_keys.CREATE:
             key_id, digest, raw = args
             self.data.setdefault(keys[0], {})[key_id] = raw

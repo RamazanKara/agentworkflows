@@ -143,7 +143,33 @@ async def change_key(request: Request, key_id: str, changes: dict[str, Any], act
     return public_record(record)
 
 
+async def issue_key(request: Request, body: KeyCreate) -> dict[str, Any]:
+    principal = require_role(request, "admin")
+    check_project(request, body.project)
+    key = "aw_" + secrets.token_urlsafe(30)
+    record = {
+        "sha256": hashlib.sha256(key.encode()).hexdigest(),
+        "key_id": uuid4().hex,
+        "team": request.state.sandbox_id,
+        "role": body.role,
+        "project": body.project,
+        "name": body.name,
+        "created_by": principal.get("sub") or principal["key_id"],
+        "created_at": time(),
+        "expires_at": body.expires_at.timestamp() if body.expires_at else None,
+        "last_used_at": None,
+        "revoked_at": None,
+    }
+    await storage_call(request, "create_key", record)
+    key_receipt(request, "create", record)
+    return {**public_record(record), "key": key}
+
+
 def register_key_routes(app: FastAPI) -> None:
+    from app.invitations import register_invitation_routes
+
+    register_invitation_routes(app)
+
     @app.get("/v1/team/keys", tags=["teams"], response_model=KeyList)
     async def list_keys(request: Request) -> dict[str, Any]:
         principal = require_role(request, "admin")
@@ -155,19 +181,7 @@ def register_key_routes(app: FastAPI) -> None:
 
     @app.post("/v1/team/keys", status_code=201, tags=["teams"], response_model=CreatedKey)
     async def create_key(request: Request, body: KeyCreate) -> dict[str, Any]:
-        principal = require_role(request, "admin")
-        check_project(request, body.project)
-        key = "aw_" + secrets.token_urlsafe(30)
-        record = {
-            "sha256": hashlib.sha256(key.encode()).hexdigest(), "key_id": uuid4().hex,
-            "team": request.state.sandbox_id, "role": body.role, "project": body.project, "name": body.name,
-            "created_by": principal.get("sub") or principal["key_id"], "created_at": time(),
-            "expires_at": body.expires_at.timestamp() if body.expires_at else None,
-            "last_used_at": None, "revoked_at": None,
-        }
-        await storage_call(request, "create_key", record)
-        key_receipt(request, "create", record)
-        return {**public_record(record), "key": key}
+        return await issue_key(request, body)
 
     @app.patch("/v1/team/keys/{key_id}", tags=["teams"], response_model=ManagedKey)
     async def update_key(request: Request, key_id: str, body: KeyUpdate) -> dict[str, Any]:

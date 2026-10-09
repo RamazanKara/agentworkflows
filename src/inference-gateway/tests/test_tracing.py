@@ -170,7 +170,7 @@ def test_inbound_trace_propagates_gateway_span_to_runtime_without_credentials(mo
     forwarded = {}
 
     async def dispatch():
-        _, _, headers, _ = runtime._request_parts(
+        _, _, headers, _ = await runtime._request_parts(
             {"messages": [], "model": "default-model"}, backend, "chat/completions",
             {"traceparent": inbound, "Authorization": "Bearer caller-private-key", "baggage": "secret=value"},
         )

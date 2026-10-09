@@ -9,6 +9,32 @@ from importlib.resources import files
 from pathlib import Path
 
 TEMPLATES = {
+    "release-notes": (
+        "release_notes",
+        "ReleaseNotesWorkflow",
+        {"changes": ("REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint.")},
+    ),
+    "meeting-actions": (
+        "meeting_actions",
+        "MeetingActionsWorkflow",
+        {
+            "transcript": (
+                "09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout "
+                "checklist, due Friday. 09:04 Maya: Budget approval is still open."
+            )
+        },
+    ),
+    "security-questionnaire": (
+        "security_questionnaire",
+        "SecurityQuestionnaireWorkflow",
+        {
+            "evidence": (
+                "Q1: Are approvals required? E1: The team policy requires two reviewers before "
+                "publication. Q2: Is SOC 2 certification current? No certification evidence "
+                "supplied."
+            )
+        },
+    ),
     "research": ("research", "ResearchWorkflow", {"topic": "How should our team evaluate AI agents?"}),
     "support-triage": (
         "support_triage",
@@ -88,7 +114,8 @@ agentworkflows runs list
 
 Set `AGENTWORKFLOWS_API_KEY=local-development-only` in your shell for the local demo.
 Use the printed run UUID with `agentworkflows runs inspect RUN_ID`; repeat while it is running.
-Research and code review wait at `awaiting_approval`: read `progress.draft`, then run
+Research, code review, release notes, meeting actions, and security questionnaire
+wait at `awaiting_approval`: read `progress.draft`, then run
 `agentworkflows runs approve RUN_ID` (or add `--reject`). The other templates complete
 without approval. Inspect again for the result, budget, and timeline with receipt IDs.
 All model and tool outputs in the trial are synthetic; no PR, customer reply, or report is sent.

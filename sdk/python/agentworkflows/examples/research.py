@@ -89,6 +89,9 @@ async def main() -> None:
     from agentworkflows.examples.document_qa import DocumentQAWorkflow
     from agentworkflows.examples.frameworks import AGENTS, CodeWorkflow, FrameworkWorkflow
     from agentworkflows.examples.incident_summary import IncidentSummaryWorkflow
+    from agentworkflows.examples.meeting_actions import MeetingActionsWorkflow
+    from agentworkflows.examples.release_notes import ReleaseNotesWorkflow
+    from agentworkflows.examples.security_questionnaire import SecurityQuestionnaireWorkflow
     from agentworkflows.examples.support_triage import SupportTriageWorkflow
     from agentworkflows.examples.weekly_report import WeeklyReportWorkflow
     from agentworkflows.worker import serve
@@ -112,6 +115,9 @@ async def main() -> None:
         await serve(
             [
                 ResearchWorkflow,
+                ReleaseNotesWorkflow,
+                MeetingActionsWorkflow,
+                SecurityQuestionnaireWorkflow,
                 SupportTriageWorkflow,
                 CodeReviewWorkflow,
                 WeeklyReportWorkflow,

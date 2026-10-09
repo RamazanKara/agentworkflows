@@ -13,7 +13,7 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 - This candidate checkout for chart validation, or a matching published release checkout for installation.
 
 This guide describes the current source (package/chart version 0.9.0), under review for
-1.0.0-rc.1. **Candidate images are not published by this pass.** For a candidate cluster
+1.0.0-rc.4. **Candidate images are not published by this pass.** For a candidate cluster
 trial, build/load the gateway and worker from this checkout and set their image values;
 see the source-image example below. A v0.5.1 install cannot demonstrate all features here.
 See [command verification](release-verification.md#candidate-readiness-pass) for the
@@ -37,18 +37,18 @@ matching images before installation. If needed, create that test cluster with
 `kind create cluster --name aw`. Use these overrides throughout the candidate trial:
 
 ```bash
-docker build -t agentworkflows-gateway:rc.1 src/inference-gateway
-docker build -t agentworkflows-worker:rc.1 -f sdk/python/Dockerfile .
-kind load docker-image agentworkflows-gateway:rc.1 agentworkflows-worker:rc.1 --name aw
+docker build -t agentworkflows-gateway:rc.4 src/inference-gateway
+docker build -t agentworkflows-worker:rc.4 -f sdk/python/Dockerfile .
+kind load docker-image agentworkflows-gateway:rc.4 agentworkflows-worker:rc.4 --name aw
 cat > candidate-values.yaml <<'YAML'
 inference-gateway:
   image:
     repository: agentworkflows-gateway
-    tag: rc.1
+    tag: rc.4
     digest: ""
 workflows:
   worker:
-    image: agentworkflows-worker:rc.1
+    image: agentworkflows-worker:rc.4
 YAML
 helm install aw deploy/charts/agentworkflows -n aw --create-namespace -f candidate-values.yaml --wait --timeout 15m
 ```
@@ -482,3 +482,5 @@ reviewers within an hour. The shipped Research defaults remain one/seven days.
 Team settings offers the same controls without a rollout and overrides YAML values.
 A new run snapshots the policy; an existing waiting run keeps its original rules.
 See [approval policies](workflows.md#approval-policies) for the full semantics.
+
+For a customer-facing service with managed stores, use the [single-tenant reference](single-tenant.md), including backup and upgrade procedures.

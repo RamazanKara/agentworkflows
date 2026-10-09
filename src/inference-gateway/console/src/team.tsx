@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
 import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 import { SettingsPanel } from './settings';
+import { FirstRunWizard } from './onboarding';
 
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
 const routes = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1';
@@ -21,6 +22,7 @@ export function GetStarted({ session }: { session: Session }) {
   const exampleMissing = blocked ? [] : (example?.allowedProviders || []).filter(provider => missing.includes(provider));
   return <><PageHeader title="Your first governed workflow" subtitle="Three steps from sign-in to an approved result."/>
     {isDemo(models.data) && <DemoNote/>}
+    <FirstRunWizard session={session}/>
     <ol className="onboarding">
       <li><span className="onboarding-number">01</span><div><h2>{blocked ? 'Add a provider key' : 'Check your models'}</h2>
         {blocked ? <p className="note-warn">No provider key yet. {providerList(missing)} {missing.length > 1 ? 'keys are' : 'key is'} missing, so runs fail until you add {missing.length > 1 ? 'them' : 'it'}.</p>

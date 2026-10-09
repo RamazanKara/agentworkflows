@@ -281,6 +281,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
       {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" onClick={() => setConfirmCancel(false)}>Keep running</button></div></div>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
       <Metrics items={[[ 'Tokens', `${number(run.budget.tokens)} of ${number(run.budget.token_limit)}` ], ['Cost', `${money(run.budget.cost_usd)} of ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
+      {run.error && <section className="callout" role="alert"><h2>Run needs attention</h2><p>{run.error.message}</p><code>{run.error.code}</code></section>}
       {run.progress?.message && <p className="callout">{run.progress.message}</p>}
       {running && <p className="muted">This page updates automatically while the run is active.</p>}
       {run.result !== undefined && <Result value={run.result}/>}

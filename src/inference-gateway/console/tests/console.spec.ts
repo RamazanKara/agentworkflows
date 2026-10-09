@@ -475,6 +475,10 @@ test.beforeEach(async ({ page }) => {
     if (token === 'invalid') return route.fulfill({ status: 401, json: { detail: { message: 'Invalid credential. Ask your team admin for a valid key.' } } });
     let body: unknown;
     if (url.pathname === '/v1/team') body = { team_id: team, role, projects: ['default', 'engineering'], providers: ['openai'], cost_limit_usd: 50, ...(role === 'admin' ? { provider_configuration: { openai: { configured: true, environment_variable: 'TEAM_OPENAI_KEY' } } } : {}) };
+    else if (url.pathname === '/v1/team/deployment') body = { checks: [{ id: 'authentication', name: 'Team authentication', configured: true, action: 'Enable team-bound authentication.' }, { id: 'cookies', name: 'Secure session cookies', configured: true, action: 'Enable HTTPS.' }], verification_required: ['Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.', 'Run the first-approved-run check after every install and upgrade.'] };
+    else if (url.pathname === '/v1/team/alert-rules') body = { revision: 0, events: ['awaiting_approval', 'failed', 'budget_threshold'], channels: ['slack', 'email', 'webhook'], available_channels: ['slack', 'email', 'webhook'], budget_threshold: 0.8, slow_step_ms: 30000 };
+    else if (url.pathname === '/v1/team/invitations') body = [];
+    else if (url.pathname === '/v1/team/onboarding') body = { providers: [], blockers: [], sample: { template_id: 'research', version: '0.9.0', workflow: 'ResearchWorkflow', installed: false, ready: true, input: { topic: 'How should our team evaluate AI agents?', model: 'demo-openai' } } };
     else if (url.pathname === '/v1/workflow-policies') body = policies;
     else if (url.pathname === '/v1/models') body = { data: [{ id: 'demo-openai' }] };
     else if (url.pathname === '/v1/sandbox/budget') body = { usage: { estimated_tokens: 63 }, limits: { estimated_tokens: 200000 }, window_seconds: 86400 };
@@ -545,7 +549,7 @@ for (const width of [360, 393, 1440]) {
         return split;
       });
       expect(splitWords, `${name}: words must wrap at spaces`).toEqual([]);
-      const path = `../../../.out/console-v1.0.0-rc.2/${width}-${name}.png`;
+      const path = `../../../.out/console-v1.0.0-rc.4/${width}-${name}.png`;
       if (target) await target.screenshot({ path });
       else await page.screenshot({ path, fullPage: true });
     };
@@ -559,6 +563,9 @@ for (const width of [360, 393, 1440]) {
       ['WeeklyReportWorkflow', 'weekly-report', 'period', '2026-09-28/2026-10-04', 'Start and end date, e.g. 2026-09-28/2026-10-04', '2026-09-28/2026-10-04'],
       ['IncidentSummaryWorkflow', 'incident-summary', 'incident_id', 'INC-1042', 'The ID from your incident tracker.', 'INC-1042'],
       ['DocumentQAWorkflow', 'document-qa', 'question', 'Who can approve workflows?', "A question about your team's documents.", 'Who can approve a workflow, and when does approval expire?'],
+      ["ReleaseNotesWorkflow","release-notes","changes","REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint.","Turn merged changes into release notes with a reviewer decision.","REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint."],
+      ["MeetingActionsWorkflow","meeting-actions","transcript","09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is still open.","Extract decisions, owners, and due dates from a meeting transcript.","09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is still open."],
+      ["SecurityQuestionnaireWorkflow","security-questionnaire","evidence","Q1: Are approvals required? E1: The team policy requires two reviewers before publication. Q2: Is SOC 2 certification current? No certification evidence supplied.","Draft evidence-backed questionnaire answers and flag unsupported claims.","Q1: Are approvals required? E1: The team policy requires two reviewers before publication. Q2: Is SOC 2 certification current? No certification evidence supplied."],
     ];
     const capturePolicies: { workflows: Record<string, Policy> } = { workflows: Object.fromEntries(templates.map(([workflow, , field, , description, example]) => [workflow, {
       allowedModels: workflow === 'ResearchWorkflow' ? models.map(model => model.id) : [models[0].id],
@@ -660,7 +667,21 @@ for (const width of [360, 393, 1440]) {
       const range = document.createRange(); range.selectNodeContents(button.lastChild!);
       return range.getClientRects().length;
     })).toBe(1);
-    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.1/${width}-sso-sign-in.png`, fullPage: true });
+    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.4/${width}-sso-sign-in.png`, fullPage: true });
+    await page.route('**/v1/team/deployment', route => route.fulfill({ json: { checks: [
+      ['authentication', 'Team authentication'], ['cookies', 'Secure session cookies'], ['sso', 'Company sign-in'],
+      ['encryption', 'Secret encryption'], ['accounting', 'Shared accounting'], ['records', 'PostgreSQL records'], ['audit', 'Shared audit chain'],
+    ].map(([id, name]) => ({ id, name, configured: true, action: '' })), verification_required: [
+      'Verify HTTPS, database TLS, approved network egress and secret rotation.',
+      'Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.',
+      'Run the first-approved-run check after every install and upgrade.',
+    ] } }));
+    await page.route('**/v1/team/onboarding', route => route.fulfill({ json: {
+      providers: models.map(model => ({ provider: model.owned_by, configured: model.owned_by === 'openai' ? openaiConfigured : anthropicConfigured, version: 0, can_save: true })),
+      blockers: openaiConfigured || anthropicConfigured ? [] : ['Connect a provider for an approved Research model, then refresh readiness.'],
+      sample: { template_id: 'research', version: '0.9.0', workflow: 'ResearchWorkflow', installed: true, ready: openaiConfigured || anthropicConfigured,
+        input: { topic: 'How should our team evaluate AI agents?', model: models[openaiConfigured ? 0 : 1].id } },
+    } }));
     await login(page, 'admin', `${origin}/console/#start`);
     await expect(page.locator('.identity .team')).toHaveText('Insights');
     await expect(page.locator('.identity .who')).toHaveText('Maya Chen');
@@ -739,7 +760,7 @@ for (const width of [360, 393, 1440]) {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
     const exported = await download;
-    await exported.saveAs(`../../../.out/console-v1.0.0-rc.2/${width}-usage.csv`);
+    await exported.saveAs(`../../../.out/console-v1.0.0-rc.4/${width}-usage.csv`);
     const stream = await exported.createReadStream();
     const chunks = [];
     for await (const chunk of stream!) chunks.push(chunk);
@@ -781,6 +802,7 @@ for (const width of [360, 393, 1440]) {
     expect(await page.locator('.step-number').first().evaluate(node => {
       const style = getComputedStyle(node); return [style.fontFamily, style.fontVariantNumeric, style.color, style.fontWeight];
     })).toEqual(numberStyle);
+    if (width === 1440) await page.screenshot({ path: '../../../docs/assets/console-1440.png', fullPage: false });
     await page.getByText('Arguments and result', { exact: true }).click();
     const json = page.locator('.step-content.json').last();
     await expect(json).toHaveCSS('white-space', 'pre');
@@ -806,7 +828,7 @@ for (const width of [360, 393, 1440]) {
     await expect(page.getByLabel('Model for research')).toHaveValue(models[0].id);
     await expect(page.getByLabel('Model for research').locator('option')).toHaveText(['gpt-4.1-mini · OpenAI', 'claude-haiku-4-5 · Anthropic']);
     await expect(page.locator('.workflow-card').first().locator('summary .dot-list > span')).toHaveText(['$5.00 per run', 'Approval on every run', 'OpenAI, Anthropic']);
-    await expect(page.locator('.workflow-card')).toHaveCount(6);
+    await expect(page.locator('.workflow-card')).toHaveCount(9);
     await page.locator('.workflow-card').first().locator('summary').click();
     await expect(page.getByLabel('Research · Token limit per run')).toHaveValue('10,000');
     await expect(page.getByLabel('Research · Approval expiry (minutes)')).toHaveValue('60');
@@ -825,7 +847,7 @@ for (const width of [360, 393, 1440]) {
     await capture('audit');
     for (const [workflow, name, field, value] of templates) {
       await visit(`/console/#new/${workflow}`);
-      await expect(page.getByLabel('Workflow', { exact: true }).locator('option')).toHaveCount(6);
+      await expect(page.getByLabel('Workflow', { exact: true }).locator('option')).toHaveCount(9);
       await page.locator(`[name="input.${field}"]`).fill(value);
       if (workflow === 'CodeReviewWorkflow') await expect(page.getByLabel('Diff', { exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');
       if (workflow === 'WeeklyReportWorkflow') {
@@ -837,12 +859,12 @@ for (const width of [360, 393, 1440]) {
       await page.getByRole('heading', { name: 'Run workflow', exact: true }).click();
       await capture(`template-${name}`);
     }
-    const templateNames = ['Research', 'Code review', 'Support triage', 'Weekly report', 'Incident summary', 'Document Q&A'];
+    const templateNames = ['Research', 'Code review', 'Support triage', 'Weekly report', 'Incident summary', 'Document Q&A', 'Release notes', 'Meeting actions', 'Security questionnaire'];
     const descriptions = ['Research a topic, review a draft, then publish.', 'Review a patch and approve the findings.',
       'Classify a ticket and draft a reply.', 'Combine changes, support and incidents.',
-      'Build a timeline from incident logs.', 'Answer a question with source citations.'];
+      'Build a timeline from incident logs.', 'Answer a question with source citations.', "Turn merged changes into release notes with a reviewer decision.", "Extract decisions, owners, and due dates from a meeting transcript.", "Draft evidence-backed questionnaire answers and flag unsupported claims."];
     const catalog = templates.map(([workflow, id], i) => ({
-      id, workflow, name: templateNames[i], description: descriptions[i], version: '0.9.0', installable: true,
+      id, workflow, name: templateNames[i], description: descriptions[i], version: i < 6 ? '0.9.0' : '1.0.0-rc.4', installable: true,
       installed_version: i === 0 ? '0.9.0' : null,
     }));
     await page.route('**/v1/workflow-templates', route => route.fulfill({ json: catalog }));
@@ -852,7 +874,7 @@ for (const width of [360, 393, 1440]) {
       return route.fulfill({ json: { id: 'code-review', workflow: 'CodeReviewWorkflow', version: '0.9.0', installed_at: started + 1200 } });
     });
     await visit('/console/#templates');
-    await expect(page.locator('.template-card')).toHaveCount(6);
+    await expect(page.locator('.template-card')).toHaveCount(9);
     await capture('templates-gallery');
     await page.locator('.template-card').filter({ has: page.getByRole('heading', { name: 'Code review', exact: true }) }).getByRole('button', { name: 'Install template' }).click();
     await expect(page.getByRole('link', { name: 'Run code review' })).toBeVisible();
@@ -902,7 +924,7 @@ for (const width of [360, 393, 1440]) {
     const teamDownload = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
     const teamExport = await teamDownload;
-    await teamExport.saveAs(`../../../.out/console-v1.0.0-rc.2/${width}-team-data.json`);
+    await teamExport.saveAs(`../../../.out/console-v1.0.0-rc.4/${width}-team-data.json`);
     await expect(page.getByRole('status')).toContainText('Team data exported');
     await capture('team-data-export');
 
@@ -1690,4 +1712,80 @@ test('team settings saves quorum and expiry together at the current revision', a
   await page.getByRole('button', { name: 'Save settings', exact: true }).click();
   expect((await fractional).postDataJSON()).toEqual({ fields: { 'workflows.ResearchWorkflow.approval_timeout_seconds': 90 } });
   await expect(page.getByText(/Settings saved/)).toBeVisible();
+});
+
+test('first-run wizard starts the ready sample and keeps retry identity', async ({ page }) => {
+  let attempts = 0;
+  const bodies: { request_id: string; input: unknown }[] = [];
+  await page.route('**/v1/workflow-templates/research/install', route => route.fulfill({ json: { id: 'research', version: '0.9.0', workflow: 'ResearchWorkflow' } }));
+  await page.route('**/v1/workflow-runs', route => {
+    bodies.push(route.request().postDataJSON()); attempts++;
+    return route.fulfill(attempts === 1 ? { status: 503, json: { detail: 'Worker unavailable. Retry the same run.' } } : { json: { run_id: id } });
+  });
+  await login(page);
+  await page.getByRole('button', { name: 'Start sample workflow' }).click();
+  await expect(page.getByRole('alert')).toContainText('Worker unavailable');
+  await page.getByRole('button', { name: 'Start sample workflow' }).click();
+  await expect(page).toHaveURL(new RegExp(`#run/${id}$`));
+  expect(bodies[0].request_id).toBe(bodies[1].request_id);
+  expect(bodies[0].input).toEqual({ topic: 'How should our team evaluate AI agents?', model: 'demo-openai' });
+});
+
+test('admins create scoped invitations and recipients exchange them for a session', async ({ page }) => {
+  await page.route('**/v1/team/invitations', route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: [] });
+    expect(route.request().postDataJSON()).toMatchObject({ name: 'Maya Chen', role: 'approver', project: 'default' });
+    return route.fulfill({ status: 201, json: { invitation_id: 'invite', token: 'team.invitation.private-token' } });
+  });
+  await login(page, 'admin', '/console/#keys');
+  await page.getByLabel('Teammate name', { exact: true }).fill('Maya Chen');
+  await page.getByLabel('Invitation role', { exact: true }).selectOption('approver');
+  await page.getByRole('button', { name: 'Create invitation', exact: true }).click();
+  await expect(page.getByLabel('Invitation link', { exact: true })).toHaveValue(/#invite\/team.invitation.private-token$/);
+  await page.route('**/v1/auth/invitations/accept', route => {
+    expect(route.request().postDataJSON()).toEqual({ token: 'team.invitation.private-token' });
+    return route.fulfill({ json: { key: 'approver' } });
+  });
+  await page.goto('/console/#invite/team.invitation.private-token');
+  await page.getByRole('button', { name: 'Accept invitation', exact: true }).click();
+  await expect(page).toHaveURL(/#start$/);
+  await expect(page.getByRole('region', { name: 'Signed in as' })).toContainText('Approver');
+  await expect(page.locator('body')).not.toContainText('private-token');
+});
+
+test('alert rules save selected events and approved destinations at the displayed revision', async ({ page }) => {
+  await page.route('**/v1/team/alert-rules', route => {
+    const rules = { revision: 2, events: ['failed'], channels: ['webhook'], available_channels: ['webhook'], budget_threshold: 0.8, slow_step_ms: 30000 };
+    if (route.request().method() === 'PUT') {
+      expect(route.request().headers()['if-match']).toBe('2');
+      expect(route.request().postDataJSON()).toEqual({ events: ['failed', 'slow_step'], channels: ['webhook'], budget_threshold: 0.9, slow_step_ms: 1000 });
+      return route.fulfill({ json: { ...rules, ...route.request().postDataJSON(), revision: 3 } });
+    }
+    return route.fulfill({ json: rules });
+  });
+  await login(page, 'admin', '/console/#team');
+  await page.getByLabel('Slow step', { exact: true }).check();
+  await page.getByLabel('Budget used (%)', { exact: true }).fill('90');
+  await page.getByLabel('Slow step threshold (milliseconds)', { exact: true }).fill('1000');
+  await page.getByRole('button', { name: 'Save alert rules', exact: true }).click();
+  await expect(page.getByText('Alert rules saved.', { exact: true })).toBeVisible();
+});
+
+test('deployment checklist separates configured settings from recovery verification', async ({ page }) => {
+  await page.route('**/v1/team/retention', route => route.fulfill({ json: { revision: 0, run_seconds: 86400, content_seconds: 3600, audit_seconds: 86400 } }));
+  await page.route('**/v1/team/telemetry', route => route.fulfill({ json: { traces_enabled: false, metrics_enabled: false, protocol: 'http/protobuf', service_name: 'gateway' } }));
+  await page.route('**/v1/team/data', route => route.fulfill({ json: { team_id: 'demo', status: 'active', external_follow_up: [] } }));
+  let configured = false;
+  await page.route('**/v1/team/deployment', route => route.fulfill({ json: { checks: [
+    { id: 'encryption', name: 'Secret encryption', configured, action: 'Configure a persistent encryption key.' },
+  ], verification_required: ['Restore a backup in an isolated environment.'] } }));
+  await login(page, 'admin', '/console/#data');
+  const panel = page.getByRole('region', { name: 'Deployment checklist' });
+  await expect(panel).toContainText('Needs setup');
+  await expect(panel).toContainText('Configure a persistent encryption key.');
+  configured = true;
+  await panel.getByRole('button', { name: 'Refresh' }).click();
+  await expect(panel).toContainText('Configured');
+  await expect(panel).not.toContainText('Configure a persistent encryption key.');
+  await expect(panel).toContainText('Restore a backup in an isolated environment.');
 });
