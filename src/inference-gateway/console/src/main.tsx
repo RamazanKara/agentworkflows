@@ -9,6 +9,7 @@ import { Triggers } from './triggers';
 import { Keys } from './keys';
 import { AuditLog } from './audit';
 import { TeamData, Templates, WorkflowSecrets } from './lifecycle';
+import { AcceptInvitation } from './invitations';
 import './style.css';
 
 const navigation = [
@@ -128,6 +129,7 @@ function App() {
     document.title = `${session ? title : 'Sign in'} · AgentWorkflows Console`;
   }, [route, session]);
   if (loading) return <Loading/>;
+  if (route.startsWith('invite/')) return <AcceptInvitation token={decodeURIComponent(route.slice(7))}/>;
   if (!session || adding) return <SignIn config={config} csrfToken={session?.csrfToken || ''}
     message={expired ? 'Your session expired. Sign in again to continue.' : signinError}
     cancel={session ? () => setAdding(false) : undefined}

@@ -10,6 +10,21 @@ from app.teams import require_role
 
 TEMPLATE_VERSION = "0.9.0"
 TEMPLATES = {
+    "release-notes": (
+        "ReleaseNotesWorkflow",
+        "Release notes",
+        "Turn merged changes into release notes with a reviewer decision.",
+    ),
+    "meeting-actions": (
+        "MeetingActionsWorkflow",
+        "Meeting actions",
+        "Extract decisions, owners, and due dates from a meeting transcript.",
+    ),
+    "security-questionnaire": (
+        "SecurityQuestionnaireWorkflow",
+        "Security questionnaire",
+        "Draft evidence-backed questionnaire answers and flag unsupported claims.",
+    ),
     "research": ("ResearchWorkflow", "Research", "Research a topic, review a draft, then publish."),
     "code-review": ("CodeReviewWorkflow", "Code review", "Review a patch and approve the findings."),
     "support-triage": ("SupportTriageWorkflow", "Support triage", "Classify a ticket and draft a reply."),
@@ -19,9 +34,15 @@ TEMPLATES = {
 }
 
 
+TEMPLATE_VERSIONS = {
+    key: "1.0.0-rc.4" if key in {"release-notes", "meeting-actions", "security-questionnaire"} else TEMPLATE_VERSION
+    for key in TEMPLATES
+}
+
+
 class TemplateInstall(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    version: Literal["0.9.0"]
+    version: Literal["0.9.0", "1.0.0-rc.4"]
 
 
 class InstalledTemplate(BaseModel):
@@ -53,7 +74,7 @@ def register_template_routes(app: FastAPI) -> None:
         return [
             {
                 "id": key,
-                "version": TEMPLATE_VERSION,
+                "version": TEMPLATE_VERSIONS[key],
                 "workflow": workflow,
                 "name": name,
                 "description": description,
@@ -76,6 +97,8 @@ def register_template_routes(app: FastAPI) -> None:
         require_settings_admin(request)
         if template_id not in TEMPLATES:
             raise HTTPException(404, detail="Template not found.")
+        if body.version != TEMPLATE_VERSIONS[template_id]:
+            raise HTTPException(422, detail="Choose the version shown for this template in the gallery.")
         settings = await effective_team_settings(request)
         workflow = TEMPLATES[template_id][0]
         if not settings.team or workflow not in settings.team.workflows:

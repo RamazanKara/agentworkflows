@@ -1,5 +1,5 @@
 site_name: AgentWorkflows
-site_description: The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.
+site_description: Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.
 site_url: https://ramazankara.github.io/agentworkflows/
 repo_url: https://github.com/RamazanKara/agentworkflows
 repo_name: RamazanKara/agentworkflows
@@ -111,6 +111,7 @@ nav:
       - Call the API: client-examples.md
       - Local evaluation: local-evaluation.md
       - Install on Kubernetes: install-kubernetes.md
+      - Single-tenant service: single-tenant.md
       - PostgreSQL gateway storage: postgresql-storage.md
       - Kubernetes production checklist: kubernetes-production-checklist.md
       - Production readiness: production-readiness.md

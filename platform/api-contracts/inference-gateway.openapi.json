@@ -26,6 +26,58 @@
         "title": "AgentResult",
         "type": "object"
       },
+      "AlertRules": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_threshold": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Budget Threshold",
+            "type": "number"
+          },
+          "channels": {
+            "items": {
+              "enum": [
+                "slack",
+                "email",
+                "webhook"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Channels",
+            "type": "array"
+          },
+          "events": {
+            "items": {
+              "enum": [
+                "awaiting_approval",
+                "failed",
+                "budget_threshold",
+                "slow_step"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Events",
+            "type": "array"
+          },
+          "slow_step_ms": {
+            "maximum": 86400000.0,
+            "minimum": 1.0,
+            "title": "Slow Step Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "channels",
+          "budget_threshold",
+          "slow_step_ms"
+        ],
+        "title": "AlertRules",
+        "type": "object"
+      },
       "Approval": {
         "additionalProperties": false,
         "properties": {
@@ -569,6 +621,85 @@
         "title": "CreateBatchRequest",
         "type": "object"
       },
+      "CreatedInvitation": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "number"
+          },
+          "invitation_id": {
+            "title": "Invitation Id",
+            "type": "string"
+          },
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invitation_id",
+          "key_id",
+          "name",
+          "role",
+          "project",
+          "created_at",
+          "expires_at",
+          "accepted_at",
+          "revoked_at",
+          "token"
+        ],
+        "title": "CreatedInvitation",
+        "type": "object"
+      },
       "CreatedKey": {
         "properties": {
           "created_at": {
@@ -666,6 +797,58 @@
         "title": "CreatedKey",
         "type": "object"
       },
+      "DeploymentCheck": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "configured",
+          "action"
+        ],
+        "title": "DeploymentCheck",
+        "type": "object"
+      },
+      "DeploymentReadiness": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/DeploymentCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "verification_required": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verification Required",
+            "type": "array"
+          }
+        },
+        "required": [
+          "checks",
+          "verification_required"
+        ],
+        "title": "DeploymentReadiness",
+        "type": "object"
+      },
       "EmbeddingsRequest": {
         "additionalProperties": true,
         "description": "Request body for an OpenAI-compatible embeddings call.\n\nRouting embeddings through the gateway (rather than calling a separate embedding\nservice directly) subjects them to the same auth, model allowlist, budget, and\naudit controls as chat completions. ``extra=\"allow\"`` forwards provider params\nsuch as ``dimensions`` or ``encoding_format`` unchanged.",
@@ -747,6 +930,96 @@
           "workflow"
         ],
         "title": "InstalledTemplate",
+        "type": "object"
+      },
+      "Invitation": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "number"
+          },
+          "invitation_id": {
+            "title": "Invitation Id",
+            "type": "string"
+          },
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invitation_id",
+          "key_id",
+          "name",
+          "role",
+          "project",
+          "created_at",
+          "expires_at",
+          "accepted_at",
+          "revoked_at"
+        ],
+        "title": "Invitation",
+        "type": "object"
+      },
+      "InvitationAccept": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "format": "password",
+            "title": "Token",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "InvitationAccept",
         "type": "object"
       },
       "KeyCreate": {
@@ -1234,6 +1507,91 @@
         "title": "ModerationRequest",
         "type": "object"
       },
+      "Onboarding": {
+        "properties": {
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderSetup"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "sample": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SampleSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "providers",
+          "sample",
+          "blockers"
+        ],
+        "title": "Onboarding",
+        "type": "object"
+      },
+      "ProviderKeyWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "value": {
+            "format": "password",
+            "title": "Value",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "value",
+          "expected_version"
+        ],
+        "title": "ProviderKeyWrite",
+        "type": "object"
+      },
+      "ProviderSetup": {
+        "properties": {
+          "can_save": {
+            "title": "Can Save",
+            "type": "boolean"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider",
+          "configured",
+          "version",
+          "can_save"
+        ],
+        "title": "ProviderSetup",
+        "type": "object"
+      },
       "ReceiptRequest": {
         "additionalProperties": false,
         "description": "A single agent action reported by a workspace for the audit chain.\n\nEvery free-text field is bounded and redacted before it is chained. A receipt is\npermanent, tamper-evident, and read by auditors, which makes it the last place a\ncredential pasted into a command line should be allowed to come to rest. A producer\nthat needs to commit to detail it cannot publish sends ``detail_sha256`` instead.",
@@ -1613,6 +1971,45 @@
         "title": "RunPage",
         "type": "object"
       },
+      "SampleSetup": {
+        "properties": {
+          "input": {
+            "additionalProperties": true,
+            "title": "Input",
+            "type": "object"
+          },
+          "installed": {
+            "title": "Installed",
+            "type": "boolean"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template_id",
+          "version",
+          "workflow",
+          "installed",
+          "input",
+          "ready"
+        ],
+        "title": "SampleSetup",
+        "type": "object"
+      },
       "ScheduleFiring": {
         "additionalProperties": false,
         "properties": {
@@ -1781,6 +2178,76 @@
           "input"
         ],
         "title": "StartRun",
+        "type": "object"
+      },
+      "TeamAlertRules": {
+        "additionalProperties": false,
+        "properties": {
+          "available_channels": {
+            "items": {
+              "enum": [
+                "slack",
+                "email",
+                "webhook"
+              ],
+              "type": "string"
+            },
+            "title": "Available Channels",
+            "type": "array"
+          },
+          "budget_threshold": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Budget Threshold",
+            "type": "number"
+          },
+          "channels": {
+            "items": {
+              "enum": [
+                "slack",
+                "email",
+                "webhook"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Channels",
+            "type": "array"
+          },
+          "events": {
+            "items": {
+              "enum": [
+                "awaiting_approval",
+                "failed",
+                "budget_threshold",
+                "slow_step"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Events",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "slow_step_ms": {
+            "maximum": 86400000.0,
+            "minimum": 1.0,
+            "title": "Slow Step Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "channels",
+          "budget_threshold",
+          "slow_step_ms",
+          "revision",
+          "available_channels"
+        ],
+        "title": "TeamAlertRules",
         "type": "object"
       },
       "TeamDataDelete": {
@@ -2206,7 +2673,10 @@
         "additionalProperties": false,
         "properties": {
           "version": {
-            "const": "0.9.0",
+            "enum": [
+              "0.9.0",
+              "1.0.0-rc.4"
+            ],
             "title": "Version",
             "type": "string"
           }
@@ -2667,6 +3137,47 @@
           }
         },
         "summary": "Auth Config",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/invitations/accept": {
+      "post": {
+        "operationId": "accept_invitation_v1_auth_invitations_accept_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedKey"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exchange a single-use invitation for its scoped API key (returned once)",
         "tags": [
           "auth"
         ]
@@ -4018,6 +4529,100 @@
         ]
       }
     },
+    "/v1/team/alert-rules": {
+      "get": {
+        "operationId": "get_rules_v1_team_alert_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAlertRules"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Get Rules",
+        "tags": [
+          "observability"
+        ]
+      },
+      "put": {
+        "operationId": "put_rules_v1_team_alert_rules_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertRules"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamAlertRules"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Choose team run alerts without changing approved destinations",
+        "tags": [
+          "observability"
+        ]
+      }
+    },
     "/v1/team/audit": {
       "get": {
         "operationId": "audit_list_v1_team_audit_get",
@@ -4397,6 +5002,180 @@
         ]
       }
     },
+    "/v1/team/deployment": {
+      "get": {
+        "operationId": "deployment_v1_team_deployment_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentReadiness"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Inspect deployment configuration (unrestricted admin only)",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/invitations": {
+      "get": {
+        "operationId": "list_invitations_v1_team_invitations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  },
+                  "title": "Response List Invitations V1 Team Invitations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "List Invitations",
+        "tags": [
+          "teams"
+        ]
+      },
+      "post": {
+        "operationId": "create_invitation_v1_team_invitations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedInvitation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Create a one-day invitation; share its token through a trusted channel",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/invitations/{invitation_id}": {
+      "delete": {
+        "operationId": "revoke_invitation_v1_team_invitations__invitation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{32}$",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Revoke Invitation",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
     "/v1/team/keys": {
       "get": {
         "operationId": "list_keys_v1_team_keys_get",
@@ -4591,6 +5370,102 @@
           }
         ],
         "summary": "Update Key",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/onboarding": {
+      "get": {
+        "operationId": "onboarding_v1_team_onboarding_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Check first-run prerequisites and get a policy-approved sample input",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/providers/{provider}/key": {
+      "put": {
+        "operationId": "put_provider_key_v1_team_providers__provider__key_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "title": "Provider",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderKeyWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderSetup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Save or rotate an encrypted team provider key; zero creates",
         "tags": [
           "teams"
         ]

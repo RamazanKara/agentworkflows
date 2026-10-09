@@ -166,6 +166,24 @@ class Handler(BaseHTTPRequestHandler):
                     "Synthetic PR review: HIGH auth.py:10 returns True for every user, bypassing the admin check. "
                     "Restore user.is_admin and test admin/non-admin access. Confirm caller context before approval."
                 )
+            elif prompt.startswith("Draft release notes from these merged changes"):
+                text = (
+                    "Synthetic release notes: REL-42: Added CSV usage export. Fixed approval expiry. "
+                    "Removed the legacy /draft endpoint. Review source evidence before acting."
+                )
+            elif prompt.startswith("Extract a meeting action plan from this transcript"):
+                text = (
+                    "Synthetic meeting actions: 09:00 Maya: We will pilot the review workflow. 09:02 "
+                    "Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is "
+                    "still open. Review source evidence before acting."
+                )
+            elif prompt.startswith("Draft security questionnaire answers"):
+                text = (
+                    "Synthetic security questionnaire: Q1: Are approvals required? E1: The team "
+                    "policy requires two reviewers before publication. Q2: Is SOC 2 certification "
+                    "current? No certification evidence supplied. Review source evidence before "
+                    "acting."
+                )
             elif prompt.startswith("Triage this support ticket"):
                 text = (
                     "Synthetic triage: category=access; priority=high; owner=identity-support. "

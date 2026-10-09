@@ -78,6 +78,7 @@ class RuntimeClient:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
+        self.storage: Any = None
         self.policy = ModelRoutingPolicy.default(settings)
         self.sandbox_policies = SandboxPolicySet.empty()
         self._failures: dict[str, int] = {}
@@ -111,7 +112,7 @@ class RuntimeClient:
         # Managed calls retry through the caller/Temporal so each attempt has its own budget and receipt.
         return not (team and (team.projects or team.cost_limit_usd is not None))
 
-    def _request_parts(
+    async def _request_parts(
         self, payload: dict[str, Any], backend: str, endpoint: str, headers: dict[str, str] | None
     ) -> tuple[str, dict[str, Any], dict[str, str] | None, ModelRoute | None]:
         body = self._chat_completion_body(payload)
@@ -130,7 +131,18 @@ class RuntimeClient:
             raise ValueError("provider route mismatch")
         if endpoint == "chat/completions" and not any(key in body for key in ("max_tokens", "max_completion_tokens")):
             body["max_completion_tokens"] = self.settings.max_completion_tokens
-        url, body, auth = cloud_request(route, body, endpoint, self.settings.max_completion_tokens)
+        credential_value = None
+        if (
+            team
+            and self.storage is not None
+            and (self.storage.backend == "postgres" or self.settings.sandbox_budget_backend == "redis")
+        ):
+            from app.onboarding import saved_provider_key
+
+            credential_value = await saved_provider_key(
+                self.storage, self.settings, (headers or {}).get("X-Sandbox-ID", ""), backend
+            )
+        url, body, auth = cloud_request(route, body, endpoint, self.settings.max_completion_tokens, credential_value)
         return url, body, auth, route
 
     def _base_url(self, backend: str | None = None) -> str:
@@ -249,7 +261,7 @@ class RuntimeClient:
         retry = retry and self._allow_retries(headers)
         body = self._chat_completion_body(payload)
         resolved_backend = backend or self.settings.runtime_backend
-        url, body, headers, route = self._request_parts(body, resolved_backend, "chat/completions", headers)
+        url, body, headers, route = await self._request_parts(body, resolved_backend, "chat/completions", headers)
         data = await self._post_json_with_retry(
             url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend, retry=retry
         )
@@ -268,7 +280,7 @@ class RuntimeClient:
         body = dict(payload)
         body["model"] = body.get("model") or self.settings.model_id
         resolved_backend = backend or self.settings.runtime_backend
-        url, body, headers, route = self._request_parts(body, resolved_backend, "embeddings", headers)
+        url, body, headers, route = await self._request_parts(body, resolved_backend, "embeddings", headers)
         data = await self._post_json_with_retry(
             url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend, retry=retry
         )
@@ -290,7 +302,7 @@ class RuntimeClient:
         body = dict(payload)
         body["model"] = body.get("model") or self.settings.model_id
         resolved_backend = backend or self.settings.runtime_backend
-        url, body, headers, route = self._request_parts(body, resolved_backend, "completions", headers)
+        url, body, headers, route = await self._request_parts(body, resolved_backend, "completions", headers)
         data = await self._post_json_with_retry(
             url, body, headers, f"{resolved_backend}:{route.model_id}" if route else resolved_backend, retry=retry
         )
@@ -312,7 +324,7 @@ class RuntimeClient:
         retry = self._allow_retries(headers)
         body = self._chat_completion_body(payload)
         resolved_backend = backend or self.settings.runtime_backend
-        url, body, headers, route = self._request_parts(body, resolved_backend, "chat/completions", headers)
+        url, body, headers, route = await self._request_parts(body, resolved_backend, "chat/completions", headers)
         circuit = f"{resolved_backend}:{route.model_id}" if route else resolved_backend
         attempts = self.settings.runtime_max_retries + 1 if retry else 1
         client = self._client_instance()

@@ -63,6 +63,23 @@ class UmbrellaChartTests(unittest.TestCase):
         self.assertEqual(env["OTEL_TRACING_ENABLED"]["value"], "true")
         self.assertEqual(env["OTEL_EXPORTER_OTLP_ENDPOINT"]["value"], "http://collector:4318")
 
+    def test_single_tenant_reference_uses_private_stores_and_secure_sessions(self):
+        values = yaml.safe_load((CHART / "values-single-tenant.yaml").read_text())
+        docs = self.render(values)
+        env = gateway_env(docs)
+        self.assertEqual(env["SESSION_COOKIE_SECURE"]["value"], "true")
+        self.assertEqual(env["STORAGE_BACKEND"]["value"], "postgres")
+        self.assertEqual(env["WORKFLOW_SECRETS_KEY"]["valueFrom"]["secretKeyRef"]["name"], "agents-encryption")
+        self.assertEqual(env["SANDBOX_BUDGET_REDIS_URL"]["valueFrom"]["secretKeyRef"]["name"], "agents-redis")
+        self.assertEqual(resource(docs, "Deployment", "inference-gateway")["spec"]["replicas"], 2)
+        self.assertEqual(resource(docs, "Deployment", "workflow-worker")["spec"]["replicas"], 2)
+        resource(docs, "PodDisruptionBudget", "workflow-worker")
+        resource(docs, "NetworkPolicy", "inference-gateway")
+        self.assertFalse(any(doc["kind"] == "StatefulSet" for doc in docs))
+        for store in values["workflows"]["temporal"]["server"]["config"]["persistence"]["datastores"].values():
+            self.assertTrue(store["sql"]["tls"]["enableHostVerification"])
+            self.assertFalse(store["sql"]["createDatabase"])
+
     def test_kind_quickstart_uses_candidate_images_and_local_model(self):
         values = yaml.safe_load((CHART / "values-quickstart.yaml").read_text())
         docs = self.render(values)

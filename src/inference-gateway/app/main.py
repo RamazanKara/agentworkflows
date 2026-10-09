@@ -208,6 +208,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "Team projects require authentication, SANDBOX_BUDGET_ENABLED=true, "
             "SANDBOX_BUDGET_BACKEND=redis, and AUDIT_LOG_ENABLED=true."
         )
+    app.state.runtime_client.storage = app.state.storage
     app.state.runtime_client.sandbox_policies = app.state.sandbox_policy_set
     from app.teams import authorize_team_request, register_team_routes
 

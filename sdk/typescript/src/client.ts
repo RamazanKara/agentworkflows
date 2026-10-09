@@ -5,7 +5,7 @@ import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
   ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
-  InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
+  DeploymentReadiness, AlertRules, TeamAlertRules, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
 } from './types';
 
 export interface ClientOptions {
@@ -39,7 +39,22 @@ export class GatewayClient {
     }
   }
 
-  /** List managed keys, including revoked and expired keys (admin only). */
+  invitations(): Promise<Invitation[]> {
+    return this.request('GET', '/v1/team/invitations');
+  }
+
+  createInvitation(name: string, options: KeyOptions = {}): Promise<Invitation & { token: string }> {
+    return this.request('POST', '/v1/team/invitations', { name, ...options });
+  }
+
+  revokeInvitation(invitationId: string): Promise<Invitation> {
+    return this.request('DELETE', `/v1/team/invitations/${encodeURIComponent(invitationId)}`);
+  }
+
+  acceptInvitation(token: string): Promise<CreatedKey> {
+    return this.request('POST', '/v1/auth/invitations/accept', { token });
+  }
+
   listKeys(): Promise<KeyList> {
     return this.request('GET', '/v1/team/keys');
   }
@@ -74,9 +89,29 @@ export class GatewayClient {
     return this.request('GET', '/v1/team/sso');
   }
 
-  /** Monthly limits and alerts; requires an unrestricted team credential. */
+  deployment(): Promise<DeploymentReadiness> {
+    return this.request('GET', '/v1/team/deployment');
+  }
+
+  alertRules(): Promise<TeamAlertRules> {
+    return this.request('GET', '/v1/team/alert-rules');
+  }
+
+  setAlertRules(rules: AlertRules, revision: number | string): Promise<TeamAlertRules> {
+    return this.request('PUT', '/v1/team/alert-rules', rules, false, { 'If-Match': String(revision) });
+  }
+
   teamSpend(): Promise<TeamSpend> {
     return this.request('GET', '/v1/team/spend');
+  }
+
+  onboarding(): Promise<Onboarding> {
+    return this.request('GET', '/v1/team/onboarding');
+  }
+
+  setProviderKey(provider: string, value: string, expectedVersion = 0): Promise<ProviderSetup> {
+    return this.request('PUT', `/v1/team/providers/${encodeURIComponent(provider)}/key`,
+      { value, expected_version: expectedVersion });
   }
 
   workflowTemplates(): Promise<WorkflowTemplate[]> {

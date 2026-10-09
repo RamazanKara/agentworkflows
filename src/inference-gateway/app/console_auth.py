@@ -37,7 +37,7 @@ from app.sessions import (
 from app.settings import validate_sandbox_id
 from app.workflow_budget import redis_call
 
-AUTH_PATHS = {f"/v1/auth/{name}" for name in ("config", "login", "callback", "logout", "session")}
+AUTH_PATHS = {f"/v1/auth/{name}" for name in ("config", "login", "callback", "logout", "session", "invitations/accept")}
 STATE_COOKIE = "aw_oidc_state"
 SIGNIN_ERRORS = {400: "expired", 401: "rejected"}
 

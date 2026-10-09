@@ -514,9 +514,42 @@ class GatewayClient:
         """Export current UTC month usage as CSV, scoped to this credential's team/project."""
         return self._request("GET", "/v1/usage/export", headers={"Accept": "text/csv"}).text
 
+    def onboarding(self) -> dict[str, Any]:
+        """Check first-run prerequisites and get the team's sample input."""
+        return self._get("/v1/team/onboarding")
+
+    def set_provider_key(self, provider: str, value: str, *, expected_version: int = 0) -> dict[str, Any]:
+        """Encrypt a credential for an already approved team provider; zero creates."""
+        return self._request(
+            "PUT",
+            f"/v1/team/providers/{quote(provider, safe='')}/key",
+            json={"value": value, "expected_version": expected_version},
+            creates_state=True,
+        ).json()
+
     def team(self) -> dict[str, Any]:
         """Discover the current credential's team, role, and projects."""
         return self._get("/v1/team")
+
+    def invitations(self) -> list[dict[str, Any]]:
+        return self._get("/v1/team/invitations")
+
+    def create_invitation(self, name: str, **options: Unpack[KeyOptions]) -> dict[str, Any]:
+        """Return a one-day, single-use token; share it through a trusted channel."""
+        response = self._client.post("/v1/team/invitations", json={"name": name, **options})
+        _raise_for_status(response)
+        return response.json()
+
+    def revoke_invitation(self, invitation_id: str) -> dict[str, Any]:
+        return self._request(
+            "DELETE", f"/v1/team/invitations/{quote(invitation_id, safe='')}", creates_state=True
+        ).json()
+
+    def accept_invitation(self, token: str) -> CreatedKey:
+        """Exchange an invitation once; save the returned credential securely."""
+        response = self._client.post("/v1/auth/invitations/accept", json={"token": token})
+        _raise_for_status(response)
+        return response.json()
 
     def list_keys(self) -> KeyList:
         """List the team's managed keys, including revoked and expired keys (admin only)."""
@@ -549,6 +582,21 @@ class GatewayClient:
     def team_settings(self) -> TeamSettings:
         """Read effective settings, policy defaults and the revision (unrestricted admin only)."""
         return self._request("GET", "/v1/team/settings").json()
+
+    def deployment(self) -> dict[str, Any]:
+        return self._get("/v1/team/deployment")
+
+    def alert_rules(self) -> dict[str, Any]:
+        return self._get("/v1/team/alert-rules")
+
+    def set_alert_rules(self, rules: dict[str, Any], *, revision: int | str) -> dict[str, Any]:
+        return self._request(
+            "PUT",
+            "/v1/team/alert-rules",
+            json=rules,
+            headers={"If-Match": str(revision)},
+            creates_state=True,
+        ).json()
 
     def team_spend(self) -> TeamSpend:
         """Read monthly spend, limits and alerts (an unrestricted team credential is required)."""

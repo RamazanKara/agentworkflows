@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DeploymentChecklist } from './deployment';
 import { api, date, useData, workflowName, type Policy, type Session } from './api';
 import { Badge, Empty, ErrorMessage, Loading, PageHeader, Refresh } from './ui';
 
@@ -18,7 +19,7 @@ export function Templates({ session }: { session: Session }) {
     <ErrorMessage message={error || result.error}/><p className="status" role="status">{notice}</p>
     {!result.data ? <Loading/> : <div className="template-gallery">{result.data.map(template => <article className="panel template-card" key={`${template.id}:${template.version}`}>
       <div className="section-heading"><h2>{template.name}</h2><Badge value={template.installed_version ? 'completed' : 'recorded'} text={template.installed_version ? 'Installed' : `v${template.version}`}/></div>
-      <p>{template.description}</p><p className="muted">Version {template.version}</p>
+      <p>{template.description}</p><p className="muted">Version {template.version} · <a href={`https://github.com/RamazanKara/agentworkflows/blob/main/docs/templates.md#${template.id}`} target="_blank" rel="noreferrer">Workflow guide</a></p>
       {!template.installable ? <p className="muted">Your operator needs to register this workflow and approve its policy.</p> : template.installed_version ? <a className="button" href={`#new/${encodeURIComponent(template.workflow)}`}>Run {template.name.toLowerCase()}</a> : session.team.role !== 'admin' ? <p className="muted">A team admin can install this template.</p> : <button disabled={Boolean(busy)} onClick={async () => {
         setBusy(template.id); setError(''); setNotice('');
         try {
@@ -120,6 +121,7 @@ function DataManagement({ session }: { session: Session }) {
           <button className="danger" disabled={busy || confirmation !== session.team.team_id}>Erase team data</button></form>
       </section>
     </>}
+    <DeploymentChecklist session={session}/>
     {state.data && <section className="panel form-panel"><h2>External follow-up</h2><p>These records have separate owners and retention controls:</p><ul>{state.data.external_follow_up.map(item => <li key={item}>{item}</li>)}</ul></section>}
     {telemetry.data && <section className="panel form-panel"><h2>OpenTelemetry export</h2><dl className="data-facts"><div><dt>Traces</dt><dd>{telemetry.data.traces_enabled ? 'Enabled' : 'Disabled'}</dd></div><div><dt>Metrics</dt><dd>{telemetry.data.metrics_enabled ? 'Enabled' : 'Disabled'}</dd></div><div><dt>Protocol</dt><dd>{telemetry.data.protocol}</dd></div></dl>
       <p className="muted">Configuration is shown here. Check your collector and Grafana for delivery and current data.</p>

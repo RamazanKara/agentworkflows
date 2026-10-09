@@ -17,7 +17,7 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 
 ## 1. Install and start
 
-### Scripted first approved run (rc.2)
+### Scripted first approved run (rc.4)
 
 The script installs the Research template, starts its simulated workflow, prints and approves
 the fixture draft, checks publication and verifies the audit chain. It fails after 300 seconds
@@ -115,7 +115,8 @@ agentworkflows runs start ResearchWorkflow --input '@input.json'
 
 You now have editable `workflow.py`, `worker.py`, `input.json`, and `input-schema.json`, plus a README with
 worker instructions. `init --help` lists **research**, **code-review**, **support-triage**,
-**weekly-report**, **incident-summary**, and **document-qa**.
+**weekly-report**, **incident-summary**, **document-qa**, **release-notes**,
+**meeting-actions**, and **security-questionnaire**.
 It never overwrites an existing project. The built-in worker runs the unchanged templates;
 follow [Edit your workflow](templates.md#run-your-edits) when you change the source.
 
@@ -309,3 +310,28 @@ is available for Temporal (`AGENTWORKFLOWS_TEMPORAL_PORT`) and its UI
 
 Next: [workflow concepts](concepts.md), [edit a template](templates.md),
 [CLI and SDK reference](sdk-reference.md), or [full smoke test and Kubernetes lab](local-evaluation.md).
+
+## 60-second console walkthrough
+
+After the stack is ready, sign in at `http://127.0.0.1:8080/console/` with
+`local-development-only`. Open **Get started → First-run wizard** and click
+**Start sample workflow**. Read the draft on the run page, approve it, and wait for
+**Completed / Published**. Inspect the step timeline and its approval receipt.
+
+The wizard checks the Research policy, model routes, provider credential presence,
+approved research/publish tools, and nonzero budgets. It selects a ready model rather
+than a missing-key route. It installs the versioned sample for team admins and uses the
+normal idempotent run API. Builders can start approved policy; viewers and approvers
+cannot launch work. Model access and worker availability are verified by the run itself.
+
+For a real provider, an unrestricted admin can paste a credential and click **Save provider
+key**. The provider must already be allowed by deployment policy. Values are encrypted
+using the existing persistent `WORKFLOW_SECRETS_KEY`, never returned, logged, or included
+in exports. Each save checks the displayed version to prevent overwriting a concurrent
+rotation. The saved team credential takes precedence over its environment default on
+every gateway replica. This is a presence check, not a paid provider probe. If encryption
+is not configured, the wizard links to the operator setup instructions.
+
+API: `GET /v1/team/onboarding`; `PUT /v1/team/providers/{provider}/key` with
+`{"value":"…","expected_version":0}`. Both SDKs expose `onboarding()` and
+Python `set_provider_key()` / TypeScript `setProviderKey()`.

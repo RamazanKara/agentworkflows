@@ -382,3 +382,42 @@ it('propagates later page failures instead of treating partial exports as comple
   await expect(lines.next()).rejects.toMatchObject({ statusCode: 503, reason: 'audit_view_unavailable' });
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
+
+it('checks onboarding and writes provider keys with a version', async () => {
+  fetchMock.mockImplementation(async () => ok({ version: 2 }));
+  await client.onboarding();
+  await client.setProviderKey('openai', 'new-key', 1);
+  expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
+    '/v1/team/onboarding', '/v1/team/providers/openai/key',
+  ]);
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ value: 'new-key', expected_version: 1 });
+});
+
+it('preserves invitation scope and never retries acceptance', async () => {
+  fetchMock.mockImplementation(async url => String(url).endsWith('/accept')
+    ? new Response('{}', { status: 503 }) : ok({}));
+  await client.invitations();
+  await client.createInvitation('Maya', { role: 'approver', project: 'private' });
+  await client.revokeInvitation('abc');
+  await expect(client.acceptInvitation('single-use-token')).rejects.toMatchObject({ statusCode: 503 });
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ name: 'Maya', role: 'approver', project: 'private' });
+  expect(fetchMock.mock.calls[2][1]?.method).toBe('DELETE');
+});
+
+it('preserves alert rule revision and surfaces conflicts without retry', async () => {
+  fetchMock.mockResolvedValueOnce(ok({ revision: 2 })).mockResolvedValueOnce(new Response('{}', { status: 409 }));
+  await client.alertRules();
+  await expect(client.setAlertRules({ events: ['failed'], channels: ['webhook'], budget_threshold: 0.8, slow_step_ms: 1000 }, 2))
+    .rejects.toMatchObject({ statusCode: 409 });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({ 'If-Match': '2' });
+});
+
+it('returns deployment checks and manual verification steps', async () => {
+  const body = { checks: [{ id: 'encryption', configured: false, action: 'Configure encryption.' }],
+    verification_required: ['Restore a backup.'] };
+  fetchMock.mockResolvedValueOnce(ok(body));
+  await expect(client.deployment()).resolves.toEqual(body);
+  expect(fetchMock.mock.calls[0][0]).toBe('http://gateway.test/v1/team/deployment');
+});

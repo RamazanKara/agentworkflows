@@ -90,3 +90,19 @@ expiry/rejection, legacy worker compatibility, SDK and console tests, and source
 Quickstart verification where Docker is available. Escalation, versioned one-click
 installation and per-workflow secrets remain open. OpenTelemetry live export and broader
 SDK parity remain integration work. Already-implemented features are not counted again.
+
+## 1.0.0-rc.4 adoption pass — plan recorded before implementation
+
+Existing behavior is the baseline, not a new feature claim. Work proceeds in this order.
+Each gap includes the HTTP contract, gateway behavior, console, Python/TypeScript methods,
+documentation, and regression coverage. Container acceptance is separate from native checks.
+
+| Gap | Symptom for a new team | Why it blocks adoption | Plan | Status |
+| --- | --- | --- | --- | --- |
+| Onboarding | Get started is a static checklist; a missing provider key sends an admin to shell commands. | A team cannot reach its first approved result from the product. | Add a readiness contract and live wizard, choose a ready sample model, securely save a missing provider key using existing encryption, install/start the sample, and link review and evidence. | Implemented; onboarding API, SDK and browser checks passed. Container acceptance pending. |
+| Templates | Six templates; installation requires preapproved worker policy. | Common team jobs still start from a blank file. | Expand to nine distinct, documented workflows, register workers and policies, retain version-pinned idempotent installation, and cover schemas, outputs, and approval decisions. | Implemented; nine templates with Python/TypeScript workflow, scaffold, and gateway version checks passing. |
+| Auth and teams | Members are effectively API-key records; no invitation lifecycle. | Admins hand credentials around and cannot track pending access. | Add expiring, single-use invitation creation/acceptance/revocation, role/project boundaries and audit; console copy/accept flows; preserve OIDC mapping and managed-key controls. | Implemented; gateway identity suite passed (117 tests). Invitation SDK and console acceptance covered. |
+| Observability | Step timings and costs exist, but notification rules are deployment policy only. | Teams cannot choose actionable run alerts without operator changes. | Add revision-checked alert rules for existing approved notification channels, console controls, delivery/error visibility, SDK parity and tests; retain the run timeline. | Implemented: revisioned alert API and SDKs, console rules, safe failure surfaces; 22 alert/trigger and 85 TypeScript SDK tests pass. Live delivery acceptance pending; final TypeScript suite: 86 tests. |
+| Deployment | Compose, hardened Helm settings, and a kind trial exist in separate guides. | Teams cannot identify one supported path or recover an installation confidently. | Consolidate one-command source Compose, validate a single-tenant Helm reference, expose deployment readiness, and document backup/restore and ordered upgrades with explicit caller acceptance commands. | Implemented: configuration API, console checklist, both SDKs, single-tenant Helm profile and recovery/upgrade guide. Native Helm rendering passed (20 tests, 8 subtests); Compose/kind and managed-service drills require the caller. |
+
+Final rc.4 native verification: gateway 1,101 passed/27 skipped; Python SDK 215 passed/3 skipped; TypeScript 86 passed; console build and 80 tests passed, with 3 final capture tests. Changed Python files and contracts pass. Container/live-provider/recovery acceptance remains open, and existing repository Ruff/format/MkDocs failures remain unchanged. See [verification and caller commands](release-verification.md#rc4-adoption-pass).

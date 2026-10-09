@@ -80,11 +80,17 @@ def authorize_team_request(request: Request) -> None:
 
 
 def register_team_routes(app: FastAPI) -> None:
+    from app.alert_rules import register_alert_routes
     from app.audit_view import register_audit_routes
+    from app.deployment import register_deployment_routes
+    from app.onboarding import register_onboarding_routes
     from app.team_data import register_team_data_routes
     from app.team_settings import effective_team_settings, register_team_settings_routes
     from app.team_spend import register_spend_routes
 
+    register_deployment_routes(app)
+    register_alert_routes(app)
+    register_onboarding_routes(app)
     register_audit_routes(app)
     register_team_settings_routes(app)
     register_spend_routes(app)
@@ -150,7 +156,12 @@ def register_team_routes(app: FastAPI) -> None:
             **(
                 {
                     "provider_configuration": {
-                        provider: {"environment_variable": variable, "configured": bool(os.getenv(variable))}
+                        provider: {
+                            "environment_variable": variable,
+                            "configured": bool(
+                                os.getenv(variable) or settings.document.get("provider_keys", {}).get(provider)
+                            ),
+                        }
                         for provider, variable in team.provider_credentials.items()
                     }
                 }

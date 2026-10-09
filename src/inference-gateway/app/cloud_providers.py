@@ -18,8 +18,8 @@ from app.policy import ModelRoute
 from app.settings import AdmissionPolicyError
 
 
-def credential_headers(route: ModelRoute) -> dict[str, str]:
-    credential = os.environ.get(route.credential_env, "")
+def credential_headers(route: ModelRoute, credential: str | None = None) -> dict[str, str]:
+    credential = credential if credential is not None else os.environ.get(route.credential_env, "")
     if not credential or "\n" in credential or "\r" in credential:
         raise AdmissionPolicyError("provider_not_configured", "provider credential is unavailable")
     if route.backend == "anthropic":
@@ -28,9 +28,9 @@ def credential_headers(route: ModelRoute) -> dict[str, str]:
 
 
 def cloud_request(
-    route: ModelRoute, payload: dict[str, Any], endpoint: str, max_tokens: int
+    route: ModelRoute, payload: dict[str, Any], endpoint: str, max_tokens: int, credential: str | None = None
 ) -> tuple[str, dict[str, Any], dict[str, str]]:
-    headers = credential_headers(route)
+    headers = credential_headers(route, credential)
     body = dict(payload)
     body["model"] = route.upstream_model
     body.pop("data_classification", None)

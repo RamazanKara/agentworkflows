@@ -8,6 +8,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from datetime import timedelta
 from time import time
 from typing import Any, Literal
@@ -159,6 +160,25 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
             # A completed run can still end in a reviewer's rejection; lists show that outcome.
             if isinstance(value, dict) and isinstance(value.get("status"), str):
                 result["outcome"] = value["status"]
+        if result["status"] in {"failed", "timed_out", "terminated"}:
+            code = "workflow_" + result["status"]
+            if result["status"] == "failed":
+                from temporalio.client import WorkflowFailureError
+
+                try:
+                    await handle.result(rpc_timeout=RPC_TIMEOUT)
+                except WorkflowFailureError as exc:
+                    cause = exc.cause
+                    while getattr(cause, "cause", None) is not None:
+                        cause = cause.cause
+                    failure_type = getattr(cause, "type", "")
+                    if isinstance(failure_type, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,79}", failure_type):
+                        code = failure_type
+            result["error"] = {
+                "code": code,
+                "message": "Review failed step receipts and the worker logs for this run. "
+                "Check provider access, budgets, approval expiry, and tool availability before retrying.",
+            }
         if result["status"] == "running":
             try:
                 result["progress"] = await handle.query("status", rpc_timeout=RPC_TIMEOUT)

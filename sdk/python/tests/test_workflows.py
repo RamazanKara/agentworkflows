@@ -362,3 +362,33 @@ def test_document_answer_abstains_without_evidence(monkeypatch, sources):
     result = asyncio.run(DocumentQAWorkflow().run(DocumentQARequest("unanswerable")))
     assert result == {"answer": "I don't know from the supplied documents.", "citations": []}
     assert text.await_count == (1 if sources else 0)
+
+
+@pytest.mark.parametrize("template", ["release-notes", "meeting-actions", "security-questionnaire"])
+@pytest.mark.parametrize("approved", [True, False])
+def test_team_templates_require_review_and_preserve_source(monkeypatch, template, approved):
+    from importlib import import_module
+
+    from agentworkflows.scaffold import TEMPLATES
+    from temporalio.workflow import _Definition
+
+    module, name, example = TEMPLATES[template]
+    source = import_module(f"agentworkflows.examples.{module}")
+    workflow_class = getattr(source, name)
+    request_class = getattr(source, name.replace("Workflow", "Request"))
+    draft = "A grounded draft awaiting the team's decision."
+    text = AsyncMock(return_value=draft)
+    approval = AsyncMock(return_value=approved)
+    monkeypatch.setattr(WorkflowGateway, "text", text)
+    monkeypatch.setattr(workflow_class, "approval", approval)
+
+    async def execute():
+        SandboxedWorkflowRunner().prepare_workflow(_Definition.must_from_class(workflow_class))
+        return await workflow_class().run(request_class(**example))
+
+    result = asyncio.run(execute())
+    assert result["approved"] is approved
+    assert draft in result.values()
+    assert next(iter(example.values())) in text.call_args.args[0]
+    approval.assert_awaited_once_with(draft)
+    assert workflow_class.input_schema["required"] == list(example)

@@ -29,22 +29,37 @@ def main():
         TemporaryDirectory() as directory,
         GatewayClient(os.environ["AGENTWORKFLOWS_URL"], api_key="local-development-only") as client,
     ):
-        for template in ("code-review", "support-triage", "weekly-report", "incident-summary", "document-qa"):
+        for template in (
+            "code-review",
+            "support-triage",
+            "weekly-report",
+            "incident-summary",
+            "document-qa",
+            "release-notes",
+            "meeting-actions",
+            "security-questionnaire",
+        ):
             project = Path(directory) / template
             with contextlib.redirect_stdout(io.StringIO()):
                 assert cli(["init", str(project), "--template", template]) == 0
             value = json.loads((project / "input.json").read_text())
             workflow = TEMPLATES[template][1]
-            for approved in [True, False] if template == "code-review" else [None]:
+            for approved in (
+                [True, False]
+                if template in {"code-review", "release-notes", "meeting-actions", "security-questionnaire"}
+                else [None]
+            ):
                 run_id = client.start_run(workflow, value)["run_id"]
                 if approved is not None:
                     run = until(client, run_id, lambda row: row.get("progress", {}).get("stage") == "awaiting_approval")
-                    assert "auth.py:10" in run["progress"]["draft"], run
+                    assert run["progress"]["draft"], run
+                    if template == "code-review":
+                        assert "auth.py:10" in run["progress"]["draft"], run
                     assert not any(step["action"] == "approval" for step in run["timeline"]), run
                     client.approve_run(run_id, approved=approved)
                 run = until(client, run_id, lambda row: row["status"] == "completed")
                 result = run["result"]
-                if template == "code-review":
+                if approved is not None:
                     assert result["approved"] is approved and result["reviewer"] == "demo-key", run
                 elif template == "support-triage":
                     assert "priority=high" in result and "Draft reply:" in result, run

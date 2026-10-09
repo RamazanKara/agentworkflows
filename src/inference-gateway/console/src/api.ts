@@ -56,6 +56,7 @@ export type Run = {
   timeline?: Step[];
   result?: unknown;
   outcome?: string;
+  error?: { code: string; message: string };
 };
 export type RunPage = { runs: Run[]; next_cursor: string | null };
 export type CostRow = { calls?: number; tokens?: number; cost_usd?: number };

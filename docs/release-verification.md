@@ -21,6 +21,80 @@ Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: `make lint test-gateway test-scripts`. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.
 
+## rc.4 adoption pass
+
+2026-10-09, native Windows. All five plans were recorded in
+[PRODUCT-GAPS.md](https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md)
+before implementation. No dependencies were added and no commit, push, PR or publication was made.
+
+| Native check | Result |
+| --- | --- |
+| Gateway full suite | **1,101 passed, 27 skipped**. Infrastructure/optional skips remain; no live PostgreSQL or Temporal deployment is implied. |
+| Python SDK | **215 passed, 3 skipped** (optional frameworks). |
+| TypeScript SDK | Build and lint passed; **86 tests passed**. |
+| Console | Production build passed; **80 Playwright tests passed**. Final capture-only rerun: **3 passed**. |
+| Contracts | OpenAPI snapshot generation/check and configuration contract check passed. |
+| Helm | Dependencies resolved; **20 tests and 8 schema subtests passed**. Single-tenant profile passed strict Helm lint. |
+| Ruff | Every changed Python file passes lint. Repository-wide lint still fails on the untouched `tests/test_approval_policies.py:67` E501. Repository formatter check reports 32 files; no unrelated formatting cleanup was made. |
+| Docs | Strict MkDocs build still fails on two existing `../runbooks/observability.md` links in this file and `team-lifecycle.md`. New landing/reference links and screenshots resolve. |
+| Compose quickstart | Attempted the README command; native `docker` is unavailable, including the usual Windows installation paths. WSL was not used. **No end-to-end run or 60-second timing claim was verified here.** |
+
+Python checks used installed native environments with `PYTHONPATH` pointing at this
+checkout for SDK tests and bytecode writes disabled. Browser tests used the production
+Vite preview on port 4175 and the existing Playwright suite through a temporary config
+that omitted its web-server launcher; the launcher hung during Windows teardown.
+The preview process was stopped after verification.
+
+The capture test now writes the README's [1440 px screenshot](assets/console-1440.png).
+Reviewed [360 px](assets/console-360.png) and [393 px](assets/console-393.png) run captures
+are retained as well. The complete capture set is generated under
+`.out/console-v1.0.0-rc.4/`. Review covered first-run provider setup, templates,
+membership/SSO, approval/timeline, alert rules and deployment checks. Layout assertions
+check viewport overflow, mid-word wraps, placeholder fixture text, totals and identities.
+All screenshots use the same seeded Insights team; they are UI evidence, not live service evidence.
+
+### Caller acceptance still required
+
+Run these from this checkout on a Docker-capable Linux host or in the caller's WSL
+environment, with Python 3.12+, Docker/Compose, Helm, kind and kubectl installed:
+
+```bash
+docker compose -f deploy/compose/compose.yaml up --build -d --wait workflow-worker
+python3 scripts/first-approved-run.py compose
+python3 scripts/template-smoke.py
+python3 scripts/trigger-smoke.py
+```
+
+The first-run script has a 300-second deadline after image preparation. Time the manual
+sign-in → sample → approval walkthrough separately before publishing a measured
+60-second result. Test all nine template inputs and the provider-key wizard against
+the running gateway, then verify delivery in the local notification fakes.
+
+For the isolated kind path:
+
+```bash
+docker build -t agentworkflows-gateway:quickstart src/inference-gateway
+docker build -f sdk/python/Dockerfile -t agentworkflows-worker:quickstart .
+helm dependency build deploy/charts/workflows
+helm dependency build deploy/charts/agentworkflows
+python3 scripts/first-approved-run.py kind
+```
+
+Run the existing recovery and upgrade drills against their disposable environments:
+
+```bash
+python3 scripts/workflow-recovery.py drill
+python3 scripts/workflow-recovery.py upgrade
+python3 scripts/helm-upgrade-test.py
+```
+
+These drills create and remove their own stacks/data. The upgrade drill's historical
+baseline is pinned in its script; also stage the actual rc.3 → rc.4 customer upgrade.
+Follow the [single-tenant reference](single-tenant.md) to verify managed-store TLS,
+network isolation, backup restore, real company sign-in and approved notification
+destinations. Use test accounts and a capped provider budget. None of that live
+infrastructure acceptance was replaced by mocks or static chart rendering.
+
 ## rc.2 lifecycle pass
 
 2026-10-09, native Windows, Python 3.12.14, Node 24.19.0, portable Helm 3.18.6.
