@@ -1220,6 +1220,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Uninstall">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approval-policies-v090-source-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval policies (v0.9.0 source build)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2323,6 +2340,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Uninstall">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approval-policies-v090-source-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval policies (v0.9.0 source build)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2705,6 +2739,14 @@ disposable namespace, remove all remaining data and stop its port-forward:</p>
 </code></pre></div>
 <p>Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
 <code>temporal-postgres-auth</code> Secret or delete the old claim before a fresh evaluation install.</p>
+<h3 id="approval-policies-v090-source-build">Approval policies (v0.9.0 source build)<a class="headerlink" href="#approval-policies-v090-source-build" title="Permanent link">&para;</a></h3>
+<p>Build and roll out the v0.9.0 gateway before upgrading the worker image/SDK. Under the
+existing workflow policy in <code>inference-gateway.sandboxPolicy.policy.policies</code>, use
+<code>requiredApprovals: 2</code> and <code>approvalTimeoutSeconds: 3600</code> to require two distinct
+reviewers within an hour. The shipped Research defaults remain one/seven days.
+Team settings offers the same controls without a rollout and overrides YAML values.
+A new run snapshots the policy; an existing waiting run keeps its original rules.
+See <a href="../workflows/#approval-policies">approval policies</a> for the full semantics.</p>
 
 
 

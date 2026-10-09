@@ -561,6 +561,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#try-a-two-reviewer-policy-v090-source-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Try a two-reviewer policy (v0.9.0 source build)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stop-the-trial" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2112,6 +2123,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#try-a-two-reviewer-policy-v090-source-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Try a two-reviewer policy (v0.9.0 source build)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stop-the-trial" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2205,17 +2227,16 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 <p>Compose pulls the signed v0.5.1 release images; nothing is built locally. <code>--wait</code> waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every <a href="../templates/">gallery template</a>. The public demo key is a local admin
 identity. <a href="../workflows/#teams-projects-and-roles">Team setup</a> separates builders and approvers.</p>
-<p><strong>Testing the unreleased v0.8.0 checkout:</strong> use your existing checkout instead of
+<p><strong>Testing the unreleased v0.9.0 checkout:</strong> use your existing checkout instead of
 cloning v0.5.1, install <code>./sdk/python</code>, and replace <code>--no-build</code> above with <code>--build</code>
 (<code>docker compose ... up -d --wait --build workflow-worker temporal-ui</code>). This builds
 the gateway and worker from source; it requires network access for build dependencies.
 The default pull-only path remains v0.5.1 until the new release is published.
-Generated projects pin the SDK's release version; before v0.8.0 is published, install
+Generated projects pin the SDK's release version; before v0.9.0 is published, install
 the checkout SDK in those projects instead of its generated release-wheel URL.</p>
-<p>The v0.8.0 milestone adds <a href="../workflows/#sso-group-to-role-mapping">company group-to-role mapping</a>
-and an admin sign-in policy view in <strong>Members &amp; keys</strong>, the API and both SDKs.
-The fixture trial below still uses API keys. SSO acceptance needs your own configured
-identity provider and is separate from the first approved workflow.</p>
+<p>The v0.9.0 milestone adds <a href="../workflows/#approval-policies">multi-reviewer approval policies</a>.
+The trial still defaults to one reviewer and seven days. Build both gateway and worker
+from this checkout; upgrade the gateway before SDK workers on an existing installation.</p>
 <p>The default <strong>fake</strong> returns canned text and synthetic prices without contacting a cloud.
 For real generated text, select the <a href="#use-a-real-openai-key">OpenAI option</a> now, then continue
 with exactly the same workflow steps. Research and publish tools remain local fixtures in
@@ -2265,7 +2286,7 @@ step or <strong>Arguments and result</strong> on a tool step to see
 what it sent and received, with redaction and truncation notes. The demo captures redacted
 content for seven days; terminal run records expire after 30 days. Receipt hashes contain
 no captured text. Temporal history is at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a> and has its own retention.</p>
-<p>On the v0.8.0 checkout, save completed runs before their retention deadline with
+<p>On the v0.9.0 checkout, save completed runs before their retention deadline with
 <code>agentworkflows runs export --status completed --output runs.jsonl</code>. This follows
 cursor pages and includes results, receipts and retained step content. Settings and
 the audit log are available to team admins in the console. Run and audit exports
@@ -2300,6 +2321,21 @@ in sync using <code>input-schema.json</code>. Invalid fields are reported before
 <p>Expect <code>OK</code> and a nonzero record count. Hash verification detects edits and internal gaps;
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">external anchors</a>
 are needed to detect truncation or a complete rewrite. Save the export before removing the stack.</p>
+<h2 id="try-a-two-reviewer-policy-v090-source-build">Try a two-reviewer policy (v0.9.0 source build)<a class="headerlink" href="#try-a-two-reviewer-policy-v090-source-build" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Sign in to the console with <code>local-development-only</code>. In <strong>Team settings / Research</strong>,
+   set <strong>Required reviewers</strong> to <code>2</code> and <strong>Approval expiry (seconds)</strong> to <code>3600</code>, then save.</li>
+<li>In <strong>Members &amp; keys</strong>, create a separate key with the <strong>Approver</strong> role. Keep the key
+   for the second sign-in. Each key is a distinct identity in this local fixture.</li>
+<li>Start a new Research run and approve its draft with the admin identity. The run must
+   still be waiting, showing <strong>1 of 2 approvals received</strong> and a deadline.</li>
+<li>Use <strong>Switch account</strong> with the new approver key and approve the same draft. Inspect
+   the completed run and the two approval receipts. Repeating the first identity's vote
+   cannot supply the missing approval; any reviewer's rejection ends the gate.</li>
+<li>To exercise expiry, set it to <code>60</code>, start another run and leave it waiting. It fails
+   with <code>ApprovalExpired</code> after its review deadline without publishing. Reset both
+   settings to their policy defaults when finished. Existing runs keep their saved rules.</li>
+</ol>
 <h2 id="stop-the-trial">Stop the trial<a class="headerlink" href="#stop-the-trial" title="Permanent link">&para;</a></h2>
 <p>From the checkout root, stop and remove this trial's containers and volumes:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Bash (Linux/macOS)</label><label for="__tabbed_4_2">PowerShell (Docker in WSL)</label></div>

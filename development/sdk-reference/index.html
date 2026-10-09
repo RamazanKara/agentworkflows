@@ -1349,6 +1349,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#approval-quorum-and-expiry-v090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval quorum and expiry (v0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2149,6 +2160,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#approval-quorum-and-expiry-v090" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval quorum and expiry (v0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2313,7 +2335,7 @@ The equivalent module entry point is <code>python -m agentworkflows.cli</code>.<
 <p><code>runs start</code> also accepts <code>--project</code> and <code>--request-id UUID</code>. If a start response is lost,
 reuse the request ID printed on stderr with <strong>identical input</strong> to avoid duplicate runs.
 Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport failure, <strong>2</strong> usage/input/scaffold error.</p>
-<p>Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.8.0 checkout SDK and gateway,
+<p>Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.9.0 checkout SDK and gateway,
 not the v0.5.1 wheel or images. <code>runs list</code> and <code>runs export</code> accept <code>--project</code>,
 <code>--workflow</code>, <code>--status</code>, <code>--cursor</code> and <code>--limit</code> (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have <code>next_cursor</code>.
@@ -2671,6 +2693,30 @@ before a start intent or Temporal execution is created; defaults are not inserte
 <p>The <a href="../workflows/#authenticated-workflow-api">authenticated API table</a> documents the run
 endpoints. The full <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json">OpenAPI contract</a>
 is checked in and can be viewed at <code>/docs</code> on the running gateway when enabled.</p>
+<h2 id="approval-quorum-and-expiry-v090">Approval quorum and expiry (v0.9.0)<a class="headerlink" href="#approval-quorum-and-expiry-v090" title="Permanent link">&para;</a></h2>
+<p>Upgrade the gateway before workers. Both SDKs' <code>ApprovalWorkflow.approval(draft)</code>
+read the run's saved policy through a versioned worker activity. No workflow-code
+change is needed for an existing approval gate. <code>review</code> accepts a vote, while
+<code>approval</code> resolves only after quorum or rejection; expiry raises <code>ApprovalExpired</code>.
+The TypeScript <code>ApprovalProgress</code> type includes the quorum, reviewer IDs and deadline.
+Python exposes the same fields in the status query and <code>GatewayClient.run()</code> response.</p>
+<p>Use the existing settings helpers to change the policy for new runs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">settings</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">team_settings</span><span class="p">()</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">client</span><span class="o">.</span><span class="n">update_team_settings</span><span class="p">({</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="s2">"workflows.ResearchWorkflow.required_approvals"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="s2">"workflows.ResearchWorkflow.approval_timeout_seconds"</span><span class="p">:</span> <span class="mi">3600</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">},</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">settings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">teamSettings</span><span class="p">();</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">updateTeamSettings</span><span class="p">({</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="s1">'workflows.ResearchWorkflow.required_approvals'</span><span class="o">:</span><span class="w"> </span><span class="mf">2</span><span class="p">,</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="s1">'workflows.ResearchWorkflow.approval_timeout_seconds'</span><span class="o">:</span><span class="w"> </span><span class="mf">3600</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p><code>approve_run</code> / <code>approveRun</code> retain their existing signature. A successful positive
+vote can leave the run waiting for other reviewers; inspect the run before assuming
+it completed. Repeating a vote never adds a reviewer. See <a href="../workflows/#approval-policies">approval policies</a>
+for identity, replay, automatic decisions and upgrade boundaries.</p>
 
 
 

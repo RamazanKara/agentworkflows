@@ -1127,6 +1127,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#approval-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval policies
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2415,6 +2426,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#approval-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval policies
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3293,6 +3315,51 @@ namespaces/deployments for stronger trust boundaries, and restrict signals and u
 </tr>
 </tbody>
 </table>
+<h2 id="approval-policies">Approval policies<a class="headerlink" href="#approval-policies" title="Permanent link">&para;</a></h2>
+<p>The v0.9.0 gateway and both workflow SDKs support <strong>1–10 distinct reviewers</strong> and
+<strong>60–604800 seconds</strong> of approval time. Defaults are one reviewer and seven days.
+Use <strong>Team settings</strong> to edit Required reviewers and Approval expiry, or add these
+fields to an existing workflow policy (preserve its models, tools, egress and budgets):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">requiredApprovals</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nt">approvalTimeoutSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="nt">approvalRequired</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="nt">approvalThresholdUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="nt">approverRole</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">approver</span>
+</code></pre></div>
+<p>In the umbrella chart these fields live under
+<code>inference-gateway.sandboxPolicy.policy.policies[].workflows.&lt;Workflow&gt;</code>; see the
+existing ResearchWorkflow in <code>deploy/charts/agentworkflows/values.yaml</code>. Runtime
+settings overrides take precedence over YAML defaults. There is no new service,
+secret, environment variable or datastore migration.</p>
+<p>All approval fields are saved when the gateway starts a run, including cron/webhook
+starts. Settings changes apply to new runs; repeating a start's request ID keeps its
+original rules. Retrying a failed/canceled run starts a new run with current rules.
+The deadline starts when the worker receives the approval policy at its review step.
+The enclosing eight-day run execution timeout can end a run earlier.</p>
+<p>Each verified subject (<code>sub</code>, otherwise <code>key_id</code>) can decide once. A positive vote
+counts toward the quorum; any eligible reviewer's rejection ends the gate immediately.
+An admin can review but still contributes only one vote. A repeated delivery of the
+same identity/decision is idempotent; changing a recorded vote is refused. Separate
+keys count as separate identities, so use individual SSO accounts for human review
+and restrict who can create keys. This is not proof of separate natural persons.</p>
+<p><code>POST /v1/workflow-runs/{run_id}/approve</code> still accepts only <code>{"approved": true|false}</code>.
+Its <code>approved</code> result describes that reviewer's vote, not the final quorum outcome.
+Inspect the run's <code>progress.required_approvals</code>, <code>approved_by</code>, <code>expires_at</code> (UTC), and
+<code>approver_role</code>. The console shows counts/deadlines and keeps partial reviews visible.
+Deadlines and duplicate decisions are enforced by synchronous Temporal update handlers,
+so gateway replicas cannot race past the quorum. Expiry fails the run with
+<code>ApprovalExpired</code>; votes at or after the deadline cannot revive it.</p>
+<p>Approval disabled or spend below the saved threshold still yields an audited automatic
+decision without a human quorum. These settings govern <code>ApprovalWorkflow.approval()</code>;
+they do not insert gates into arbitrary workflow code. Workers and direct Temporal
+access remain trusted operator surfaces. Approval escalation is not implemented.</p>
+<p>Upgrade the gateway first, then Python/TypeScript workers, before enabling nondefault
+quorum/expiry. New SDKs request <code>{"policy_version": 1}</code> from the worker-only
+<code>/approval-waiting</code> endpoint and wait for its policy before accepting reviews. Advanced
+policies reject old workers instead of falling back to one reviewer. Temporal patch
+markers preserve replay of already-started legacy gates with their original single
+reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
+<a href="../quickstart/#try-a-two-reviewer-policy-v090-source-build">two-reviewer Quickstart</a>.</p>
 
 
 

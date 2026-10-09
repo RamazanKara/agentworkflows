@@ -2188,6 +2188,16 @@ default</strong> removes one override and uses the current loaded YAML default.<
 <td><code>approver</code> or <code>admin</code>; admins can always review</td>
 </tr>
 <tr>
+<td><code>workflows.&lt;name&gt;.required_approvals</code></td>
+<td><code>workflows.&lt;name&gt;.requiredApprovals</code> (default <code>1</code>)</td>
+<td>Integer 1–10 distinct verified reviewers</td>
+</tr>
+<tr>
+<td><code>workflows.&lt;name&gt;.approval_timeout_seconds</code></td>
+<td><code>workflows.&lt;name&gt;.approvalTimeoutSeconds</code> (default <code>604800</code>)</td>
+<td>Integer 60–604800 seconds from the review gate</td>
+</tr>
+<tr>
 <td><code>workflows.&lt;name&gt;.allowed_providers</code></td>
 <td><code>workflows.&lt;name&gt;.allowedProviders</code></td>
 <td>Provider names eligible for this workflow</td>
@@ -2273,9 +2283,11 @@ older gateways retain any lower cap already stored for that run.</p>
 below the threshold, or with approval disabled, receives an audited automatic
 decision there. Spend includes conservative reservations for unreported calls.
 These settings do not insert a review step into workflow code that has no gate.
-Changing the threshold affects subsequent gate checks, not decisions already
-made or reviews already waiting. The current approver role is checked when a human
-submits a decision, including for waiting runs.</p>
+Since v0.9.0, all approval fields are saved with the run at launch; changing them
+only affects new runs. A retried start keeps its saved policy, while retrying a failed
+run creates a new run using current settings. Existing gates from older releases retain
+their one-reviewer/seven-day behavior. See <a href="../workflows/#approval-policies">approval policies</a>
+for upgrade order, reviewer identity and deadline semantics.</p>
 <p>Routes, prices, credentials, model allowlists and egress stay in YAML. Selecting an
 alias target cannot bypass those controls; select a route the workflow already
 permits. Fallback, canary and shadow routes retain their normal admission checks.

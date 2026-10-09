@@ -653,6 +653,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#multi-reviewer-approval-v090-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-reviewer approval (v0.9.0 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2210,6 +2221,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#multi-reviewer-approval-v090-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-reviewer approval (v0.9.0 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2567,6 +2589,13 @@ remove this disposable trial's containers and volumes from the repository root:<
 </div>
 </div>
 </div>
+<h2 id="multi-reviewer-approval-v090-candidate">Multi-reviewer approval (v0.9.0 candidate)<a class="headerlink" href="#multi-reviewer-approval-v090-candidate" title="Permanent link">&para;</a></h2>
+<p>Build the gateway from this checkout and use the v0.9.0 SDK worker before enabling
+nondefault approval policies. In <strong>Team settings / Code review</strong>, set Required
+reviewers to <code>2</code> and Approval expiry (seconds) to <code>3600</code>, then start a new review.
+The first positive vote leaves it waiting; a second distinct reviewer completes the
+quorum. Any rejection ends review, and expiry fails the run with <code>ApprovalExpired</code>.
+Both SDKs use the same <a href="../workflows/#approval-policies">approval contract</a>.</p>
 
 
 
