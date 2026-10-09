@@ -1,8 +1,10 @@
 # CLI and Python SDK reference
 
-Install the released SDK in a virtual environment with
-`python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-0.5.1-py3-none-any.whl`
-(or `python -m pip install ./sdk/python` from a checkout). `agentworkflows --help` and each subcommand's `--help` work without a key.
+This reference describes the current source SDK (0.9.0) under review for 1.0.0-rc.1.
+Install it in a virtual environment from the repository root with
+`python -m pip install ./sdk/python`; run a gateway built from the same checkout.
+The older v0.5.1 release wheel does not implement the entire surface below.
+`agentworkflows --help` and each subcommand's `--help` work without a key.
 The equivalent module entry point is `python -m agentworkflows.cli`.
 
 ## CLI
@@ -77,8 +79,8 @@ to the authenticated admin's team and project access. You cannot revoke or demot
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.
 
-Settings and audit SDK methods and CLI commands are available from this checkout
-(v0.6.0 in progress); they are not in the v0.5.1 wheel above. Both require an
+Settings and audit SDK methods and CLI commands are available from this checkout;
+they are not in the v0.5.1 wheel. Both require an
 unrestricted team admin credential. Run `settings show` before changing settings,
 review the values, and pass its `revision` to `set` or `reset`. `--fields` is a
 non-empty JSON object of field names to values, without an outer `fields` wrapper.

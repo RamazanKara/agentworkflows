@@ -19,7 +19,7 @@ const ssoPolicy = (): TeamSSO => ({
   groups_claim: 'groups', group_role_mappings: { 'Engineering builders': 'builder', 'Engineering reviewers': 'approver' },
 });
 
-for (const width of [393, 1440]) {
+for (const width of [360, 393, 1440]) {
   test(`company group access is readable and refreshes at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     let policy = ssoPolicy();
@@ -491,7 +491,24 @@ for (const width of [360, 393, 1440]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(await page.locator('.dot-list').evaluateAll(lists => lists.every(list => list.scrollWidth <= list.clientWidth))).toBe(true);
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-      await page.screenshot({ path: `../../../.out/console-v0.6.0/${width}-${name}.png`, fullPage: true });
+      const splitWords = await page.locator('main').evaluate(main => {
+        const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+        const split: string[] = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (node.parentElement?.closest('pre, code, textarea, select, .copy-field, .visually-hidden')) continue;
+          const header = node.parentElement?.closest('thead');
+          if (header && getComputedStyle(header).clipPath !== 'none') continue;
+          for (const match of (node.textContent || '').matchAll(/[\p{L}\p{N}]{4,}/gu)) {
+            const range = document.createRange();
+            range.setStart(node, match.index); range.setEnd(node, match.index + match[0].length);
+            if (range.getClientRects().length > 1) split.push(match[0]);
+          }
+        }
+        return split;
+      });
+      expect(splitWords, `${name}: words must wrap at spaces`).toEqual([]);
+      await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.1/${width}-${name}.png`, fullPage: true });
     };
     const runId = '7e2b941c-65af-4d83-9c12-34b08f6ea725';
     const started = Date.parse('2026-10-09T09:40:00Z') / 1000;
@@ -518,13 +535,44 @@ for (const width of [360, 393, 1440]) {
     const totals = { calls: timeline.length, tokens: timeline.reduce((sum, step) => sum + step.tokens, 0), cost_usd: timeline.reduce((sum, step) => sum + step.cost_usd, 0) };
     const providers = Object.fromEntries(timeline.map(step => [step.provider, { calls: 1, tokens: step.tokens, cost_usd: step.cost_usd }])) satisfies Record<string, CostRow>;
     const activeRun: Run = { run_id: runId, workflow: 'ResearchWorkflow', project: 'default', created_at: started, status: 'running',
-      progress: { stage: 'awaiting_approval', draft }, budget: { ...totals, token_limit: 10000, cost_limit_usd: 5 }, timeline };
+      progress: { stage: 'awaiting_approval', draft, required_approvals: 2, approved_by: [], expires_at: '2026-10-09T10:40:00Z', approver_role: 'approver' },
+      trigger: { kind: 'cron', name: 'morning-briefing' }, budget: { ...totals, token_limit: 10000, cost_limit_usd: 5 }, timeline };
     const teamSettings = settings();
     teamSettings.routes = models.map(model => model.id);
     teamSettings.fields['model_routes.research'] = { value: models[0].id, policy_default: models[0].id, source: 'policy' };
+    teamSettings.fields['soft_cost_limit_usd'] = { value: 40, policy_default: 40, source: 'policy' };
+    teamSettings.fields['capture_content'] = { value: 'redacted', policy_default: 'redacted', source: 'policy' };
+    teamSettings.fields['workflows.ResearchWorkflow.capture_content'] = { value: 'redacted', policy_default: 'redacted', source: 'policy' };
+    teamSettings.fields['workflows.ResearchWorkflow.required_approvals'] = { value: 2, policy_default: 2, source: 'policy' };
+    teamSettings.fields['workflows.ResearchWorkflow.approval_timeout_seconds'] = { value: 3600, policy_default: 3600, source: 'policy' };
     let openaiConfigured = false;
     let anthropicConfigured = false;
     let recorded = false;
+    let signedIn = false;
+    await page.route('**/v1/auth/config', route => route.fulfill({ json: { api_key: true, jwt: true, oidc: { enabled: true, provider_name: 'identity.insights.internal', login_url: '/v1/auth/login' } } }));
+    await page.route('**/v1/auth/session', async route => {
+      if (route.request().method() === 'POST') {
+        signedIn = true;
+        await page.context().addCookies([
+          { name: 'aw_session', value: 'opaque-session', url: 'http://127.0.0.1:4175', httpOnly: true, sameSite: 'Lax' },
+          { name: 'aw_csrf', value: 'csrf-fixture', url: 'http://127.0.0.1:4175', sameSite: 'Lax' },
+        ]);
+      }
+      return route.fulfill(signedIn ? { json: { csrf_token: 'csrf-fixture', principal: { key_id: 'admin', name: 'Maya Chen' } } } : { status: 401, json: {} });
+    });
+    await page.route('**/v1/team/sso', route => route.fulfill({ json: { ...ssoPolicy(), team_id: 'insights', provider_name: 'identity.insights.internal' } }));
+    await page.route('**/v1/team/spend', route => route.fulfill({ json: {
+      team_id: 'insights', window_start: 1790812800, window_end: 1793491200,
+      soft_limit_usd: 40, hard_limit_usd: 50, reserved_and_spent_usd: recorded ? totals.cost_usd : 0, status: 'ok', alerts: [],
+    } }));
+    await page.route('**/v1/workflow-triggers', route => route.fulfill({ json: { triggers: [
+      { workflow: 'ResearchWorkflow', name: 'morning-briefing', kind: 'cron', project: 'default', cron: '40 9 * * *', paused: false, configuration_paused: false, next_fire_at: ['2026-10-10T09:40:00Z'] },
+      { workflow: 'ResearchWorkflow', name: 'requested-briefing', kind: 'webhook', project: 'default', paused: false, configuration_paused: false, secret_configured: true, url: '/v1/hooks/insights/ResearchWorkflow/requested-briefing' },
+    ] } }));
+    const csvRows = [['total', 'all', totals], ...Object.entries(providers).map(([name, row]) => ['provider', name, row]), ['workflow', 'ResearchWorkflow', totals]] as [string, string, CostRow][];
+    const csv = 'team_id,project,period_start,period_end,dimension,name,calls,tokens,cost_usd,currency\r\n' + csvRows.map(([dimension, name, row]) =>
+      `insights,,2026-10-01T00:00:00Z,2026-11-01T00:00:00Z,${dimension},${name},${row.calls},${row.tokens},${row.cost_usd!.toFixed(9)},USD\r\n`).join('');
+    await page.route('**/v1/usage/export', route => route.fulfill({ body: csv, contentType: 'text/csv;charset=utf-8' }));
     await page.route('**/v1/team', route => route.fulfill({ json: {
       team_id: 'insights', role: 'admin', projects: ['default'], providers: ['openai', 'anthropic'], cost_limit_usd: 50,
       provider_configuration: { openai: { configured: openaiConfigured, environment_variable: 'OPENAI_API_KEY' }, anthropic: { configured: anthropicConfigured, environment_variable: 'ANTHROPIC_API_KEY' } },
@@ -549,8 +597,12 @@ for (const width of [360, 393, 1440]) {
     await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: timeline.map((step, index) => ({
       id: `${step.timestamp * 1000}-0`, chain_id: step.chain_id, sequence: index + 1, event: step.receipt,
     })).reverse(), next_cursor: null } }));
+    await page.goto('/console/');
+    await expect(page.getByRole('button', { name: 'Sign in with your company account' })).toBeVisible();
+    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.1/${width}-sso-sign-in.png`, fullPage: true });
     await login(page);
     await expect(page.locator('.identity .team')).toHaveText('Insights');
+    await expect(page.locator('.identity .who')).toHaveText('Maya Chen');
     page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
     const labels = page.locator('.model-list li > span.muted');
     await expect(labels).toHaveText(['OpenAI', 'Anthropic']);
@@ -620,10 +672,43 @@ for (const width of [360, 393, 1440]) {
     await expect(page.getByRole('region', { name: 'Spending period' })).toContainText('This month (UTC)');
     await expect(page.getByRole('region', { name: 'Spending period' })).not.toContainText('24-hour window');
     await expect(page.getByLabel('Research · Token limit per run')).toHaveValue('10,000');
+    expect(await page.getByRole('region', { name: 'Spend alerts', exact: true }).evaluate(node => parseFloat(getComputedStyle(node).paddingLeft))).toBeGreaterThanOrEqual(18);
     await capture('costs');
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
+    const exported = await download;
+    await exported.saveAs(`../../../.out/console-v1.0.0-rc.1/${width}-usage.csv`);
+    const stream = await exported.createReadStream();
+    const chunks = [];
+    for await (const chunk of stream!) chunks.push(chunk);
+    expect(Buffer.concat(chunks).toString('utf8')).toBe(csv);
+    await capture('csv-export');
     await page.goto('/console/#keys');
     await expect(page.getByRole('rowheader', { name: 'Maya Chen You' })).toBeVisible();
+    const revoke = await page.getByRole('button', { name: 'Revoke Research worker', exact: true }).boundingBox();
+    const edit = await page.getByRole('button', { name: 'Edit Research worker', exact: true }).boundingBox();
+    expect(edit!.x - revoke!.x - revoke!.width).toBeGreaterThanOrEqual(8);
     await capture('members-keys');
+    await expect(page.getByRole('region', { name: 'Company sign-in', exact: true })).toContainText('Engineering reviewers');
+    await capture('sso-policy');
+    await page.getByRole('button', { name: 'Edit Research worker', exact: true }).click();
+    await expect(page.getByLabel('Edit name', { exact: true })).toHaveValue('Research worker');
+    await capture('edit-key');
+    await page.goto('/console/#runs');
+    await expect(page.getByRole('link', { name: 'Research', exact: true })).toBeVisible();
+    await capture('workflow-runs');
+    await page.goto('/console/#triggers');
+    await expect(page.getByRole('link', { name: 'Run history for morning-briefing' })).toBeVisible();
+    const history = await page.getByRole('link', { name: 'Run history for morning-briefing' }).boundingBox();
+    const pause = await page.getByRole('button', { name: 'Pause morning-briefing', exact: true }).boundingBox();
+    expect(pause!.x - history!.x - history!.width).toBeGreaterThanOrEqual(8);
+    await capture('triggers');
+    await page.getByRole('link', { name: 'Run history for morning-briefing' }).click();
+    await expect(page.getByText('Started by trigger')).toBeVisible();
+    await capture('trigger-history');
+    await page.goto('/console/#new/ResearchWorkflow');
+    await expect(page.getByLabel('Topic', { exact: true })).toHaveValue('Agent workflow evaluation');
+    await capture('template-research');
     await page.goto(`/console/#run/${runId}`);
     await expect(page.locator('.draft h3')).toHaveText('Briefing: Agent workflow evaluation');
     await expect(page.locator('.step-preview h3')).toHaveText('Briefing: Agent workflow evaluation');
@@ -663,12 +748,37 @@ for (const width of [360, 393, 1440]) {
       expect(columns).toHaveLength(2);
     }
     await capture('team-settings');
+    await capture('spend-limits');
     await page.goto('/console/#audit');
     await expect(page.locator('.audit-table').getByText('Model call', { exact: true })).toHaveCount(2);
     await expect(page.locator('.audit-table').getByText('Agent action', { exact: true })).toHaveCount(1);
     await expect(page.locator('.audit-table td[data-label="Actor"]')).toHaveText(['Research workerAPI key', 'Research workerAPI key', 'Research workerAPI key']);
     await expect(page.locator('.audit-table')).not.toContainText('key-rese');
     await capture('audit');
+    const templates = [
+      ['ResearchWorkflow', 'research', 'topic', 'Agent workflow evaluation', 'A question or subject, in a sentence.', 'How should our team evaluate AI agents?'],
+      ['CodeReviewWorkflow', 'code-review', 'diff', '- const timeout = 1000;\n+ const timeout = 5000;', 'Paste a unified diff (git diff output).', '- return user.is_admin\n+ return True'],
+      ['SupportTriageWorkflow', 'support-triage', 'ticket', 'Password reset blocks sign-in.', "Paste the customer's message.", 'I cannot sign in after resetting my password.'],
+      ['WeeklyReportWorkflow', 'weekly-report', 'period', '2026-09-28/2026-10-04', 'Start and end dates, as YYYY-MM-DD/YYYY-MM-DD.', '2026-09-28/2026-10-04'],
+      ['IncidentSummaryWorkflow', 'incident-summary', 'incident_id', 'INC-1042', 'The ID from your incident tracker.', 'INC-1042'],
+      ['DocumentQAWorkflow', 'document-qa', 'question', 'Who can approve workflows?', "A question about your team's documents.", 'Who can approve a workflow, and when does approval expire?'],
+    ];
+    await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: Object.fromEntries(templates.map(([workflow, , field, , description, example]) => [workflow, {
+      allowedModels: [models[0].id], allowedProviders: ['openai'], tokenLimit: 10000, costLimitUsd: 5,
+      inputSchema: { type: 'object', properties: {
+        [field]: { type: 'string', description, examples: [example], minLength: 1, pattern: '\\S' },
+        model: { type: 'string', default: models[0].id, minLength: 1, pattern: '\\S' },
+        ...(workflow === 'ResearchWorkflow' ? { token_limit: { type: 'integer', default: 10000, minimum: 1, maximum: 1000000000 }, cost_limit_usd: { type: 'number', default: 5, exclusiveMinimum: 0, maximum: 1000000 } } : {}),
+      }, required: [field], additionalProperties: false },
+    }])) } }));
+    for (const [workflow, name, field, value] of templates) {
+      await page.goto(`/console/#new/${workflow}`);
+      await expect(page.getByLabel('Workflow', { exact: true }).locator('option')).toHaveCount(6);
+      await page.locator(`[name="input.${field}"]`).fill(value);
+      if (workflow === 'CodeReviewWorkflow') await expect(page.getByLabel('Diff', { exact: true })).toHaveJSProperty('tagName', 'TEXTAREA');
+      await page.getByRole('heading', { name: 'Run workflow', exact: true }).click();
+      await capture(`template-${name}`);
+    }
     expect(errors).toEqual([]);
   });
 }

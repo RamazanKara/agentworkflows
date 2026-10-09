@@ -1,6 +1,7 @@
 """OpenAI-compatible inference gateway with auth, admission, budgets, and runtime routing."""
 
 import asyncio
+import hashlib
 import logging
 import os
 from time import time
@@ -96,13 +97,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_tags=OPENAPI_TAGS,
         docs_url="/docs",
         redoc_url=None,
-    )
-    # Bound JSON bodies before Pydantic or endpoint code parses them. The Files
-    # endpoint gets its own upload ceiling plus multipart framing overhead.
-    app.add_middleware(
-        RequestBodyLimitMiddleware,
-        max_bytes=resolved.max_request_body_bytes,
-        path_limits={"/v1/files": resolved.batch_max_file_bytes + 65536},
     )
     # Added before the request_context middleware below, so it runs inside it: only
     # authenticated, rate-limit-admitted requests take a concurrency slot.
@@ -279,6 +273,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             from app.workflow_triggers import bind_webhook
 
             if request.url.path in AUTH_PATHS:
+                if resolved.rate_limit_enabled and request.url.path != "/v1/auth/config":
+                    # Unauthenticated callers cannot choose their throttle bucket through a team header.
+                    peer = request.client.host if request.client else "unknown"
+                    key = "auth:" + hashlib.sha256(peer.encode()).hexdigest()
+                    try:
+                        allowed, retry_after = await asyncio.to_thread(app.state.rate_limiter.check, key)
+                    except BudgetBackendError:
+                        response = _rate_limit_backend_unavailable_response(request)
+                    else:
+                        response = None if allowed else _rate_limited_response(request, retry_after)
+                    if response is not None:
+                        response.headers["Cache-Control"] = "no-store"
+                        return response
                 response = await call_next(request)
                 response.headers["Cache-Control"] = "no-store"
                 response.headers["Referrer-Policy"] = "no-referrer"
@@ -568,6 +575,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.router.add_event_handler("shutdown", _storage_shutdown)
 
     _install_openapi_contract(app, resolved)
+    # Outermost: webhook authentication reads the body before dispatching to a route.
+    app.add_middleware(
+        RequestBodyLimitMiddleware,
+        max_bytes=resolved.max_request_body_bytes,
+        path_limits={"/v1/files": resolved.batch_max_file_bytes + 65536},
+    )
     return app
 
 

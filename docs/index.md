@@ -9,10 +9,11 @@ Cron schedules and signed webhooks can start work, with notifications for waitin
 failures and budget thresholds. People sign in with their company account (OIDC) or an API key,
 and admins add members and manage keys in the console.
 
-The **v0.9.0 candidate (unreleased)** adds distinct-reviewer approval quorums and
+The **1.0.0-rc.1 review candidate (unreleased)** includes distinct-reviewer approval quorums and
 configurable expiry, with console policy controls and progress plus Python/TypeScript
 SDK support. Use the [Quickstart's source-build path](quickstart.md) to try it;
-published image defaults remain on v0.5.1.
+package/chart versions remain 0.9.0 and published image defaults remain on v0.5.1.
+Read [Why AgentWorkflows](why-agentworkflows.md) for its fit and boundaries.
 
 It is for **developers** turning agent scripts into repeatable jobs, **team leads** reviewing
 drafts and spend, and **platform engineers** managing shared provider access. Built-in routes

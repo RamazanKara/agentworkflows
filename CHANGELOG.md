@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-rc.1 - Unreleased
+
+- Reconcile candidate quickstarts, installation, API/SDK and feature documentation;
+  add Why AgentWorkflows and a code-aligned architecture overview. Package and chart
+  versions remain 0.9.0 pending release preparation; this entry does not publish artifacts.
+- Refresh console evidence at 360, 393 and 1440 pixels with consistent seeded identity,
+  receipts and totals, including approval quorums, SSO, spend, triggers and CSV export.
+  Fix spend-alert spacing and adjacent key/trigger action controls.
+- Throttle browser authentication with the configured limiter and remove OIDC query
+  parameters from Uvicorn access logs. Bound webhook bodies before authentication;
+  add regression tests and security review notes.
+- Add a native local gateway HTTP load sanity script and record measured results and
+  verification limits. Document checks that still need WSL, containers or a real cluster.
+
 ## v0.9.0 - Unreleased
 
 - Add per-workflow approval quorums (1–10 distinct verified identities) and expiry

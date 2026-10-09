@@ -32,6 +32,37 @@ The release gates check request count, error rate, p95 latency, and p99 latency.
 
 ## Reference Serving Benchmark
 
+### 1.0 candidate native gateway sanity (2026-10-09)
+
+Run `python loadtest/gateway-sanity.py` from an environment containing the gateway's
+runtime dependencies. It starts and stops its own loopback gateway and the existing
+fake runtime, then writes `results/loadtest/gateway-sanity.json` and a process log.
+This run used Windows 11 (build 26200), Python 3.12.14 and 16 logical CPUs, one Uvicorn
+process, 10 concurrent clients and 500 measured requests per endpoint after 10 warmups.
+All **4,000 measured requests returned 200**. Percentiles use nearest-rank latency.
+
+| Endpoint | Requests/s | p50 ms | p95 ms | p99 ms |
+| --- | ---: | ---: | ---: | ---: |
+| `GET /healthz` | 485.71 | 8.76 | 19.92 | 490.71 |
+| `GET /readyz` | 192.59 | 46.03 | 75.73 | 141.70 |
+| `GET /v1/models` | 386.17 | 10.56 | 47.52 | 364.13 |
+| `GET /v1/usage` | 507.38 | 15.32 | 43.51 | 91.67 |
+| `GET /v1/sandbox/budget` | 605.01 | 12.90 | 33.58 | 62.68 |
+| `POST /v1/chat/completions` | 149.87 | 65.26 | 90.21 | 132.73 |
+| `POST /v1/responses` | 139.54 | 67.10 | 102.35 | 141.77 |
+| `POST /v1/messages` | 136.44 | 69.11 | 113.12 | 165.14 |
+
+API-key authentication was enabled; audit output, caching, rate limits and budget
+enforcement were disabled, with memory accounting. The fake returns a short constant
+answer; requests allow at most 32 output tokens. Client, gateway and fake share the
+host, which also ran validation work. These numbers establish a local smoke baseline,
+not capacity or a production SLO. They exclude Redis/PostgreSQL, browser sessions,
+Temporal run start/list/approve, signed triggers, streaming, embeddings, Files/Batch,
+TLS and real provider latency. Run `make workflow-loadtest` against Compose and
+`make loadtest-local`/a deployment-specific load test in WSL before release acceptance.
+
+### Model serving reference
+
 A real, reproducible serving measurement for the default local model. This is a hardware reference, not a guarantee; re-run it on your own machine.
 
 `qwen2.5:0.5b` (494M parameters, Q4_K_M; Ollama registry model-layer digest `sha256:c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515`) on an **AMD Ryzen 7 5800X3D** (CPU only, no GPU), 20 runs after warmup, `num_predict=100`, `temperature=0`. Results:

@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import logging
 import secrets
 from contextlib import suppress
 from math import isfinite
@@ -143,7 +144,18 @@ async def oidc_identity(request: Request, token: str, nonce: str) -> None:
         request.state.credential_expires_at = claims["exp"]
 
 
+def redact_auth_query(record: logging.LogRecord) -> bool:
+    # Uvicorn's access logger includes the authorization code and state in callback URLs.
+    if isinstance(record.args, tuple) and len(record.args) == 5:
+        peer, method, target, version, status = record.args
+        if isinstance(target, str) and target.partition("?")[0] in AUTH_PATHS:
+            record.args = (peer, method, target.partition("?")[0], version, status)
+    return True
+
+
 def register_auth_routes(app: FastAPI) -> None:
+    logging.getLogger("uvicorn.access").addFilter(redact_auth_query)
+
     @app.get("/v1/auth/config", tags=["auth"])
     async def auth_config(request: Request) -> dict[str, Any]:
         settings = app.state.settings

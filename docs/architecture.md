@@ -23,6 +23,19 @@ The exact HTTP surface is generated into [`platform/api-contracts/inference-gate
 
 RAG is a separate service. It returns retrieved passages and grounded message objects; it does not automatically intercept gateway calls. The local profile uses the checked-in lexical corpus. The customer values select Qdrant and an embedding endpoint.
 
+The bundled React console calls same-origin `/v1` APIs. API credentials are exchanged
+for opaque Redis-backed sessions; browser writes require a CSRF header and cookie.
+OIDC uses authorization code, PKCE, state and nonce checks. Team/project roles are
+checked by the gateway, including reads of runs, SSO policy, spend and exports.
+
+Run start, cancellation and review operations coordinate with Temporal. Workers poll
+Temporal task queues and send governed activities back through the gateway; Temporal
+does not replace gateway authorization. Redis retains live accounting, sessions,
+coordination and captured content. Gateway history, receipts, audit, managed-key metadata
+and settings may use Redis (default) or PostgreSQL. Temporal has its own PostgreSQL
+databases, separate from optional gateway storage. Worker and Temporal access are trusted
+operator surfaces; protect them from direct tenant access.
+
 Framework agents execute inside Temporal activities and point their clients at this gateway.
 Workflow policies and MCP registrations extend the existing `SandboxPolicySet`; run accounting
 and expiring container credentials use its existing Redis backend. MCP calls share input/output
@@ -30,6 +43,9 @@ DLP, budgets, and receipts with HTTP tools. Container steps execute approved com
 agent-sandbox workspaces through narrowly scoped worker RBAC. See [workflows](workflows.md).
 
 ## Components
+
+The namespaces below describe the separate GitOps charts. The umbrella chart installs
+its enabled components together in the release namespace; Compose uses container networking.
 
 | Component | Namespace | Source | Notes |
 | --- | --- | --- | --- |

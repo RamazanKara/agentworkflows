@@ -7,6 +7,11 @@ five minutes. You need **Git, Python 3.12+, and Docker with Compose** already in
 Initial image/package downloads can take longer on a slow connection. No GPU, Kubernetes,
 Make, Node.js, or cloud account is needed for this path.
 
+These instructions exercise the **unreleased 1.0 candidate from source** (package version
+0.9.0). Start at the repository root if you already have this checkout; skip clone/cd.
+The command verification and remaining Docker/WSL checks are recorded in
+[release verification](release-verification.md#candidate-readiness-pass).
+
 Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
 the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout on Windows.
 
@@ -15,40 +20,38 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 === "Bash (Linux/macOS)"
 
     ```bash
-    git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch main --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python3 -m venv .venv
     source .venv/bin/activate
     python -m pip install ./sdk/python
-    docker compose -f deploy/compose/compose.yaml up -d --wait --no-build workflow-worker temporal-ui
+    docker compose -f deploy/compose/compose.yaml up -d --wait --build workflow-worker temporal-ui
     export AGENTWORKFLOWS_API_KEY=local-development-only
     ```
 
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch main --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python -m venv .venv
     $env:Path = "$PWD\.venv\Scripts;$env:Path"
     python -m pip install ./sdk/python
-    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait --no-build workflow-worker temporal-ui
+    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait --build workflow-worker temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'local-development-only'
     ```
 
-Compose pulls the signed v0.5.1 release images; nothing is built locally. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
+Compose builds the gateway and Python worker from this checkout and pulls their dependencies.
+Locally built images are not release-signed. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
-**Testing the unreleased v0.9.0 checkout:** use your existing checkout instead of
-cloning v0.5.1, install `./sdk/python`, and replace `--no-build` above with `--build`
-(`docker compose ... up -d --wait --build workflow-worker temporal-ui`). This builds
-the gateway and worker from source; it requires network access for build dependencies.
-The default pull-only path remains v0.5.1 until the new release is published.
-Generated projects pin the SDK's release version; before v0.9.0 is published, install
-the checkout SDK in those projects instead of its generated release-wheel URL.
+For the older published v0.5.1 trial, clone that tag and use `--no-build` instead;
+it does not include the newer settings, history, SSO group or quorum features described here.
+Generated projects pin the SDK's package version. Until matching release artifacts exist,
+keep using the source SDK installed above instead of the scaffold's release-wheel URL.
 
-The v0.9.0 milestone adds [multi-reviewer approval policies](workflows.md#approval-policies).
+This checkout includes [multi-reviewer approval policies](workflows.md#approval-policies).
 The trial still defaults to one reviewer and seven days. Build both gateway and worker
 from this checkout; upgrade the gateway before SDK workers on an existing installation.
 
@@ -115,7 +118,7 @@ what it sent and received, with redaction and truncation notes. The demo capture
 content for seven days; terminal run records expire after 30 days. Receipt hashes contain
 no captured text. Temporal history is at <http://127.0.0.1:8233> and has its own retention.
 
-On the v0.9.0 checkout, save completed runs before their retention deadline with
+Save completed runs before their retention deadline with
 `agentworkflows runs export --status completed --output runs.jsonl`. This follows
 cursor pages and includes results, receipts and retained step content. Settings and
 the audit log are available to team admins in the console. Run and audit exports
@@ -155,7 +158,7 @@ Expect `OK` and a nonzero record count. Hash verification detects edits and inte
 [external anchors](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md)
 are needed to detect truncation or a complete rewrite. Save the export before removing the stack.
 
-## Try a two-reviewer policy (v0.9.0 source build)
+## Try a two-reviewer policy
 
 1. Sign in to the console with `local-development-only`. In **Team settings / Research**,
    set **Required reviewers** to `2` and **Approval expiry (seconds)** to `3600`, then save.

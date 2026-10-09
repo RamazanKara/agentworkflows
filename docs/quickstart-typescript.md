@@ -12,10 +12,11 @@ and synthetic prices from the existing Compose fakes.
 
 ## 1. Install and start the fake gateway
 
-Clone the release, then install and build the SDK and its examples:
+Use this source candidate (package version 0.9.0), then install and build the SDK and
+its examples. Skip clone/cd if you already have the repository checkout:
 
 ```sh
-git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+git clone --branch main --depth 1 https://github.com/RamazanKara/agentworkflows.git
 cd agentworkflows/sdk/typescript
 npm ci --no-audit --no-fund --maxsockets=2
 npm run build
@@ -29,7 +30,7 @@ Choose ports using the existing `AGENTWORKFLOWS_GATEWAY_PORT` and
 === "Bash (Linux/macOS)"
 
     ```bash
-    docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait inference-gateway notification-fake temporal-ui
+    docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait --build inference-gateway notification-fake temporal-ui
     export AGENTWORKFLOWS_API_KEY=demo-worker
     export AGENTWORKFLOWS_URL=http://127.0.0.1:8080
     export TEMPORAL_ADDRESS=localhost:7233
@@ -40,7 +41,7 @@ Choose ports using the existing `AGENTWORKFLOWS_GATEWAY_PORT` and
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait inference-gateway notification-fake temporal-ui
+    wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait --build inference-gateway notification-fake temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'demo-worker'
     $env:AGENTWORKFLOWS_URL = 'http://127.0.0.1:8080'
     $env:TEMPORAL_ADDRESS = 'localhost:7233'
@@ -112,10 +113,11 @@ Change the prompt and rebuild with `npm run build` before restarting the worker.
 
 ## Write a workflow
 
-Install the SDK in your own Node project from the GitHub release (it is not on npm yet):
+For the candidate, install the built source SDK in your own Node project. Replace the
+path below with your checkout path (this is a local install, not a published package):
 
 ```sh
-npm install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-sdk-0.5.1.tgz
+npm install /path/to/agentworkflows/sdk/typescript
 ```
 
 Import workflow code from the dedicated sandbox-safe subpath:
@@ -145,7 +147,7 @@ The helper reads the same `AGENTWORKFLOWS_API_KEY`, `AGENTWORKFLOWS_URL`,
 | `gateway.text(prompt, { model, maxTokens })` | Governed text answer; omitted model uses the gateway default |
 | `gateway.model(messages, { model, maxTokens })` | Full chat completion, including usage |
 | `gateway.tool(name, arguments)` | Approved HTTP/MCP tool result through the gateway |
-| `approval.approval(draft)` | One human decision per run, exposed through `status`, `approve`, and `review` handlers |
+| `approval.approval(draft)` | Policy-driven reviewer quorum and expiry, exposed through `status`, `approve`, and `review` handlers |
 | `AgentWorkflowsTrigger` | Export alongside your workflows for governed Temporal schedule delivery |
 
 Activity defaults match Python: three minutes per attempt, fifteen minutes overall,
@@ -153,12 +155,13 @@ five attempts with exponential backoff. `WorkflowGateway` accepts a second optio
 argument with Temporal's `retry`, `startToCloseTimeout`, `scheduleToCloseTimeout`, and
 `dataClassification` (default `internal`). Policy and per-run budget denials fail
 without retries; transient gateway failures retry, honoring `Retry-After`.
-Approval expires after seven days.
+Approval defaults to one reviewer and seven days; a run snapshots the team's quorum
+and expiry policy when it starts.
 Worker credentials and HTTP clients must never be imported into a workflow module.
 
 The workflow client methods are `startRun`, `runs`, `run`, `approveRun`, `cancelRun`,
 `retryRun`, `triggers`, and `pauseTrigger`. Use `{ paused: false }` to resume a
-trigger and `{ project, offset }` to page through runs. JSON response fields retain
+trigger and `{ project, cursor }` to page through runs. JSON response fields retain
 the API's snake_case names. This SDK covers governed model/tool workflows and the
 workflow and team administration APIs; Python's framework adapters and container runner remain Python APIs.
 
@@ -174,8 +177,8 @@ Inside workflows, gateway failures arrive as Temporal `ActivityFailure` with an
 
 ## Team administration
 
-The admin methods below are available from this checkout (v0.6.0 in progress),
-not the v0.5.1 release tarball above. Use an admin key; settings and audit require
+The admin methods below are available from this source candidate,
+not the older v0.5.1 release tarball. Use an admin key; settings and audit require
 a credential without a project restriction.
 
 | Method | Typed result / behavior |
@@ -237,7 +240,9 @@ partial output. Retention continues during paging; these team exports are not
 complete process logs for the operator verifier. See [audit log](audit-log.md)
 for range boundaries and what verification proves.
 
-## Run history and export (v0.6.0 checkout)
+<a id="run-history-and-export-v060-checkout"></a>
+
+## Run history and export
 
 Use the source-built gateway from the [Python quickstart](quickstart.md#1-install-and-start)
 and install/build `sdk/typescript` from this checkout; the v0.5.1 release tarball
@@ -326,7 +331,9 @@ remove this disposable trial's containers and volumes from the repository root:
     ```
 
 
-## Multi-reviewer approval (v0.9.0 candidate)
+<a id="multi-reviewer-approval-v090-candidate"></a>
+
+## Multi-reviewer approval
 
 Build the gateway from this checkout and use the v0.9.0 SDK worker before enabling
 nondefault approval policies. In **Team settings / Code review**, set Required

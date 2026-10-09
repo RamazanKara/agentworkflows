@@ -564,7 +564,7 @@ and audit evidence. Expired Temporal executions return 404; retained receipts re
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
 Temporal; restrict access and retention for both stores.
 
-In the v0.6.0 checkout (unreleased), `GET /v1/workflow-runs` returns `next_cursor`
+Since v0.6.0, `GET /v1/workflow-runs` returns `next_cursor`
 alongside the legacy `next_offset`. Send that cursor with unchanged project,
 workflow and status filters to continue toward older runs. Empty filtered pages
 can have a continuation: `limit` bounds records scanned before filtering, keeping
@@ -926,4 +926,4 @@ quorum/expiry. New SDKs request `{"policy_version": 1}` from the worker-only
 policies reject old workers instead of falling back to one reviewer. Temporal patch
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
-[two-reviewer Quickstart](quickstart.md#try-a-two-reviewer-policy-v090-source-build).
+[two-reviewer Quickstart](quickstart.md#try-a-two-reviewer-policy).

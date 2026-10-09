@@ -12,11 +12,14 @@ spend; platform engineers control shared model and tool access. Connect OpenAI, 
 Azure OpenAI, AWS Bedrock and Vertex Gemini through one governed API. Self-hosted Ollama
 and vLLM models are optional add-ons. You operate the service and own your integrations.
 
-The **0.9.0 candidate (unreleased)** adds approval quorums and configurable expiry,
+This checkout is under review for **1.0.0-rc.1 (unreleased)**. Its current package
+versions remain 0.9.0; no 1.0 artifacts are published by this readiness pass.
+It includes approval quorums and configurable expiry,
 with policy controls and review progress in the console and matching Python/TypeScript
 workflow behavior. It builds on SSO group mapping, trigger history, CSV exports,
 PostgreSQL history and spend limits. See [approval policies](docs/workflows.md#approval-policies).
-The published Quickstart still uses v0.5.1 images; follow its source-build note to try this checkout.
+The Quickstart builds this checkout so the SDK, gateway, console and worker match.
+See [Why AgentWorkflows](docs/why-agentworkflows.md) and the [architecture](docs/architecture.md).
 
 ## Your first approved workflow in five minutes
 

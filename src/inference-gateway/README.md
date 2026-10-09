@@ -11,6 +11,15 @@ the [feature inventory](../../docs/feature-inventory.md) for supported API behav
 
 ## Code map
 
+The checked-in [OpenAPI contract](../../platform/api-contracts/inference-gateway.openapi.json)
+is the exact HTTP reference. This candidate also serves the console/session, team/SSO,
+managed-key, settings, spend, audit, workflow-run, approval and trigger APIs; they use
+verified team/project roles, not caller-supplied membership headers. See the
+[SDK reference](../../docs/sdk-reference.md) for paging, CSV and JSON Lines exports.
+Optional Files/Batch, stored Responses and agent-action receipt endpoints are registered
+but require their feature settings. OpenAI compatibility covers the implemented subset;
+it does not include every upstream endpoint or Responses mode.
+
 | Area | Modules |
 | --- | --- |
 | Application assembly, middleware, and lifecycle | [main.py](app/main.py) |

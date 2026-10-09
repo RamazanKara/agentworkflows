@@ -3,7 +3,8 @@
 This is the source of truth for what the current checkout implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
-configured.
+configured or published. This review targets 1.0.0-rc.1; source package/chart versions
+remain 0.9.0. Use source-built images for candidate features.
 
 Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workflow policy](workflows.md).
 
@@ -17,7 +18,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | Workflow policy | Shipped | Configured under each team | Provider/model/tool/egress allowlists and immutable run budget caps |
 | Container agent steps | Shipped | Existing Kubernetes workspace required | Hardened workspace checks, scoped expiring credentials, one attempt, and completion receipts |
 | Workflow token/cost budgets | Shipped | 10,000 tokens / $5 per run in SDK | Immutable team-scoped Redis counters; unknown attempts retain reservations |
-| Human approvals | v0.9.0 candidate adds quorum and configurable expiry | One reviewer, seven days | 1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Escalation and production Temporal authorization remain operator-owned |
+| Human approvals | Implemented in this candidate | One reviewer, seven days | 1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Escalation and production Temporal authorization remain operator-owned |
 | OpenAI chat completions | Shipped | On | Gateway tests, OpenAPI contract, local smoke |
 | Legacy completions | Shipped | On, non-streaming | Gateway tests; streaming rejected explicitly |
 | Embeddings | Shipped | On | Gateway tests; same auth, budget, audit, and model policy |
@@ -30,7 +31,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | Python client SDK and CLI | Shipped (typed) | Install `./sdk/python`; command `agentworkflows` | Isolated build/test matrix, checksums, and release artifacts; PyPI Trusted Publishing is optional |
 | API-key authentication | Shipped | Local on; chart base off | Hashed keys or scoped/expiring key records |
 | JWT/JWKS authentication | Shipped | Customer template on | Issuer/audience/time/algorithm validation and tenant binding |
-| SSO group-to-role mapping | Implemented for v0.8.0 (unreleased) | Off; existing OIDC role claims remain the default | Exact team-scoped mappings, deny unmapped/conflicting groups, token-bounded sessions and policy-change invalidation; admin policy view in Members & keys, API and both SDKs. IdP provisioning remains operator-owned |
+| SSO group-to-role mapping | Implemented in this candidate | Off; existing OIDC role claims remain the default | Exact team-scoped mappings, deny unmapped/conflicting groups, token-bounded sessions and policy-change invalidation; admin policy view in Members & keys, API and both SDKs. IdP provisioning remains operator-owned |
 | Model allowlist and routing | Shipped | On | Per-model primary/fallback/canary/shadow routes |
 | Runtime failover | Shipped | Configured by policy | Readiness accepts a healthy declared fallback chain |
 | Prompt and tool-payload admission | Shipped | On | Recursive secret/blocked-term scan and size ceilings |
@@ -45,9 +46,9 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | RAG retrieval receipts | Shipped | On | Own chain, same primitives and same verifier as the gateway |
 | Audit chain head persistence | Shipped | Memory (no continuity) | `file` or `redis` head backend, or the opt-in PostgreSQL gateway store, preserves cross-restart linkage; storage is operator-provided |
 | Team web console | Shipped | On in Compose/umbrella Helm; opt-in standalone | `/console`; existing auth, identity switching, filtered runs, approvals, step receipts/logs, admin configuration guidance, and costs |
-| Trigger run history | Implemented for v0.7.0 (unreleased) | On for new cron/webhook launches | Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; existing run retention, no backfill |
-| Usage CSV export | Implemented for v0.7.0 (unreleased) | Available to team roles | Costs, `/v1/usage/export`, both SDKs and CLI; current UTC month, scoped totals and overlapping breakdowns; estimates include reservations |
-| Docker Compose evaluation stack | Shipped | `make compose-up` | Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; headless browser smoke in CI; no Kubernetes network policy or agent workspaces |
+| Trigger run history | Implemented in this candidate | On for new cron/webhook launches | Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; existing run retention, no backfill |
+| Usage CSV export | Implemented in this candidate | Available to team roles | Costs, `/v1/usage/export`, both SDKs and CLI; current UTC month, scoped totals and overlapping breakdowns; estimates include reservations |
+| Docker Compose evaluation stack | Shipped | `make compose-up` | Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; caller-run headless browser smoke; no Kubernetes network policy or agent workspaces |
 | Ollama runtime | Shipped | Local profile | Pinned image; local-only model-pull egress exception |
 | vLLM generation runtime | Shipped | Customer profile | NVIDIA/AMD values, explicit task, queue-based autoscaling |
 | vLLM embedding runtime | Shipped | Customer profile | Dedicated `--task embed` release consumed by RAG |
@@ -56,7 +57,7 @@ Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workfl
 | Agent sandbox workspace | Shipped | Local/customer profiles | Restricted pod, no ambient token, scoped token, PVC, quotas |
 | Network-policy enforcement | Shipped | Calico local default | Reachable-target deny smoke; customer CNI remains operator-owned |
 | GitOps delivery | Shipped | Argo CD | Immutable release revisions; every declared app is health-gated and customer sync fails closed |
-| Evidence and release gates | Shipped | CI/nightly | Conformance and model-quality evidence are labeled separately |
+| Evidence and release gates | Shipped | Caller-run strict checks | Conformance and model-quality evidence are labeled separately |
 | Egress exception expiry | Shipped | Report-only | Rendered onto the NetworkPolicy; Kyverno denies expired, CronJob retires them when enforcement is on |
 | Signed releases | Shipped | Release workflow | Tag-built multi-arch images and digest-bound charts signed with Cosign; SBOM and scans run locally (`make supply-chain-check`, `make image-scan`) |
 | Multi-node model serving | Example/integration | Off | LeaderWorkerSet/Ray installation and topology are operator-owned |

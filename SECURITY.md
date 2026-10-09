@@ -50,6 +50,38 @@ Please do not publicly disclose a vulnerability until a fix is released. We foll
 
 The public threat model is maintained in [docs/threat-model.md](docs/threat-model.md).
 
+## 1.0.0-rc.1 review notes (2026-10-09)
+
+Reviewed gateway authentication and team/project authorization, browser CSRF/session
+handling, OIDC groups, managed keys, approval gates, settings/spend, trigger ingress and
+history, run cursors and CSV exports. This is a source review with local regression
+tests, not a penetration test or a production deployment certification.
+
+- Fixed browser authentication routes bypassing the configured rate limiter. With
+  `RATE_LIMIT_ENABLED=true` and a nonzero request ceiling, sign-in, callback, session
+  and logout requests share a peer-address bucket, independent of team and forwarded
+  headers. This boundary fails closed on store failure even when inference is configured
+  to fail open. Redis makes limits shared across replicas; memory limits are per process.
+- Fixed Uvicorn access logs retaining OIDC callback query parameters. The auth logger
+  filter removes the entire query before formatting. Configure ingress/proxy and any
+  custom access loggers likewise; the gateway cannot redact logs made outside it.
+- Moved the request-body ceiling outside authentication middleware. Signed webhook
+  authentication previously read bodies before the limit ran. Both declared-length
+  and chunked oversized bodies now return 413 before authentication touches them.
+- Existing regressions cover double-submit CSRF on cookie writes, session rotation,
+  expiry and revocation, OIDC issuer/audience/nonce/PKCE and group-policy invalidation,
+  cross-team/project denials, quorum identity/idempotency, settings revisions, signed
+  webhook replay protection, cursor validation and CSV formula protection. Provider
+  transport errors and notification failures avoid logging credential-bearing URLs.
+
+Production boundaries still require operator configuration: enable shared rate limits,
+bound unauthenticated API abuse at ingress, use TLS/Secure cookies, restrict trusted
+proxy addresses, and keep Temporal and workers inaccessible to tenants. Rate limiting
+is off by default in the standalone chart; do not interpret an available control as an
+enabled one. Captured content is policy-controlled and may still be sensitive; exports
+outlive server retention. Live IdP, proxy, cluster isolation and store failover checks
+remain in the [caller verification list](docs/release-verification.md#candidate-readiness-pass).
+
 ## Validation
 
 Before security-sensitive handoff or release review, run:

@@ -19,7 +19,7 @@ walkthrough that runs against the Compose fakes, plus instructions for adapting 
 
 ## Concepts
 
-[Workflow essentials](concepts.md), [architecture](architecture.md),
+[Why AgentWorkflows](why-agentworkflows.md), [workflow essentials](concepts.md), [architecture](architecture.md),
 [security](security-overview.md), [threat model](threat-model.md),
 [decision guide](decision-guide.md), [scope](scope-and-non-goals.md), and [FAQ](faq.md).
 

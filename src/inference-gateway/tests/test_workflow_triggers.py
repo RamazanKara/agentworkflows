@@ -9,6 +9,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from time import time
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -96,6 +97,18 @@ def signed(body=b'{"topic":"from webhook"}', *, path=PATH, timestamp=None, deliv
         "X-AW-Signature": "sha256=" + signature,
         "Content-Type": "application/json",
     }
+
+
+@pytest.mark.parametrize("streamed", [False, True])
+def test_webhook_body_is_bounded_before_authentication(gateway, monkeypatch, streamed):
+    client, app, _ = gateway
+    binding = AsyncMock(return_value=False)
+    monkeypatch.setattr("app.workflow_triggers.bind_webhook", binding)
+    body = b"x" * (app.state.settings.max_request_body_bytes + 1)
+    response = client.post(PATH, content=iter([body]) if streamed else body)
+    assert response.status_code == 413
+    assert response.json()["detail"]["reason"] == "request_body_too_large"
+    binding.assert_not_awaited()
 
 
 def internal(app):

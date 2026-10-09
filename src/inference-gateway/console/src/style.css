@@ -202,6 +202,7 @@ details[open] summary { margin-bottom: 12px; }
 .badge.key-expired { color: #825100; background: #fff0d1; }
 .keys-table tr.inactive th, .keys-table tr.inactive td { color: var(--muted); }
 .keys-table .row-action { text-align: right; }
+.row-action a + button, .keys-table .row-action button + button { margin-left: 8px; }
 .keys-table button { min-height: 38px; padding: 6px 14px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 760px) {
@@ -396,6 +397,7 @@ table.numeric th:first-child { width: 40%; }
 .settings.budgets-only > h2 { margin-bottom: 14px; }
 fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .settings-group { padding: 24px 28px 26px; overflow: visible; }
+.panel:has(> #spend-alerts) { padding: 24px 28px; }
 .settings-group > h2, .settings-group > h3 { margin: 0 0 4px; }
 .settings-group > p.muted { margin: 0 0 20px; max-width: 680px; }
 .setting-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 22px 28px; align-items: start; }
@@ -440,6 +442,7 @@ fieldset.choices label.check { min-height: 38px; }
 .setting-list dd { margin: 3px 0 0; font-weight: 600; }
 @media (max-width: 760px) {
   .settings-group { padding: 18px 18px 20px; }
+  .panel:has(> #spend-alerts) { padding: 18px; }
   .setting-grid { grid-template-columns: 1fr; gap: 20px; }
   .save-bar.docked { bottom: 0; margin: 0 -18px; border-width: 1px 0 0; border-radius: 0; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgb(7 58 50 / .12); }
   .save-bar.docked p { flex-basis: 100%; }

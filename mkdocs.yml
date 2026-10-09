@@ -97,6 +97,7 @@ nav:
   - TypeScript quickstart: quickstart-typescript.md
   - Templates: templates.md
   - Concepts:
+      - Why AgentWorkflows: why-agentworkflows.md
       - Workflow essentials: concepts.md
       - Is it a fit?: decision-guide.md
       - FAQ: faq.md

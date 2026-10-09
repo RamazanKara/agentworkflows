@@ -1,6 +1,9 @@
 # Getting started
 
-Use the [local quickstart](quickstart.md) for the first cluster run and the [developer workflow](development.md) to change code or documentation without a cluster. This page is the command reference for validation, operations, and customer handoff.
+Use the [quickstart](quickstart.md) for a Docker Compose trial without Kubernetes,
+the [Kubernetes install guide](install-kubernetes.md) for the umbrella chart, and the
+[developer workflow](development.md) to change code or documentation without a cluster.
+This page is the command reference for validation, operations, and customer handoff.
 
 ## Tool requirements
 

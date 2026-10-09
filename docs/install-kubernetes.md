@@ -10,7 +10,14 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 - Kubernetes, `kubectl`, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.
 - Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.
-- A checkout of the release: `git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git`.
+- This candidate checkout for chart validation, or a matching published release checkout for installation.
+
+This guide describes the current source (package/chart version 0.9.0), under review for
+1.0.0-rc.1. **Candidate images are not published by this pass.** For a candidate cluster
+trial, build/load the gateway and worker from this checkout and set their image values;
+see the source-image example below. A v0.5.1 install cannot demonstrate all features here.
+See [command verification](release-verification.md#candidate-readiness-pass) for the
+native results and the cluster commands still requiring WSL and operator infrastructure.
 
 Prepare the local chart's dependencies once, in this order:
 
@@ -25,9 +32,32 @@ Prometheus CRDs are required.
 
 ## Install
 
+For this source candidate on a disposable kind cluster named `aw`, build and load
+matching images before installation. If needed, create that test cluster with
+`kind create cluster --name aw`. Use these overrides throughout the candidate trial:
+
 ```bash
-helm install aw deploy/charts/agentworkflows -n aw --create-namespace --wait --timeout 15m
+docker build -t agentworkflows-gateway:rc.1 src/inference-gateway
+docker build -t agentworkflows-worker:rc.1 -f sdk/python/Dockerfile .
+kind load docker-image agentworkflows-gateway:rc.1 agentworkflows-worker:rc.1 --name aw
+cat > candidate-values.yaml <<'YAML'
+inference-gateway:
+  image:
+    repository: agentworkflows-gateway
+    tag: rc.1
+    digest: ""
+workflows:
+  worker:
+    image: agentworkflows-worker:rc.1
+YAML
+helm install aw deploy/charts/agentworkflows -n aw --create-namespace -f candidate-values.yaml --wait --timeout 15m
 ```
+
+For another cluster, make those source-built images available in its approved registry
+and change the image references. For a published release, use its matching checkout and
+release image values instead. The component defaults still refer to v0.5.1 images;
+chart metadata alone does not upgrade them. Include `candidate-values.yaml` when running
+the fresh/combined installs below; `--reuse-values` upgrades preserve its image overrides.
 
 The chart generates `temporal-postgres-auth` (`password`), `workflow-gateway-key`
 (`api-key`), and `agentworkflows-admin` (`api-key`) if they are missing. Pre-create
@@ -187,7 +217,7 @@ setting yourself. Scopes must include `openid`; missing roles use `defaultRole` 
 The client secret is referenced from the existing Secret, not copied into Helm values.
 OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.
 
-On the v0.8.0 source build, `inference-gateway.auth.oidc.groupsClaim` and
+`inference-gateway.auth.oidc.groupsClaim` and
 `groupRoleMappings` can derive roles from existing company groups. See the
 [mapping example and acceptance checks](workflows.md#sso-group-to-role-mapping).
 Mappings are scoped by team; nonempty mappings deny unmapped or conflicting
@@ -443,9 +473,9 @@ Do not reuse an old PostgreSQL claim with a newly generated password: restore it
 `temporal-postgres-auth` Secret or delete the old claim before a fresh evaluation install.
 
 
-### Approval policies (v0.9.0 source build)
+### Approval policies
 
-Build and roll out the v0.9.0 gateway before upgrading the worker image/SDK. Under the
+Build and roll out the current gateway before upgrading the worker image/SDK. Under the
 existing workflow policy in `inference-gateway.sandboxPolicy.policy.policies`, use
 `requiredApprovals: 2` and `approvalTimeoutSeconds: 3600` to require two distinct
 reviewers within an hour. The shipped Research defaults remain one/seven days.

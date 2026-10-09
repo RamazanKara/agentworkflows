@@ -2,7 +2,7 @@
 
 Use this checklist before trusting a public release in a customer-owned cluster.
 
-For the unreleased v0.9.0 checkout, run the local gate before tagging:
+For the source candidate (package/chart version 0.9.0), run the local gate:
 
 ```bash
 make lint test-gateway test-scripts api-contract config-contract chart-docs
@@ -10,17 +10,10 @@ make test-typescript test-console
 ```
 
 Build Helm dependencies, then run `helm lint` and `helm template` for the charts
-being shipped. The console suite captures fixture-based screens at 360, 393 and 1440
-CSS pixels in `.out/console-v0.6.0/`; inspect them yourself after the tests pass.
-To repeat only those captures after a console build, run
-`npm test -- --grep 'release console layouts'` from `src/inference-gateway/console`.
-These cover Get started, provider setup, costs, members and keys, step JSON,
-settings, audit and the phone menu. Inspect chips, links, command wrapping and
-horizontal step-JSON scrolling at both phone widths. Setup variants show zero
-usage while keys are missing. The connected insights team has one Research run
-awaiting approval: three calls and receipts, 4,200 tokens and $0.06, matching the
-step sums and cost tables. These are synthetic UI fixtures; the separate Compose
-smoke test exercises the live gateway.
+being shipped. After a console build, repeat the screenshot captures with
+`npm test -- --grep 'release console layouts'` in `src/inference-gateway/console`.
+Screenshots use synthetic UI fixtures; the separate Compose smoke test exercises
+the live gateway.
 
 On native Windows without WSL, run the console's `npm run build` and `npm test`,
 the TypeScript SDK's `npm run build`, `npm run lint` and `npm test`, and Python
@@ -28,7 +21,141 @@ Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: `make lint test-gateway test-scripts`. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.
 
-Set the release and repository once:
+## Candidate readiness pass
+
+2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0, Helm 3.18.6.
+This pass prepares **1.0.0-rc.1** without changing package versions, publishing
+artifacts or committing. It is **not a completed release gate**: the lint finding
+and caller checks below remain open.
+
+### Native checks
+
+| Check | Result |
+| --- | --- |
+| `ruff check .` | One existing E501 at `src/inference-gateway/tests/test_approval_policies.py:67`; left unchanged. All changed Python files pass. |
+| `python scripts/api-contract.py --check` / `python scripts/config-contract.py --check` | Pass. |
+| Python SDK tests | 200 passed, 3 skipped. |
+| TypeScript SDK build, lint, tests | Pass; 77 tests. |
+| Console build and Playwright suite | Pass; 73 tests. |
+| Gateway suite excluding live integrations | Final run: 1,069 passed, 5 skipped. An earlier Git Bash subprocess timeout in `test_sync_script.py::test_local_direct_apply_centrally_owns_namespaces` did not recur. |
+| Security/body-limit regression subset after the final fix | 130 passed. |
+| Umbrella Helm tests | 17 passed. |
+| Documentation | `mkdocs build --strict` passes with the runbook mirror used by `scripts/docs-build.sh`. |
+| Local gateway load | 4,000 requests, all HTTP 200; [endpoint timings and limitations](benchmarks-and-evals.md#10-candidate-native-gateway-sanity-2026-10-09). |
+
+The Windows sandbox prevented Playwright's managed server teardown. The successful
+native run used the same test configuration with `webServer` disabled in a temporary
+config and an explicitly started/stopped Vite preview process. No permanent test
+configuration was changed. Linux/WSL should use the ordinary `npm test` command.
+
+### Console review
+
+The capture suite writes **80 PNGs** to `.out/console-v1.0.0-rc.1/`: every route and
+the six starter forms at **360, 393 and 1440 CSS pixels**, plus both phone menus.
+It includes sign-in/SSO policy, approvals, spend limits, trigger history, CSV export,
+key editing, retained step content, and setup states. Three downloaded CSVs are
+saved beside the images. The images were visually reviewed, with these checks:
+
+- No debug overlays, raw errors, filler records, overlaps or mid-word prose wraps.
+- Text and controls fit 360px; long commands/JSON scroll inside their own panels.
+- The Insights team and Maya Chen identity remain consistent across pages.
+- One waiting Research run has three calls/receipts, 4,200 tokens and $0.06:
+  $0.01 tool + $0.02 OpenAI + $0.03 Anthropic. Costs, run details, audit and CSV agree.
+- Setup shows zero usage before providers are connected. The review gate has zero
+  of two votes, a matching one-hour deadline, and consistent trigger history.
+- Fixed missing Spend alerts padding and touching key/trigger action controls;
+  layout assertions cover the fixes. Download assertions verify CSV contents.
+
+These are realistic, deterministic seeded states, not proof of a live IdP or
+workflow deployment. Screenshot artifacts and raw local results are git-ignored.
+
+### Quickstart command coverage
+
+All 14 fenced shell blocks were parsed with Bash or PowerShell as appropriate.
+Runtime checks created a native venv, installed `./sdk/python`, exercised module
+and subcommand help, scaffolded all six templates, and verified the checked-in
+sample receipt log. The fresh clone attempt failed in Windows Schannel with
+`SEC_E_NO_CREDENTIALS`; the existing checkout was used. Bash venv activation was
+syntax-checked; the PowerShell environment path was exercised.
+
+The following still require a caller with Docker/WSL: Compose `up --build` and
+health waits; `runs start`, `inspect`, `approve`/reject, `usage`, JSONL and CSV
+exports against that stack; gateway/worker logs and verification of a **fresh**
+receipt export; two-reviewer/expiry walkthrough; `stop` or `down -v`; the real
+OpenAI override (with the caller's funded key); and alternate-port `.env`/Compose
+commands. The older `--no-build` release path was not exercised. `docker info`
+could not run: no native Docker and `wsl.exe -d Ubuntu` returned `E_ACCESSDENIED`.
+
+The TypeScript quickstart's 12 shell/JavaScript/TypeScript blocks also passed
+syntax parsing. Its `npm ci`, build, lint and tests passed; a separate local project
+installed the built source SDK and loaded `GatewayClient`. Results of snippet
+parsing are in `.out/ts-doc-command-checks.json`. The Compose `aw-typescript` stack,
+`npm run worker`, REPL start/inspect/approve/triage calls, admin/export calls,
+`npm run smoke`, quorum walkthrough and Compose cleanup still need the caller's
+Temporal/gateway stack. No snippet containing a live mutation was executed.
+
+### Kubernetes command coverage
+
+All 18 fenced Bash blocks passed syntax checks. Both `helm dependency update`
+commands ran. All seven here-document values files were extracted, then strict
+lint and template rendering passed for nine variants: defaults, candidate images,
+TLS, HA, NetworkPolicy, external Redis, external PostgreSQL, TLS+OIDC, and all
+options together. The guide's umbrella test command passed natively. Raw command
+results are in `.out/docs-command-checks.json`; rendered YAML is in `.out/docs-check/`.
+
+`kubectl config current-context` found no context, so **no cluster commands ran**.
+The remaining commands/walkthroughs, in guide order, are:
+
+1. Docker image builds, kind creation/image loading, initial `helm install`,
+   bootstrap Secret read, port-forward and `/readyz` request.
+2. Provider Secret creation, provider `helm upgrade`, rollout after rotation,
+   API-key environment setup, and the paid Research start/inspect/approve flow.
+3. TLS Secret creation, TLS/cert-manager upgrades and HTTPS probe; OIDC Secret
+   creation/upgrade, auth-config probe, real sign-in/refresh/logout and Secure cookies.
+4. HA upgrade, pod/PDB inspection and pod-loss/session recovery; NetworkPolicy
+   upgrade/inspection, all three allowed/denied probe pods and unlisted-egress denial.
+5. External Redis/PostgreSQL Secret creation and upgrades, backup/data migration,
+   persistence after restarts, and combined installation in `aw-production-smoke`.
+6. Upgrade with operator-owned `my-values.yaml`, rollback/restore rehearsal,
+   `helm uninstall`, namespace deletion and kind cleanup; approval-policy rollout.
+
+Those checks need test infrastructure, provider/IdP credentials, TLS/DNS, a
+NetworkPolicy-capable CNI, and reachable external stores. Offline renders cannot
+verify those conditions or existing-Secret reuse. Preserve the candidate image
+overrides in every installation/upgrade values set.
+
+### Caller checks in WSL
+
+Use a Linux venv in a WSL checkout with Docker available; do not reuse the native
+Windows venv. Re-run the documented quickstart and cluster checks above, then:
+
+```bash
+make validate-full
+make compose-up
+make compose-smoke
+make workflow-loadtest
+make workflow-upgrade-test
+make workflow-helm-upgrade-test
+make workflow-restore-drill
+make repo-security-scan
+make dependency-lock-check
+make image-scan
+make supply-chain-check
+make loadtest-local
+make evidence
+make release-gate-strict
+```
+
+The workflow recovery/Helm checks require their documented test stacks and backups;
+see [local evaluation](local-evaluation.md) and [production readiness](production-readiness.md).
+Live-provider tests additionally need the caller's credentials. Do not substitute
+fixture screenshots, offline chart renders or this fake-runtime load test for live
+release evidence. No commit, push, tag, publication or `gh` command was run in this pass.
+
+## Published artifact verification
+
+The commands below target the older published release; change `RELEASE` only after
+the matching artifacts exist. Set the release and repository once:
 
 ```bash
 export RELEASE=v0.5.1

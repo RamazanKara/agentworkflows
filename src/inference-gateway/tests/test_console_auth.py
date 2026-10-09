@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import json
+import logging
 from dataclasses import replace
 from time import time
 from unittest.mock import AsyncMock
@@ -10,8 +11,11 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import jwt
 import pytest
+from app.budget import BudgetBackendError
+from app.console_auth import redact_auth_query
 from app.jwt_auth import JwtVerifier
 from app.main import create_app
+from app.ratelimit import InMemoryRateLimiter
 from app.sessions import CSRF_COOKIE, IDLE_SECONDS, MAX_SECONDS, SESSION_COOKIE
 from app.settings import Settings
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -26,6 +30,49 @@ def login(client, key="admin"):
     response = client.post("/v1/auth/session", json={"key": key})
     assert response.status_code == 200, response.text
     return {"X-CSRF-Token": response.json()["csrf_token"]}
+
+
+@pytest.mark.parametrize(
+    "path,method", [("session", "POST"), ("login", "GET"), ("callback", "GET"), ("logout", "POST")]
+)
+def test_sign_in_throttle_cannot_be_bypassed_by_team_or_forwarded_headers(auth_gateway, path, method):
+    _, _, _, build = auth_gateway
+    client, app = build(rate_limit_enabled=True, rate_limit_requests_per_window=2)
+    app.state.rate_limiter = InMemoryRateLimiter(app.state.settings)
+    for index in range(3):
+        response = client.request(
+            method, f"/v1/auth/{path}", json={"key": "invalid"} if path == "session" else None,
+            headers={"X-Sandbox-ID": f"team-{index}", "X-Forwarded-For": f"192.0.2.{index}"},
+        )
+        assert (response.status_code == 429) is (index == 2)
+    assert int(response.headers["retry-after"]) > 0
+    assert response.headers["cache-control"] == "no-store"
+    assert client.get("/v1/auth/config").status_code == 200
+
+
+def test_sign_in_throttle_fails_closed_on_store_outage(auth_gateway, monkeypatch):
+    _, _, _, build = auth_gateway
+    client, app = build(rate_limit_enabled=True, rate_limit_fail_open=True)
+
+    def unavailable(key):
+        raise BudgetBackendError("unavailable")
+
+    monkeypatch.setattr(app.state.rate_limiter, "check", unavailable)
+    response = client.post("/v1/auth/session", json={"key": "admin"})
+    assert response.status_code == 503
+    assert "retry-after" in response.headers
+    assert not client.cookies.get(SESSION_COOKIE)
+
+
+def test_access_log_omits_oidc_codes_and_state():
+    record = logging.LogRecord(
+        "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d',
+        ("127.0.0.1", "GET", "/v1/auth/callback?code=private-code&state=private-state", "1.1", 303), None,
+    )
+    assert redact_auth_query(record)
+    assert "/v1/auth/callback" in record.getMessage()
+    assert "private-code" not in record.getMessage()
+    assert "private-state" not in record.getMessage()
 
 
 def test_session_restore_cookie_flags_and_logout(auth_gateway):
