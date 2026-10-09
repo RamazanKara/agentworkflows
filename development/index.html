@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
+        <meta name="description" content="Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.">
       
       
       
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agentworkflows" class="md-skip">
+        <a href="#put-your-teams-ai-agents-to-work" class="md-skip">
           Skip to content
         </a>
       
@@ -499,10 +499,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#five-minute-quickstart" class="md-nav__link">
+  <a href="#start-with-one-approved-result" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Five-minute quickstart
+        Start with one approved result
       
     </span>
   </a>
@@ -510,10 +510,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-use-this-instead-of-litellm-plus-temporal" class="md-nav__link">
+  <a href="#choose-your-path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why use this instead of LiteLLM plus Temporal?
+        Choose your path
       
     </span>
   </a>
@@ -521,10 +521,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#find-a-capability" class="md-nav__link">
+  <a href="#replace-the-glue-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Find a capability
+        Replace the glue code
       
     </span>
   </a>
@@ -532,10 +532,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understand-the-receipts" class="md-nav__link">
+  <a href="#know-where-the-evidence-ends" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understand the receipts
+        Know where the evidence ends
       
     </span>
   </a>
@@ -931,6 +931,8 @@
       
         
       
+        
+      
     
     
     
@@ -1131,6 +1133,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="single-tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
   
 
     
@@ -2085,10 +2115,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#five-minute-quickstart" class="md-nav__link">
+  <a href="#start-with-one-approved-result" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Five-minute quickstart
+        Start with one approved result
       
     </span>
   </a>
@@ -2096,10 +2126,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-use-this-instead-of-litellm-plus-temporal" class="md-nav__link">
+  <a href="#choose-your-path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why use this instead of LiteLLM plus Temporal?
+        Choose your path
       
     </span>
   </a>
@@ -2107,10 +2137,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#find-a-capability" class="md-nav__link">
+  <a href="#replace-the-glue-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Find a capability
+        Replace the glue code
       
     </span>
   </a>
@@ -2118,10 +2148,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#understand-the-receipts" class="md-nav__link">
+  <a href="#know-where-the-evidence-ends" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Understand the receipts
+        Know where the evidence ends
       
     </span>
   </a>
@@ -2153,137 +2183,72 @@
   
 
 
-<h1 id="agentworkflows">AgentWorkflows<a class="headerlink" href="#agentworkflows" title="Permanent link">&para;</a></h1>
-<p><strong>Run team AI workflows with human approval, budgets, and a traceable record of each step.</strong></p>
-<p>AgentWorkflows is self-managed: Python and TypeScript workflow SDKs, a model gateway and a team web console.
-Temporal keeps runs durable; the gateway controls model and tool access and records usage
-and receipts. Start, inspect, approve, cancel and retry runs through the console or CLI.
-Cron schedules and signed webhooks can start work, with notifications for waiting approvals,
-failures and budget thresholds. People sign in with their company account (OIDC) or an API key,
-and admins add members and manage keys in the console.</p>
-<p>The <strong>1.0.0-rc.1 review candidate (unreleased)</strong> includes distinct-reviewer approval quorums and
-configurable expiry, with console policy controls and progress plus Python/TypeScript
-SDK support. Use the <a href="quickstart/">Quickstart's source-build path</a> to try it;
-package/chart versions remain 0.9.0 and published image defaults remain on v0.5.1.
-Read <a href="why-agentworkflows/">Why AgentWorkflows</a> for its fit and boundaries.</p>
-<p>It is for <strong>developers</strong> turning agent scripts into repeatable jobs, <strong>team leads</strong> reviewing
-drafts and spend, and <strong>platform engineers</strong> managing shared provider access. Built-in routes
-cover OpenAI, Anthropic, Azure OpenAI, AWS Bedrock and Vertex Gemini; Ollama and vLLM are optional.
-You still own the workflows, integrations and deployment. There is no hosted service here.</p>
-<h2 id="five-minute-quickstart">Five-minute quickstart<a class="headerlink" href="#five-minute-quickstart" title="Permanent link">&para;</a></h2>
-<p>With Git, Python 3.12+ and Docker Compose installed, follow the <strong><a href="quickstart/">Quickstart</a></strong>:
-start the fake stack, run <code>agentworkflows init my-research</code>, start the workflow, review its
-draft, approve it and verify the receipts. Bash and Windows PowerShell commands are included.
-Initial image and package downloads may take longer than five minutes.</p>
-<p>The default trial makes no external model calls and needs no cloud credentials, GPU or
-Kubernetes. Its canned outputs demonstrate execution and governance, not model quality.
-The <a href="templates/">template gallery</a> makes the next afternoon concrete:</p>
+<h1 id="put-your-teams-ai-agents-to-work">Put your team's AI agents to work<a class="headerlink" href="#put-your-teams-ai-agents-to-work" title="Permanent link">&para;</a></h1>
+<p><strong>Approvals, spend limits, and an audit trail in one platform.</strong></p>
+<p>AgentWorkflows turns scattered agent scripts into durable team workflows. Developers write
+Python or TypeScript. Reviewers approve drafts in the console. Platform teams control model
+access and budgets through one gateway. Every governed model call, tool action, and approval
+has a receipt.</p>
+<p><img alt="A workflow draft, costs, and approval progress in the team console" src="assets/console-1440.png" /></p>
+<p><em>1440 px console capture with consistent test data.</em></p>
+<h2 id="start-with-one-approved-result">Start with one approved result<a class="headerlink" href="#start-with-one-approved-result" title="Permanent link">&para;</a></h2>
+<p>Start the local stack from this checkout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker
+</code></pre></div>
+<p>After images build and services become ready, follow the
+<a href="quickstart/#60-second-console-walkthrough">60-second console walkthrough</a>: sign in,
+start the sample, and approve its draft. The simulated trial needs no cloud key and makes
+no external model calls. Connect a real provider to evaluate output quality.</p>
+<p>This is <strong>1.0.0-rc.4 (unreleased)</strong> source. Package versions remain 0.9.0; build the candidate
+instead of pulling older published images. <a href="release-verification/">Verification and remaining checks</a>.</p>
+<h2 id="choose-your-path">Choose your path<a class="headerlink" href="#choose-your-path" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Start with</th>
-<th>You get</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="templates/#code-review">PR review</a></td>
-<td>A diff review that waits for a human decision</td>
-</tr>
-<tr>
-<td><a href="templates/#support-triage">Support triage</a></td>
-<td>Routing suggestions and a reply draft</td>
-</tr>
-<tr>
-<td><a href="templates/#weekly-report">Weekly report</a></td>
-<td>One briefing from changes, support and incidents</td>
-</tr>
-<tr>
-<td><a href="templates/#incident-summary">Incident summary</a></td>
-<td>A timeline grounded in log excerpts</td>
-</tr>
-<tr>
-<td><a href="templates/#document-qa">Document Q&amp;A</a></td>
-<td>An answer with source links and checked citation IDs</td>
-</tr>
-</tbody>
-</table>
-<p>Each walkthrough includes the input, commands, expected result and the integration work
-needed for your team. Read <a href="concepts/">Concepts</a> for the model, <a href="workflows/">Guides</a> for
-team setup, and <a href="sdk-reference/">Reference</a> for exact commands and defaults.</p>
-<h2 id="why-use-this-instead-of-litellm-plus-temporal">Why use this instead of LiteLLM plus Temporal?<a class="headerlink" href="#why-use-this-instead-of-litellm-plus-temporal" title="Permanent link">&para;</a></h2>
-<p>That is a reasonable stack to build yourself. <a href="https://docs.litellm.ai/docs/simple_proxy">LiteLLM</a>
-already provides broad model routing, budgets and spend tracking;
-<a href="https://docs.temporal.io/develop/python/workflows/message-passing">Temporal</a> supplies workflow
-state and messages for review flows. AgentWorkflows itself uses Temporal.</p>
-<p>AgentWorkflows packages a particular integration: team roles, governed workflow activities,
-per-run budgets, an approval console, triggers, notifications and linked receipts. Choose it
-if that shared workflow fits your team and saves integration work. Choose your own assembly
-if you need broader provider support, already operate those systems, or want full control
-over the application UX. This young project has a narrower API surface, and you still run
-its backups, upgrades and monitoring yourself. See the <a href="decision-guide/">side-by-side decision guide</a>.</p>
-<h2 id="find-a-capability">Find a capability<a class="headerlink" href="#find-a-capability" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>You want to</th>
+<th>Your job</th>
 <th>Start here</th>
+<th>What you get</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Call cloud models and configure fallback</td>
-<td><a href="client-examples/">Client examples</a></td>
+<td>Build agent workflows</td>
+<td><a href="templates/">Templates</a>, <a href="sdk-reference/">SDK reference</a></td>
+<td>Versioned starting points, forms, governed activities, and durable approvals.</td>
 </tr>
 <tr>
-<td>Run durable workflows with human approvals</td>
-<td><a href="workflows/">Workflow walkthrough</a></td>
+<td>Lead a team</td>
+<td><a href="workflows/">Teams and approvals</a>, <a href="team-settings/">Team settings</a></td>
+<td>Company sign-in, roles, review queues, and visible spend.</td>
 </tr>
 <tr>
-<td>Sign in with your company account and manage members and API keys</td>
-<td><a href="workflows/#company-sign-in-oidc">Company sign-in</a>, <a href="workflows/#members-and-api-keys">members and keys</a></td>
-</tr>
-<tr>
-<td>Set team roles, projects, provider keys, and budgets</td>
-<td><a href="workflows/#teams-projects-and-roles">Team setup</a>, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md">budget controls</a></td>
-</tr>
-<tr>
-<td>Verify model and reported tool-action receipts</td>
-<td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">Audit chain</a></td>
-</tr>
-<tr>
-<td>Add retrieval or hardened workspaces</td>
-<td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/rag-service.md">RAG</a>, <a href="agent-sandbox-integration/">agent-sandbox</a></td>
-</tr>
-<tr>
-<td>Add self-hosted models</td>
-<td><a href="model-selection/">Model selection</a></td>
-</tr>
-<tr>
-<td>Review current support and planned work</td>
-<td><a href="feature-inventory/">Feature inventory</a>, <a href="scope-and-non-goals/">scope</a>, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">roadmap</a></td>
-</tr>
-<tr>
-<td>Deploy and operate</td>
-<td><a href="install-kubernetes/">Install on Kubernetes</a>, <a href="kubernetes-production-checklist/">Kubernetes production checklist</a>, <a href="production-readiness/">production readiness</a>, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/README.md">runbooks</a></td>
-</tr>
-<tr>
-<td>Contribute</td>
-<td><a href="development/">Developer workflow</a>, <a href="repository-map/">repository map</a></td>
+<td>Run the platform</td>
+<td><a href="single-tenant/">Helm install</a>, <a href="kubernetes-production-checklist/">Production checklist</a></td>
+<td>A cloud-first deployment with explicit storage, identity, backup, and upgrade responsibilities.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="understand-the-receipts">Understand the receipts<a class="headerlink" href="#understand-the-receipts" title="Permanent link">&para;</a></h2>
-<p>The gateway records redacted, hash-chained receipts. Verification detects edits and gaps
-within retained chains. Detecting truncation, missing lifetimes, or full rewrites requires
-persisted restart links and external head anchors. Tool actions need an instrumented producer;
-the log cannot prove actions nobody reported. Receipts fingerprint prompts; workflow inputs
-and activity results remain in Temporal history.</p>
-<p>Checked-in samples demonstrate report formats, not release readiness. CI supports signing
-and evidence generation; AgentWorkflows release claims require fresh artifacts.
-See <a href="proof/">evidence and validation</a> and <a href="threat-model/">security boundaries</a>.</p>
-<p>AgentWorkflows is Apache-2.0 licensed. See
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/NOTICE">NOTICE</a> for attribution.</p>
+<h2 id="replace-the-glue-code">Replace the glue code<a class="headerlink" href="#replace-the-glue-code" title="Permanent link">&para;</a></h2>
+<p>Agent sprawl becomes a run list. Ad hoc review becomes an approval gate with 1–10 reviewers
+and a deadline. Unbounded calls become token and dollar limits. Scattered logs become a
+step timeline with costs, latency, errors, and receipts. Schedules and signed webhooks
+start work through the same policies as the console.</p>
+<p>The gateway supports OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex Gemini; optional
+Ollama and vLLM routes keep local models available. Temporal provides durable execution.
+AgentWorkflows supplies the team application around it. You supply business workflows and
+real tool integrations and operate the deployment.</p>
+<p><a href="decision-guide/">Build-or-adopt decision guide</a> · <a href="architecture/">Architecture</a>.
+There is no hosted service in this repository.</p>
+<h2 id="know-where-the-evidence-ends">Know where the evidence ends<a class="headerlink" href="#know-where-the-evidence-ends" title="Permanent link">&para;</a></h2>
+<p>Provider keys stay on the server; roles and projects restrict access. Receipt hash chains
+expose edits and internal gaps. External head anchors detect truncation or replacement.
+Inputs and results also remain in Temporal history with separate retention. Configure
+content capture, provider retention, and backups for your team.</p>
+<p><a href="security-overview/">Security overview</a> · <a href="threat-model/">Threat model</a> ·
+<a href="team-lifecycle/">Data lifecycle</a> · <a href="proof/">Verification</a></p>
+<p><a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">Roadmap</a> ·
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md">Adoption gaps</a> ·
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/LICENSE">Apache-2.0 license</a>.</p>
 
 
 

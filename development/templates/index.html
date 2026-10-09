@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
+        <meta name="description" content="Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.">
       
       
       
@@ -702,6 +702,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#release-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#meeting-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meeting actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-questionnaire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security questionnaire
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1010,6 +1043,8 @@
       
         
       
+        
+      
     
     
     
@@ -1210,6 +1245,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../single-tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
   
 
     
@@ -2284,6 +2347,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#release-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#meeting-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Meeting actions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-questionnaire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security questionnaire
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2313,18 +2409,19 @@
 <h2 id="install-a-reviewed-version">Install a reviewed version<a class="headerlink" href="#install-a-reviewed-version" title="Permanent link">&para;</a></h2>
 <p>Open <strong>Workflow templates</strong> in the console. A team admin can install any bundled template
 whose worker and team policy are already configured with one click, then select <strong>Run</strong>.
-The six shipped templates (including Research) have immutable catalog version <code>0.9.0</code>.
+The gallery has nine templates. The original six retain version <code>0.9.0</code>; release notes,
+meeting actions, and security questionnaire start at <code>1.0.0-rc.4</code>.
 Installation pins that version in the team's revisioned settings and records an audit entry;
 repeating the same installation is idempotent. New runs retain the template ID and version.
 Unknown versions return 422; an unapproved workflow returns 409.</p>
 <p>This installs the catalog selection, not remote executable code. The Compose worker already
-registers all six implementations. For Kubernetes, register the implementation in your worker
+registers all nine implementations. For Kubernetes, register the implementation in your worker
 and approve <code>inference-gateway.sandboxPolicy.policy.policies[].workflows</code> in Helm first;
 the gallery never expands model, tool or egress permissions. Operator policy remains authoritative.
 Source changes still require a worker deployment. The existing scaffold command below is
 the way to edit a template. See <a href="../team-lifecycle/">lifecycle API and SDK methods</a>.</p>
 <p>Pick one team task, run its fixture, then adapt its inputs and tools. Each walkthrough takes
-about five minutes after the <a href="../quickstart/">quickstart</a>. All five run in the same Compose
+about five minutes after the <a href="../quickstart/">quickstart</a>. All nine run in the same Compose
 trial without credentials for any external service, a GPU, or framework extras.</p>
 <table>
 <thead>
@@ -2359,6 +2456,21 @@ trial without credentials for any external service, a GPU, or framework extras.<
 <td><a href="#document-qa">Document Q&amp;A with citations</a></td>
 <td><code>document-qa</code></td>
 <td>Answer, source links and the exact retrieved excerpts</td>
+</tr>
+<tr>
+<td><a href="#release-notes">Release notes</a></td>
+<td><code>release-notes</code></td>
+<td>Turn merged changes into release notes with a reviewer decision.</td>
+</tr>
+<tr>
+<td><a href="#meeting-actions">Meeting actions</a></td>
+<td><code>meeting-actions</code></td>
+<td>Extract decisions, owners, and due dates from a meeting transcript.</td>
+</tr>
+<tr>
+<td><a href="#security-questionnaire">Security questionnaire</a></td>
+<td><code>security-questionnaire</code></td>
+<td>Draft evidence-backed questionnaire answers and flag unsupported claims.</td>
 </tr>
 </tbody>
 </table>
@@ -2573,6 +2685,63 @@ the existing <a href="../workflows/#teams-projects-and-roles">team policy</a>.</
 run API. <code>text</code> schedules the same governed model activity as the lower-level <code>model</code> method.
 See <a href="../sdk-reference/">SDK reference</a> for defaults and <a href="../workflows/#bring-your-agent">bring your agent</a>
 for OpenAI, Anthropic, Agents SDK, LangGraph, MCP, and sandboxed code steps.</p>
+<h2 id="release-notes">Release notes<a class="headerlink" href="#release-notes" title="Permanent link">&para;</a></h2>
+<p><strong>For:</strong> release managers preparing a customer-facing change summary.
+Version <code>1.0.0-rc.4</code>; Python and TypeScript workers both implement <code>ReleaseNotesWorkflow</code>.</p>
+<p>In the console, choose <strong>Templates → Release notes → Install template → Run</strong>.
+Or scaffold and run from code:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-release-notes<span class="w"> </span>--template<span class="w"> </span>release-notes
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>ReleaseNotesWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@my-release-notes/input.json'</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span>RUN_ID
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>approve<span class="w"> </span>RUN_ID
+</code></pre></div>
+<p>Input field: <code>changes</code> (required text); <code>model</code> defaults to <code>demo-openai</code>.
+Example: REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint.</p>
+<p>The draft turn merged changes into release notes with a reviewer decision.
+It waits for human approval and returns <code>approved</code>, <code>release_notes</code>, and <code>reviewer</code>.
+Rejection returns <code>approved: false</code>; it sends no external message or publication.
+Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
+further constrained by team policy.</p>
+<p><strong>Adapt it:</strong> supply sanitized merged changes with stable issue/PR IDs; have the reviewer check breaking changes and migration instructions against the diff before publishing.
+The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
+<h2 id="meeting-actions">Meeting actions<a class="headerlink" href="#meeting-actions" title="Permanent link">&para;</a></h2>
+<p><strong>For:</strong> team leads turning a transcript into an actionable follow-up.
+Version <code>1.0.0-rc.4</code>; Python and TypeScript workers both implement <code>MeetingActionsWorkflow</code>.</p>
+<p>In the console, choose <strong>Templates → Meeting actions → Install template → Run</strong>.
+Or scaffold and run from code:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-meeting-actions<span class="w"> </span>--template<span class="w"> </span>meeting-actions
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>MeetingActionsWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@my-meeting-actions/input.json'</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span>RUN_ID
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>approve<span class="w"> </span>RUN_ID
+</code></pre></div>
+<p>Input field: <code>transcript</code> (required text); <code>model</code> defaults to <code>demo-openai</code>.
+Example: 09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is still open.</p>
+<p>The draft extract decisions, owners, and due dates from a meeting transcript.
+It waits for human approval and returns <code>approved</code>, <code>action_plan</code>, and <code>reviewer</code>.
+Rejection returns <code>approved: false</code>; it sends no external message or publication.
+Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
+further constrained by team policy.</p>
+<p><strong>Adapt it:</strong> supply a transcript with timestamps and consent to process it; verify every proposed owner and deadline before transferring actions to your task tracker.
+The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
+<h2 id="security-questionnaire">Security questionnaire<a class="headerlink" href="#security-questionnaire" title="Permanent link">&para;</a></h2>
+<p><strong>For:</strong> security teams answering vendor questionnaires from retained evidence.
+Version <code>1.0.0-rc.4</code>; Python and TypeScript workers both implement <code>SecurityQuestionnaireWorkflow</code>.</p>
+<p>In the console, choose <strong>Templates → Security questionnaire → Install template → Run</strong>.
+Or scaffold and run from code:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-security-questionnaire<span class="w"> </span>--template<span class="w"> </span>security-questionnaire
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>SecurityQuestionnaireWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'@my-security-questionnaire/input.json'</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span>RUN_ID
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>approve<span class="w"> </span>RUN_ID
+</code></pre></div>
+<p>Input field: <code>evidence</code> (required text); <code>model</code> defaults to <code>demo-openai</code>.
+Example: Q1: Are approvals required? E1: The team policy requires two reviewers before publication. Q2: Is SOC 2 certification current? No certification evidence supplied.</p>
+<p>The draft draft evidence-backed questionnaire answers and flag unsupported claims.
+It waits for human approval and returns <code>approved</code>, <code>answers</code>, and <code>reviewer</code>.
+Rejection returns <code>approved: false</code>; it sends no external message or publication.
+Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
+further constrained by team policy.</p>
+<p><strong>Adapt it:</strong> supply numbered questions and authoritative evidence excerpts with IDs; require a security reviewer to check each cited statement. Missing evidence must remain an explicit gap, especially certification claims.
+The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
 
 
 

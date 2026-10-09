@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
+        <meta name="description" content="Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.">
       
       
       
@@ -842,6 +842,8 @@
       
         
       
+        
+      
     
     
     
@@ -1042,6 +1044,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../single-tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
   
 
     
@@ -1384,6 +1414,17 @@
     <span class="md-ellipsis">
       
         Approval quorum and expiry (v0.9.0)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#team-adoption-apis-rc4-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team adoption APIs (rc.4 candidate)
       
     </span>
   </a>
@@ -2201,6 +2242,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#team-adoption-apis-rc4-candidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Team adoption APIs (rc.4 candidate)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2752,6 +2804,60 @@ Python exposes the same fields in the status query and <code>GatewayClient.run()
 vote can leave the run waiting for other reviewers; inspect the run before assuming
 it completed. Repeating a vote never adds a reviewer. See <a href="../workflows/#approval-policies">approval policies</a>
 for identity, replay, automatic decisions and upgrade boundaries.</p>
+<h2 id="team-adoption-apis-rc4-candidate">Team adoption APIs (rc.4 candidate)<a class="headerlink" href="#team-adoption-apis-rc4-candidate" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Python</th>
+<th>TypeScript</th>
+<th>HTTP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First-run readiness</td>
+<td><code>onboarding()</code></td>
+<td><code>onboarding()</code></td>
+<td><code>GET /v1/team/onboarding</code></td>
+</tr>
+<tr>
+<td>Save provider key</td>
+<td><code>set_provider_key(provider, value, expected_version=0)</code></td>
+<td><code>setProviderKey(provider, value, 0)</code></td>
+<td><code>PUT /v1/team/providers/{provider}/key</code></td>
+</tr>
+<tr>
+<td>Invitations</td>
+<td><code>invitations()</code>, <code>create_invitation(name, role="viewer")</code>, <code>revoke_invitation(id)</code></td>
+<td><code>invitations()</code>, <code>createInvitation(name, {role: "viewer"})</code>, <code>revokeInvitation(id)</code></td>
+<td><code>GET/POST /v1/team/invitations</code>, <code>DELETE /v1/team/invitations/{id}</code></td>
+</tr>
+<tr>
+<td>Redeem invitation once</td>
+<td><code>accept_invitation(token)</code></td>
+<td><code>acceptInvitation(token)</code></td>
+<td><code>POST /v1/auth/invitations/accept</code></td>
+</tr>
+<tr>
+<td>Alert rules</td>
+<td><code>alert_rules()</code>, <code>set_alert_rules(rules, revision=revision)</code></td>
+<td><code>alertRules()</code>, <code>setAlertRules(rules, revision)</code></td>
+<td><code>GET/PUT /v1/team/alert-rules</code></td>
+</tr>
+<tr>
+<td>Deployment settings</td>
+<td><code>deployment()</code></td>
+<td><code>deployment()</code></td>
+<td><code>GET /v1/team/deployment</code></td>
+</tr>
+</tbody>
+</table>
+<p>Invitation creation and redemption never automatically retry: a lost response can
+contain the only copy of a token or key. Ask an admin to revoke uncertain access and
+issue a fresh invitation. See <a href="../workflows/">invitations and alerts</a>,
+<a href="../quickstart/#60-second-console-walkthrough">provider onboarding</a>, and
+<a href="../single-tenant/#install-and-verify">deployment checks</a> for roles, boundaries and examples.</p>
 
 
 

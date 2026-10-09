@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/team-lifecycle/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/single-tenant/">
       
       
+        <link rel="prev" href="../install-kubernetes/">
+      
+      
+        <link rel="next" href="../postgresql-storage/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>Team lifecycle APIs - AgentWorkflows</title>
+        <title>Single-tenant service - AgentWorkflows</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#team-lifecycle-apis" class="md-skip">
+        <a href="#run-a-single-tenant-service" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Team lifecycle APIs
+              Single-tenant service
             
           </span>
         </div>
@@ -321,10 +325,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../workflows/" class="md-tabs__link">
           
   
@@ -811,8 +817,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -842,19 +850,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -872,7 +883,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1055,10 +1066,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../single-tenant/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1074,6 +1112,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-the-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose the path
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-a-tenant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare a tenant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-and-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install and verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#back-up-a-recoverable-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Back up a recoverable unit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-without-losing-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade without losing history
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2020,10 +2133,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#secret-storage-and-rotation" class="md-nav__link">
+  <a href="#choose-the-path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Secret storage and rotation
+        Choose the path
       
     </span>
   </a>
@@ -2031,10 +2144,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#retention-export-and-erasure" class="md-nav__link">
+  <a href="#prepare-a-tenant" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Retention, export and erasure
+        Prepare a tenant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-and-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install and verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#back-up-a-recoverable-unit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Back up a recoverable unit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-without-losing-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade without losing history
       
     </span>
   </a>
@@ -2058,7 +2204,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/team-lifecycle.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/single-tenant.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2066,147 +2212,178 @@
   
 
 
-<h1 id="team-lifecycle-apis">Team lifecycle APIs<a class="headerlink" href="#team-lifecycle-apis" title="Permanent link">&para;</a></h1>
-<p>These rc.2 APIs require the source gateway and SDKs. OpenAPI snapshots in
-<code>platform/api-contracts/inference-gateway.openapi.json</code> define request and response schemas. The console's
-Workflow templates, Workflow secrets, Data &amp; privacy, and run detail pages use these same APIs.
-All calls are scoped to the authenticated team; a project-scoped admin cannot administer
-team settings, secrets or erasure. Redis accounting remains required with either storage backend.</p>
+<h1 id="run-a-single-tenant-service">Run a single-tenant service<a class="headerlink" href="#run-a-single-tenant-service" title="Permanent link">&para;</a></h1>
+<p>Give one customer one namespace, one gateway URL, dedicated database credentials,
+a Redis instance, and a persistent secret-encryption key. The customer uses the console;
+your operations team owns upgrades, backups, identity, availability and provider access.
+This is a reference deployment you operate. AgentWorkflows does not sell a hosted SLA.</p>
+<h2 id="choose-the-path">Choose the path<a class="headerlink" href="#choose-the-path" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>HTTP contract</th>
-<th>Access and behavior</th>
-<th>Python / TypeScript</th>
+<th>Path</th>
+<th>Command</th>
+<th>Result</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>GET /v1/workflow-templates</code></td>
-<td>Team member; version, schema, availability, installed version</td>
-<td><code>workflow_templates()</code> / <code>workflowTemplates()</code></td>
+<td>Local evaluation</td>
+<td><code>docker compose -f deploy/compose/compose.yaml up --build -d --wait workflow-worker</code></td>
+<td>Gateway, console, Temporal, persistent stores, worker and a simulated provider; no paid key needed.</td>
 </tr>
 <tr>
-<td><code>POST /v1/workflow-templates/{id}/install</code> with <code>version</code></td>
-<td>Admin; pin a reviewed bundled version, idempotent</td>
-<td><code>install_template(id, version=...)</code> / <code>installTemplate(id, version)</code></td>
+<td>Disposable kind trial</td>
+<td><code>python scripts/first-approved-run.py kind</code></td>
+<td>Isolated cluster, template install, approved run and audit verification; prepare source images first.</td>
 </tr>
 <tr>
-<td><code>POST /v1/workflow-runs/{id}/cancel</code></td>
-<td>Builder/admin in the project; requests Temporal cancellation</td>
-<td><code>cancel_run(id)</code> / <code>cancelRun(id)</code></td>
-</tr>
-<tr>
-<td><code>POST /v1/workflow-runs/{id}/retry</code></td>
-<td>Builder/admin; failed/canceled/timed-out/terminated only, otherwise 409</td>
-<td><code>retry_run(id)</code> / <code>retryRun(id)</code></td>
-</tr>
-<tr>
-<td><code>GET /v1/workflows/{workflow}/secrets</code></td>
-<td>Admin; names, versions and timestamps only</td>
-<td><code>workflow_secrets(workflow)</code> / <code>workflowSecrets(workflow)</code></td>
-</tr>
-<tr>
-<td><code>PUT /v1/workflows/{workflow}/secrets/{name}</code></td>
-<td>Admin; <code>{value, expected_version}</code>; 0 creates, current version rotates</td>
-<td><code>set_workflow_secret(workflow, name, value, expected_version=...)</code> / <code>setWorkflowSecret(workflow, name, value, version)</code></td>
-</tr>
-<tr>
-<td><code>POST /v1/workflow-runs/{id}/secrets/{name}/resolve</code></td>
-<td>Running workflow; worker scope <code>workflows:execute</code>, matching run/step headers and project</td>
-<td><code>resolve_workflow_secret(id, step, name)</code> / <code>resolveWorkflowSecret(id, step, name)</code></td>
-</tr>
-<tr>
-<td><code>GET</code>, <code>PUT /v1/team/retention</code></td>
-<td>Admin; PUT requires <code>If-Match</code> settings revision and all three periods</td>
-<td><code>team_retention()</code>, <code>set_team_retention(...)</code> / <code>teamRetention()</code>, <code>setTeamRetention(policy, revision)</code></td>
-</tr>
-<tr>
-<td><code>GET /v1/team/data</code></td>
-<td>Admin; erasure status and external follow-up</td>
-<td><code>team_data()</code> / <code>teamData()</code></td>
-</tr>
-<tr>
-<td><code>GET /v1/team/data/export</code></td>
-<td>Admin; JSON attachment of retained team data</td>
-<td><code>export_team_data()</code> / <code>exportTeamData()</code></td>
-</tr>
-<tr>
-<td><code>DELETE /v1/team/data</code> with <code>confirm_team</code></td>
-<td>Admin; explicit matching team ID, resumable erasure</td>
-<td><code>delete_team_data(confirm_team=...)</code> / <code>deleteTeamData(team)</code></td>
-</tr>
-<tr>
-<td><code>GET /v1/team/telemetry</code></td>
-<td>Admin; configured trace/metric export status, no credentials</td>
-<td><code>team_telemetry()</code> / <code>teamTelemetry()</code></td>
+<td>Customer namespace</td>
+<td>Helm reference below</td>
+<td>HTTPS console, company sign-in, two gateway/worker replicas, external stores and explicit gateway egress.</td>
 </tr>
 </tbody>
 </table>
-<p>Cancel and retry produce <code>workflow_operation</code> receipts with the actor and action. Retry records
-the new run ID on the original timeline and starts a fresh budget using current policy. Repeating
-retry on one original run returns the same retry execution. Tools already invoked can have external
-side effects; the console confirms cancellation and explains that a retry may repeat them.
-There is no new Helm switch: existing workflow/project/role policy governs these operations.</p>
-<h2 id="secret-storage-and-rotation">Secret storage and rotation<a class="headerlink" href="#secret-storage-and-rotation" title="Permanent link">&para;</a></h2>
-<p>Generate a Fernet key using the gateway environment's existing cryptography dependency:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'</span>
+<p>Use the <a href="../quickstart/">quickstart</a> for kind's image-build and dependency commands.
+The trial has a <strong>300-second</strong> deadline after images are prepared. The README's
+60-second walkthrough covers console interaction on a ready stack. Neither number is a
+cold image download or cluster provisioning benchmark.</p>
+<h2 id="prepare-a-tenant">Prepare a tenant<a class="headerlink" href="#prepare-a-tenant" title="Permanent link">&para;</a></h2>
+<p>Start with <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/agentworkflows/values-single-tenant.yaml">values-single-tenant.yaml</a>.
+Copy it into your deployment configuration and replace the example domains, OIDC application
+and group names. Use the same reviewed values for every upgrade.</p>
+<p>Provision managed PostgreSQL databases <code>gateway</code>, <code>temporal</code>, and
+<code>temporal_visibility</code>, and authenticated Redis with persistence and backups.
+Use separate gateway and Temporal database users. The Temporal user needs schema DDL
+privileges during upgrades; database creation remains an operator action.
+The reference enables verified PostgreSQL TLS for Temporal. Use a certificate whose
+name matches <code>serverName</code>; configure the provider CA through Temporal's chart mounts
+when it is not in the image trust store.</p>
+<p>Create these Kubernetes Secrets in the tenant namespace from your secret manager:</p>
+<table>
+<thead>
+<tr>
+<th>Secret</th>
+<th>Entry</th>
+<th>Required value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agents-redis</code></td>
+<td><code>url</code></td>
+<td>Authenticated <code>rediss://</code> URL with certificate verification</td>
+</tr>
+<tr>
+<td><code>agents-records</code></td>
+<td><code>dsn</code></td>
+<td>Gateway PostgreSQL DSN with <code>sslmode=verify-full</code></td>
+</tr>
+<tr>
+<td><code>agents-temporal-db</code></td>
+<td><code>password</code></td>
+<td>Password for the configured Temporal database user</td>
+</tr>
+<tr>
+<td><code>agents-encryption</code></td>
+<td><code>fernet-key</code></td>
+<td>Persistent Fernet key; retain it across reinstalls</td>
+</tr>
+<tr>
+<td><code>agents-oidc</code></td>
+<td><code>oidc-client-secret</code></td>
+<td>OIDC application's client secret</td>
+</tr>
+<tr>
+<td><code>agents-tls</code></td>
+<td><code>tls.crt</code>, <code>tls.key</code></td>
+<td>Certificate and key for the console hostname</td>
+</tr>
+</tbody>
+</table>
+<p>Keep values files free of plaintext credentials. Generate the encryption key once with
+<code>python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"</code>
+on your secure administration host and store it in the secret manager.</p>
+<p>Set <code>networkPolicy.externalEgress</code> to reviewed CIDRs and ports for managed Redis,
+gateway PostgreSQL, providers and your identity provider. An empty list deliberately
+blocks those connections. The CNI must enforce NetworkPolicy. Public provider IPs change;
+maintain the approved list or use a controlled network egress layer. No public
+<code>0.0.0.0/0</code> or <code>::/0</code> rule is accepted.</p>
+<p>The umbrella policy isolates the gateway and any bundled stores. Apply your platform's
+namespace isolation policy to Temporal, workers and research tools as well; their
+intra-namespace RPC is not configured for mutual TLS by this profile. Keep Temporal
+and database services private. The Research example's tools are synthetic; replace
+them before treating publication as a business integration.</p>
+<h2 id="install-and-verify">Install and verify<a class="headerlink" href="#install-and-verify" title="Permanent link">&para;</a></h2>
+<p>Build candidate gateway and worker images from this checkout, make them available in
+your registry, and pin their digests in <code>tenant-values.yaml</code>. The chart still has
+older release defaults; do not rely on its default image tags for rc.4.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-f<span class="w"> </span>deploy/charts/agentworkflows/values-single-tenant.yaml<span class="w"> </span>-f<span class="w"> </span>tenant-values.yaml
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>agents<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>tenant-acme<span class="w"> </span>--create-namespace<span class="w"> </span>-f<span class="w"> </span>deploy/charts/agentworkflows/values-single-tenant.yaml<span class="w"> </span>-f<span class="w"> </span>tenant-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
-<p>Store it securely as <code>WORKFLOW_SECRETS_KEY</code> for Compose, or in a Kubernetes Secret referenced by
-<code>inference-gateway.workflowSecrets.existingSecret.name</code> and <code>.key</code> (default <code>fernet-key</code>).
-Use one persistent key across all replicas and include it in your encrypted recovery procedure.
-Without it secret writes/resolution return 503. The console never receives saved plaintext;
-values are 1–16384 UTF-8 bytes, encrypted with their team/workflow/name binding before persistence.
-Audit contains name, version, actor and activity step, never plaintext or ciphertext.</p>
-<p>Rotation replaces the old ciphertext immediately and increments the version; a stale expected
-version returns 409. A worker that already read the old value may finish with it. Resolve inside
-an activity, use the result directly with the service, and never return it into workflow history,
-log it, or put it into captured model/tool input. The SDK passes run/step headers; authorization
-also checks the credential's team/project and the run's actual registered workflow. A worker
-credential can access workflows in its authorized project; it is not an attestation of activity code.</p>
-<p>This API rotates credential values. Changing the Fernet master key without migrating stored
-ciphertexts makes them unreadable; keep the master key stable during normal rotation.</p>
-<h2 id="retention-export-and-erasure">Retention, export and erasure<a class="headerlink" href="#retention-export-and-erasure" title="Permanent link">&para;</a></h2>
-<p>Retention uses seconds, each an integer from 60 through 31536000:
-<code>run_seconds</code>, <code>content_seconds</code>, <code>audit_seconds</code>. PUT uses the shared team-settings revision;
-a concurrent settings change returns 409 and requires reloading. Run periods apply when runs
-close, content periods when content is captured, and audit periods when views are read/pruned.
-Existing expiry deadlines are not extended or rewritten. Helm defaults remain
-<code>workflowRecords.runRecordRetentionSeconds</code>, <code>workflowRecords.contentRetentionSeconds</code> and
-<code>traceability.auditViewRetentionSeconds</code> on the
-inference-gateway chart; team overrides are durable settings, not deployment flags.
-Optional Responses and batch/file stores keep their existing subsystem retention settings.</p>
-<p>Export includes retained run metadata, start intents, receipts, captured step content, team
-settings, managed key metadata, and Temporal histories. Enabled shared Responses and batch stores
-also include responses, batches and base64 file content. Authentication tokens, key hashes and
-secret ciphertext/plaintext are excluded; captured user content may itself contain sensitive data.
-Export is a current retained-data view, not a transactionally frozen point-in-time backup. Store the
-download securely. It cannot recover already expired data. Large exports need an operator-sized
-HTTP timeout and sufficient memory; exports are currently a single JSON response.</p>
-<p>Before DELETE, pause triggers, cancel running workflows and active batches, stop clients and let
-requests/streams drain. Disable the response cache and wait its configured TTL if it was enabled.
-In-memory Responses/batch stores cannot support shared-team export/erasure: use their Redis backends.
-An active request/run/batch returns 409. Erasure freezes new requests across replicas, removes
-Temporal executions/schedules, gateway records, managed keys/sessions, captured content, budgets,
-and enabled shared auxiliary data. A minimal team tombstone (<code>erased</code>) blocks future work.
-Background reconciliation respects that tombstone. Temporal visibility is supplemented with
-durable run/start records to catch executions not yet indexed.</p>
-<p>Storage/Temporal failure leaves <code>erasing</code> and returns an error. Restore the dependency and repeat
-DELETE with the team's bootstrap admin key; completed deletions tolerate already missing records.
-If a gateway process dies with an active request lease, stop <strong>all</strong> gateway replicas and workers,
-verify no requests remain, then let the operator clear that team's <code>team-data:{team}:active</code> Redis
-counter before resuming. A killed process or lost Redis connection during erasure can also leave a <code>team-data:{team}:lock</code>;
-clear that operation lock only after stopping every replica and confirming the eraser is gone.
-Never clear these while a replica can still write. Keep the erasure tombstone.
-Duplicate erasers receive 409. A failed retry never unfreezes an already-erasing team.
-Team gauges are removed locally after erasure and on other replicas' next 30-second refresh;
-previously exported telemetry remains an external follow-up item.</p>
-<p>The response lists external follow-up: provider/tool systems, delivered notifications, downloaded
-exports, telemetry, operator audit logs, backups, object-store versions and Temporal archival.
-Remove static team policies/bootstrap keys and identity-provider membership when retiring the team.
-Those systems have independent retention/legal requirements. These endpoints support portability
-and erasure operations; they do not certify GDPR compliance or erase records outside their stores.</p>
-<p>See <a href="../runbooks/observability/">OTLP operations</a> for collector and dashboard configuration.</p>
+<p>Read the generated bootstrap admin Secret through your normal privileged access
+process. Sign in over HTTPS, configure a provider in <strong>Get started</strong>, and complete
+the sample approval. Test company sign-in with each mapped role, then use
+<strong>Data &amp; privacy → Deployment checklist</strong>.</p>
+<p><code>GET /v1/team/deployment</code> returns <code>checks[]</code> with <code>id</code>, <code>name</code>, <code>configured</code>
+and <code>action</code>, plus <code>verification_required[]</code>. It requires an unrestricted team admin.
+Python: <code>client.deployment()</code>. TypeScript: <code>client.deployment()</code>.
+It reports settings without secrets or connection strings. A configured check does
+not prove database TLS, backup recovery, egress enforcement or service availability.
+Check <code>/readyz</code>, perform an approved run and verify the audit range before admitting users.</p>
+<h2 id="back-up-a-recoverable-unit">Back up a recoverable unit<a class="headerlink" href="#back-up-a-recoverable-unit" title="Permanent link">&para;</a></h2>
+<p>Redis holds budgets, sessions, key records and invitation tokens even when gateway
+records use PostgreSQL. The legacy multi-namespace platform's Redis-is-ephemeral
+assumption <strong>does not apply</strong> to this deployment.</p>
+<p>Back up these together:</p>
+<ol>
+<li>Gateway PostgreSQL, both Temporal databases, and Redis persistence.</li>
+<li>Tenant values, chart version, image digests, policies and secret-manager versions.</li>
+<li>The encryption key, provider credentials, OIDC secret, bootstrap and worker keys.</li>
+<li>Exported audit receipts and an independently stored chain anchor.</li>
+</ol>
+<p>For a consistent recovery point, stop incoming API traffic, pause triggers, drain
+activities, scale workers and gateways to zero, then stop Temporal writers. Record
+the original replica counts first. Take managed-store snapshots after writes stop.
+A PostgreSQL logical backup can use libpq service definitions (which keep passwords
+out of command arguments):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-gateway<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>gateway.dump
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-temporal<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>temporal.dump
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-temporal-visibility<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>temporal-visibility.dump
+</code></pre></div>
+<p>Export the managed Redis snapshot in the same stopped interval. Encrypt backups in
+an access-controlled off-cluster store, record checksums and secret versions, then
+restore Temporal, gateways and workers to their recorded replica counts and reopen
+traffic. Record the interruption duration and backup timestamp. Choose and measure
+your RPO/RTO; this reference makes no unmeasured recovery guarantee.</p>
+<p>Restore quarterly and before a database migration in an isolated namespace with
+outbound provider/tool access blocked. Restore PostgreSQL and Redis to the same
+checkpoint and restore the matching encryption key. Do not mix an old Temporal
+snapshot with current gateway records. Use <code>pg_restore --exit-on-error</code> into empty
+databases, restore Redis through the managed service, then start the matching
+application versions. Verify an existing run, approval receipts, budget balances,
+key revocations and decryption before a new approved run. Revoke restored sessions
+and outstanding invitation credentials if the recovery point predates revocation.
+Keep triggers paused until operators reconcile external side effects.</p>
+<h2 id="upgrade-without-losing-history">Upgrade without losing history<a class="headerlink" href="#upgrade-without-losing-history" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Read the changelog and <a href="../postgresql-storage/#upgrade-and-rollback">gateway migration rules</a>.
+   Take the coordinated backup above and verify the checksums.</li>
+<li>Restore that backup into staging. Run the new image versions against it, inspect
+   a pre-upgrade run, complete a new approval and check the audit chain.</li>
+<li>Preserve database, key and policy Secrets. Supply the complete reviewed values;
+   avoid inheriting obsolete settings with <code>--reuse-values</code>.</li>
+<li>Run the same <code>helm upgrade --install</code> command with reviewed new image digests.
+   Watch migration jobs, rollout health and <code>/readyz</code>; exercise sign-in and approval.</li>
+<li>Keep the old images and checkpoint until acceptance finishes. Roll back application
+   images only when their storage schema remains compatible. Otherwise restore the
+   coordinated checkpoint into an isolated recovery environment. A Helm rollback
+   does not reverse a database migration or an external tool action.</li>
+</ol>
+<p>Run the Compose recovery and upgrade drills in
+<a href="../release-verification/">release verification</a> on a Docker-capable host before promotion.</p>
 
 
 
@@ -2239,6 +2416,44 @@ and erasure operations; they do not certify GDPR compliance or erase records out
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../install-kubernetes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Install on Kubernetes">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Install on Kubernetes
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../postgresql-storage/" class="md-footer__link md-footer__link--next" aria-label="Next: PostgreSQL gateway storage">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                PostgreSQL gateway storage
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">

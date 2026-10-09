@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
+        <meta name="description" content="Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.">
       
       
       
@@ -844,6 +844,8 @@
       
         
       
+        
+      
     
     
     
@@ -1168,6 +1170,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#invite-teammates-without-company-sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invite teammates without company sign-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alert-rules-and-failed-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alert rules and failed runs
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1304,6 +1328,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../single-tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
   
 
     
@@ -2467,6 +2519,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#invite-teammates-without-company-sign-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invite teammates without company sign-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alert-rules-and-failed-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alert rules and failed runs
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3390,6 +3464,51 @@ policies reject old workers instead of falling back to one reviewer. Temporal pa
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
 <a href="../quickstart/#try-a-two-reviewer-policy">two-reviewer Quickstart</a>.</p>
+<h2 id="invite-teammates-without-company-sign-in">Invite teammates without company sign-in<a class="headerlink" href="#invite-teammates-without-company-sign-in" title="Permanent link">&para;</a></h2>
+<p>In <strong>Members &amp; keys → Invite a teammate</strong>, choose a name, role, and project. Create and
+copy the invitation link, then share it privately. The recipient opens it and chooses
+<strong>Accept invitation</strong> to sign in. Links expire after 24 hours and can be redeemed once;
+a lost acceptance response requires a new invitation. The console grants 90 days of
+access; admins can edit or revoke the resulting credential in Members &amp; keys.</p>
+<p>A link is a bearer invitation: anyone holding it can receive the chosen access. The
+display name is assigned by the admin, not verified by an email provider. Use OIDC for
+company-verified identity and group-based access. Invitations do not change SSO policy
+or identity-provider group membership. Delivery is an explicit copy/share step.</p>
+<p>The API lists pending, accepted, revoked, and expired invitations without tokens or key
+values. Invitation credentials are encrypted with a key derived from the random link
+secret using a separate derivation from its lookup digest. Redis stores ciphertext and
+metadata; the key store retains only credential hashes. Metadata expires after 30 days.
+Revoking an invitation also revokes its credential and sessions; team erasure removes
+both invitation metadata and encrypted delivery state.</p>
+<p>Contracts: <code>GET/POST /v1/team/invitations</code>, <code>DELETE /v1/team/invitations/{id}</code>, and
+<code>POST /v1/auth/invitations/accept</code> with <code>{"token":"…"}</code>. Creation uses the same
+name/role/project/credential expiry fields as key creation. Acceptance returns a
+<code>CreatedKey</code> once and does not retry automatically. Python exposes <code>invitations()</code>,
+<code>create_invitation()</code>, <code>revoke_invitation()</code>, <code>accept_invitation()</code>; TypeScript uses
+<code>invitations()</code>, <code>createInvitation()</code>, <code>revokeInvitation()</code>, <code>acceptInvitation()</code>.</p>
+<h2 id="alert-rules-and-failed-runs">Alert rules and failed runs<a class="headerlink" href="#alert-rules-and-failed-runs" title="Permanent link">&para;</a></h2>
+<p>Team admins open <strong>Team settings → Alert rules</strong> to choose waiting approvals, failures,
+run budget thresholds, and slow model/tool steps. Select Slack, email, or webhook from the
+operator-approved destinations. Choose the percentage of a run's token/dollar budget and
+the slow-step threshold in milliseconds. Clear events or destinations to pause delivery.
+A missing destination points to operator setup instead of accepting a URL that bypasses
+the deployment's network policy.</p>
+<p>The existing gateway sweep checks retained runs every 30 seconds. Events persist, and
+each run/event/channel has a stable delivery ID. Delivery retries up to five times with
+backoff. Already delivered events are not resent after a rule edit; enabling a rule can
+deliver retained events. Inspect attempted, retrying, delivered, or failed notification
+receipts in the run timeline. External services may duplicate a delivery after an ambiguous
+transport failure; webhook receivers should deduplicate by the supplied idempotency key.
+Destinations and their credentials remain in the existing team notification policy.</p>
+<p>A failed run now includes <code>error.code</code> and safe recovery guidance. The console points to
+step receipts and worker logs and explains what to check before a retry. Gateway responses
+do not copy exception messages that could contain inputs or credentials. Each existing
+model/tool timeline step still shows its measured latency, cost, HTTP status, and receipt.</p>
+<p>API: <code>GET/PUT /v1/team/alert-rules</code>; PUT requires the current <code>If-Match</code> revision and
+<code>events</code>, <code>channels</code>, <code>budget_threshold</code> (0–1, exclusive of zero), and <code>slow_step_ms</code>.
+Changes conflict with concurrent team settings edits rather than overwriting them.
+Python: <code>alert_rules()</code>, <code>set_alert_rules(rules, revision=...)</code>.
+TypeScript: <code>alertRules()</code>, <code>setAlertRules(rules, revision)</code>.</p>
 
 
 

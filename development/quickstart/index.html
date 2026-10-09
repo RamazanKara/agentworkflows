@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="The agent workflow platform for teams, with governed cloud AI providers, budgets, and verifiable receipts.">
+        <meta name="description" content="Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.">
       
       
       
@@ -540,10 +540,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#scripted-first-approved-run-rc2" class="md-nav__link">
+  <a href="#scripted-first-approved-run-rc4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scripted first approved run (rc.2)
+        Scripted first approved run (rc.4)
       
     </span>
   </a>
@@ -626,6 +626,17 @@
     <span class="md-ellipsis">
       
         If something goes wrong
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#60-second-console-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        60-second console walkthrough
       
     </span>
   </a>
@@ -994,6 +1005,8 @@
       
         
       
+        
+      
     
     
     
@@ -1194,6 +1207,34 @@
     
   
     Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../single-tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
   
 
     
@@ -2160,10 +2201,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#scripted-first-approved-run-rc2" class="md-nav__link">
+  <a href="#scripted-first-approved-run-rc4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scripted first approved run (rc.2)
+        Scripted first approved run (rc.4)
       
     </span>
   </a>
@@ -2252,6 +2293,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#60-second-console-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        60-second console walkthrough
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2290,7 +2342,7 @@ The command verification and remaining Docker/WSL checks are recorded in
 <p>Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
 the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout on Windows.</p>
 <h2 id="1-install-and-start">1. Install and start<a class="headerlink" href="#1-install-and-start" title="Permanent link">&para;</a></h2>
-<h3 id="scripted-first-approved-run-rc2">Scripted first approved run (rc.2)<a class="headerlink" href="#scripted-first-approved-run-rc2" title="Permanent link">&para;</a></h3>
+<h3 id="scripted-first-approved-run-rc4">Scripted first approved run (rc.4)<a class="headerlink" href="#scripted-first-approved-run-rc4" title="Permanent link">&para;</a></h3>
 <p>The script installs the Research template, starts its simulated workflow, prints and approves
 the fixture draft, checks publication and verifies the audit chain. It fails after 300 seconds
 and reports elapsed time on success. This is an automated acceptance check; the manual steps
@@ -2369,7 +2421,8 @@ both modes: no external document is published.</p>
 </code></pre></div>
 <p>You now have editable <code>workflow.py</code>, <code>worker.py</code>, <code>input.json</code>, and <code>input-schema.json</code>, plus a README with
 worker instructions. <code>init --help</code> lists <strong>research</strong>, <strong>code-review</strong>, <strong>support-triage</strong>,
-<strong>weekly-report</strong>, <strong>incident-summary</strong>, and <strong>document-qa</strong>.
+<strong>weekly-report</strong>, <strong>incident-summary</strong>, <strong>document-qa</strong>, <strong>release-notes</strong>,
+<strong>meeting-actions</strong>, and <strong>security-questionnaire</strong>.
 It never overwrites an existing project. The built-in worker runs the unchanged templates;
 follow <a href="../templates/#run-your-edits">Edit your workflow</a> when you change the source.</p>
 <p>Copy the returned <code>run_id</code> into the variable below (keep the quotes):</p>
@@ -2577,6 +2630,26 @@ is available for Temporal (<code>AGENTWORKFLOWS_TEMPORAL_PORT</code>) and its UI
 (<code>AGENTWORKFLOWS_TEMPORAL_UI_PORT</code>); add those to the same ignored <code>deploy/compose/.env</code> file if needed.</p>
 <p>Next: <a href="../concepts/">workflow concepts</a>, <a href="../templates/">edit a template</a>,
 <a href="../sdk-reference/">CLI and SDK reference</a>, or <a href="../local-evaluation/">full smoke test and Kubernetes lab</a>.</p>
+<h2 id="60-second-console-walkthrough">60-second console walkthrough<a class="headerlink" href="#60-second-console-walkthrough" title="Permanent link">&para;</a></h2>
+<p>After the stack is ready, sign in at <code>http://127.0.0.1:8080/console/</code> with
+<code>local-development-only</code>. Open <strong>Get started → First-run wizard</strong> and click
+<strong>Start sample workflow</strong>. Read the draft on the run page, approve it, and wait for
+<strong>Completed / Published</strong>. Inspect the step timeline and its approval receipt.</p>
+<p>The wizard checks the Research policy, model routes, provider credential presence,
+approved research/publish tools, and nonzero budgets. It selects a ready model rather
+than a missing-key route. It installs the versioned sample for team admins and uses the
+normal idempotent run API. Builders can start approved policy; viewers and approvers
+cannot launch work. Model access and worker availability are verified by the run itself.</p>
+<p>For a real provider, an unrestricted admin can paste a credential and click <strong>Save provider
+key</strong>. The provider must already be allowed by deployment policy. Values are encrypted
+using the existing persistent <code>WORKFLOW_SECRETS_KEY</code>, never returned, logged, or included
+in exports. Each save checks the displayed version to prevent overwriting a concurrent
+rotation. The saved team credential takes precedence over its environment default on
+every gateway replica. This is a presence check, not a paid provider probe. If encryption
+is not configured, the wizard links to the operator setup instructions.</p>
+<p>API: <code>GET /v1/team/onboarding</code>; <code>PUT /v1/team/providers/{provider}/key</code> with
+<code>{"value":"…","expected_version":0}</code>. Both SDKs expose <code>onboarding()</code> and
+Python <code>set_provider_key()</code> / TypeScript <code>setProviderKey()</code>.</p>
 
 
 
