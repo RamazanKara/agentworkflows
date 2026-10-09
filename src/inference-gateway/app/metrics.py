@@ -141,6 +141,15 @@ _SANDBOX_LABEL_VALUES: set[str] = set()
 _SANDBOX_LABEL_OVERFLOW = "__other__"
 
 
+def forget_team_metrics(team: str) -> None:
+    TEAM_SPEND.remove(team)
+    TEAM_COST_LIMIT.remove(team)
+    for metric in WORKFLOW_RUNS.collect():
+        for sample in metric.samples:
+            if sample.labels.get("team") == team:
+                WORKFLOW_RUNS.remove(team, sample.labels["status"])
+
+
 def sandbox_label(sandbox_id: str) -> str:
     """Return the sandbox metric label, collapsing past the cardinality bound."""
     if sandbox_id in _SANDBOX_LABEL_VALUES:

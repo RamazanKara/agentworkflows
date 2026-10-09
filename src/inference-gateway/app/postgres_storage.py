@@ -60,6 +60,41 @@ class PostgresStorage:
             ).fetchone()
             return row[0] if row else None
 
+    def export_team(self, team: str) -> dict[str, Any]:
+        with self.pool.connection() as connection:
+            runs = connection.execute(
+                "SELECT run_id, document, snapshot FROM aw_runs WHERE scope = %s AND team = %s "
+                "AND (expires_at IS NULL OR expires_at > %s)",
+                (self.scope, team, time()),
+            ).fetchall()
+            intents = connection.execute(
+                "SELECT document FROM aw_start_intents WHERE scope = %s AND document->>'team_id' = %s",
+                (self.scope, team),
+            ).fetchall()
+        return {
+            "settings": self.get_settings(team),
+            "runs": [
+                {"run_id": run_id, "metadata": document, "snapshot": snapshot, "timeline": self.run_steps(team, run_id)}
+                for run_id, document, snapshot in runs
+            ],
+            "start_intents": [row[0] for row in intents],
+            "keys": [{k: v for k, v in row.items() if k != "sha256"} for row in self.list_keys(team)],
+            "audit": list(self.audit_entries(team, None, True)),
+        }
+
+    def delete_team(self, team: str) -> None:
+        with self.pool.connection() as connection:
+            for table in ("aw_runs", "aw_api_keys", "aw_team_settings", "aw_audit_events"):
+                from psycopg import sql
+
+                connection.execute(
+                    sql.SQL("DELETE FROM {} WHERE scope = %s AND team = %s").format(sql.Identifier(table)),
+                    (self.scope, team),
+                )
+            connection.execute(
+                "DELETE FROM aw_start_intents WHERE scope = %s AND document->>'team_id' = %s", (self.scope, team)
+            )
+
     def change_settings(self, team: str, revision: int, document: dict[str, Any]) -> bool:
         with self.pool.connection() as connection:
             if revision == 0:
@@ -259,7 +294,7 @@ class PostgresStorage:
             self._save_head(connection, ChainHead(event["chain_id"], event["record_hash"], sequence))
 
     def audit_entries(self, team: str, cursor: str | None, oldest_first: bool) -> Any:
-        params: list[Any] = [self.scope, team, time() - self.settings.audit_view_retention_seconds]
+        params: list[Any] = [self.scope, team, time(), self.scope, team, self.settings.audit_view_retention_seconds]
         condition = ""
         if cursor:
             number, suffix = map(int, cursor.split("-"))
@@ -271,7 +306,8 @@ class PostgresStorage:
         with self.pool.connection() as connection, connection.cursor(name="audit_" + uuid4().hex) as reader:
             reader.execute(
                 "SELECT id, chain_id, sequence, event, entry FROM aw_audit_events WHERE scope = %s AND team = %s "
-                "AND stored_at >= %s AND entry IS NOT NULL"
+                "AND stored_at >= %s - COALESCE((SELECT (document->'retention'->>'audit_seconds')::int "
+                "FROM aw_team_settings WHERE scope = %s AND team = %s), %s) AND entry IS NOT NULL"
                 + condition
                 + (" ORDER BY id" if oldest_first else " ORDER BY id DESC"),
                 params,
@@ -311,8 +347,10 @@ class PostgresStorage:
             connection.execute("DELETE FROM aw_runs WHERE scope = %s AND expires_at <= %s", (self.scope, now))
             connection.execute("DELETE FROM aw_start_intents WHERE scope = %s AND expires_at <= %s", (self.scope, now))
             connection.execute(
-                "DELETE FROM aw_audit_events WHERE scope = %s AND stored_at < %s",
-                (self.scope, now - self.settings.audit_view_retention_seconds),
+                "DELETE FROM aw_audit_events e WHERE e.scope = %s AND e.stored_at < %s - COALESCE("
+                "(SELECT (document->'retention'->>'audit_seconds')::integer FROM aw_team_settings s "
+                "WHERE s.scope = e.scope AND s.team = e.team), %s)",
+                (self.scope, now, self.settings.audit_view_retention_seconds),
             )
             connection.execute(
                 "DELETE FROM aw_audit_heads WHERE scope = %s AND updated_at < to_timestamp(%s) "

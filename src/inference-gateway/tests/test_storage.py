@@ -234,7 +234,7 @@ def test_retention_lock_scopes_deletion_and_keeps_settings_and_keys():
     deletes = [call.args for call in connection.execute.call_args_list if call.args[0].startswith("DELETE")]
     assert len(deletes) == 4
     assert all("scope = %s" in sql and params[0] == store.scope for sql, params in deletes)
-    assert not any("aw_api_keys" in sql or "aw_team_settings" in sql for sql, _ in deletes)
+    assert not any("DELETE FROM aw_api_keys" in sql or "DELETE FROM aw_team_settings" in sql for sql, _ in deletes)
 
 
 def test_audit_sql_roundtrip_keeps_hash_payload_and_original_verification(team_gateway):

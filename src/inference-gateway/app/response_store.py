@@ -116,6 +116,24 @@ class RedisResponseStore:
     def _key(self, tenant: str, response_id: str) -> str:
         return f"{self.prefix}:{tenant}:{response_id}"
 
+    def export_team(self, tenant: str) -> list[dict[str, Any]]:
+        try:
+            result = []
+            for key in self.client.scan_iter(match=f"{self.prefix}:{tenant}:*", count=500):
+                raw = self.client.get(key)
+                if raw:
+                    result.append(json.loads(raw))
+            return result
+        except _RESPONSE_BACKEND_ERRORS as exc:
+            raise ResponseStoreError("response store backend is unavailable") from exc
+
+    def delete_team(self, tenant: str) -> None:
+        try:
+            for key in self.client.scan_iter(match=f"{self.prefix}:{tenant}:*", count=500):
+                self.client.delete(key)
+        except _RESPONSE_BACKEND_ERRORS as exc:
+            raise ResponseStoreError("response store backend is unavailable") from exc
+
     def create(self, record: StoredResponse) -> None:
         try:
             self.client.set(self._key(record.tenant, record.id), json.dumps(_to_dict(record)), ex=self.retention)

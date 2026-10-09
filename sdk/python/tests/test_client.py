@@ -27,6 +27,58 @@ def _record_sleeps(monkeypatch, client):
     return sleeps
 
 
+def test_lifecycle_endpoints_preserve_versions_and_activity_scope(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"version": 2})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        client.workflow_templates()
+        client.install_template("research", version="0.9.0")
+        client.workflow_secrets("ResearchWorkflow")
+        client.set_workflow_secret("ResearchWorkflow", "TOKEN", "new-value", expected_version=1)
+        client.resolve_workflow_secret("7e2b941c-65af-4d83-9c12-34b08f6ea725", "publish", "TOKEN")
+        client.team_retention()
+        client.set_team_retention(run_seconds=3600, content_seconds=600, audit_seconds=86400, revision=4)
+        client.team_data()
+        client.export_team_data()
+        client.delete_team_data(confirm_team="research")
+        client.team_telemetry()
+    assert [(r.method, r.url.path) for r in requests] == [
+        ("GET", "/v1/workflow-templates"), ("POST", "/v1/workflow-templates/research/install"),
+        ("GET", "/v1/workflows/ResearchWorkflow/secrets"), ("PUT", "/v1/workflows/ResearchWorkflow/secrets/TOKEN"),
+        ("POST", "/v1/workflow-runs/7e2b941c-65af-4d83-9c12-34b08f6ea725/secrets/TOKEN/resolve"),
+        ("GET", "/v1/team/retention"),
+        ("PUT", "/v1/team/retention"), ("GET", "/v1/team/data"), ("GET", "/v1/team/data/export"),
+        ("DELETE", "/v1/team/data"), ("GET", "/v1/team/telemetry"),
+    ]
+    assert json.loads(requests[1].content) == {"version": "0.9.0"}
+    assert json.loads(requests[3].content) == {"value": "new-value", "expected_version": 1}
+    assert requests[4].headers["X-Workflow-Run-ID"] == "7e2b941c-65af-4d83-9c12-34b08f6ea725"
+    assert requests[4].headers["X-Workflow-Step-ID"] == "publish"
+    assert requests[6].headers["If-Match"] == "4"
+    assert json.loads(requests[9].content) == {"confirm_team": "research"}
+
+
+def test_secret_rotation_conflict_is_not_retried(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(409, json={"detail": "Reload the secret version."})
+
+    _mock_transport(monkeypatch, handler)
+    with (
+        GatewayClient("http://gateway.test", api_key="admin-key") as client,
+        pytest.raises(GatewayError, match="Reload the secret version"),
+    ):
+        client.set_workflow_secret("ResearchWorkflow", "TOKEN", "new-value", expected_version=1)
+    assert len(requests) == 1
+
+
 def test_team_sso_returns_policy_and_preserves_authorization_errors(monkeypatch):
     policy = {
         "team_id": "team", "enabled": True, "provider_name": "idp.example", "role_source": "groups",

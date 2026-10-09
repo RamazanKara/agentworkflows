@@ -5,6 +5,7 @@ import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
   ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
+  InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
 } from './types';
 
 export interface ClientOptions {
@@ -76,6 +77,54 @@ export class GatewayClient {
   /** Monthly limits and alerts; requires an unrestricted team credential. */
   teamSpend(): Promise<TeamSpend> {
     return this.request('GET', '/v1/team/spend');
+  }
+
+  workflowTemplates(): Promise<WorkflowTemplate[]> {
+    return this.request('GET', '/v1/workflow-templates');
+  }
+
+  installTemplate(templateId: string, version: string): Promise<InstalledTemplate> {
+    return this.request('POST', `/v1/workflow-templates/${encodeURIComponent(templateId)}/install`, { version });
+  }
+
+  workflowSecrets(workflow: string): Promise<WorkflowSecret[]> {
+    return this.request('GET', `/v1/workflows/${encodeURIComponent(workflow)}/secrets`);
+  }
+
+  /** Zero creates a secret; the current version rotates it. Values are never listed. */
+  setWorkflowSecret(workflow: string, name: string, value: string, expectedVersion: number): Promise<WorkflowSecret> {
+    return this.request('PUT', `/v1/workflows/${encodeURIComponent(workflow)}/secrets/${encodeURIComponent(name)}`,
+      { value, expected_version: expectedVersion });
+  }
+
+  /** Call inside an activity and do not return the value into Temporal workflow history. */
+  resolveWorkflowSecret(runId: string, stepId: string, name: string): Promise<WorkflowSecret & { value: string }> {
+    return this.request('POST', `/v1/workflow-runs/${encodeURIComponent(runId)}/secrets/${encodeURIComponent(name)}/resolve`, {}, false,
+      { 'X-Workflow-Run-ID': runId, 'X-Workflow-Step-ID': stepId });
+  }
+
+  teamRetention(): Promise<TeamRetention> {
+    return this.request('GET', '/v1/team/retention');
+  }
+
+  setTeamRetention(policy: RetentionPolicy, revision: number | string): Promise<TeamRetention> {
+    return this.request('PUT', '/v1/team/retention', policy, false, { 'If-Match': String(revision) });
+  }
+
+  teamData(): Promise<TeamDataStatus> {
+    return this.request('GET', '/v1/team/data');
+  }
+
+  exportTeamData(): Promise<TeamDataExport> {
+    return this.request('GET', '/v1/team/data/export');
+  }
+
+  deleteTeamData(confirmTeam: string): Promise<TeamDataStatus> {
+    return this.request('DELETE', '/v1/team/data', { confirm_team: confirmTeam });
+  }
+
+  teamTelemetry(): Promise<TeamTelemetry> {
+    return this.request('GET', '/v1/team/telemetry');
   }
 
   /** Set both monthly limits atomically. null disables a limit; zero is a zero-dollar limit. */

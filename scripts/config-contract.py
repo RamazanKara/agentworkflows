@@ -43,6 +43,8 @@ class ServiceContract:
 
 
 GATEWAY_VARS = (
+    ConfigVar("WORKFLOW_SECRETS_KEY", "workflow_secrets_key", "string", "", "workflowSecrets.existingSecret.name", "", "Persistent Fernet key from a Kubernetes Secret. Encrypts workflow secret values; not returned by the API.", sensitive=True),
+    ConfigVar("OTEL_METRICS_ENABLED", "otel_metrics_enabled", "boolean", False, "observability.metrics.enabled", False, "Export bounded HTTP and workflow metrics over OTLP/HTTP using the configured tracing OTLP base endpoint."),
     ConfigVar("STORAGE_BACKEND", "storage_backend", "string", "redis", "storage.backend", "redis", "Backend for gateway run history, audit events and heads, team settings and managed API-key metadata. Redis accounting and sessions remain separate.", allowed_values=("redis", "postgres")),
     ConfigVar("STORAGE_POSTGRES_DSN", "storage_postgres_dsn", "string", "", "storage.postgres.existingSecret.name", "", "PostgreSQL connection string from the referenced Secret's dsn key. Required with the postgres backend; never put credentials in Helm values.", sensitive=True),
     ConfigVar("STORAGE_POSTGRES_POOL_SIZE", "storage_postgres_pool_size", "integer", 5, "storage.postgres.poolSize", 5, "Maximum PostgreSQL connections per gateway process; minimum pool size is one."),

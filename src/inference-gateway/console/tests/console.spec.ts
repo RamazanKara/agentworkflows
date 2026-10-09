@@ -477,7 +477,7 @@ test('model prompts read as a transcript and the answer is previewed on the step
 
 for (const width of [360, 393, 1440]) {
   test(`release console layouts at ${width}px`, async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     const origin = 'https://gateway.insights.internal';
     const visit = (path: string) => page.goto(`${origin}${path}`);
     await page.route(`${origin}/console/**`, async route => {
@@ -516,7 +516,7 @@ for (const width of [360, 393, 1440]) {
         return split;
       });
       expect(splitWords, `${name}: words must wrap at spaces`).toEqual([]);
-      const path = `../../../.out/console-v1.0.0-rc.1/${width}-${name}.png`;
+      const path = `../../../.out/console-v1.0.0-rc.2/${width}-${name}.png`;
       if (target) await target.screenshot({ path });
       else await page.screenshot({ path, fullPage: true });
     };
@@ -562,7 +562,7 @@ for (const width of [360, 393, 1440]) {
     });
     const totals = { calls: timeline.length, tokens: timeline.reduce((sum, step) => sum + step.tokens, 0), cost_usd: timeline.reduce((sum, step) => sum + step.cost_usd, 0) };
     const providers = Object.fromEntries(timeline.map(step => [step.provider, { calls: 1, tokens: step.tokens, cost_usd: step.cost_usd }])) satisfies Record<string, CostRow>;
-    const activeRun: Run = { run_id: runId, workflow: 'ResearchWorkflow', project: 'default', created_at: started, status: 'running',
+    const activeRun: Run = { run_id: runId, workflow: 'ResearchWorkflow', project: 'default', created_at: started, status: 'running', template: { id: 'research', version: '0.9.0' },
       progress: { stage: 'awaiting_approval', draft, required_approvals: 2, approved_by: [], expires_at: '2026-10-09T10:40:00Z', approver_role: 'approver' },
       trigger: { kind: 'cron', name: 'morning-briefing' }, budget: { ...totals, token_limit: 10000, cost_limit_usd: 5 }, timeline };
     const teamSettings = settings();
@@ -688,7 +688,7 @@ for (const width of [360, 393, 1440]) {
     await capture('get-started-ready');
     if (width < 760) {
       await page.getByRole('button', { name: 'Open menu' }).click();
-      await expect(page.getByRole('navigation').getByRole('link')).toHaveCount(9);
+      await expect(page.getByRole('navigation').getByRole('link')).toHaveCount(12);
       await capture('navigation');
       await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
@@ -710,7 +710,7 @@ for (const width of [360, 393, 1440]) {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
     const exported = await download;
-    await exported.saveAs(`../../../.out/console-v1.0.0-rc.1/${width}-usage.csv`);
+    await exported.saveAs(`../../../.out/console-v1.0.0-rc.2/${width}-usage.csv`);
     const stream = await exported.createReadStream();
     const chunks = [];
     for await (const chunk of stream!) chunks.push(chunk);
@@ -808,9 +808,160 @@ for (const width of [360, 393, 1440]) {
       await page.getByRole('heading', { name: 'Run workflow', exact: true }).click();
       await capture(`template-${name}`);
     }
+    const templateNames = ['Research', 'Code review', 'Support triage', 'Weekly report', 'Incident summary', 'Document Q&A'];
+    const descriptions = ['Research a topic, review a draft, then publish.', 'Review a patch and approve the findings.',
+      'Classify a ticket and draft a reply.', 'Combine changes, support and incidents.',
+      'Build a timeline from incident logs.', 'Answer a question with source citations.'];
+    const catalog = templates.map(([workflow, id], i) => ({
+      id, workflow, name: templateNames[i], description: descriptions[i], version: '0.9.0', installable: true,
+      installed_version: i === 0 ? '0.9.0' : null,
+    }));
+    await page.route('**/v1/workflow-templates', route => route.fulfill({ json: catalog }));
+    await page.route('**/v1/workflow-templates/code-review/install', route => {
+      expect(route.request().postDataJSON()).toEqual({ version: '0.9.0' });
+      catalog[1].installed_version = '0.9.0';
+      return route.fulfill({ json: { id: 'code-review', workflow: 'CodeReviewWorkflow', version: '0.9.0', installed_at: started + 1200 } });
+    });
+    await visit('/console/#templates');
+    await expect(page.locator('.template-card')).toHaveCount(6);
+    await capture('templates-gallery');
+    await page.locator('.template-card').filter({ has: page.getByRole('heading', { name: 'Code review', exact: true }) }).getByRole('button', { name: 'Install template' }).click();
+    await expect(page.getByRole('link', { name: 'Run code review' })).toBeVisible();
+    await capture('template-installed');
+
+    let secrets = [{ name: 'RESEARCH_API_TOKEN', version: 2, updated_at: started - 600 }];
+    await page.route('**/v1/workflows/ResearchWorkflow/secrets', route => route.fulfill({ json: secrets }));
+    await page.route('**/v1/workflows/ResearchWorkflow/secrets/RESEARCH_API_TOKEN', route => {
+      expect(route.request().postDataJSON()).toEqual({ value: 'rotated-test-credential', expected_version: 2 });
+      secrets = [{ ...secrets[0], version: 3, updated_at: started + 1200 }];
+      return route.fulfill({ json: secrets[0] });
+    });
+    await visit('/console/#secrets');
+    await expect(page.getByRole('heading', { name: 'RESEARCH_API_TOKEN' })).toBeVisible();
+    await capture('workflow-secrets');
+    await page.getByRole('button', { name: 'Rotate secret', exact: true }).click();
+    await page.getByLabel('New secret value', { exact: true }).fill('rotated-test-credential');
+    await page.getByRole('button', { name: 'Save rotation', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('saved as version 3');
+    await expect(page.getByLabel('Secret value', { exact: true })).toHaveValue('');
+    await expect(page.locator('main')).not.toContainText('rotated-test-credential');
+    await capture('secret-rotated');
+
+    let retention = { revision: 5, run_seconds: 2592000, content_seconds: 604800, audit_seconds: 7776000 };
+    const dataStatus = { team_id: 'insights', status: 'active', external_follow_up: [
+      'Provider and tool records, delivered notifications, downloaded exports and telemetry',
+      'Operator audit logs, backups, object-store versions and Temporal archival',
+      'Static team policy, bootstrap keys and identity-provider membership',
+    ] };
+    await page.route('**/v1/team/retention', route => {
+      if (route.request().method() === 'PUT') {
+        expect(route.request().headers()['if-match']).toBe(String(retention.revision));
+        retention = { ...route.request().postDataJSON(), revision: retention.revision + 1 };
+      }
+      return route.fulfill({ json: retention });
+    });
+    await page.route('**/v1/team/data', route => route.fulfill({ json: dataStatus }));
+    await page.route('**/v1/team/telemetry', route => route.fulfill({ json: { traces_enabled: true, metrics_enabled: true, protocol: 'http/protobuf', service_name: 'inference-gateway' } }));
+    await page.route('**/v1/team/data/export', route => route.fulfill({ json: { version: 1, team_id: 'insights', runs: [activeRun], external_follow_up: dataStatus.external_follow_up } }));
+    await visit('/console/#data');
+    await expect(page.getByLabel('Run history (seconds)')).toHaveValue('2592000');
+    await expect(page.getByRole('button', { name: 'Erase team data', exact: true })).toBeDisabled();
+    await capture('data-privacy');
+    await page.getByLabel('Step content (seconds)').fill('86400');
+    await page.getByRole('button', { name: 'Save retention', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Retention saved.');
+    const teamDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
+    const teamExport = await teamDownload;
+    await teamExport.saveAs(`../../../.out/console-v1.0.0-rc.2/${width}-team-data.json`);
+    await expect(page.getByRole('status')).toContainText('Team data exported');
+    await capture('team-data-export');
+
+    const retryId = '537f05bf-aebb-4e90-b2d5-1b5387cf9a03';
+    const addOperation = (action: string, fields = {}) => {
+      const receipt = { event: 'workflow_operation', action_type: action, ts: started + 1200, workflow_run_id: runId,
+        principal: { key_id: 'admin', name: 'Maya Chen' }, ...fields };
+      const hash = createHash('sha256').update(JSON.stringify(receipt)).digest('hex');
+      activeRun.timeline!.push({ step_id: action, action, timestamp: receipt.ts, status_code: 200, tokens: 0, cost_usd: 0,
+        provider: '', model: '', tool: '', duration_ms: 0, attempts: [], chain_id: 'gateway:insights', receipt_id: hash,
+        receipt: { ...receipt, record_hash: hash } });
+    };
+    await page.route(`**/v1/workflow-runs/${runId}/cancel`, route => {
+      activeRun.status = 'canceled'; activeRun.progress = undefined; addOperation('cancel');
+      return route.fulfill({ json: { run_id: runId, status: 'cancellation_requested' } });
+    });
+    await page.route(`**/v1/workflow-runs/${runId}/retry`, route => {
+      addOperation('retry', { retry_run_id: retryId });
+      return route.fulfill({ status: 201, json: { run_id: retryId } });
+    });
+    await page.route(`**/v1/workflow-runs/${retryId}`, route => route.fulfill({ json: {
+      ...activeRun, run_id: retryId, status: 'running', created_at: started + 1200, trigger: undefined, timeline: [],
+      budget: { tokens: 0, cost_usd: 0, token_limit: 10000, cost_limit_usd: 5 },
+    } }));
+    await visit(`/console/#run/${runId}`);
+    await page.getByRole('button', { name: 'Cancel run', exact: true }).click();
+    await capture('cancel-confirmation');
+    await page.getByRole('button', { name: 'Confirm cancellation', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Cancellation requested', exact: true })).toBeVisible();
+    await capture('run-canceled');
+    await page.getByRole('button', { name: 'Retry workflow', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(retryId));
+    await expect(page.locator('.metrics dd')).toHaveText(['0 of 10,000', '$0.00 of $5.00', '0']);
+    await capture('run-retry');
+    await visit(`/console/#run/${runId}`);
+    await expect(page.getByRole('heading', { name: 'Retry started', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open retry run' })).toHaveAttribute('href', `#run/${retryId}`);
+    await capture('run-operation-audit');
     expect(errors).toEqual([]);
   });
 }
+
+test('secret rotation clears plaintext after a version conflict', async ({ page }) => {
+  await page.route('**/v1/workflows/ResearchWorkflow/secrets', route => route.fulfill({ json: [{ name: 'TOKEN', version: 1, updated_at: 1791538800 }] }));
+  await page.route('**/v1/workflows/ResearchWorkflow/secrets/TOKEN', route => route.fulfill({ status: 409, json: { detail: 'Secret changed. Reload its current version.' } }));
+  await login(page, 'admin', '/console/#secrets');
+  await page.getByRole('button', { name: 'Rotate secret', exact: true }).click();
+  await page.getByLabel('New secret value', { exact: true }).fill('never-display-this');
+  await page.getByRole('button', { name: 'Save rotation', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Reload its current version');
+  await expect(page.getByLabel('New secret value', { exact: true })).toHaveValue('');
+  await expect(page.locator('main')).not.toContainText('never-display-this');
+});
+
+test('team erasure requires confirmation and retains actionable failure and follow-up', async ({ page }) => {
+  let attempts = 0;
+  await page.route('**/v1/team/retention', route => route.fulfill({ json: { revision: 0, run_seconds: 86400, content_seconds: 3600, audit_seconds: 86400 } }));
+  await page.route('**/v1/team/telemetry', route => route.fulfill({ json: { traces_enabled: false, metrics_enabled: false, protocol: 'http/protobuf', service_name: 'gateway' } }));
+  await page.route('**/v1/team/data', route => {
+    if (route.request().method() === 'DELETE') {
+      expect(route.request().postDataJSON()).toEqual({ confirm_team: 'demo' });
+      if (++attempts === 1) return route.fulfill({ status: 409, json: { detail: 'Cancel running workflows first.' } });
+    }
+    return route.fulfill({ json: { team_id: 'demo', status: attempts > 1 ? 'erased' : 'active', external_follow_up: ['Remove provider records and backups.'] } });
+  });
+  await login(page, 'admin', '/console/#data');
+  const erase = page.getByRole('button', { name: 'Erase team data', exact: true });
+  await expect(erase).toBeDisabled();
+  await page.getByLabel('Type demo to confirm').fill('other');
+  await expect(erase).toBeDisabled();
+  await page.getByLabel('Type demo to confirm').fill('demo');
+  await erase.click();
+  await expect(page.getByRole('alert')).toContainText('Cancel running workflows first');
+  await erase.click();
+  await expect(page.getByRole('heading', { name: 'Team data erased', exact: true })).toBeVisible();
+  await expect(page.getByText('Remove provider records and backups.')).toBeVisible();
+  expect(attempts).toBe(2);
+});
+
+test('viewer cannot access secret or data administration, including direct links', async ({ page }) => {
+  const adminRequests: string[] = [];
+  page.on('request', request => { if (/\/v1\/(team\/(retention|data|telemetry)|workflows\/.*\/secrets)/.test(request.url())) adminRequests.push(request.url()); });
+  await login(page, 'viewer', '/console/#secrets');
+  await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
+  await page.goto('/console/#data');
+  await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
+  expect(adminRequests).toEqual([]);
+});
 
 test('triggers show schedules and signed endpoints; pause and resume are accessible', async ({ page }) => {
   const errors: string[] = [];

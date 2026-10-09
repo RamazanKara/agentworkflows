@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 from app.settings import Settings
@@ -28,6 +29,7 @@ class _FakeRequest:
         self.method = "POST"
         self.url = _FakeURL()
         self.headers: dict[str, str] = {}
+        self.scope = {"route": SimpleNamespace(path="/v1/chat/completions")}
 
 
 class _FakeResponse:
@@ -75,4 +77,41 @@ def test_trace_request_exports_a_server_span():
     assert span.name == "POST /v1/chat/completions"
     assert span.kind == SpanKind.SERVER
     assert span.attributes["http.response.status_code"] == 200
-    assert span.attributes["url.path"] == "/v1/chat/completions"
+    assert span.attributes["http.route"] == "/v1/chat/completions"
+    assert "url.path" not in span.attributes
+
+
+def test_metrics_export_uses_bounded_routes_and_counts_errors():
+    from app.tracing import configure_metrics, measure_request, signal_endpoint
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
+    assert signal_endpoint("http://collector:4318", "traces") == "http://collector:4318/v1/traces"
+    assert signal_endpoint("http://collector:4318/v1/traces/", "metrics") == "http://collector:4318/v1/metrics"
+    assert configure_metrics(_settings()) is None
+    reader = InMemoryMetricReader()
+    instruments = configure_metrics(
+        _settings(otel_metrics_enabled=True, otel_exporter_otlp_endpoint="http://collector:4318"),
+        reader,
+    )
+
+    async def failed():
+        raise RuntimeError("secret error detail")
+
+    request = _FakeRequest()
+    request.scope = {"route": SimpleNamespace(path="/v1/workflow-runs/{run_id}/secrets/{name}/resolve")}
+    with pytest.raises(RuntimeError):
+        asyncio.run(measure_request(instruments, request, failed))
+    data = reader.get_metrics_data()
+    metrics = {
+        metric.name: metric
+        for resource in data.resource_metrics
+        for scope in resource.scope_metrics
+        for metric in scope.metrics
+    }
+    count = metrics["agentworkflows_http_requests"].data.data_points[0]
+    assert count.value == 1 and count.attributes["http.response.status_code"] == 500
+    assert count.attributes["http.route"] == request.scope["route"].path
+    assert "secret error detail" not in str(data)
+    assert metrics["agentworkflows_http_request_duration_seconds"].data.data_points[0].count == 1
+    assert metrics["agentworkflows_http_request_duration_seconds"].data.data_points[0].explicit_bounds[0] == 0.005
+    instruments[2].shutdown()

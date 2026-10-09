@@ -70,7 +70,7 @@ from app.settings import (
 )
 from app.state_migrations import migrate
 from app.storage import RedisStorage
-from app.tracing import configure_tracing, trace_request
+from app.tracing import configure_metrics, configure_tracing, measure_request, trace_request
 from app.workflow_api import bind_workflow, register_workflow_routes
 from app.workflow_credentials import bind_step_credential
 
@@ -239,6 +239,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     tracing = configure_tracing(resolved)
     app.state.tracer = tracing[0] if tracing else None
     app.state.tracer_provider = tracing[1] if tracing else None
+    app.state.otel_metrics = configure_metrics(resolved)
+    if app.state.otel_metrics is not None:
+        app.router.add_event_handler("shutdown", app.state.otel_metrics[2].shutdown)
     if app.state.tracer_provider is not None:
         # Flush buffered spans on termination: BatchSpanProcessor otherwise drops its
         # queued tail every time a pod stops, losing the last requests' traces.
@@ -365,12 +368,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 request.url.path in {"/v1/chat/completions", "/v1/messages", "/v1/tools"}
                 or (request.url.path.startswith("/v1/tools/") and request.url.path.endswith("/call"))
                 or (request.url.path.startswith("/v1/agents/") and request.url.path.endswith(("/start", "/finish")))
+                or (request.url.path.startswith("/v1/workflow-runs/") and request.url.path.endswith("/resolve"))
             ):
                 return JSONResponse(
                     status_code=400,
                     content={"detail": "Workflow steps support chat, messages, tools, and container agents."},
                 )
-            response = await call_next(request)
+            from app.team_data import enter_team_request, leave_team_request
+
+            try:
+                entered = await enter_team_request(request)
+            except StarletteHTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
+            try:
+                response = await call_next(request)
+            except BaseException:
+                if entered:
+                    await leave_team_request(request)
+                raise
+            if entered:
+                body = response.body_iterator
+
+                async def leased_body():
+                    try:
+                        async for chunk in body:
+                            yield chunk
+                    finally:
+                        await leave_team_request(request)
+
+                response.body_iterator = leased_body()
             refresh_cookies(request, response)
             if request.url.path.startswith("/console"):
                 response.headers["Content-Security-Policy"] = (
@@ -399,9 +425,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return response
 
         tracer = request.app.state.tracer
-        if tracer is None:
-            return await dispatch()
-        return await trace_request(tracer, request, dispatch)
+        async def traced():
+            return await trace_request(tracer, request, dispatch) if tracer else await dispatch()
+        if request.app.state.otel_metrics:
+            return await measure_request(request.app.state.otel_metrics, request, traced)
+        return await traced()
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:

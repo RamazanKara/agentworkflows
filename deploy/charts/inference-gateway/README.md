@@ -157,6 +157,7 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `networkPolicy.enabled` | `true` |
 | `networkPolicy.metricsIngressNamespaces` | `["monitoring"]` |
 | `networkPolicy.runtimeEgress` | `[{"namespace": "workflows", "port": 7233}, {"namespace": "ollama", "port": 11434}, {"namespace": "vllm", "port": 8000...` |
+| `observability.metrics.enabled` | `false` |
 | `observability.tracing.enabled` | `false` |
 | `observability.tracing.otlpEndpoint` | `""` |
 | `observability.tracing.serviceName` | `inference-gateway` |
@@ -246,6 +247,8 @@ Run `make config-contract` after changing settings, env vars, Helm values, or ch
 | `workflowRecords.contentMaxBytes` | `16384` |
 | `workflowRecords.contentRetentionSeconds` | `604800` |
 | `workflowRecords.runRecordRetentionSeconds` | `2592000` |
+| `workflowSecrets.existingSecret.key` | `fernet-key` |
+| `workflowSecrets.existingSecret.name` | `""` |
 | `workflows.temporalAddress` | `""` |
 <!-- chart-docs:end -->
 ## Install profiles

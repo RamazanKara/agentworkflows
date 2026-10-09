@@ -48,11 +48,13 @@ async def capture_field(request: Request, settings: Settings, field: str, value:
     content[field] = encoded[: settings.content_max_bytes].decode("utf-8", "ignore")
     content["truncated"][field] = len(encoded) > settings.content_max_bytes
     try:
+        from app.team_data import team_retention
+
         base = run_key(request)
         await redis_call(request, "hset", base + ":capture", request.state.workflow_step_id, content["redaction"])
         await redis_call(
             request, "setex", content_key(base, request.state.workflow_step_id),
-            settings.content_retention_seconds, json.dumps(content),
+            (await team_retention(request))["content_seconds"], json.dumps(content),
         )
     except HTTPException:
         # A failed content write must not cause a worker to repeat an already executed tool.

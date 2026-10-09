@@ -5,4 +5,5 @@ export type {
   ApprovalProgress, AuditEntry, AuditFilters, AuditPage, AuditPosition, AuditRange, AuditVerification, ChatCompletion,
   CreatedKey, KeyList, KeyOptions, KeyUpdate, ManagedKey, Receipt, Role, RunBudget, RunFilters, RunPage, StartedRun,
   CaptureMode, SpendAlert, TeamSetting, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
+  InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
 } from './types';

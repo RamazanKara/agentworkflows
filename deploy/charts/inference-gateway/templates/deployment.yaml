@@ -303,6 +303,15 @@ spec:
               {{- end }}
             - name: OTEL_TRACING_ENABLED
               value: {{ .Values.observability.tracing.enabled | quote }}
+            - name: OTEL_METRICS_ENABLED
+              value: {{ .Values.observability.metrics.enabled | quote }}
+            {{- if .Values.workflowSecrets.existingSecret.name }}
+            - name: WORKFLOW_SECRETS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.workflowSecrets.existingSecret.name | quote }}
+                  key: {{ .Values.workflowSecrets.existingSecret.key | quote }}
+            {{- end }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.observability.tracing.otlpEndpoint | quote }}
             - name: OTEL_SERVICE_NAME

@@ -189,6 +189,7 @@ class Settings:
     runtime_circuit_failure_threshold: int = 0
     runtime_circuit_reset_seconds: float = 30.0
     otel_tracing_enabled: bool = False
+    otel_metrics_enabled: bool = False
     otel_exporter_otlp_endpoint: str = ""
     otel_service_name: str = "inference-gateway"
     # Asynchronous Files + Batch API (ADR 0011). Off by default; enabling it requires an object
@@ -221,6 +222,7 @@ class Settings:
     content_retention_seconds: int = 604800
     content_max_bytes: int = 16384
     run_record_retention_seconds: int = 2592000
+    workflow_secrets_key: str = dataclasses.field(default="", repr=False)
     # Opt-in team console served at /console. Off by default for API-only deployments.
     admin_console_enabled: bool = False
 
@@ -349,8 +351,12 @@ class Settings:
             raise ValueError("runtime_circuit_failure_threshold must be zero or greater")
         if self.runtime_circuit_reset_seconds <= 0:
             raise ValueError("runtime_circuit_reset_seconds must be greater than zero")
-        if self.otel_tracing_enabled and not self.otel_exporter_otlp_endpoint:
-            raise ValueError("otel_exporter_otlp_endpoint must be set when OTEL tracing is enabled")
+        if (self.otel_tracing_enabled or self.otel_metrics_enabled) and not self.otel_exporter_otlp_endpoint:
+            raise ValueError("otel_exporter_otlp_endpoint must be set when OTEL tracing or metrics is enabled")
+        if self.workflow_secrets_key:
+            from cryptography.fernet import Fernet
+
+            Fernet(self.workflow_secrets_key.encode())
         unknown_patterns = sorted(set(self.prompt_secret_patterns) - set(BUILT_IN_SECRET_PATTERNS))
         if unknown_patterns:
             raise ValueError(f"prompt_secret_patterns contains unknown patterns: {unknown_patterns}")
@@ -542,6 +548,7 @@ class Settings:
                 30.0,
             ),
             otel_tracing_enabled=_bool_from_env("OTEL_TRACING_ENABLED", False),
+            otel_metrics_enabled=_bool_from_env("OTEL_METRICS_ENABLED", False),
             otel_exporter_otlp_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip(),
             otel_service_name=os.getenv("OTEL_SERVICE_NAME", "inference-gateway").strip(),
             batch_api_enabled=_bool_from_env("BATCH_API_ENABLED", False),
@@ -571,6 +578,7 @@ class Settings:
             content_retention_seconds=_positive_int_from_env("CONTENT_RETENTION_SECONDS", 604800),
             content_max_bytes=_positive_int_from_env("CONTENT_MAX_BYTES", 16384),
             run_record_retention_seconds=_positive_int_from_env("RUN_RECORD_RETENTION_SECONDS", 2592000),
+            workflow_secrets_key=os.getenv("WORKFLOW_SECRETS_KEY", "").strip(),
             admin_console_enabled=_bool_from_env("ADMIN_CONSOLE_ENABLED", False),
         )
 

@@ -8,12 +8,14 @@ import { TeamConfiguration } from './settings';
 import { Triggers } from './triggers';
 import { Keys } from './keys';
 import { AuditLog } from './audit';
+import { TeamData, Templates, WorkflowSecrets } from './lifecycle';
 import './style.css';
 
 const navigation = [
-  ['start', 'Get started'], ['runs', 'Workflow runs'], ['approvals', 'Approvals'],
+  ['start', 'Get started'], ['templates', 'Templates'], ['runs', 'Workflow runs'], ['approvals', 'Approvals'],
   ['triggers', 'Triggers'], ['keys', 'Members & keys'], ['team', 'Team settings'], ['providers', 'Providers & budgets'], ['costs', 'Costs'],
   ['audit', 'Audit log'],
+  ['secrets', 'Workflow secrets'], ['data', 'Data & privacy'],
 ];
 
 // Reasons the gateway's OIDC callback can send a browser back with.
@@ -144,7 +146,7 @@ function App() {
       <button className="menu-button" aria-expanded={menu} aria-controls="app-menu" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu(value => !value)}><Icon name={menu ? 'close' : 'menu'}/></button>
       <div id="app-menu" className="app-menu">
         <p className="menu-who">{session.name && <strong>{session.name}</strong>}<DotList items={[teamName, label(session.team.role)]}/></p>
-        <nav aria-label="Main navigation">{navigation.filter(([id]) => !['keys', 'audit'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
+        <nav aria-label="Main navigation">{navigation.filter(([id]) => !['keys', 'audit', 'secrets', 'data'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
           <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}
         </nav>
         <div className="session-actions">
@@ -162,6 +164,9 @@ function App() {
         route === 'new' || route.startsWith('new/') ? <StartRun session={session} initial={decodeURIComponent(route.slice(4))}/> : route === 'approvals' ? <Approvals session={session}/> :
         route === 'keys' ? <Keys session={session}/> :
         route === 'audit' ? <AuditLog session={session}/> :
+        route === 'templates' ? <Templates session={session}/> :
+        route === 'secrets' ? <WorkflowSecrets session={session}/> :
+        route === 'data' ? <TeamData session={session}/> :
         route === 'team' ? <TeamConfiguration session={session}/> :
         route === 'triggers' ? <Triggers session={session}/> : route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> :
         /^run\/[a-f0-9-]{36}$/.test(route) ? <RunDetail session={session} runId={route.slice(4)}/> :

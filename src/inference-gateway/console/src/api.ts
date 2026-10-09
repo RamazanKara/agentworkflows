@@ -50,6 +50,7 @@ export type Step = {
 export type Run = {
   run_id: string; workflow: string; project: string; created_at: number; status: string;
   trigger?: { name: string; kind: 'cron' | 'webhook' };
+  template?: { id: string; version: string };
   progress?: { stage: string; draft?: string; message?: string; required_approvals?: number; approved_by?: string[]; expires_at?: string; approver_role?: string };
   budget: { tokens: number; cost_usd: number; token_limit: number; cost_limit_usd: number };
   timeline?: Step[];

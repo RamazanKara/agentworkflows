@@ -27,12 +27,14 @@ REQUIRED_DASHBOARDS = (
     "inference-dashboard.json",
     "rag-dashboard.json",
     "restore-drill-dashboard.json",
+    "otlp-dashboard.json",
 )
-METRIC_PATTERN = re.compile(r"(?:inference_gateway|rag_service)_[a-z0-9_]+")
+METRIC_PATTERN = re.compile(r"(?:inference_gateway|rag_service|agentworkflows)_[a-z0-9_]+")
 HISTOGRAM_SUFFIXES = ("_bucket", "_sum", "_count")
 SERVICE_SOURCES = {
     "inference_gateway": ROOT / "src/inference-gateway/app",
     "rag_service": ROOT / "src/rag-service/app",
+    "agentworkflows": ROOT / "src/inference-gateway/app",
 }
 
 
@@ -60,6 +62,8 @@ def service_metric_names(prefix: str) -> set[str]:
 
 
 def base_metric_name(metric: str) -> str:
+    if metric == "agentworkflows_http_requests_total":
+        return "agentworkflows_http_requests"
     for suffix in HISTOGRAM_SUFFIXES:
         if metric.endswith(suffix):
             return metric[: -len(suffix)]
@@ -108,7 +112,7 @@ def check_dashboards() -> list[str]:
     for name in REQUIRED_DASHBOARDS:
         require(errors, (DASHBOARD_DIR / name).is_file(), f"required dashboard missing: {name}")
 
-    known_metrics = service_metric_names("inference_gateway") | service_metric_names("rag_service")
+    known_metrics = set().union(*(service_metric_names(prefix) for prefix in SERVICE_SOURCES))
 
     for path in dashboard_files():
         try:

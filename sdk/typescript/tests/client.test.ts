@@ -9,6 +9,39 @@ const ok = (body = {}) => new Response(JSON.stringify(body), { status: 200 });
 beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockReset(); vi.mocked(setTimeout).mockClear(); });
 afterEach(() => vi.unstubAllGlobals());
 
+it('preserves lifecycle versions, confirmation and activity scope', async () => {
+  fetchMock.mockImplementation(async () => ok({ version: 2 }));
+  await client.workflowTemplates();
+  await client.installTemplate('research', '0.9.0');
+  await client.workflowSecrets('ResearchWorkflow');
+  await client.setWorkflowSecret('ResearchWorkflow', 'TOKEN', 'new-value', 1);
+  await client.resolveWorkflowSecret('run-1', 'publish', 'TOKEN');
+  await client.teamRetention();
+  await client.setTeamRetention({ run_seconds: 3600, content_seconds: 600, audit_seconds: 86400 }, 4);
+  await client.teamData();
+  await client.exportTeamData();
+  await client.deleteTeamData('research');
+  await client.teamTelemetry();
+  expect(fetchMock.mock.calls.map(([url, init]) => [init?.method, new URL(String(url)).pathname])).toEqual([
+    ['GET', '/v1/workflow-templates'], ['POST', '/v1/workflow-templates/research/install'],
+    ['GET', '/v1/workflows/ResearchWorkflow/secrets'], ['PUT', '/v1/workflows/ResearchWorkflow/secrets/TOKEN'],
+    ['POST', '/v1/workflow-runs/run-1/secrets/TOKEN/resolve'], ['GET', '/v1/team/retention'],
+    ['PUT', '/v1/team/retention'], ['GET', '/v1/team/data'], ['GET', '/v1/team/data/export'],
+    ['DELETE', '/v1/team/data'], ['GET', '/v1/team/telemetry'],
+  ]);
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ version: '0.9.0' });
+  expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ value: 'new-value', expected_version: 1 });
+  expect(fetchMock.mock.calls[4][1]?.headers).toMatchObject({ 'X-Workflow-Run-ID': 'run-1', 'X-Workflow-Step-ID': 'publish' });
+  expect(fetchMock.mock.calls[6][1]?.headers).toMatchObject({ 'If-Match': '4' });
+  expect(JSON.parse(String(fetchMock.mock.calls[9][1]?.body))).toEqual({ confirm_team: 'research' });
+});
+
+it('does not retry a stale secret rotation', async () => {
+  fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'Reload the secret version.' }), { status: 409 }));
+  await expect(client.setWorkflowSecret('ResearchWorkflow', 'TOKEN', 'new-value', 1)).rejects.toMatchObject({ statusCode: 409 });
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
 it('reads typed team SSO policy and preserves authorization errors', async () => {
   const policy = {
     team_id: 'team', enabled: true, provider_name: 'idp.example', role_source: 'groups',

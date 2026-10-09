@@ -924,6 +924,18 @@
     {
       "aliases": [],
       "allowed_values": [],
+      "app_default": false,
+      "chart_default": false,
+      "chart_value": "observability.metrics.enabled",
+      "description": "Export bounded HTTP and workflow metrics over OTLP/HTTP using the configured tracing OTLP base endpoint.",
+      "field": "otel_metrics_enabled",
+      "name": "OTEL_METRICS_ENABLED",
+      "sensitive": false,
+      "type": "boolean"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
       "app_default": "inference-gateway",
       "chart_default": "inference-gateway",
       "chart_value": "observability.tracing.serviceName",
@@ -1581,6 +1593,18 @@
       "name": "VLLM_BASE_URL",
       "sensitive": false,
       "type": "url"
+    },
+    {
+      "aliases": [],
+      "allowed_values": [],
+      "app_default": "",
+      "chart_default": "",
+      "chart_value": "workflowSecrets.existingSecret.name",
+      "description": "Persistent Fernet key from a Kubernetes Secret. Encrypts workflow secret values; not returned by the API.",
+      "field": "workflow_secrets_key",
+      "name": "WORKFLOW_SECRETS_KEY",
+      "sensitive": true,
+      "type": "string"
     }
   ],
   "helm_chart": "deploy/charts/inference-gateway",

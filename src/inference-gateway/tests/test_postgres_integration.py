@@ -45,6 +45,38 @@ def postgres():
             connection.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
 
 
+def test_real_team_export_and_erasure_are_isolated(postgres):
+    run_ids = {team: str(uuid4()) for team in ("erase", "keep")}
+    for team, run_id in run_ids.items():
+        assert postgres.change_settings(team, 0, {"revision": 1, "retention": {"audit_seconds": 600}})
+        document = {
+            "workflow_id": f"{team}/default/request",
+            "team_id": team,
+            "project": "default",
+            "created_at": time(),
+            "workflow": "ResearchWorkflow",
+            "input": {"topic": team},
+        }
+        postgres.save_intent(document["workflow_id"], document)
+        postgres.save_run(team, run_id, document)
+        postgres.append_step(team, run_id, {"event": "workflow_operation", "action_type": "cancel"})
+        postgres.create_key({
+            "key_id": team, "team": team, "sha256": ("a" if team == "erase" else "b") * 64, "created_at": time(),
+        })
+    exported = postgres.export_team("erase")
+    assert exported["runs"][0]["metadata"]["input"] == {"topic": "erase"}
+    assert exported["start_intents"][0]["team_id"] == "erase"
+    assert "sha256" not in exported["keys"][0]
+    postgres.delete_team("erase")
+    assert postgres.get_run("erase", run_ids["erase"]) is None
+    assert postgres.get_settings("erase") is None
+    assert postgres.list_keys("erase") == []
+    assert postgres.get_intent("erase/default/request") is None
+    assert postgres.get_run("keep", run_ids["keep"])
+    assert postgres.get_settings("keep")
+    assert len(postgres.list_keys("keep")) == 1
+
+
 def test_real_migrations_up_down_up_and_newer_schema_refusal(postgres):
     assert postgres.health()
     migrate(postgres.pool)

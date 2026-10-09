@@ -726,6 +726,29 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "InstalledTemplate": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "workflow"
+        ],
+        "title": "InstalledTemplate",
+        "type": "object"
+      },
       "KeyCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1297,6 +1320,34 @@
         "title": "ReceiptRequest",
         "type": "object"
       },
+      "ResolvedSecret": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "number"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "updated_at",
+          "value"
+        ],
+        "title": "ResolvedSecret",
+        "type": "object"
+      },
       "ResponsesRequest": {
         "additionalProperties": true,
         "description": "Request body for a native OpenAI ``POST /v1/responses`` call.\n\nMirrors the OpenAI Responses API shape. ``input`` is required and accepts either a plain\nstring (translated to a single user message) or an array of input items / messages.\n``instructions`` is prepended as a system message. ``max_output_tokens`` becomes the\nOpenAI ``max_tokens`` cap that admission enforces. Fields with no chat equivalent are\naccepted (``extra=\"allow\"``) but not forwarded to the runtime.\n\nThe stateful fields ``store`` and ``previous_response_id`` are modelled explicitly so the\nhandler can serve them from the response store, or reject them when the store is off,\ninstead of forwarding them into the chat payload where they would be meaningless.",
@@ -1462,6 +1513,36 @@
         "title": "ResponsesRequest",
         "type": "object"
       },
+      "RetentionPolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_seconds": {
+            "maximum": 31536000.0,
+            "minimum": 60.0,
+            "title": "Audit Seconds",
+            "type": "integer"
+          },
+          "content_seconds": {
+            "maximum": 31536000.0,
+            "minimum": 60.0,
+            "title": "Content Seconds",
+            "type": "integer"
+          },
+          "run_seconds": {
+            "maximum": 31536000.0,
+            "minimum": 60.0,
+            "title": "Run Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_seconds",
+          "content_seconds",
+          "audit_seconds"
+        ],
+        "title": "RetentionPolicy",
+        "type": "object"
+      },
       "RunBudget": {
         "additionalProperties": false,
         "properties": {
@@ -1545,6 +1626,51 @@
           "firing_id"
         ],
         "title": "ScheduleFiring",
+        "type": "object"
+      },
+      "SecretMetadata": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "number"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "updated_at"
+        ],
+        "title": "SecretMetadata",
+        "type": "object"
+      },
+      "SecretWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "value": {
+            "format": "password",
+            "title": "Value",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "value",
+          "expected_version"
+        ],
+        "title": "SecretWrite",
         "type": "object"
       },
       "SessionLogin": {
@@ -1655,6 +1781,206 @@
           "input"
         ],
         "title": "StartRun",
+        "type": "object"
+      },
+      "TeamDataDelete": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_team": {
+            "title": "Confirm Team",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_team"
+        ],
+        "title": "TeamDataDelete",
+        "type": "object"
+      },
+      "TeamDataExport": {
+        "properties": {
+          "audit": {
+            "items": {},
+            "title": "Audit",
+            "type": "array"
+          },
+          "batches": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Batches",
+            "type": "array"
+          },
+          "exported_at": {
+            "title": "Exported At",
+            "type": "number"
+          },
+          "external_follow_up": {
+            "items": {
+              "type": "string"
+            },
+            "title": "External Follow Up",
+            "type": "array"
+          },
+          "files": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "keys": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "responses": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Responses",
+            "type": "array"
+          },
+          "runs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings"
+          },
+          "start_intents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Start Intents",
+            "type": "array"
+          },
+          "step_content": {
+            "additionalProperties": true,
+            "title": "Step Content",
+            "type": "object"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          },
+          "temporal_histories": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Temporal Histories",
+            "type": "array"
+          },
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "team_id",
+          "exported_at",
+          "settings",
+          "runs",
+          "start_intents",
+          "keys",
+          "audit",
+          "step_content",
+          "temporal_histories",
+          "responses",
+          "files",
+          "batches",
+          "external_follow_up"
+        ],
+        "title": "TeamDataExport",
+        "type": "object"
+      },
+      "TeamDataStatus": {
+        "properties": {
+          "external_follow_up": {
+            "items": {
+              "type": "string"
+            },
+            "title": "External Follow Up",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "erasing",
+              "erased"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "team_id": {
+            "title": "Team Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_id",
+          "status",
+          "external_follow_up"
+        ],
+        "title": "TeamDataStatus",
+        "type": "object"
+      },
+      "TeamRetention": {
+        "additionalProperties": false,
+        "properties": {
+          "audit_seconds": {
+            "maximum": 31536000.0,
+            "minimum": 60.0,
+            "title": "Audit Seconds",
+            "type": "integer"
+          },
+          "content_seconds": {
+            "maximum": 31536000.0,
+            "minimum": 60.0,
+            "title": "Content Seconds",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "run_seconds": {
+            "maximum": 31536000.0,
+            "minimum": 60.0,
+            "title": "Run Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_seconds",
+          "content_seconds",
+          "audit_seconds",
+          "revision"
+        ],
+        "title": "TeamRetention",
         "type": "object"
       },
       "TeamSSO": {
@@ -1848,6 +2174,49 @@
         "title": "TeamSpend",
         "type": "object"
       },
+      "TeamTelemetry": {
+        "properties": {
+          "metrics_enabled": {
+            "title": "Metrics Enabled",
+            "type": "boolean"
+          },
+          "protocol": {
+            "title": "Protocol",
+            "type": "string"
+          },
+          "service_name": {
+            "title": "Service Name",
+            "type": "string"
+          },
+          "traces_enabled": {
+            "title": "Traces Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "traces_enabled",
+          "metrics_enabled",
+          "protocol",
+          "service_name"
+        ],
+        "title": "TeamTelemetry",
+        "type": "object"
+      },
+      "TemplateInstall": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "0.9.0",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "TemplateInstall",
+        "type": "object"
+      },
       "ToolCall": {
         "additionalProperties": false,
         "properties": {
@@ -1915,6 +2284,69 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkflowTemplate": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "installable": {
+            "title": "Installable",
+            "type": "boolean"
+          },
+          "installed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Version"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "workflow",
+          "name",
+          "description",
+          "installable",
+          "installed_version",
+          "input_schema"
+        ],
+        "title": "WorkflowTemplate",
         "type": "object"
       }
     },
@@ -3850,6 +4282,121 @@
         ]
       }
     },
+    "/v1/team/data": {
+      "delete": {
+        "operationId": "delete_data_v1_team_data_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamDataDelete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDataStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Erase a quiescent team; retain a tombstone blocking new work",
+        "tags": [
+          "teams"
+        ]
+      },
+      "get": {
+        "operationId": "data_status_v1_team_data_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDataStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Inspect team erasure status and external follow-up",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/data/export": {
+      "get": {
+        "operationId": "export_data_v1_team_data_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDataExport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Export retained team data and Temporal histories as JSON",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
     "/v1/team/keys": {
       "get": {
         "operationId": "list_keys_v1_team_keys_get",
@@ -4044,6 +4591,100 @@
           }
         ],
         "summary": "Update Key",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/v1/team/retention": {
+      "get": {
+        "operationId": "get_retention_v1_team_retention_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRetention"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Inspect this team's gateway retention periods",
+        "tags": [
+          "teams"
+        ]
+      },
+      "put": {
+        "operationId": "set_retention_v1_team_retention_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRetention"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Set retention for newly closed runs, new content and the retained audit view",
         "tags": [
           "teams"
         ]
@@ -4291,6 +4932,38 @@
         "summary": "Inspect this team's company sign-in policy (unrestricted admin only)",
         "tags": [
           "teams"
+        ]
+      }
+    },
+    "/v1/team/telemetry": {
+      "get": {
+        "operationId": "telemetry_v1_team_telemetry_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamTelemetry"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Inspect OTLP export configuration (team admin)",
+        "tags": [
+          "observability"
         ]
       }
     },
@@ -5088,6 +5761,171 @@
         ]
       }
     },
+    "/v1/workflow-runs/{run_id}/secrets/{name}/resolve": {
+      "post": {
+        "operationId": "resolve_secret_v1_workflow_runs__run_id__secrets__name__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolvedSecret"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Resolve a secret inside a running, scoped worker activity",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflow-templates": {
+      "get": {
+        "operationId": "gallery_v1_workflow_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowTemplate"
+                  },
+                  "title": "Response Gallery V1 Workflow Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Browse versioned templates and this team's installations",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflow-templates/{template_id}/install": {
+      "post": {
+        "operationId": "install_v1_workflow_templates__template_id__install_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateInstall"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstalledTemplate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Install a reviewed template version for this team",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/v1/workflow-triggers": {
       "get": {
         "operationId": "listing_v1_workflow_triggers_get",
@@ -5267,6 +6105,137 @@
           }
         ],
         "summary": "Worker-only Temporal schedule delivery",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflows/{workflow}/secrets": {
+      "get": {
+        "operationId": "list_secrets_v1_workflows__workflow__secrets_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "title": "Workflow",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SecretMetadata"
+                  },
+                  "title": "Response List Secrets V1 Workflows  Workflow  Secrets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "List workflow secret metadata, never values (team admin)",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflows/{workflow}/secrets/{name}": {
+      "put": {
+        "operationId": "write_secret_v1_workflows__workflow__secrets__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "title": "Workflow",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretMetadata"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Create or rotate a secret with an expected version; zero creates",
         "tags": [
           "workflows"
         ]

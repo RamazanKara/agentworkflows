@@ -461,6 +461,20 @@ class RedisBatchStore:
     def _file_key(self, tenant: str, file_id: str) -> str:
         return f"{self.prefix}:file:{tenant}:{file_id}"
 
+    def delete_team(self, tenant: str) -> None:
+        try:
+            for row in self.list_batches(tenant, 2147483647):
+                message = self._message(tenant, row.id)
+                self.client.lrem(self._pending_key(), 0, message)
+                self.client.lrem(self._processing_key(), 0, message)
+                self.client.hdel(self._claims_key(), message)
+            for pattern in (f"{self.prefix}:file:{tenant}:*", f"{self.prefix}:batch:{tenant}:*"):
+                for key in self.client.scan_iter(match=pattern, count=500):
+                    self.client.delete(key)
+            self.client.delete(self._file_index(tenant), self._batch_index(tenant))
+        except _BATCH_BACKEND_ERRORS as exc:
+            raise BatchStoreError("batch store backend is unavailable") from exc
+
     def _file_index(self, tenant: str) -> str:
         return f"{self.prefix}:files:{tenant}"
 

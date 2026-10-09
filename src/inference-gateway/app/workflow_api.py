@@ -47,6 +47,11 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
     from app.workflow_operations import describe_run, register_operation_routes, save_metadata
 
     register_operation_routes(app)
+    from app.workflow_secrets import register_secret_routes
+    from app.workflow_templates import register_template_routes
+
+    register_secret_routes(app)
+    register_template_routes(app)
     from app.workflow_notifications import register_notification_routes
     from app.workflow_triggers import register_trigger_routes
 

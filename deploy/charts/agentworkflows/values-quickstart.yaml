@@ -1,0 +1,61 @@
+# Isolated kind evaluation with locally built candidate images and synthetic model responses.
+workflows:
+  worker:
+    image: agentworkflows-worker:quickstart
+inference-gateway:
+  providerCredentials:
+    - env: COMPOSE_PROVIDER_KEY
+      secretName: quickstart-model-key
+      secretKey: api-key
+  image:
+    repository: agentworkflows-gateway
+    tag: quickstart
+    digest: ""
+  runtime:
+    modelId: demo-openai
+    allowedModels: [demo-openai]
+  routing:
+    policy:
+      models:
+        - id: demo-openai
+          backend: openai
+          simulated: true
+          connection:
+            baseUrl: http://cloud-fake:8000/openai/v1
+            model: fixture-model
+            credentialEnv: COMPOSE_PROVIDER_KEY
+          pricing:
+            inputUsdPer1kTokens: 0.001
+            outputUsdPer1kTokens: 0.002
+  sandboxPolicy:
+    policy:
+      policies:
+        - sandboxId: default
+          projects: [default]
+          budgets:
+            estimatedTokenLimit: 200000
+            costLimitUsd: 50
+          tools:
+            research:
+              url: http://research-tools:8000/research
+              costUsd: 0
+            publish:
+              url: http://research-tools:8000/publish
+              costUsd: 0
+          workflows:
+            ResearchWorkflow:
+              allowedProviders: [openai]
+              allowedModels: [demo-openai]
+              allowedTools: [research, publish]
+              allowedEgress: [http://research-tools:8000, http://cloud-fake:8000]
+              tokenLimit: 10000
+              costLimitUsd: 5
+              requiredApprovals: 1
+              approvalTimeoutSeconds: 300
+              inputSchema:
+                type: object
+                properties:
+                  topic: {type: string, minLength: 1}
+                  model: {type: string, default: demo-openai}
+                required: [topic]
+                additionalProperties: false

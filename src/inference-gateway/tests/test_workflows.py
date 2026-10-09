@@ -62,6 +62,28 @@ class RunRedis(FakeRedisBudgetStore):
         return self.data.pop(key, None) is not None
 
     def eval(self, script, numkeys, key, *args):
+        from app.team_data import ENTER, FREEZE, LEAVE
+
+        if script == ENTER:
+            if self.get(key):
+                return 0
+            self.data[args[0]] = int(self.data.get(args[0], 0)) + 1
+            return 1
+        if script == LEAVE:
+            self.data[key] = int(self.data.get(key, 0)) - 1
+            if self.data[key] <= 0:
+                self.delete(key)
+            return 1
+        if script == FREEZE:
+            if self.get(args[1]):
+                return -1
+            if int(self.data.get(args[0], 0)) > 0:
+                return 0
+            self.data[args[1]] = "1"
+            if self.get(key):
+                return 2
+            self.data[key] = "erasing"
+            return 1
         if script == LEASE:
             if key in self.data:
                 return None

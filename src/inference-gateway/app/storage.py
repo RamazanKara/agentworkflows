@@ -14,6 +14,9 @@ from redis.exceptions import RedisError
 class Storage(Protocol):
     backend: str
 
+    def export_team(self, team: str) -> dict[str, Any]: ...
+    def delete_team(self, team: str) -> None: ...
+
     def get_settings(self, team: str) -> dict[str, Any] | None: ...
     def change_settings(self, team: str, revision: int, document: dict[str, Any]) -> bool: ...
     def create_key(self, record: dict[str, Any]) -> None: ...
@@ -84,6 +87,50 @@ class RedisStorage:
 
     def run_key(self, team: str, run_id: str) -> str:
         return f"{self.prefix}:workflow:{team}:{run_id}"
+
+    def export_team(self, team: str) -> dict[str, Any]:
+        runs = []
+        cursor = 0
+        while True:
+            cursor, keys = self.client.scan(cursor, match=f"{self.prefix}:workflow:{team}:*:metadata", count=500)
+            for key in keys:
+                raw = self.client.get(key)
+                if raw:
+                    run_id = key.removeprefix(f"{self.prefix}:workflow:{team}:").removesuffix(":metadata")
+                    runs.append(
+                        {
+                            "run_id": run_id,
+                            "metadata": json.loads(raw),
+                            "timeline": self.run_steps(team, run_id),
+                        }
+                    )
+            if not cursor:
+                break
+        intents: list[dict[str, Any]] = []
+        cursor = 0
+        while True:
+            cursor, keys = self.client.scan(cursor, match=f"{self.prefix}:start:{team}/*", count=500)
+            intents.extend(json.loads(raw) for key in keys if (raw := self.client.get(key)))
+            if not cursor:
+                break
+        return {
+            "settings": self.get_settings(team),
+            "runs": runs,
+            "start_intents": intents,
+            "keys": [{k: v for k, v in row.items() if k != "sha256"} for row in self.list_keys(team)],
+            "audit": list(self.audit_entries(team, None, True)),
+        }
+
+    def delete_team(self, team: str) -> None:
+        for record in self.list_keys(team):
+            self.client.hdel(f"{self.prefix}:keys:records", record["key_id"])
+            self.client.hdel(f"{self.prefix}:keys:digests", record["sha256"])
+        for key in (
+            f"{self.prefix}:team-settings:{team}",
+            f"{self.prefix}:keys:team:{team}",
+            f"{self.prefix}:audit:{team}",
+        ):
+            self.client.delete(key)
 
     def get_settings(self, team: str) -> dict[str, Any] | None:
         raw = self.client.get(f"{self.prefix}:team-settings:{team}")
@@ -179,6 +226,7 @@ class RedisStorage:
 
     def append_audit(self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None) -> None:
         from app.audit_view import APPEND, MAX_EVENTS
+        from app.team_data import retention_values
 
         if entry is not None:
             self.client.eval(
@@ -187,14 +235,16 @@ class RedisStorage:
                 f"{self.prefix}:audit:{event['sandbox_id']}",
                 json.dumps(entry, sort_keys=True),
                 MAX_EVENTS,
-                self.state.settings.audit_view_retention_seconds,
+                retention_values(self.state.settings, self.get_settings(event["sandbox_id"]))["audit_seconds"],
             )
 
     def audit_entries(self, team: str, cursor: str | None, oldest_first: bool) -> Any:
         from app.audit_view import READ_BATCH, time
+        from app.team_data import retention_values
 
         key = f"{self.prefix}:audit:{team}"
-        cutoff = max(0, int((time() - self.state.settings.audit_view_retention_seconds) * 1000))
+        retention = retention_values(self.state.settings, self.get_settings(team))["audit_seconds"]
+        cutoff = max(0, int((time() - retention) * 1000))
         self.client.xtrim(key, minid=f"{cutoff}-0", approximate=False)
         tail = self.client.xrevrange(key, count=1)
         if not tail:

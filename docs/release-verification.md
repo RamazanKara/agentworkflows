@@ -21,6 +21,72 @@ Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: `make lint test-gateway test-scripts`. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.
 
+## rc.2 lifecycle pass
+
+2026-10-09, native Windows, Python 3.12.14, Node 24.19.0, portable Helm 3.18.6.
+This is unreleased source work: no commit, push, PR or publication, and no new dependencies.
+
+| Native check | Result |
+| --- | --- |
+| Gateway full suite | 1,082 passed, 26 skipped; final lifecycle/stream-erasure/concurrency/run-audit/quickstart/telemetry subset: 59 passed. Six optional PostgreSQL tests require the caller database. |
+| Python SDK | 202 passed, 3 optional-framework skips. |
+| TypeScript SDK build, lint, tests | Passed; 79 tests. |
+| Console build, Playwright | Passed; 76 tests with the same Windows preview workaround described below. Final capture-only rerun: 3 passed. |
+| OpenAPI/config contracts, chart docs, dashboards | Passed; generated snapshots updated. |
+| Helm dependencies, strict kind-profile lint/render | Passed; 19 umbrella chart tests, including encryption Secret references and OTLP flags. |
+| Ruff | Changed Python files pass. Repository lint still reports the untouched E501 at `test_approval_policies.py:67`; formatter also finds existing repository drift. |
+| Gateway mypy | 26 existing errors in 13 files, identical to a clean HEAD comparison; no new findings. |
+| Scripted quickstarts | Native CLI and mocked approval/audit checks pass; live Compose/kind runs are blocked as described below. |
+
+The **107 PNGs** in `.out/console-v1.0.0-rc.2/` cover 360/393/1440, including the gallery,
+installation, secret rotation, retention/export/telemetry, cancellation confirmation, retry
+and operation receipts. Layout assertions check overflow and mid-word wrapping; visual review
+checks readable controls and spacing. Screens use one Insights/Maya Chen fixture. The canceled
+run retains 4,200 tokens/$0.06 and gains two operation receipts; its retry starts with zero
+tokens, spend and receipts. Template descriptions match the actual catalog. Downloads and
+screenshots are synthetic UI evidence, not live backend proof.
+
+The native sandbox blocks Playwright-managed Vite teardown. A temporary ignored config at
+`.out/playwright-rc2.config.ts` disables only `webServer`, uses the same tests/locale/timezone,
+and runs against a separately started Vite preview. No permanent test configuration changed.
+
+### Caller checks in WSL
+
+Native Docker is absent. `kind get clusters` cannot find Docker; `wsl.exe -d Ubuntu -e docker version`
+returns `Wsl/Service/E_ACCESSDENIED`, and `kubectl config current-context` reports no context.
+No live first-run timing, cluster mutation, real PostgreSQL deletion, or collector delivery
+is claimed. From a Linux/WSL checkout with Docker, Python 3.12+, Helm, kind and kubectl:
+
+```sh
+docker compose -f deploy/compose/compose.yaml build
+docker compose -f deploy/compose/compose.yaml pull --ignore-buildable
+python3 scripts/first-approved-run.py compose
+
+docker build -t agentworkflows-gateway:quickstart src/inference-gateway
+docker build -f sdk/python/Dockerfile -t agentworkflows-worker:quickstart .
+helm dependency build deploy/charts/workflows
+helm dependency build deploy/charts/agentworkflows
+python3 scripts/first-approved-run.py kind
+
+make test-gateway test-scripts test-typescript test-console
+```
+
+The scripts fail if the prepared trial exceeds 300 seconds. Image preparation/downloads are
+outside that clock. Record their output and inspect the approved run and verified audit chain.
+For gateway SQL erasure/retention integration, point `TEST_POSTGRES_DSN` at a **disposable**
+PostgreSQL database where the test user can create schemas, then run:
+
+```sh
+PYTHONPATH=src/inference-gateway src/inference-gateway/.venv/bin/python -m pytest \
+  src/inference-gateway/tests/test_postgres_integration.py -q
+```
+
+Also exercise [OTLP collector/Grafana delivery](../runbooks/observability.md), and the
+[team lifecycle](team-lifecycle.md) export/erasure flow with real Redis/Temporal and a second
+team retained as the isolation control. Verify secret creation/rotation from an authorized
+worker activity and rejection for other teams/projects. These live checks remain required
+before treating the candidate as release-ready.
+
 ## Candidate readiness pass
 
 2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0, Helm 3.18.6.

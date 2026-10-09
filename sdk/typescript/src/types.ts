@@ -226,3 +226,21 @@ export interface GovernedActivities {
   'agentworkflows.call'(call: Call): Promise<Record<string, unknown>>;
   'agentworkflows.trigger'(request: TriggerRequest): Promise<TriggerResult>;
 }
+export interface InstalledTemplate { id: string; version: string; workflow: string }
+export interface WorkflowTemplate extends InstalledTemplate {
+  name: string; description: string; installable: boolean; installed_version: string | null;
+  input_schema: Record<string, unknown> | null;
+}
+export interface WorkflowSecret { name: string; version: number; updated_at: number }
+export interface RetentionPolicy { run_seconds: number; content_seconds: number; audit_seconds: number }
+export interface TeamRetention extends RetentionPolicy { revision: number }
+export interface TeamDataStatus { team_id: string; status: 'active' | 'erasing' | 'erased'; external_follow_up: string[] }
+export interface TeamDataExport {
+  version: number; team_id: string; exported_at: number; settings: Record<string, unknown> | null;
+  runs: Record<string, unknown>[]; start_intents: Record<string, unknown>[];
+  keys: Record<string, unknown>[]; audit: Record<string, unknown>[];
+  step_content: Record<string, unknown>; temporal_histories: Record<string, unknown>[];
+  responses: Record<string, unknown>[]; files: Record<string, unknown>[]; batches: Record<string, unknown>[];
+  external_follow_up: string[];
+}
+export interface TeamTelemetry { traces_enabled: boolean; metrics_enabled: boolean; protocol: string; service_name: string }

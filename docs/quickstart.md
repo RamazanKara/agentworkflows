@@ -17,6 +17,49 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 
 ## 1. Install and start
 
+### Scripted first approved run (rc.2)
+
+The script installs the Research template, starts its simulated workflow, prints and approves
+the fixture draft, checks publication and verifies the audit chain. It fails after 300 seconds
+and reports elapsed time on success. This is an automated acceptance check; the manual steps
+below let you review the draft yourself. It refuses real model routes so it cannot approve a
+real-provider run. Image builds, dependency installation and initial downloads are preparation
+outside the timed run; the five-minute result is measured, not guaranteed on a cold machine.
+
+From the repository root in Linux/WSL with Python 3.12+, Docker and Compose installed:
+
+```sh
+# Prepare candidate images and dependencies before starting the clock.
+docker compose -f deploy/compose/compose.yaml build
+docker compose -f deploy/compose/compose.yaml pull --ignore-buildable
+python3 scripts/first-approved-run.py compose
+```
+
+For kind, also install `kind`, `kubectl` and Helm. Use an isolated cluster/namespace named
+`agentworkflows-quickstart`; the script always supplies that context, creates it if absent,
+loads the local images and installs the chart's source candidate. Prepare images/chart dependencies:
+
+```sh
+docker build -t agentworkflows-gateway:quickstart src/inference-gateway
+docker build -f sdk/python/Dockerfile -t agentworkflows-worker:quickstart .
+helm dependency build deploy/charts/workflows
+helm dependency build deploy/charts/agentworkflows
+python3 scripts/first-approved-run.py kind
+```
+
+The kind profile `deploy/charts/agentworkflows/values-quickstart.yaml` uses a local fake provider,
+one approval and local research/publish fixtures; no cloud credential is needed. It is for evaluation.
+The script's temporary port-forward is stopped on exit; it prints how to reopen the console.
+Both scripts leave their containers/cluster/data in place for inspection. On failure inspect
+`docker compose -f deploy/compose/compose.yaml logs workflow-worker inference-gateway` or
+`kubectl --context kind-agentworkflows-quickstart -n agentworkflows-quickstart get pods`.
+
+On this native Windows sandbox Docker/kind execution may be unavailable. Run the commands above
+inside WSL, using its own Python environment. A native `python scripts/first-approved-run.py --help`
+only verifies the CLI, not a successful run. See [release verification](release-verification.md).
+
+### Manual setup
+
 === "Bash (Linux/macOS)"
 
     ```bash

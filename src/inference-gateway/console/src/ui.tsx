@@ -5,6 +5,9 @@ export function Icon({ name }: { name: string }) {
   const paths: Record<string, ReactNode> = {
     brand: <><rect x="3" y="2" width="12" height="15" rx="1"/><rect x="10" y="9" width="11" height="13" rx="1"/></>,
     start: <><path d="m3 10 9-7 9 7v11H3Z"/><path d="M9 21v-8h6v8"/></>,
+    templates: <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></>,
+    secrets: <><rect x="4" y="10" width="16" height="12" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 15v3"/></>,
+    data: <><path d="M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6Z"/><path d="m8 12 3 3 5-6"/></>,
     runs: <><path d="M8 5h13M8 12h13M8 19h13"/><path d="M3 5h.01M3 12h.01M3 19h.01"/></>,
     approvals: <><circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/></>,
     providers: <><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></>,

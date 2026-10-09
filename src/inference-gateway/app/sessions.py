@@ -120,6 +120,10 @@ def refresh_cookies(request: Request, response: Response, token: str | None = No
 
 
 async def create_session(request: Request, response: Response) -> dict[str, Any]:
+    from app.team_data import data_key
+
+    if await redis_call(request, "get", data_key(request)):
+        raise HTTPException(409, detail="This team's data is being erased or has been erased.")
     cookie_options(request)
     token = secrets.token_urlsafe(32)
     session = {

@@ -165,7 +165,8 @@ class Execution:
         self.updates = {}
 
     async def describe(self, **kwargs):
-        return SimpleNamespace(status=SimpleNamespace(name=self.status), close_time=self.close_time)
+        return SimpleNamespace(status=SimpleNamespace(name=self.status), close_time=self.close_time,
+                               run_id=self.first_execution_run_id)
 
     async def query(self, name, **kwargs):
         return {"stage": self.stage, "draft": "Reviewed draft"}
@@ -209,7 +210,7 @@ class Temporal:
 
     def get_workflow_handle(self, workflow_id, *, run_id):
         handle = self.executions[workflow_id]
-        assert handle.first_execution_run_id == run_id
+        assert run_id is None or handle.first_execution_run_id == run_id
         return handle
 
 
@@ -405,6 +406,10 @@ def test_approval_identity_duplicates_and_cancel_retry(team_gateway, caplog):
     assert len(timeline[0]["receipt_id"]) == 64
     assert timeline[0]["receipt"]["record_hash"] == timeline[0]["receipt_id"]
     assert timeline[0]["receipt"]["approved"] is True
+    assert any(step["action"] == "cancel" and step["principal"]["key_id"] == "builder" for step in timeline)
+    assert timeline[-1]["action"] == "retry"
+    assert timeline[-1]["receipt"]["retry_run_id"] == retried["run_id"]
+    assert timeline[-1]["principal"]["key_id"] == "builder"
     assert len(app.state.temporal_client.executions) == 2
     verifier = _load_verifier()
     events = verifier.deduplicate(verifier.extract_audit_events(_double_logged_lines(caplog)))

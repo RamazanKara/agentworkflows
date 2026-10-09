@@ -13,6 +13,12 @@ workflows:
   # Set when workflow operations are enabled; readiness checks Temporal as well as Redis.
   temporalAddress: ""
 
+workflowSecrets:
+  # Persistent Fernet key; generate once and keep it with your encrypted backups.
+  existingSecret:
+    name: ""
+    key: fernet-key
+
 # One authenticated redis(s) URL for all Redis stores; key prefixes keep their data separate.
 # Empty preserves the individual store URLs below. Also used by the batch processor.
 redis:
@@ -452,6 +458,8 @@ keda:
   p95LatencyThresholdSeconds: "5"
 
 observability:
+  metrics:
+    enabled: false
   tracing:
     enabled: false
     otlpEndpoint: ""

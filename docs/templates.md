@@ -1,5 +1,21 @@
 # Workflow template gallery
 
+## Install a reviewed version
+
+Open **Workflow templates** in the console. A team admin can install any bundled template
+whose worker and team policy are already configured with one click, then select **Run**.
+The six shipped templates (including Research) have immutable catalog version `0.9.0`.
+Installation pins that version in the team's revisioned settings and records an audit entry;
+repeating the same installation is idempotent. New runs retain the template ID and version.
+Unknown versions return 422; an unapproved workflow returns 409.
+
+This installs the catalog selection, not remote executable code. The Compose worker already
+registers all six implementations. For Kubernetes, register the implementation in your worker
+and approve `inference-gateway.sandboxPolicy.policy.policies[].workflows` in Helm first;
+the gallery never expands model, tool or egress permissions. Operator policy remains authoritative.
+Source changes still require a worker deployment. The existing scaffold command below is
+the way to edit a template. See [lifecycle API and SDK methods](team-lifecycle.md).
+
 Pick one team task, run its fixture, then adapt its inputs and tools. Each walkthrough takes
 about five minutes after the [quickstart](quickstart.md). All five run in the same Compose
 trial without credentials for any external service, a GPU, or framework extras.

@@ -25,13 +25,14 @@ def migrate(client: Any, prefix: str) -> None:
 
 async def migrate_run_retention(app: FastAPI) -> bool:
     """Online TTL backfill: older metadata has no status, so consult Temporal."""
+    from app.team_data import enter_team_request, leave_team_request
     from app.workflow_budget import redis_call
     from app.workflow_operations import RPC_TIMEOUT, temporal_client
     from app.workflow_retention import TERMINAL_STATES, retain_run
 
     if app.state.budget_tracker.backend != "redis":
         return True
-    request = Request({"type": "http", "app": app, "headers": []})
+    request = Request({"type": "http", "app": app, "headers": [], "path": "/v1/internal"})
     prefix = app.state.settings.sandbox_budget_key_prefix
     client = None
     complete = True
@@ -45,6 +46,12 @@ async def migrate_run_retention(app: FastAPI) -> bool:
             data = json.loads(raw)
             run_id = key.rsplit(":", 2)[1]
             request.state.sandbox_id = data["team_id"]
+            try:
+                entered = await enter_team_request(request)
+            except HTTPException as exc:
+                if exc.status_code == 409:
+                    continue
+                raise
             try:
                 if client is None:
                     client = await temporal_client(app)
@@ -62,5 +69,8 @@ async def migrate_run_retention(app: FastAPI) -> bool:
             except (HTTPException, RPCError, OSError):
                 complete = False
                 logging.getLogger("uvicorn.error").warning("Run retention migration pending; check Temporal and Redis.")
+            finally:
+                if entered:
+                    await leave_team_request(request)
         if cursor == 0:
             return complete

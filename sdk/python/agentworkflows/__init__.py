@@ -554,6 +554,56 @@ class GatewayClient:
         """Read monthly spend, limits and alerts (an unrestricted team credential is required)."""
         return self._request("GET", "/v1/team/spend").json()
 
+    def workflow_templates(self) -> list[dict[str, Any]]:
+        return self._request("GET", "/v1/workflow-templates").json()
+
+    def install_template(self, template_id: str, *, version: str) -> dict[str, Any]:
+        return self._post(f"/v1/workflow-templates/{quote(template_id, safe='')}/install", {"version": version})
+
+    def workflow_secrets(self, workflow: str) -> list[dict[str, Any]]:
+        """List metadata only; requires an unrestricted team admin."""
+        return self._request("GET", f"/v1/workflows/{quote(workflow, safe='')}/secrets").json()
+
+    def set_workflow_secret(
+        self, workflow: str, name: str, value: str, *, expected_version: int
+    ) -> dict[str, Any]:
+        """Zero creates a secret; the current version rotates it without retaining the old value."""
+        return self._request(
+            "PUT", f"/v1/workflows/{quote(workflow, safe='')}/secrets/{quote(name, safe='')}",
+            json={"value": value, "expected_version": expected_version}, creates_state=True,
+        ).json()
+
+    def resolve_workflow_secret(self, run_id: str, step_id: str, name: str) -> dict[str, Any]:
+        """Call inside a worker activity; never return the secret into Temporal workflow history."""
+        run_id = str(UUID(run_id))
+        return self._request(
+            "POST", f"/v1/workflow-runs/{run_id}/secrets/{quote(name, safe='')}/resolve", json={},
+            headers={"X-Workflow-Run-ID": run_id, "X-Workflow-Step-ID": step_id}, creates_state=True,
+        ).json()
+
+    def team_retention(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/team/retention").json()
+
+    def set_team_retention(
+        self, *, run_seconds: int, content_seconds: int, audit_seconds: int, revision: int | str
+    ) -> dict[str, Any]:
+        return self._request(
+            "PUT", "/v1/team/retention", headers={"If-Match": str(revision)}, creates_state=True,
+            json={"run_seconds": run_seconds, "content_seconds": content_seconds, "audit_seconds": audit_seconds},
+        ).json()
+
+    def team_data(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/team/data").json()
+
+    def export_team_data(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/team/data/export").json()
+
+    def delete_team_data(self, *, confirm_team: str) -> dict[str, Any]:
+        return self._request("DELETE", "/v1/team/data", json={"confirm_team": confirm_team}, creates_state=True).json()
+
+    def team_telemetry(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/team/telemetry").json()
+
     def set_spend_limits(
         self, *, soft_limit_usd: float | None, hard_limit_usd: float | None, revision: int | str
     ) -> TeamSettings:

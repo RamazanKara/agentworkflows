@@ -92,6 +92,10 @@ services:
       RESPONSES_STORE_ENABLED: "true"
       # The team console is bundled in this image: http://127.0.0.1:8080/console
       ADMIN_CONSOLE_ENABLED: "true"
+      WORKFLOW_SECRETS_KEY: ${WORKFLOW_SECRETS_KEY:-}
+      OTEL_TRACING_ENABLED: ${OTEL_TRACING_ENABLED:-false}
+      OTEL_METRICS_ENABLED: ${OTEL_METRICS_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       SESSION_COOKIE_SECURE: "false"
       AUDIT_LOG_ENABLED: "true"
       AUDIT_CHAIN_STORE_BACKEND: redis

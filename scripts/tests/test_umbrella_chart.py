@@ -46,6 +46,35 @@ def gateway_env(docs):
     HELM and yaml and (CHART / "charts").exists(), "Helm, PyYAML and built chart dependencies required"
 )
 class UmbrellaChartTests(unittest.TestCase):
+    def test_workflow_secrets_and_otlp_are_explicitly_enabled(self):
+        defaults = gateway_env(self.render())
+        self.assertNotIn("WORKFLOW_SECRETS_KEY", defaults)
+        self.assertEqual(defaults["OTEL_METRICS_ENABLED"]["value"], "false")
+        env = gateway_env(self.render({"inference-gateway": {
+            "workflowSecrets": {"existingSecret": {"name": "workflow-encryption", "key": "fernet-key"}},
+            "observability": {"metrics": {"enabled": True}, "tracing": {
+                "enabled": True, "otlpEndpoint": "http://collector:4318",
+            }},
+        }}))
+        self.assertEqual(env["WORKFLOW_SECRETS_KEY"]["valueFrom"]["secretKeyRef"], {
+            "name": "workflow-encryption", "key": "fernet-key",
+        })
+        self.assertEqual(env["OTEL_METRICS_ENABLED"]["value"], "true")
+        self.assertEqual(env["OTEL_TRACING_ENABLED"]["value"], "true")
+        self.assertEqual(env["OTEL_EXPORTER_OTLP_ENDPOINT"]["value"], "http://collector:4318")
+
+    def test_kind_quickstart_uses_candidate_images_and_local_model(self):
+        values = yaml.safe_load((CHART / "values-quickstart.yaml").read_text())
+        docs = self.render(values)
+        gateway = resource(docs, "Deployment", "inference-gateway")
+        self.assertEqual(gateway["spec"]["template"]["spec"]["containers"][0]["image"],
+                         "agentworkflows-gateway:quickstart")
+        self.assertEqual(gateway_env(docs)["COMPOSE_PROVIDER_KEY"]["valueFrom"]["secretKeyRef"]["name"],
+                         "quickstart-model-key")
+        model = values["inference-gateway"]["routing"]["policy"]["models"][0]
+        self.assertTrue(model["simulated"])
+        self.assertEqual(model["connection"]["baseUrl"], "http://cloud-fake:8000/openai/v1")
+
     def test_oidc_group_mapping_serialization_and_schema(self):
         mapping = {"default": {"Engineering / Reviewers": "approver", "Builders": "builder"}}
         values = {"inference-gateway": {"ingress": TLS, "auth": {"oidc": {

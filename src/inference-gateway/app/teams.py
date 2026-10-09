@@ -5,8 +5,16 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 
 from app.oidc_access import TeamSSO
+
+
+class TeamTelemetry(BaseModel):
+    traces_enabled: bool
+    metrics_enabled: bool
+    protocol: str
+    service_name: str
 
 
 def require_role(request: Request, *roles: str) -> dict[str, Any]:
@@ -73,12 +81,24 @@ def authorize_team_request(request: Request) -> None:
 
 def register_team_routes(app: FastAPI) -> None:
     from app.audit_view import register_audit_routes
+    from app.team_data import register_team_data_routes
     from app.team_settings import effective_team_settings, register_team_settings_routes
     from app.team_spend import register_spend_routes
 
     register_audit_routes(app)
     register_team_settings_routes(app)
     register_spend_routes(app)
+    register_team_data_routes(app)
+
+    @app.get("/v1/team/telemetry", tags=["observability"], response_model=TeamTelemetry,
+             summary="Inspect OTLP export configuration (team admin)")
+    async def telemetry(request: Request) -> dict[str, Any]:
+        from app.team_settings import require_settings_admin
+
+        require_settings_admin(request)
+        settings = app.state.settings
+        return {"traces_enabled": settings.otel_tracing_enabled, "metrics_enabled": settings.otel_metrics_enabled,
+                "protocol": "http/protobuf", "service_name": settings.otel_service_name}
 
     @app.get("/v1/team/sso", tags=["teams"], response_model=TeamSSO,
              summary="Inspect this team's company sign-in policy (unrestricted admin only)")

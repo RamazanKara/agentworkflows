@@ -1,11 +1,15 @@
 # CLI and Python SDK reference
 
-This reference describes the current source SDK (0.9.0) under review for 1.0.0-rc.1.
+This reference describes the current source SDK (0.9.0) under review for 1.0.0-rc.2.
 Install it in a virtual environment from the repository root with
 `python -m pip install ./sdk/python`; run a gateway built from the same checkout.
 The older v0.5.1 release wheel does not implement the entire surface below.
 `agentworkflows --help` and each subcommand's `--help` work without a key.
 The equivalent module entry point is `python -m agentworkflows.cli`.
+
+The [team lifecycle reference](team-lifecycle.md) lists the Python and TypeScript methods
+for versioned template installation, secret rotation/resolution, team retention,
+data export/erasure and telemetry status, including access rules and version headers.
 
 ## CLI
 

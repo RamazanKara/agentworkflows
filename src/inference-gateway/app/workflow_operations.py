@@ -216,7 +216,8 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
 async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str] | None = None) -> dict[str, Any]:
     principal = require_role(request, "admin", "builder")
     project = project_access(request, body.project)
-    team = (await effective_team_settings(request)).team
+    settings = await effective_team_settings(request)
+    team = settings.team
     if team is None or body.workflow not in team.workflows:
         raise HTTPException(
             403,
@@ -254,6 +255,8 @@ async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str]
             )
         },
         **origin,
+        **next(({"template": template} for template in settings.document.get("templates", {}).values()
+                if template["workflow"] == body.workflow), {}),
     }
     data = await storage_call(request, "save_intent", workflow_id, data)
     if data["fingerprint"] != fingerprint:
@@ -435,7 +438,7 @@ def register_operation_routes(app: FastAPI) -> None:
                     "Inspect the run first.",
                 },
             )
-        return await start_run(
+        result = await start_run(
             request,
             StartRun(
                 workflow=data["workflow"],
@@ -444,6 +447,8 @@ def register_operation_routes(app: FastAPI) -> None:
                 request_id=uuid5(run_id, "retry"),
             ),
         )
+        await operation_receipt(request, str(run_id), "retry", retry_run_id=result["run_id"])
+        return result
 
     @app.post(
         "/v1/workflow-runs/{run_id}/approve",
@@ -507,6 +512,7 @@ def register_operation_routes(app: FastAPI) -> None:
         from app.metrics import TEAM_COST_LIMIT, TEAM_SPEND, WORKFLOW_RUNS, WORKFLOW_STATUS_REFRESH
         from app.state_migrations import migrate_run_retention
         from app.team_budget import team_cost_report
+        from app.team_data import enter_team_request, leave_team_request
         from app.workflow_notifications import notify_run
         from app.workflow_triggers import reconcile_schedules
 
@@ -520,6 +526,7 @@ def register_operation_routes(app: FastAPI) -> None:
                     request = Request(
                         {
                             "type": "http",
+                            "path": "/v1/internal",
                             "app": app,
                             "headers": [],
                             "state": {
@@ -530,52 +537,66 @@ def register_operation_routes(app: FastAPI) -> None:
                         }
                     )
                     try:
-                        await reconcile_schedules(request)
-                    except (HTTPException, RPCError, OSError):
-                        logging.getLogger("uvicorn.error").warning(
-                            "Schedule configuration unavailable; check Temporal and team cron expressions."
-                        )
-                    for project in team.projects:
-                        offset = 0
-                        while True:
-                            ids = await storage_call(request, "page_runs", team.sandbox_id, project, offset, 100)
-                            removed = 0
-                            for run_id, _ in ids:
-                                try:
-                                    row = await describe_run(request, run_id, timeline=False)
-                                    await notify_run(request, row)
-                                except (HTTPException, RPCError, OSError):
-                                    if not await storage_call(request, "get_run", team.sandbox_id, run_id):
-                                        await storage_call(
-                                            request, "remove_run_index", team.sandbox_id, project, run_id,
+                        entered = await enter_team_request(request)
+                    except HTTPException as exc:
+                        if exc.status_code == 409:
+                            from app.metrics import forget_team_metrics
+
+                            forget_team_metrics(team.sandbox_id)
+                            getattr(app.state, "audit_view_heads", {}).pop(team.sandbox_id, None)
+                            continue
+                        raise
+                    try:
+                        try:
+                            await reconcile_schedules(request)
+                        except (HTTPException, RPCError, OSError):
+                            logging.getLogger("uvicorn.error").warning(
+                                "Schedule configuration unavailable; check Temporal and team cron expressions."
+                            )
+                        for project in team.projects:
+                            offset = 0
+                            while True:
+                                ids = await storage_call(request, "page_runs", team.sandbox_id, project, offset, 100)
+                                removed = 0
+                                for run_id, _ in ids:
+                                    try:
+                                        row = await describe_run(request, run_id, timeline=False)
+                                        await notify_run(request, row)
+                                    except (HTTPException, RPCError, OSError):
+                                        if not await storage_call(request, "get_run", team.sandbox_id, run_id):
+                                            await storage_call(
+                                                request, "remove_run_index", team.sandbox_id, project, run_id,
+                                            )
+                                            removed += 1
+                                            continue
+                                        logging.getLogger("uvicorn.error").warning(
+                                            "Run refresh unavailable; check Temporal, Redis and notification receipts."
                                         )
-                                        removed += 1
                                         continue
-                                    logging.getLogger("uvicorn.error").warning(
-                                        "Run refresh unavailable; check Temporal, Redis and notification receipts."
-                                    )
-                                    continue
-                                status = row["status"]
-                                if row.get("progress", {}).get("stage") == "awaiting_approval":
-                                    status = "awaiting_approval"
-                                counts[status] = counts.get(status, 0) + 1
-                            if len(ids) < 100:
-                                break
-                            offset += 100 - removed
-                    report = await team_cost_report(request)
-                    if report:
-                        TEAM_SPEND.labels(team.sandbox_id).set(report["reserved_and_spent_usd"])
-                        TEAM_COST_LIMIT.labels(team.sandbox_id).set(report["cost_limit_usd"] or 0)
-                    for status in (
-                        "running",
-                        "completed",
-                        "failed",
-                        "canceled",
-                        "timed_out",
-                        "terminated",
-                        "awaiting_approval",
-                    ):
-                        WORKFLOW_RUNS.labels(team.sandbox_id, status).set(counts.get(status, 0))
+                                    status = row["status"]
+                                    if row.get("progress", {}).get("stage") == "awaiting_approval":
+                                        status = "awaiting_approval"
+                                    counts[status] = counts.get(status, 0) + 1
+                                if len(ids) < 100:
+                                    break
+                                offset += 100 - removed
+                        report = await team_cost_report(request)
+                        if report:
+                            TEAM_SPEND.labels(team.sandbox_id).set(report["reserved_and_spent_usd"])
+                            TEAM_COST_LIMIT.labels(team.sandbox_id).set(report["cost_limit_usd"] or 0)
+                        for status in (
+                            "running",
+                            "completed",
+                            "failed",
+                            "canceled",
+                            "timed_out",
+                            "terminated",
+                            "awaiting_approval",
+                        ):
+                            WORKFLOW_RUNS.labels(team.sandbox_id, status).set(counts.get(status, 0))
+                    finally:
+                        if entered:
+                            await leave_team_request(request)
                 WORKFLOW_STATUS_REFRESH.set(time())
             except (HTTPException, RPCError, OSError):
                 logging.getLogger("uvicorn.error").warning(

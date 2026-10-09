@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.0-rc.2 - Unreleased
+
+- Add a versioned console gallery for the six bundled templates, idempotent installation
+  into approved team policies, and template version provenance on new runs.
+- Complete cancel/retry audit receipts and show these operations in the run timeline.
+- Add encrypted per-workflow secrets, activity-scoped resolution, version-checked rotation,
+  metadata-only audit, console administration and Helm Secret references.
+- Export bounded HTTP metrics and workflow/spend gauges over OTLP alongside traces;
+  provide an OTLP Grafana dashboard and console configuration status.
+- Add team retention settings, retained-data/Temporal export and resumable erasure with
+  cross-team isolation and a tombstone preventing new work. Document external data owners.
+- Extend the OpenAPI contract and both SDKs; add scripted Compose/kind first-approved-run
+  checks with a five-minute runtime budget after image preparation, regression coverage,
+  and console captures at 360, 393 and 1440 pixels. Package versions remain 0.9.0.
+
 ## 1.0.0-rc.1 - Unreleased
 
 - Reconcile candidate quickstarts, installation, API/SDK and feature documentation;

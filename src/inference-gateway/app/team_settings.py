@@ -220,6 +220,7 @@ async def change_settings(
     if soft is not None and hard is not None and soft > hard:
         invalid_fields([{"field": "soft_cost_limit_usd", "message": "Soft limit must not exceed the hard limit."}])
     document = {
+        **current.document,
         "revision": revision + 1,
         "updated_by": principal.get("sub") or principal.get("key_id"),
         "updated_at": time(),
@@ -259,6 +260,26 @@ async def change_settings(
     response.headers["ETag"] = f'"{document["revision"]}"'
     response.headers["Cache-Control"] = "no-store"
     return after.public()
+
+
+async def save_team_document(
+    request: Request, current: dict[str, Any], changes: dict[str, Any], action: str, **details: Any
+) -> dict[str, Any]:
+    principal = require_settings_admin(request)
+    document = {
+        **current, **changes, "revision": current["revision"] + 1,
+        "updated_at": time(), "updated_by": principal.get("sub") or principal.get("key_id"),
+    }
+    if not await storage_call(request, "change_settings", request.state.sandbox_id, current["revision"], document):
+        raise HTTPException(409, detail="Team configuration changed. Reload before trying again.")
+    event = {
+        "event": action, "action_type": action, "chain_id": request.app.state.audit_chain_id,
+        "sandbox_id": request.state.sandbox_id, "request_id": request.state.request_id,
+        "principal": principal, "ts": document["updated_at"], "revision": document["revision"], **details,
+    }
+    chain_audit_event(request, event)
+    emit_audit_record(event)
+    return document
 
 
 def register_team_settings_routes(app: FastAPI) -> None:
