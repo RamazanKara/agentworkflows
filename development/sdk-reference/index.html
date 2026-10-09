@@ -307,7 +307,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -563,6 +563,8 @@
       
         
       
+        
+      
     
     
     
@@ -607,6 +609,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2197,9 +2227,11 @@
 
 
 <h1 id="cli-and-python-sdk-reference">CLI and Python SDK reference<a class="headerlink" href="#cli-and-python-sdk-reference" title="Permanent link">&para;</a></h1>
-<p>Install the released SDK in a virtual environment with
-<code>python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-0.5.1-py3-none-any.whl</code>
-(or <code>python -m pip install ./sdk/python</code> from a checkout). <code>agentworkflows --help</code> and each subcommand's <code>--help</code> work without a key.
+<p>This reference describes the current source SDK (0.9.0) under review for 1.0.0-rc.1.
+Install it in a virtual environment from the repository root with
+<code>python -m pip install ./sdk/python</code>; run a gateway built from the same checkout.
+The older v0.5.1 release wheel does not implement the entire surface below.
+<code>agentworkflows --help</code> and each subcommand's <code>--help</code> work without a key.
 The equivalent module entry point is <code>python -m agentworkflows.cli</code>.</p>
 <h2 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h2>
 <table>
@@ -2364,8 +2396,8 @@ save a newly created <code>key</code> securely, since list/update cannot recover
 to the authenticated admin's team and project access. You cannot revoke or demote your
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.</p>
-<p>Settings and audit SDK methods and CLI commands are available from this checkout
-(v0.6.0 in progress); they are not in the v0.5.1 wheel above. Both require an
+<p>Settings and audit SDK methods and CLI commands are available from this checkout;
+they are not in the v0.5.1 wheel. Both require an
 unrestricted team admin credential. Run <code>settings show</code> before changing settings,
 review the values, and pass its <code>revision</code> to <code>set</code> or <code>reset</code>. <code>--fields</code> is a
 non-empty JSON object of field names to values, without an outer <code>fields</code> wrapper.

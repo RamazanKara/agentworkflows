@@ -307,7 +307,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -563,6 +563,8 @@
       
         
       
+        
+      
     
     
     
@@ -607,6 +609,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1810,6 +1840,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Reference Serving Benchmark">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#10-candidate-native-gateway-sanity-2026-10-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.0 candidate native gateway sanity (2026-10-09)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-serving-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model serving reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2103,6 +2161,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Reference Serving Benchmark">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#10-candidate-native-gateway-sanity-2026-10-09" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.0 candidate native gateway sanity (2026-10-09)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-serving-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model serving reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2170,6 +2256,91 @@
 </code></pre></div>
 <p>The release gates check request count, error rate, p95 latency, and p99 latency. Tune thresholds in <code>platform/slo/release-gates.yaml</code> only when the target environment and workload justify the change.</p>
 <h2 id="reference-serving-benchmark">Reference Serving Benchmark<a class="headerlink" href="#reference-serving-benchmark" title="Permanent link">&para;</a></h2>
+<h3 id="10-candidate-native-gateway-sanity-2026-10-09">1.0 candidate native gateway sanity (2026-10-09)<a class="headerlink" href="#10-candidate-native-gateway-sanity-2026-10-09" title="Permanent link">&para;</a></h3>
+<p>Run <code>python loadtest/gateway-sanity.py</code> from an environment containing the gateway's
+runtime dependencies. It starts and stops its own loopback gateway and the existing
+fake runtime, then writes <code>results/loadtest/gateway-sanity.json</code> and a process log.
+This run used Windows 11 (build 26200), Python 3.12.14 and 16 logical CPUs, one Uvicorn
+process, 10 concurrent clients and 500 measured requests per endpoint after 10 warmups.
+All <strong>4,000 measured requests returned 200</strong>. Percentiles use nearest-rank latency.</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th style="text-align: right;">Requests/s</th>
+<th style="text-align: right;">p50 ms</th>
+<th style="text-align: right;">p95 ms</th>
+<th style="text-align: right;">p99 ms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /healthz</code></td>
+<td style="text-align: right;">485.71</td>
+<td style="text-align: right;">8.76</td>
+<td style="text-align: right;">19.92</td>
+<td style="text-align: right;">490.71</td>
+</tr>
+<tr>
+<td><code>GET /readyz</code></td>
+<td style="text-align: right;">192.59</td>
+<td style="text-align: right;">46.03</td>
+<td style="text-align: right;">75.73</td>
+<td style="text-align: right;">141.70</td>
+</tr>
+<tr>
+<td><code>GET /v1/models</code></td>
+<td style="text-align: right;">386.17</td>
+<td style="text-align: right;">10.56</td>
+<td style="text-align: right;">47.52</td>
+<td style="text-align: right;">364.13</td>
+</tr>
+<tr>
+<td><code>GET /v1/usage</code></td>
+<td style="text-align: right;">507.38</td>
+<td style="text-align: right;">15.32</td>
+<td style="text-align: right;">43.51</td>
+<td style="text-align: right;">91.67</td>
+</tr>
+<tr>
+<td><code>GET /v1/sandbox/budget</code></td>
+<td style="text-align: right;">605.01</td>
+<td style="text-align: right;">12.90</td>
+<td style="text-align: right;">33.58</td>
+<td style="text-align: right;">62.68</td>
+</tr>
+<tr>
+<td><code>POST /v1/chat/completions</code></td>
+<td style="text-align: right;">149.87</td>
+<td style="text-align: right;">65.26</td>
+<td style="text-align: right;">90.21</td>
+<td style="text-align: right;">132.73</td>
+</tr>
+<tr>
+<td><code>POST /v1/responses</code></td>
+<td style="text-align: right;">139.54</td>
+<td style="text-align: right;">67.10</td>
+<td style="text-align: right;">102.35</td>
+<td style="text-align: right;">141.77</td>
+</tr>
+<tr>
+<td><code>POST /v1/messages</code></td>
+<td style="text-align: right;">136.44</td>
+<td style="text-align: right;">69.11</td>
+<td style="text-align: right;">113.12</td>
+<td style="text-align: right;">165.14</td>
+</tr>
+</tbody>
+</table>
+<p>API-key authentication was enabled; audit output, caching, rate limits and budget
+enforcement were disabled, with memory accounting. The fake returns a short constant
+answer; requests allow at most 32 output tokens. Client, gateway and fake share the
+host, which also ran validation work. These numbers establish a local smoke baseline,
+not capacity or a production SLO. They exclude Redis/PostgreSQL, browser sessions,
+Temporal run start/list/approve, signed triggers, streaming, embeddings, Files/Batch,
+TLS and real provider latency. Run <code>make workflow-loadtest</code> against Compose and
+<code>make loadtest-local</code>/a deployment-specific load test in WSL before release acceptance.</p>
+<h3 id="model-serving-reference">Model serving reference<a class="headerlink" href="#model-serving-reference" title="Permanent link">&para;</a></h3>
 <p>A real, reproducible serving measurement for the default local model. This is a hardware reference, not a guarantee; re-run it on your own machine.</p>
 <p><code>qwen2.5:0.5b</code> (494M parameters, Q4_K_M; Ollama registry model-layer digest <code>sha256:c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515</code>) on an <strong>AMD Ryzen 7 5800X3D</strong> (CPU only, no GPU), 20 runs after warmup, <code>num_predict=100</code>, <code>temperature=0</code>. Results:</p>
 <table>

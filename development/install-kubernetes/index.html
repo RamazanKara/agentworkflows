@@ -307,7 +307,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -563,6 +563,8 @@
       
         
       
+        
+      
     
     
     
@@ -607,6 +609,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1224,10 +1254,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#approval-policies-v090-source-build" class="md-nav__link">
+  <a href="#approval-policies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Approval policies (v0.9.0 source build)
+        Approval policies
       
     </span>
   </a>
@@ -2344,10 +2374,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#approval-policies-v090-source-build" class="md-nav__link">
+  <a href="#approval-policies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Approval policies (v0.9.0 source build)
+        Approval policies
       
     </span>
   </a>
@@ -2394,8 +2424,14 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 <li>Kubernetes, <code>kubectl</code>, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.</li>
 <li>Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.</li>
-<li>A checkout of the release: <code>git clone --branch v0.5.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git</code>.</li>
+<li>This candidate checkout for chart validation, or a matching published release checkout for installation.</li>
 </ul>
+<p>This guide describes the current source (package/chart version 0.9.0), under review for
+1.0.0-rc.1. <strong>Candidate images are not published by this pass.</strong> For a candidate cluster
+trial, build/load the gateway and worker from this checkout and set their image values;
+see the source-image example below. A v0.5.1 install cannot demonstrate all features here.
+See <a href="../release-verification/#candidate-readiness-pass">command verification</a> for the
+native results and the cluster commands still requiring WSL and operator infrastructure.</p>
 <p>Prepare the local chart's dependencies once, in this order:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
@@ -2404,8 +2440,29 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 fixed: install one release per namespace. No ingress controller, GPU, KEDA or
 Prometheus CRDs are required.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>install<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--create-namespace<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+<p>For this source candidate on a disposable kind cluster named <code>aw</code>, build and load
+matching images before installation. If needed, create that test cluster with
+<code>kind create cluster --name aw</code>. Use these overrides throughout the candidate trial:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-gateway:rc.1<span class="w"> </span>src/inference-gateway
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-worker:rc.1<span class="w"> </span>-f<span class="w"> </span>sdk/python/Dockerfile<span class="w"> </span>.
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>kind<span class="w"> </span>load<span class="w"> </span>docker-image<span class="w"> </span>agentworkflows-gateway:rc.1<span class="w"> </span>agentworkflows-worker:rc.1<span class="w"> </span>--name<span class="w"> </span>aw
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>candidate-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s">inference-gateway:</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s">  image:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="s">    repository: agentworkflows-gateway</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s">    tag: rc.1</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s">    digest: ""</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="s">workflows:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="s">  worker:</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="s">    image: agentworkflows-worker:rc.1</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="s">YAML</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>helm<span class="w"> </span>install<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--create-namespace<span class="w"> </span>-f<span class="w"> </span>candidate-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
+<p>For another cluster, make those source-built images available in its approved registry
+and change the image references. For a published release, use its matching checkout and
+release image values instead. The component defaults still refer to v0.5.1 images;
+chart metadata alone does not upgrade them. Include <code>candidate-values.yaml</code> when running
+the fresh/combined installs below; <code>--reuse-values</code> upgrades preserve its image overrides.</p>
 <p>The chart generates <code>temporal-postgres-auth</code> (<code>password</code>), <code>workflow-gateway-key</code>
 (<code>api-key</code>), and <code>agentworkflows-admin</code> (<code>api-key</code>) if they are missing. Pre-create
 these Secrets to supply your own credentials. For different names, set
@@ -2531,7 +2588,7 @@ Without chart-managed TLS ingress, supply the explicit HTTPS callback and Secure
 setting yourself. Scopes must include <code>openid</code>; missing roles use <code>defaultRole</code> (viewer).
 The client secret is referenced from the existing Secret, not copied into Helm values.
 OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.</p>
-<p>On the v0.8.0 source build, <code>inference-gateway.auth.oidc.groupsClaim</code> and
+<p><code>inference-gateway.auth.oidc.groupsClaim</code> and
 <code>groupRoleMappings</code> can derive roles from existing company groups. See the
 <a href="../workflows/#sso-group-to-role-mapping">mapping example and acceptance checks</a>.
 Mappings are scoped by team; nonempty mappings deny unmapped or conflicting
@@ -2739,8 +2796,8 @@ disposable namespace, remove all remaining data and stop its port-forward:</p>
 </code></pre></div>
 <p>Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
 <code>temporal-postgres-auth</code> Secret or delete the old claim before a fresh evaluation install.</p>
-<h3 id="approval-policies-v090-source-build">Approval policies (v0.9.0 source build)<a class="headerlink" href="#approval-policies-v090-source-build" title="Permanent link">&para;</a></h3>
-<p>Build and roll out the v0.9.0 gateway before upgrading the worker image/SDK. Under the
+<h3 id="approval-policies">Approval policies<a class="headerlink" href="#approval-policies" title="Permanent link">&para;</a></h3>
+<p>Build and roll out the current gateway before upgrading the worker image/SDK. Under the
 existing workflow policy in <code>inference-gateway.sandboxPolicy.policy.policies</code>, use
 <code>requiredApprovals: 2</code> and <code>approvalTimeoutSeconds: 3600</code> to require two distinct
 reviewers within an hour. The shipped Research defaults remain one/seven days.

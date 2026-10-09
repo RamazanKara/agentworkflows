@@ -10,27 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/runbooks/audit-chain/">
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/development/why-agentworkflows/">
       
       
+        <link rel="prev" href="../templates/">
+      
+      
+        <link rel="next" href="../concepts/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Audit Chain Verification & SIEM Forwarding Runbook - AgentWorkflows</title>
+        <title>Why AgentWorkflows - AgentWorkflows</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +53,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#audit-chain-verification-siem-forwarding-runbook" class="md-skip">
+        <a href="#why-agentworkflows" class="md-skip">
           Skip to content
         </a>
       
@@ -92,7 +96,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
+    <a href=".." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Audit Chain Verification &amp; SIEM Forwarding Runbook
+              Why AgentWorkflows
             
           </span>
         </div>
@@ -225,7 +229,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href=".." class="md-tabs__link">
         
   
   
@@ -244,7 +248,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../quickstart/" class="md-tabs__link">
+      <a href="../quickstart/" class="md-tabs__link">
         
   
   
@@ -263,7 +267,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../quickstart-typescript/" class="md-tabs__link">
+      <a href="../quickstart-typescript/" class="md-tabs__link">
         
   
   
@@ -282,7 +286,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../templates/" class="md-tabs__link">
+      <a href="../templates/" class="md-tabs__link">
         
   
   
@@ -299,11 +303,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../why-agentworkflows/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -325,7 +331,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../workflows/" class="md-tabs__link">
+        <a href="../workflows/" class="md-tabs__link">
           
   
   
@@ -347,7 +353,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../sdk-reference/" class="md-tabs__link">
+        <a href="../sdk-reference/" class="md-tabs__link">
           
   
   
@@ -369,7 +375,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../" class="md-tabs__link">
+        <a href="../runbooks/" class="md-tabs__link">
           
   
   
@@ -405,7 +411,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
+    <a href=".." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -435,7 +441,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -462,7 +468,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -489,7 +495,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart-typescript/" class="md-nav__link">
+      <a href="../quickstart-typescript/" class="md-nav__link">
         
   
   
@@ -516,7 +522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../templates/" class="md-nav__link">
+      <a href="../templates/" class="md-nav__link">
         
   
   
@@ -540,8 +546,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -563,19 +571,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
             
   
   
@@ -593,7 +604,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -608,10 +619,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../why-agentworkflows/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -627,6 +647,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -639,7 +660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../concepts/" class="md-nav__link">
+      <a href="../concepts/" class="md-nav__link">
         
   
   
@@ -667,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../decision-guide/" class="md-nav__link">
+      <a href="../decision-guide/" class="md-nav__link">
         
   
   
@@ -695,7 +716,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../faq/" class="md-nav__link">
+      <a href="../faq/" class="md-nav__link">
         
   
   
@@ -723,7 +744,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture/" class="md-nav__link">
+      <a href="../architecture/" class="md-nav__link">
         
   
   
@@ -751,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../security-overview/" class="md-nav__link">
+      <a href="../security-overview/" class="md-nav__link">
         
   
   
@@ -779,7 +800,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../scope-and-non-goals/" class="md-nav__link">
+      <a href="../scope-and-non-goals/" class="md-nav__link">
         
   
   
@@ -888,7 +909,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../workflows/" class="md-nav__link">
+      <a href="../workflows/" class="md-nav__link">
         
   
   
@@ -916,7 +937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../team-settings/" class="md-nav__link">
+      <a href="../team-settings/" class="md-nav__link">
         
   
   
@@ -944,7 +965,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../audit-log/" class="md-nav__link">
+      <a href="../audit-log/" class="md-nav__link">
         
   
   
@@ -972,7 +993,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../client-examples/" class="md-nav__link">
+      <a href="../client-examples/" class="md-nav__link">
         
   
   
@@ -1000,7 +1021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../local-evaluation/" class="md-nav__link">
+      <a href="../local-evaluation/" class="md-nav__link">
         
   
   
@@ -1028,7 +1049,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../install-kubernetes/" class="md-nav__link">
+      <a href="../install-kubernetes/" class="md-nav__link">
         
   
   
@@ -1056,7 +1077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../postgresql-storage/" class="md-nav__link">
+      <a href="../postgresql-storage/" class="md-nav__link">
         
   
   
@@ -1084,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../kubernetes-production-checklist/" class="md-nav__link">
+      <a href="../kubernetes-production-checklist/" class="md-nav__link">
         
   
   
@@ -1112,7 +1133,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../production-readiness/" class="md-nav__link">
+      <a href="../production-readiness/" class="md-nav__link">
         
   
   
@@ -1140,7 +1161,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../development/" class="md-nav__link">
+      <a href="../development/" class="md-nav__link">
         
   
   
@@ -1243,7 +1264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk-reference/" class="md-nav__link">
+      <a href="../sdk-reference/" class="md-nav__link">
         
   
   
@@ -1271,7 +1292,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../feature-inventory/" class="md-nav__link">
+      <a href="../feature-inventory/" class="md-nav__link">
         
   
   
@@ -1299,7 +1320,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../cost-model/" class="md-nav__link">
+      <a href="../cost-model/" class="md-nav__link">
         
   
   
@@ -1327,7 +1348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../distribution/" class="md-nav__link">
+      <a href="../distribution/" class="md-nav__link">
         
   
   
@@ -1355,7 +1376,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../release-verification/" class="md-nav__link">
+      <a href="../release-verification/" class="md-nav__link">
         
   
   
@@ -1383,7 +1404,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../version-matrix/" class="md-nav__link">
+      <a href="../version-matrix/" class="md-nav__link">
         
   
   
@@ -1411,7 +1432,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../glossary/" class="md-nav__link">
+      <a href="../glossary/" class="md-nav__link">
         
   
   
@@ -1499,7 +1520,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../runbooks/" class="md-nav__link ">
               
   
   
@@ -1543,7 +1564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/" class="md-nav__link">
+      <a href="../getting-started/" class="md-nav__link">
         
   
   
@@ -1571,7 +1592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../customer-handoff-example/" class="md-nav__link">
+      <a href="../customer-handoff-example/" class="md-nav__link">
         
   
   
@@ -1599,7 +1620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../regulated-offline-tenant-example/" class="md-nav__link">
+      <a href="../regulated-offline-tenant-example/" class="md-nav__link">
         
   
   
@@ -1627,7 +1648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../gpu-coding-agent-tenant-example/" class="md-nav__link">
+      <a href="../gpu-coding-agent-tenant-example/" class="md-nav__link">
         
   
   
@@ -1655,7 +1676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-sandbox-integration/" class="md-nav__link">
+      <a href="../agent-sandbox-integration/" class="md-nav__link">
         
   
   
@@ -1683,7 +1704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../model-selection/" class="md-nav__link">
+      <a href="../model-selection/" class="md-nav__link">
         
   
   
@@ -1711,7 +1732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../capacity-sizing/" class="md-nav__link">
+      <a href="../capacity-sizing/" class="md-nav__link">
         
   
   
@@ -1739,7 +1760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../benchmarks-and-evals/" class="md-nav__link">
+      <a href="../benchmarks-and-evals/" class="md-nav__link">
         
   
   
@@ -1767,7 +1788,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../threat-model/" class="md-nav__link">
+      <a href="../threat-model/" class="md-nav__link">
         
   
   
@@ -1795,7 +1816,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../owasp-llm-top-10-mapping/" class="md-nav__link">
+      <a href="../owasp-llm-top-10-mapping/" class="md-nav__link">
         
   
   
@@ -1823,7 +1844,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ai-governance-crosswalk/" class="md-nav__link">
+      <a href="../ai-governance-crosswalk/" class="md-nav__link">
         
   
   
@@ -1851,7 +1872,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../proof/" class="md-nav__link">
+      <a href="../proof/" class="md-nav__link">
         
   
   
@@ -1879,7 +1900,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../repository-map/" class="md-nav__link">
+      <a href="../repository-map/" class="md-nav__link">
         
   
   
@@ -1907,7 +1928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../adr/" class="md-nav__link">
+      <a href="../adr/" class="md-nav__link">
         
   
   
@@ -1935,7 +1956,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../references/" class="md-nav__link">
+      <a href="../references/" class="md-nav__link">
         
   
   
@@ -1983,119 +2004,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#verify-from-the-console" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify from the console
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-the-audit-events-are" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What the audit events are
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verify-a-log" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verify a log
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#anchor-the-head-detect-wholesale-re-chaining" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Anchor the head (detect wholesale re-chaining)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Anchor the head (detect wholesale re-chaining)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#scheduled-anchoring-in-cluster" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scheduled anchoring in-cluster
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#forward-the-audit-stream-to-a-siem" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Forward the audit stream to a SIEM
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chain-continuity-across-restarts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chain continuity across restarts
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#offline-auditor-path" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Offline auditor path
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -2111,7 +2019,7 @@
 
 
   
-    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/runbooks/audit-chain.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/why-agentworkflows.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -2119,170 +2027,32 @@
   
 
 
-<h1 id="audit-chain-verification-siem-forwarding-runbook">Audit Chain Verification &amp; SIEM Forwarding Runbook<a class="headerlink" href="#audit-chain-verification-siem-forwarding-runbook" title="Permanent link">&para;</a></h1>
-<p>Use this runbook to verify the gateway's tamper-evident audit hash chain, to anchor its head so
-a wholesale rewrite is detectable, and to forward the audit stream to a SIEM for long-term,
-independent retention.</p>
-<h2 id="verify-from-the-console">Verify from the console<a class="headerlink" href="#verify-from-the-console" title="Permanent link">&para;</a></h2>
-<p>An unrestricted team admin can use <strong>Audit log</strong> to filter receipts, inspect event
-JSON, verify the selected time range and export matching events as JSON Lines.
-See the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/audit-log.md">audit log guide</a>
-for the APIs and interpretation of verification results.</p>
-<p>The view appends already chained events to
-<code>&lt;SANDBOX_BUDGET_KEY_PREFIX&gt;:audit:&lt;team&gt;</code> Redis streams. It uses the existing
-budget Redis and is off when that backend is not Redis or audit logging is disabled.
-Keep Redis persistence enabled. <code>AUDIT_VIEW_RETENTION_SECONDS</code> defaults to 90 days;
-exact stream trimming also limits each team to 100,000 events. Writes and reads
-trim old entries and inactive streams expire. No existing logs are imported.</p>
-<p>The process log format stays unchanged. A separate per-team, per-process envelope
-chain covers each event and its process/team sequence, so another team's intervening
-events need not be disclosed to verify this projection. Verification recomputes both
-hashes and checks adjacent links. Retained prefixes are reported as range boundaries,
-not breaks. This cannot prove absent tails, missing lifetimes or a wholesale rewrite;
-continue anchoring the full process logs as described below.</p>
-<p>Redis write failures log <code>audit view event could not be stored</code> without interrupting
-the original audit log. A subsequent successful append exposes an internal gap to
-the view verifier. Check gateway logs and Redis health, then use full-log evidence
-to investigate missing view events. Read failures return 503; they never count as a
-successful verification. Console exports contain original events, but a team/time
-subset may lack the other process events needed by the standalone log verifier.</p>
-<h2 id="what-the-audit-events-are">What the audit events are<a class="headerlink" href="#what-the-audit-events-are" title="Permanent link">&para;</a></h2>
-<p>Team setting saves and resets emit <code>team_settings_changed</code> on the gateway's
-existing chain. Each event names the authenticated actor, revision and touched
-fields' before/after values and sources. Provider credentials are never included.
-The verifier accepts these events alongside inference and workflow receipts.</p>
-<p>Every sandbox-bound gateway request emits one redacted audit event (<code>event: inference_request</code>;
-batch calls emit <code>event: batch_request</code>). Three more event types share the same chain: an
-<code>agent_action</code> receipt for what a workspace did beyond calling a model (denied egress, tool
-execution, file writes; see <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/adr/0014-agent-action-receipts.md">ADR 0014</a>),
-a <code>rag_query</code> retrieval receipt from the RAG service on its own chain, and a <code>chain_start</code>
-record opening each chain. These events are the <strong>tamper-evident receipts</strong>: each
-is linked into a per-process SHA-256 hash chain (see
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/adr/0006-tamper-evident-audit-hash-chain.md">ADR 0006</a>):</p>
+<h1 id="why-agentworkflows">Why AgentWorkflows<a class="headerlink" href="#why-agentworkflows" title="Permanent link">&para;</a></h1>
+<p>AgentWorkflows turns a team’s agent scripts into durable jobs with a shared review,
+spend and receipt trail. Use it when people need to see what ran, approve a draft,
+and account for model and tool calls from one console.</p>
 <ul>
-<li><code>h_0 = SHA-256("genesis")</code></li>
-<li><code>record_hash = SHA-256(prev_hash || canonical(record))</code>, where <code>canonical</code> is
-  <code>json.dumps(record, sort_keys=True, separators=(",", ":"))</code> over the event <strong>before</strong> the
-  <code>prev_hash</code>/<code>record_hash</code> fields are stamped on.</li>
+<li><strong>Recover work:</strong> Python and TypeScript workers run on Temporal. Model and tool
+  calls are activities; durable workflow history preserves progress and approval waits.</li>
+<li><strong>Review before proceeding:</strong> a run snapshots its approval rules. One to ten
+  distinct reviewers can be required, with an expiry and an explicit rejection path.</li>
+<li><strong>Share controlled access:</strong> the gateway binds credentials to teams and projects,
+  enforces model/tool allowlists and budgets, and supports API keys and company OIDC.</li>
+<li><strong>Inspect the evidence:</strong> runs link step receipts, estimated usage and optional
+  retained content. Trigger history, CSV usage and JSON Lines exports support review.</li>
 </ul>
-<p>Each event carries a <code>chain_id</code> (<code>HOSTNAME:process_start:random</code>, hash-covered) identifying its
-per-replica chain, and a chain-covered <code>ts</code>. The random suffix is load-bearing: a pod that
-restarts twice within one second would otherwise mint the same id twice and the verifier would
-splice two unrelated chains together and report the seam as tampering. Events are logged twice per request (once to the
-audit logger <code>agentworkflows.audit</code> and once to <code>uvicorn.error</code>), so a pod-log stream (and
-Loki) carries two byte-identical copies of every record. The verifier deduplicates them.</p>
-<p>Any edit, insertion, deletion, or reordering of emitted records breaks the chain and is detected
-by recomputation. A <em>wholesale</em> re-chain (every record rewritten from genesis so the embedded
-hashes stay self-consistent) is only detectable against an externally committed head, which is
-what anchoring provides.</p>
-<h2 id="verify-a-log">Verify a log<a class="headerlink" href="#verify-a-log" title="Permanent link">&para;</a></h2>
-<p>Export the gateway pod logs (or a Loki export) to a file, then:</p>
-<div class="highlight"><pre><span></span><code>make audit-verify AUDIT_LOG=/path/to/gateway-audit.log
-</code></pre></div>
-<p>or pipe on stdin:</p>
-<div class="highlight"><pre><span></span><code>kubectl -n inference logs deploy/inference-gateway | python3 scripts/audit-verify.py -
-</code></pre></div>
-<p>The verifier deduplicates the double-logged copies, groups records by <code>chain_id</code> (older logs
-without it are split at genesis-restart boundaries), and reports per chain: the record count and
-<code>OK</code>, or the first broken position and reason (<code>record_hash_mismatch</code>, <code>broken_link_or_reordered</code>,
-<code>prev_hash_not_genesis</code>). It exits non-zero on any break. A per-process chain per gateway replica
-and a fresh chain after each restart are expected; verification is per chain.</p>
-<p>Self-test (also wired into <code>make validate</code>):</p>
-<div class="highlight"><pre><span></span><code>python3 scripts/audit-verify.py --selftest
-</code></pre></div>
-<h2 id="anchor-the-head-detect-wholesale-re-chaining">Anchor the head (detect wholesale re-chaining)<a class="headerlink" href="#anchor-the-head-detect-wholesale-re-chaining" title="Permanent link">&para;</a></h2>
-<p>Compute and store each chain's head so a later verify can detect a rewrite/rollback:</p>
-<div class="highlight"><pre><span></span><code>make audit-anchor AUDIT_LOG=/path/to/gateway-audit.log AUDIT_ANCHOR=/path/to/anchor.json
-</code></pre></div>
-<p>The anchor file records, per <code>chain_id</code>, <code>{count, head record_hash}</code>. Later, compare a freshly
-observed log against it:</p>
-<div class="highlight"><pre><span></span><code>python3 scripts/audit-verify.py /path/to/new-export.log --anchor /path/to/anchor.json
-</code></pre></div>
-<p>This flags a <strong>shrunk chain</strong> (truncation/rollback), a <strong>changed head without growth</strong>
-(re-chain/edit), or a <strong>missing chain</strong>. Because only the head is committed, the anchor file is
-tiny and append-safe: honest appends advance a chain's head and count; they never rewrite a
-previously anchored head. Store the anchor externally (a ConfigMap, an object-store bucket, or a
-SIEM index) so it is outside the reach of whoever could rewrite the log.</p>
-<h3 id="scheduled-anchoring-in-cluster">Scheduled anchoring in-cluster<a class="headerlink" href="#scheduled-anchoring-in-cluster" title="Permanent link">&para;</a></h3>
-<p>A ready-to-adapt CronJob that pulls the gateway audit stream from Loki, anchors it, and stores the
-head in a ConfigMap ships as a documented example at
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/examples/audit-anchor-cronjob.yaml"><code>docs/examples/audit-anchor-cronjob.yaml</code></a>. It is an
-example rather than a rendered manifest because the log source (Loki URL, LogQL selector, tenant
-header, lookback) is environment-specific; adapt those fields before applying. The scripts are
-stdlib-only, so any <code>python:3-alpine</code> with <code>scripts/audit-anchor.py</code> and <code>scripts/audit-verify.py</code>
-mounted works.</p>
-<h2 id="forward-the-audit-stream-to-a-siem">Forward the audit stream to a SIEM<a class="headerlink" href="#forward-the-audit-stream-to-a-siem" title="Permanent link">&para;</a></h2>
-<p>The audit receipts should not live only in Loki (which is single-tenant and retention-bounded by
-default; see <a href="../data-retention/">data retention</a>). Ship them onward to a SIEM for independent,
-long-term, ideally write-once retention. Two supported shapes:</p>
-<ol>
-<li><strong>Add a second Promtail/Grafana Alloy sink.</strong> Point an additional <code>clients[]</code> entry (Promtail)
-   or a second <code>loki.write</code> / <code>otelcol</code> exporter (Alloy) at the SIEM's ingest endpoint, scoped to
-   the gateway audit stream (match on the <code>record_hash</code> field or the audit logger name). This
-   duplicates the stream to the SIEM without disturbing the in-cluster Loki path.</li>
-<li><strong>Export from Loki.</strong> Run a scheduled LogQL query
-   (<code>{app_kubernetes_io_name="inference-gateway"} |= "record_hash"</code>) and forward the results to
-   the SIEM (for example via a Logstash/Vector/Fluent Bit Loki source, or the CronJob pattern
-   above adapted to write to the SIEM instead of a ConfigMap).</li>
-</ol>
-<p><strong>Also export the anchor.</strong> Ship the anchor file / ConfigMap (<code>audit-chain-anchor</code>, key
-<code>head.json</code>) to the SIEM alongside the events. The events prove internal consistency; the anchor
-is what proves the events were not wholesale-rewritten. Without the externally held anchor, a
-re-chain is undetectable.</p>
-<p>If Loki <code>auth_enabled</code> is turned on for multi-tenant isolation, add the <code>X-Scope-OrgID</code> tenant
-header on <strong>every</strong> path: the Promtail push (<code>clients[].tenant_id</code>), the Grafana datasource, and
-any anchor/export query. Otherwise pushes and reads will 401. The bundled reference keeps
-<code>auth_enabled: false</code> (single-tenant); see the comment in
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml"><code>deploy/observability/applications.yaml</code></a>.</p>
-<h2 id="chain-continuity-across-restarts">Chain continuity across restarts<a class="headerlink" href="#chain-continuity-across-restarts" title="Permanent link">&para;</a></h2>
-<p>A chain covers one process lifetime. On its own that left a seam: a restarting pod began a
-fresh chain at genesis with nothing tying it to the one before, so an attacker who deleted a
-whole replica's chain produced something indistinguishable from an ordinary restart.</p>
-<p>Each process now opens its chain with a <code>chain_start</code> receipt naming the previous chain and
-the head it had reached, which makes the chains into a chain of their own. That record is
-hash-linked like any other, so the claim it makes about its predecessor is covered by the
-chain it opens.</p>
-<p>It only works if the head outlives the pod, so pick a store:</p>
-<div class="highlight"><pre><span></span><code># File on a mounted volume
-AUDIT_CHAIN_STORE_BACKEND=file
-AUDIT_CHAIN_STORE_PATH=/var/lib/inference-gateway/audit-chain-head.json
-
-# Or Redis, if the deployment already runs one
-AUDIT_CHAIN_STORE_BACKEND=redis
-AUDIT_CHAIN_STORE_KEY=inference-gateway:audit-chain-head
-</code></pre></div>
-<p>The default is <code>memory</code>, which keeps the pre-continuity behavior: chains still verify
-individually, and each <code>chain_start</code> honestly reports no predecessor rather than claiming one
-it cannot support. The RAG service has the same settings under <code>RAG_AUDIT_CHAIN_STORE_*</code>.</p>
-<p>The head is written on an interval (<code>AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS</code>, default 5) and on
-graceful shutdown, not on every record, so a head-store write never sits on the request path.
-The cost is that a hard crash can leave the persisted head a few records behind the true tail;
-the verifier accounts for this by checking the named head appears in the predecessor rather
-than requiring it to be the predecessor's last record.</p>
-<p><code>audit-verify</code> reports continuity alongside the per-chain result:</p>
-<div class="highlight"><pre><span></span><code>python3 scripts/audit-verify.py exported-audit.log
-</code></pre></div>
-<ul>
-<li>A predecessor that is <strong>present but disagrees</strong> (truncated, or rewritten so its head
-  changed) is a failure.</li>
-<li>A predecessor that is simply <strong>absent</strong> is a note, not a failure, because verifying a
-  window of rotated logs legitimately starts mid-history. Pass <code>--strict-continuity</code> when the
-  input is meant to be a complete history and a missing predecessor should fail.</li>
-</ul>
-<h2 id="offline-auditor-path">Offline auditor path<a class="headerlink" href="#offline-auditor-path" title="Permanent link">&para;</a></h2>
-<p>An auditor does not need cluster access. Hand them the exported audit log and the anchor file;
-the verifier is stdlib-only Python:</p>
-<div class="highlight"><pre><span></span><code>python3 scripts/audit-verify.py exported-audit.log --anchor exported-anchor.json
-</code></pre></div>
-<p>A clean exit (code 0) with every chain <code>OK</code> and no anchor problems means the receipts are intact
-and were not rewritten since the anchor was taken. The same tooling runs against the checked-in
-sample (<code>results/sample-gateway-audit.log</code>) as a smoke reference.</p>
-<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../data-retention/">Data retention</a>: retention/redaction policy for the audit logs.</li>
-<li><a href="../traceability-sandbox/">Traceability sandbox</a>: request correlation and the sandbox trace contract.</li>
-<li><a href="../evidence-pack/">Evidence pack</a>: customer-facing evidence generation.</li>
-</ul>
+<p>You still operate Temporal, workers, storage, identity configuration and integrations.
+Receipts record gateway-observed activity; they do not prove that a model’s answer is
+correct or that an external tool acted safely. Prices are configured estimates, and
+retries cannot undo side effects. Start with idempotent tools and reviewed policies.</p>
+<p>Choose a smaller gateway if you only need model routing. Keep an existing orchestration
+stack if its review and governance already meet your needs. This project is intended
+for teams that want these pieces integrated and can own their operation; it is not a
+hosted service, a general chat product or a compliance certification.</p>
+<p>Try the <a href="../quickstart/">source quickstart</a>, browse the <a href="../templates/">templates</a>, and
+check the <a href="../feature-inventory/">feature inventory</a> and <a href="../architecture/">architecture</a>
+before committing to a deployment. The 1.0 candidate remains subject to the
+<a href="../release-verification/#candidate-readiness-pass">release verification checks</a>.</p>
 
 
 
@@ -2316,6 +2086,44 @@ sample (<code>results/sample-gateway-audit.log</code>) as a smoke reference.</p>
         <footer class="md-footer">
   
     
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../templates/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Templates">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Templates
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../concepts/" class="md-footer__link md-footer__link--next" aria-label="Next: Workflow essentials">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Workflow essentials
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
@@ -2346,10 +2154,10 @@ sample (<code>results/sample-gateway-audit.log</code>) as a smoke reference.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.footer", "content.code.copy", "content.tabs.link", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.footer", "content.code.copy", "content.tabs.link", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

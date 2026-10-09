@@ -309,7 +309,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -561,10 +561,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#try-a-two-reviewer-policy-v090-source-build" class="md-nav__link">
+  <a href="#try-a-two-reviewer-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Try a two-reviewer policy (v0.9.0 source build)
+        Try a two-reviewer policy
       
     </span>
   </a>
@@ -687,6 +687,8 @@
       
         
       
+        
+      
     
     
     
@@ -731,6 +733,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2123,10 +2153,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#try-a-two-reviewer-policy-v090-source-build" class="md-nav__link">
+  <a href="#try-a-two-reviewer-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Try a two-reviewer policy (v0.9.0 source build)
+        Try a two-reviewer policy
       
     </span>
   </a>
@@ -2197,44 +2227,46 @@
 five minutes. You need <strong>Git, Python 3.12+, and Docker with Compose</strong> already installed.
 Initial image/package downloads can take longer on a slow connection. No GPU, Kubernetes,
 Make, Node.js, or cloud account is needed for this path.</p>
+<p>These instructions exercise the <strong>unreleased 1.0 candidate from source</strong> (package version
+0.9.0). Start at the repository root if you already have this checkout; skip clone/cd.
+The command verification and remaining Docker/WSL checks are recorded in
+<a href="../release-verification/#candidate-readiness-pass">release verification</a>.</p>
 <p>Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
 the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout on Windows.</p>
 <h2 id="1-install-and-start">1. Install and start<a class="headerlink" href="#1-install-and-start" title="Permanent link">&para;</a></h2>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Bash (Linux/macOS)</label><label for="__tabbed_1_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>v0.5.1<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./sdk/python
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>--no-build<span class="w"> </span>workflow-worker<span class="w"> </span>temporal-ui
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>--build<span class="w"> </span>workflow-worker<span class="w"> </span>temporal-ui
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>local-development-only
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">git</span> <span class="n">clone</span> <span class="p">-</span><span class="n">-branch</span> <span class="n">v0</span><span class="p">.</span><span class="n">5</span><span class="p">.</span><span class="n">1</span> <span class="p">-</span><span class="n">-depth</span> <span class="n">1</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RamazanKara</span><span class="p">/</span><span class="n">agentworkflows</span><span class="p">.</span><span class="n">git</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">git</span> <span class="n">clone</span> <span class="p">-</span><span class="n">-branch</span> <span class="n">main</span> <span class="p">-</span><span class="n">-depth</span> <span class="n">1</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RamazanKara</span><span class="p">/</span><span class="n">agentworkflows</span><span class="p">.</span><span class="n">git</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd </span><span class="n">agentworkflows</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">$env:Path</span> <span class="p">=</span> <span class="s2">"$PWD\.venv\Scripts;$env:Path"</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">pip</span> <span class="n">install</span> <span class="p">./</span><span class="n">sdk</span><span class="p">/</span><span class="n">python</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="p">-</span><span class="n">-no-build</span> <span class="n">workflow-worker</span> <span class="n">temporal-ui</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="p">-</span><span class="n">-build</span> <span class="n">workflow-worker</span> <span class="n">temporal-ui</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">$env:AGENTWORKFLOWS_API_KEY</span> <span class="p">=</span> <span class="s1">'local-development-only'</span>
 </code></pre></div>
 </div>
 </div>
 </div>
-<p>Compose pulls the signed v0.5.1 release images; nothing is built locally. <code>--wait</code> waits for gateway, Redis, PostgreSQL, and Temporal
+<p>Compose builds the gateway and Python worker from this checkout and pulls their dependencies.
+Locally built images are not release-signed. <code>--wait</code> waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every <a href="../templates/">gallery template</a>. The public demo key is a local admin
 identity. <a href="../workflows/#teams-projects-and-roles">Team setup</a> separates builders and approvers.</p>
-<p><strong>Testing the unreleased v0.9.0 checkout:</strong> use your existing checkout instead of
-cloning v0.5.1, install <code>./sdk/python</code>, and replace <code>--no-build</code> above with <code>--build</code>
-(<code>docker compose ... up -d --wait --build workflow-worker temporal-ui</code>). This builds
-the gateway and worker from source; it requires network access for build dependencies.
-The default pull-only path remains v0.5.1 until the new release is published.
-Generated projects pin the SDK's release version; before v0.9.0 is published, install
-the checkout SDK in those projects instead of its generated release-wheel URL.</p>
-<p>The v0.9.0 milestone adds <a href="../workflows/#approval-policies">multi-reviewer approval policies</a>.
+<p>For the older published v0.5.1 trial, clone that tag and use <code>--no-build</code> instead;
+it does not include the newer settings, history, SSO group or quorum features described here.
+Generated projects pin the SDK's package version. Until matching release artifacts exist,
+keep using the source SDK installed above instead of the scaffold's release-wheel URL.</p>
+<p>This checkout includes <a href="../workflows/#approval-policies">multi-reviewer approval policies</a>.
 The trial still defaults to one reviewer and seven days. Build both gateway and worker
 from this checkout; upgrade the gateway before SDK workers on an existing installation.</p>
 <p>The default <strong>fake</strong> returns canned text and synthetic prices without contacting a cloud.
@@ -2286,7 +2318,7 @@ step or <strong>Arguments and result</strong> on a tool step to see
 what it sent and received, with redaction and truncation notes. The demo captures redacted
 content for seven days; terminal run records expire after 30 days. Receipt hashes contain
 no captured text. Temporal history is at <a href="http://127.0.0.1:8233">http://127.0.0.1:8233</a> and has its own retention.</p>
-<p>On the v0.9.0 checkout, save completed runs before their retention deadline with
+<p>Save completed runs before their retention deadline with
 <code>agentworkflows runs export --status completed --output runs.jsonl</code>. This follows
 cursor pages and includes results, receipts and retained step content. Settings and
 the audit log are available to team admins in the console. Run and audit exports
@@ -2321,7 +2353,7 @@ in sync using <code>input-schema.json</code>. Invalid fields are reported before
 <p>Expect <code>OK</code> and a nonzero record count. Hash verification detects edits and internal gaps;
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">external anchors</a>
 are needed to detect truncation or a complete rewrite. Save the export before removing the stack.</p>
-<h2 id="try-a-two-reviewer-policy-v090-source-build">Try a two-reviewer policy (v0.9.0 source build)<a class="headerlink" href="#try-a-two-reviewer-policy-v090-source-build" title="Permanent link">&para;</a></h2>
+<h2 id="try-a-two-reviewer-policy">Try a two-reviewer policy<a class="headerlink" href="#try-a-two-reviewer-policy" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Sign in to the console with <code>local-development-only</code>. In <strong>Team settings / Research</strong>,
    set <strong>Required reviewers</strong> to <code>2</code> and <strong>Approval expiry (seconds)</strong> to <code>3600</code>, then save.</li>

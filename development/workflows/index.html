@@ -307,7 +307,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -563,6 +563,8 @@
       
         
       
+        
+      
     
     
     
@@ -607,6 +609,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3024,7 +3054,7 @@ The API reports the current month. Retain run metadata/timeline keys with Tempor
 and audit evidence. Expired Temporal executions return 404; retained receipts remain in
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
 Temporal; restrict access and retention for both stores.</p>
-<p>In the v0.6.0 checkout (unreleased), <code>GET /v1/workflow-runs</code> returns <code>next_cursor</code>
+<p>Since v0.6.0, <code>GET /v1/workflow-runs</code> returns <code>next_cursor</code>
 alongside the legacy <code>next_offset</code>. Send that cursor with unchanged project,
 workflow and status filters to continue toward older runs. Empty filtered pages
 can have a continuation: <code>limit</code> bounds records scanned before filtering, keeping
@@ -3359,7 +3389,7 @@ quorum/expiry. New SDKs request <code>{"policy_version": 1}</code> from the work
 policies reject old workers instead of falling back to one reviewer. Temporal patch
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
-<a href="../quickstart/#try-a-two-reviewer-policy-v090-source-build">two-reviewer Quickstart</a>.</p>
+<a href="../quickstart/#try-a-two-reviewer-policy">two-reviewer Quickstart</a>.</p>
 
 
 

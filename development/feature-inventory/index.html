@@ -307,7 +307,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -563,6 +563,8 @@
       
         
       
+        
+      
     
     
     
@@ -607,6 +609,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2068,7 +2098,8 @@
 <p>This is the source of truth for what the current checkout implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
-configured.</p>
+configured or published. This review targets 1.0.0-rc.1; source package/chart versions
+remain 0.9.0. Use source-built images for candidate features.</p>
 <p>Milestones 2–3 add <a href="../workflows/">durable workflows, framework agents, MCP tools, and workflow policy</a>.</p>
 <table>
 <thead>
@@ -2130,7 +2161,7 @@ configured.</p>
 </tr>
 <tr>
 <td>Human approvals</td>
-<td>v0.9.0 candidate adds quorum and configurable expiry</td>
+<td>Implemented in this candidate</td>
 <td>One reviewer, seven days</td>
 <td>1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Escalation and production Temporal authorization remain operator-owned</td>
 </tr>
@@ -2208,7 +2239,7 @@ configured.</p>
 </tr>
 <tr>
 <td>SSO group-to-role mapping</td>
-<td>Implemented for v0.8.0 (unreleased)</td>
+<td>Implemented in this candidate</td>
 <td>Off; existing OIDC role claims remain the default</td>
 <td>Exact team-scoped mappings, deny unmapped/conflicting groups, token-bounded sessions and policy-change invalidation; admin policy view in Members &amp; keys, API and both SDKs. IdP provisioning remains operator-owned</td>
 </tr>
@@ -2298,13 +2329,13 @@ configured.</p>
 </tr>
 <tr>
 <td>Trigger run history</td>
-<td>Implemented for v0.7.0 (unreleased)</td>
+<td>Implemented in this candidate</td>
 <td>On for new cron/webhook launches</td>
 <td>Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; existing run retention, no backfill</td>
 </tr>
 <tr>
 <td>Usage CSV export</td>
-<td>Implemented for v0.7.0 (unreleased)</td>
+<td>Implemented in this candidate</td>
 <td>Available to team roles</td>
 <td>Costs, <code>/v1/usage/export</code>, both SDKs and CLI; current UTC month, scoped totals and overlapping breakdowns; estimates include reservations</td>
 </tr>
@@ -2312,7 +2343,7 @@ configured.</p>
 <td>Docker Compose evaluation stack</td>
 <td>Shipped</td>
 <td><code>make compose-up</code></td>
-<td>Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; headless browser smoke in CI; no Kubernetes network policy or agent workspaces</td>
+<td>Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; caller-run headless browser smoke; no Kubernetes network policy or agent workspaces</td>
 </tr>
 <tr>
 <td>Ollama runtime</td>
@@ -2365,7 +2396,7 @@ configured.</p>
 <tr>
 <td>Evidence and release gates</td>
 <td>Shipped</td>
-<td>CI/nightly</td>
+<td>Caller-run strict checks</td>
 <td>Conformance and model-quality evidence are labeled separately</td>
 </tr>
 <tr>

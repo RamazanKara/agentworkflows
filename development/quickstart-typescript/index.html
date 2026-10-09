@@ -309,7 +309,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
           
   
   
@@ -610,10 +610,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-history-and-export-v060-checkout" class="md-nav__link">
+  <a href="#run-history-and-export" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run history and export (v0.6.0 checkout)
+        Run history and export
       
     </span>
   </a>
@@ -654,10 +654,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-reviewer-approval-v090-candidate" class="md-nav__link">
+  <a href="#multi-reviewer-approval" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-reviewer approval (v0.9.0 candidate)
+        Multi-reviewer approval
       
     </span>
   </a>
@@ -720,6 +720,8 @@
       
         
       
+        
+      
     
     
     
@@ -764,6 +766,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2178,10 +2208,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-history-and-export-v060-checkout" class="md-nav__link">
+  <a href="#run-history-and-export" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run history and export (v0.6.0 checkout)
+        Run history and export
       
     </span>
   </a>
@@ -2222,10 +2252,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-reviewer-approval-v090-candidate" class="md-nav__link">
+  <a href="#multi-reviewer-approval" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-reviewer approval (v0.9.0 candidate)
+        Multi-reviewer approval
       
     </span>
   </a>
@@ -2267,8 +2297,9 @@ Node.js in PowerShell, with Docker in Ubuntu WSL. No Python installation, GPU,
 provider credentials, or cloud account is needed. The trial uses canned responses
 and synthetic prices from the existing Compose fakes.</p>
 <h2 id="1-install-and-start-the-fake-gateway">1. Install and start the fake gateway<a class="headerlink" href="#1-install-and-start-the-fake-gateway" title="Permanent link">&para;</a></h2>
-<p>Clone the release, then install and build the SDK and its examples:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>v0.5.1<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
+<p>Use this source candidate (package version 0.9.0), then install and build the SDK and
+its examples. Skip clone/cd if you already have the repository checkout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows/sdk/typescript
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>npm<span class="w"> </span>ci<span class="w"> </span>--no-audit<span class="w"> </span>--no-fund<span class="w"> </span>--maxsockets<span class="o">=</span><span class="m">2</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>npm<span class="w"> </span>run<span class="w"> </span>build
@@ -2280,7 +2311,7 @@ Choose ports using the existing <code>AGENTWORKFLOWS_GATEWAY_PORT</code> and
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Bash (Linux/macOS)</label><label for="__tabbed_1_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>inference-gateway<span class="w"> </span>notification-fake<span class="w"> </span>temporal-ui
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>--build<span class="w"> </span>inference-gateway<span class="w"> </span>notification-fake<span class="w"> </span>temporal-ui
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>demo-worker
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>http://127.0.0.1:8080
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TEMPORAL_ADDRESS</span><span class="o">=</span>localhost:7233
@@ -2289,7 +2320,7 @@ Choose ports using the existing <code>AGENTWORKFLOWS_GATEWAY_PORT</code> and
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="n">inference-gateway</span> <span class="n">notification-fake</span> <span class="n">temporal-ui</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="p">-</span><span class="n">-build</span> <span class="n">inference-gateway</span> <span class="n">notification-fake</span> <span class="n">temporal-ui</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">$env:AGENTWORKFLOWS_API_KEY</span> <span class="p">=</span> <span class="s1">'demo-worker'</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nv">$env:AGENTWORKFLOWS_URL</span> <span class="p">=</span> <span class="s1">'http://127.0.0.1:8080'</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nv">$env:TEMPORAL_ADDRESS</span> <span class="p">=</span> <span class="s1">'localhost:7233'</span>
@@ -2346,8 +2377,9 @@ both examples is in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/sdk/typescript/src/examples/workflows.ts"><code>sdk/typescript/src/examples/workflows.ts</code></a>.
 Change the prompt and rebuild with <code>npm run build</code> before restarting the worker.</p>
 <h2 id="write-a-workflow">Write a workflow<a class="headerlink" href="#write-a-workflow" title="Permanent link">&para;</a></h2>
-<p>Install the SDK in your own Node project from the GitHub release (it is not on npm yet):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>npm<span class="w"> </span>install<span class="w"> </span>https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-sdk-0.5.1.tgz
+<p>For the candidate, install the built source SDK in your own Node project. Replace the
+path below with your checkout path (this is a local install, not a published package):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>npm<span class="w"> </span>install<span class="w"> </span>/path/to/agentworkflows/sdk/typescript
 </code></pre></div>
 <p>Import workflow code from the dedicated sandbox-safe subpath:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ApprovalWorkflow</span><span class="p">,</span><span class="w"> </span><span class="nx">Budget</span><span class="p">,</span><span class="w"> </span><span class="nx">WorkflowGateway</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk/workflows'</span><span class="p">;</span>
@@ -2392,7 +2424,7 @@ The helper reads the same <code>AGENTWORKFLOWS_API_KEY</code>, <code>AGENTWORKFL
 </tr>
 <tr>
 <td><code>approval.approval(draft)</code></td>
-<td>One human decision per run, exposed through <code>status</code>, <code>approve</code>, and <code>review</code> handlers</td>
+<td>Policy-driven reviewer quorum and expiry, exposed through <code>status</code>, <code>approve</code>, and <code>review</code> handlers</td>
 </tr>
 <tr>
 <td><code>AgentWorkflowsTrigger</code></td>
@@ -2405,11 +2437,12 @@ five attempts with exponential backoff. <code>WorkflowGateway</code> accepts a s
 argument with Temporal's <code>retry</code>, <code>startToCloseTimeout</code>, <code>scheduleToCloseTimeout</code>, and
 <code>dataClassification</code> (default <code>internal</code>). Policy and per-run budget denials fail
 without retries; transient gateway failures retry, honoring <code>Retry-After</code>.
-Approval expires after seven days.
+Approval defaults to one reviewer and seven days; a run snapshots the team's quorum
+and expiry policy when it starts.
 Worker credentials and HTTP clients must never be imported into a workflow module.</p>
 <p>The workflow client methods are <code>startRun</code>, <code>runs</code>, <code>run</code>, <code>approveRun</code>, <code>cancelRun</code>,
 <code>retryRun</code>, <code>triggers</code>, and <code>pauseTrigger</code>. Use <code>{ paused: false }</code> to resume a
-trigger and <code>{ project, offset }</code> to page through runs. JSON response fields retain
+trigger and <code>{ project, cursor }</code> to page through runs. JSON response fields retain
 the API's snake_case names. This SDK covers governed model/tool workflows and the
 workflow and team administration APIs; Python's framework adapters and container runner remain Python APIs.</p>
 <p><code>GatewayError</code> exposes <code>statusCode</code>, <code>reason</code>, <code>requestId</code>, and <code>detail</code>.
@@ -2422,8 +2455,8 @@ Inside workflows, gateway failures arrive as Temporal <code>ActivityFailure</cod
 <code>ApplicationFailure</code> cause whose <code>type</code> is the gateway reason. See the Python
 <a href="../sdk-reference/#gateway-client-and-errors">error recovery table</a> for the shared reasons.</p>
 <h2 id="team-administration">Team administration<a class="headerlink" href="#team-administration" title="Permanent link">&para;</a></h2>
-<p>The admin methods below are available from this checkout (v0.6.0 in progress),
-not the v0.5.1 release tarball above. Use an admin key; settings and audit require
+<p>The admin methods below are available from this source candidate,
+not the older v0.5.1 release tarball. Use an admin key; settings and audit require
 a credential without a project restriction.</p>
 <table>
 <thead>
@@ -2516,7 +2549,8 @@ and verification results; a disabled view has <code>ok: null</code>, and export 
 partial output. Retention continues during paging; these team exports are not
 complete process logs for the operator verifier. See <a href="../audit-log/">audit log</a>
 for range boundaries and what verification proves.</p>
-<h2 id="run-history-and-export-v060-checkout">Run history and export (v0.6.0 checkout)<a class="headerlink" href="#run-history-and-export-v060-checkout" title="Permanent link">&para;</a></h2>
+<p><a id="run-history-and-export-v060-checkout"></a></p>
+<h2 id="run-history-and-export">Run history and export<a class="headerlink" href="#run-history-and-export" title="Permanent link">&para;</a></h2>
 <p>Use the source-built gateway from the <a href="../quickstart/#1-install-and-start">Python quickstart</a>
 and install/build <code>sdk/typescript</code> from this checkout; the v0.5.1 release tarball
 does not include these methods. <code>runs({ project, workflow, status, cursor, limit })</code>
@@ -2589,7 +2623,8 @@ remove this disposable trial's containers and volumes from the repository root:<
 </div>
 </div>
 </div>
-<h2 id="multi-reviewer-approval-v090-candidate">Multi-reviewer approval (v0.9.0 candidate)<a class="headerlink" href="#multi-reviewer-approval-v090-candidate" title="Permanent link">&para;</a></h2>
+<p><a id="multi-reviewer-approval-v090-candidate"></a></p>
+<h2 id="multi-reviewer-approval">Multi-reviewer approval<a class="headerlink" href="#multi-reviewer-approval" title="Permanent link">&para;</a></h2>
 <p>Build the gateway from this checkout and use the v0.9.0 SDK worker before enabling
 nondefault approval policies. In <strong>Team settings / Code review</strong>, set Required
 reviewers to <code>2</code> and Approval expiry (seconds) to <code>3600</code>, then start a new review.
