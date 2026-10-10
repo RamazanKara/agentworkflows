@@ -1,0 +1,3276 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Put your team's AI agents to work with approvals, spend limits, and an audit trail in one platform.">
+      
+      
+      
+        <link rel="canonical" href="https://ramazankara.github.io/agentworkflows/0.9.1/release-verification/">
+      
+      
+        <link rel="prev" href="../distribution/">
+      
+      
+        <link rel="next" href="../version-matrix/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Release verification - AgentWorkflows</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-verification" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="AgentWorkflows" class="md-header__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AgentWorkflows
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release verification
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RamazanKara/agentworkflows
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quickstart/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../quickstart-typescript/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  TypeScript quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../templates/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Templates
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../why-agentworkflows/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../workflows/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../sdk-reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../runbooks/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Advanced operations
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="AgentWorkflows" class="md-nav__button md-logo" aria-label="AgentWorkflows" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AgentWorkflows
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/RamazanKara/agentworkflows" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    RamazanKara/agentworkflows
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart-typescript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../why-agentworkflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why AgentWorkflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow essentials
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decision-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Is it a fit?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scope-and-non-goals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scope
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Durable workflows and teams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../team-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Team settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit-log/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit log
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Call the API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../install-kubernetes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install on Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../single-tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single-tenant service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../postgresql-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PostgreSQL gateway storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kubernetes-production-checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kubernetes production checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developer workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI and Python SDK
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature-inventory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feature inventory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cost-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cost model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release verification
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release verification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rc5-adoption-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.5 adoption pass
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc4-adoption-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.4 adoption pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.4 adoption pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#re-verification-after-rebasing-onto-rc3-2026-10-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-verification after rebasing onto rc.3 (2026-10-10)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#live-acceptance-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live acceptance checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc3-reliability-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 reliability pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.3 reliability pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rc3-linux-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 Linux checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc2-lifecycle-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.2 lifecycle pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.2 lifecycle pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rc2-linux-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.2 Linux checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#candidate-readiness-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Candidate readiness pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Candidate readiness pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#native-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Console review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quickstart-command-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart command coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes-command-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes command coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linux-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#published-artifact-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Published artifact verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helm-oci-charts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helm OCI Charts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image Signatures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chart-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chart Signatures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strict-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strict Evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../version-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Version matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../runbooks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced operations
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced operations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local lab (kind)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../customer-handoff-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Customer cluster handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../regulated-offline-tenant-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Restricted-egress tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gpu-coding-agent-tenant-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPU coding-agent tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-sandbox-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent-sandbox integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../model-selection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Self-hosted model selection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../capacity-sizing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capacity and sizing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks-and-evals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks and evals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../threat-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threat model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../owasp-llm-top-10-mapping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OWASP LLM Top 10 mapping
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai-governance-crosswalk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI governance crosswalk
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proof/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidence and strict validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../repository-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upstream references
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rc5-adoption-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.5 adoption pass
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc4-adoption-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.4 adoption pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.4 adoption pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#re-verification-after-rebasing-onto-rc3-2026-10-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-verification after rebasing onto rc.3 (2026-10-10)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#live-acceptance-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Live acceptance checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc3-reliability-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 reliability pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.3 reliability pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rc3-linux-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.3 Linux checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rc2-lifecycle-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.2 lifecycle pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rc.2 lifecycle pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rc2-linux-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.2 Linux checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#candidate-readiness-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Candidate readiness pass
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Candidate readiness pass">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#native-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#console-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Console review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quickstart-command-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quickstart command coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes-command-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes command coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linux-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#published-artifact-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Published artifact verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helm-oci-charts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helm OCI Charts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image Signatures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chart-signatures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chart Signatures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strict-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strict Evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/RamazanKara/agentworkflows/edit/main/docs/release-verification.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="release-verification">Release Verification<a class="headerlink" href="#release-verification" title="Permanent link">&para;</a></h1>
+<p>Use this checklist before trusting a public release in a customer-owned cluster.</p>
+<p>For a source checkout (package/chart version 0.9.1), run the local gate:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>lint<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts<span class="w"> </span>api-contract<span class="w"> </span>config-contract<span class="w"> </span>chart-docs
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>test-typescript<span class="w"> </span>test-console
+</code></pre></div>
+<p>Build Helm dependencies, then run <code>helm lint</code> and <code>helm template</code> for the charts
+being shipped. After a console build, repeat the screenshot captures with
+<code>npm test -- --grep 'release console layouts'</code> in <code>src/inference-gateway/console</code>.
+Screenshots use synthetic UI fixtures; the separate Compose smoke test exercises
+the live gateway.</p>
+<p>On native Windows, run the console's <code>npm run build</code> and <code>npm test</code>,
+the TypeScript SDK's <code>npm run build</code>, <code>npm run lint</code> and <code>npm test</code>, and Python
+Ruff, SDK tests and contract scripts from their installed environments. Run the Bash
+gates on Linux or WSL: <code>make lint test-gateway test-scripts</code>.</p>
+<h2 id="rc5-adoption-pass">rc.5 adoption pass<a class="headerlink" href="#rc5-adoption-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-10, native Windows, Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6 and the
+installed Edge for Playwright. The dependency set is unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result after the install acceptance check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway suite (excluding <code>tests/live</code>)</td>
+<td><strong>1,163 passed, 14 skipped</strong>, with Git Bash first on <code>PATH</code>.</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td><strong>242 passed, 3 skipped</strong>.</td>
+</tr>
+<tr>
+<td>TypeScript SDK</td>
+<td>Build, lint and <strong>93 tests</strong> passed.</td>
+</tr>
+<tr>
+<td>Console</td>
+<td>Production build passed; <strong>91 Playwright tests</strong> passed through Edge (<code>channel: 'msedge'</code>, <code>--lang=en-US</code>).</td>
+</tr>
+<tr>
+<td>Contracts</td>
+<td>OpenAPI snapshot, configuration contract and chart docs passed.</td>
+</tr>
+<tr>
+<td>Script tests</td>
+<td><strong>53 passed</strong> with <code>helm</code> on <code>PATH</code>.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>Every changed Python file passes.</td>
+</tr>
+</tbody>
+</table>
+<p>Console captures for this pass are written to <code>.out/console-v1.0.0-rc.5/</code> at 360, 393 and 1440 px.
+They were reviewed for horizontal overflow, mid-word wraps, clipped controls, consistent identities and
+placeholder values. The captures use UI fixtures.</p>
+<p>For live acceptance, run <code>agentworkflows check</code> against a live Compose stack and a Helm install; register a
+workflow through the console against the Compose stack, start a worker for it on the team's queue, and run
+it through approval. Then open Insights and a finished run's summary and compare them with the Temporal UI.
+The native tests drive a fake gateway to cover the check's logic, and the gateway tests exercise policy,
+admission, budgets, audit and the summary arithmetic with fakes.
+The README screenshot (<code>docs/assets/console-1440.png</code>) is regenerated by the 1440 px capture test and now
+shows the run summary with step costs and latency.</p>
+<h2 id="rc4-adoption-pass">rc.4 adoption pass<a class="headerlink" href="#rc4-adoption-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-09, native Windows. The dependency set is unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway full suite</td>
+<td><strong>1,101 passed, 27 skipped</strong> (infrastructure and optional tests).</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td><strong>215 passed, 3 skipped</strong> (optional frameworks).</td>
+</tr>
+<tr>
+<td>TypeScript SDK</td>
+<td>Build and lint passed; <strong>86 tests passed</strong>.</td>
+</tr>
+<tr>
+<td>Console</td>
+<td>Production build passed; <strong>80 Playwright tests passed</strong>. Final capture-only rerun: <strong>3 passed</strong>.</td>
+</tr>
+<tr>
+<td>Contracts</td>
+<td>OpenAPI snapshot generation/check and configuration contract check passed.</td>
+</tr>
+<tr>
+<td>Helm</td>
+<td>Dependencies resolved; <strong>20 tests and 8 schema subtests passed</strong>. Single-tenant profile passed strict Helm lint.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>Every changed Python file passes lint.</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>New landing/reference links and screenshots resolve.</td>
+</tr>
+</tbody>
+</table>
+<p>Python checks used installed native environments with <code>PYTHONPATH</code> pointing at this
+checkout for SDK tests and bytecode writes disabled. Browser tests used the production
+Vite preview on port 4175 and the existing Playwright suite through a temporary config
+without its web-server launcher. The preview process was stopped after verification.</p>
+<h3 id="re-verification-after-rebasing-onto-rc3-2026-10-10">Re-verification after rebasing onto rc.3 (2026-10-10)<a class="headerlink" href="#re-verification-after-rebasing-onto-rc3-2026-10-10" title="Permanent link">&para;</a></h3>
+<p>The rc.4 commit was rebased onto the rc.3 reliability work. The merge changed
+one semantic contract: cloud request preparation became asynchronous (it looks up a team's
+saved provider key), so the rc.3 trace-propagation test now awaits it. Native Windows,
+Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6, Edge for Playwright:</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway suite (excluding <code>tests/live</code>)</td>
+<td><strong>1,139 passed, 18 skipped</strong>, run with Git Bash first on <code>PATH</code>.</td>
+</tr>
+<tr>
+<td>Python SDK / script tests</td>
+<td><strong>219 passed, 3 skipped</strong>; <strong>53 script tests</strong> including the umbrella chart tests with <code>helm</code> on <code>PATH</code>.</td>
+</tr>
+<tr>
+<td>TypeScript SDK</td>
+<td>Build, lint and <strong>86 tests</strong> passed.</td>
+</tr>
+<tr>
+<td>Console</td>
+<td>Production build passed; <strong>82 Playwright tests</strong> passed against the Vite preview using the installed Edge (<code>channel: 'msedge'</code>, <code>--lang=en-US</code> so number formatting matches the pinned locale).</td>
+</tr>
+<tr>
+<td>Contracts, chart docs</td>
+<td>OpenAPI, configuration and chart-docs checks passed.</td>
+</tr>
+<tr>
+<td>Helm</td>
+<td>Umbrella chart dependencies rebuilt; strict lint passed for every chart and the single-tenant profile.</td>
+</tr>
+</tbody>
+</table>
+<p>The capture test now writes the README's <a href="../assets/console-1440.png">1440 px screenshot</a>.
+Reviewed <a href="../assets/console-360.png">360 px</a> and <a href="../assets/console-393.png">393 px</a> run captures
+are retained as well. The complete capture set is generated under
+<code>.out/console-v1.0.0-rc.4/</code>. Review covered first-run provider setup, templates,
+membership/SSO, approval/timeline, alert rules and deployment checks. Layout assertions
+check viewport overflow, mid-word wraps, placeholder fixture text, totals and identities.
+All screenshots use the same seeded Insights team.</p>
+<h3 id="live-acceptance-checks">Live acceptance checks<a class="headerlink" href="#live-acceptance-checks" title="Permanent link">&para;</a></h3>
+<p>Run these from this checkout on a Docker-capable Linux host or in a WSL
+environment, with Python 3.12+, Docker/Compose, Helm, kind and kubectl installed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>compose
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>python3<span class="w"> </span>scripts/template-smoke.py
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>python3<span class="w"> </span>scripts/trigger-smoke.py
+</code></pre></div>
+<p>The first-run script has a 300-second deadline after image preparation. Time the manual
+sign-in → sample → approval walkthrough separately for the 60-second result. Test all nine template inputs and the provider-key wizard against
+the running gateway, then verify delivery in the local notification fakes.</p>
+<p>For the isolated kind path:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-gateway:quickstart<span class="w"> </span>src/inference-gateway
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>sdk/python/Dockerfile<span class="w"> </span>-t<span class="w"> </span>agentworkflows-worker:quickstart<span class="w"> </span>.
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>kind
+</code></pre></div>
+<p>Run the existing recovery and upgrade drills against their disposable environments:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>python3<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>drill
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>python3<span class="w"> </span>scripts/workflow-recovery.py<span class="w"> </span>upgrade
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>python3<span class="w"> </span>scripts/helm-upgrade-test.py
+</code></pre></div>
+<p>These drills create and remove their own stacks/data. The upgrade drill's historical
+baseline is pinned in its script; also stage the actual rc.3 → rc.4 customer upgrade.
+Follow the <a href="../single-tenant/">single-tenant reference</a> to verify managed-store TLS,
+network isolation, backup restore, real company sign-in and approved notification
+destinations. Use test accounts and a capped provider budget.</p>
+<h2 id="rc3-reliability-pass">rc.3 reliability pass<a class="headerlink" href="#rc3-reliability-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0 and Helm 3.18.6.
+Package/chart versions remain 0.9.0, and dependency pins are unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway suite excluding live-provider tests</td>
+<td>1,110 passed, 14 skipped: eight PostgreSQL, five Redis migration checks and one SDK-environment-only approval check.</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td>205 passed, 3 optional-framework skips.</td>
+</tr>
+<tr>
+<td>TypeScript SDK build/lint/tests</td>
+<td>Passed; 79 tests.</td>
+</tr>
+<tr>
+<td>Console build/Playwright</td>
+<td>Passed; 76 tests, run against a separately started Vite preview with only <code>webServer</code> disabled in an ignored temporary config.</td>
+</tr>
+<tr>
+<td>Script tests</td>
+<td>51 passed, including backup verification, fault cleanup, regression thresholds and 19 umbrella Helm tests.</td>
+</tr>
+<tr>
+<td>Helm</td>
+<td>All nine charts passed strict lint and template rendering after dependency builds. Four historical-value render tests passed in the gateway suite.</td>
+</tr>
+<tr>
+<td>OpenAPI/config contracts, chart docs, dashboards</td>
+<td>Passed.</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>Strict MkDocs build and repository Markdown link/Make-target checks passed.</td>
+</tr>
+<tr>
+<td>Load</td>
+<td>Two runs of 4,000 HTTP requests, zero errors; the second passed p95 +25% / throughput -20% thresholds against the recorded baseline. See <a href="../benchmarks-and-evals/#rc3-native-gateway-baseline-2026-10-09">measurements and scope</a>.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>All changed Python files pass.</td>
+</tr>
+<tr>
+<td>Full repository hygiene</td>
+<td>Link checks pass.</td>
+</tr>
+</tbody>
+</table>
+<p>The native tests inject lost replies before/after Temporal accepts a start, partial Redis index
+writes, SQL connection/pool errors, slow Redis sockets, truncated provider streams and worker
+transport/startup timeouts. They check fail-closed behavior, bounded waits, stable retry IDs,
+circuit recovery, redaction and W3C context propagation. Historical config and values fixtures
+come from the actual 0.2.0 and rc.2 commits.</p>
+<h3 id="rc3-linux-checks">rc.3 Linux checks<a class="headerlink" href="#rc3-linux-checks" title="Permanent link">&para;</a></h3>
+<p>Use a Linux checkout/venv with Docker, Helm, kind and kubectl. Run the real dependency stop/pause
+matrix and recovery checks in the disposable projects created by the scripts:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>make<span class="w"> </span>workflow-upgrade-test<span class="w"> </span>workflow-helm-upgrade-test<span class="w"> </span>workflow-restore-drill
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>make<span class="w"> </span>compose-up<span class="w"> </span>compose-smoke<span class="w"> </span>workflow-loadtest
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>make<span class="w"> </span>loadtest-local
+</code></pre></div>
+<p>Set <code>TEST_REDIS_URL</code> and <code>TEST_POSTGRES_DSN</code> to disposable stores (the PostgreSQL user must be
+able to create/drop test schemas), then run from the gateway test environment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src/inference-gateway<span class="w"> </span>src/inference-gateway/.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>src/inference-gateway/tests/test_upgrade.py<span class="w"> </span>src/inference-gateway/tests/test_postgres_integration.py
+</code></pre></div>
+<p>For operator backups, run <code>python3 scripts/workflow-recovery.py verify --directory /secure/aw-backup</code>
+and an isolated restore drill using the <a href="../runbooks/disaster-recovery/">backup/restore runbook</a>.
+Checksum and receipt-chain verification runs natively; the isolated restore drill proves database
+restorability. The default helper covers Redis-backed gateway state and Temporal databases; back up
+optional gateway PostgreSQL, object data and original encryption/signing keys with the documented
+coordinated backup. Also verify <a href="../runbooks/observability/">OTLP collector delivery and dashboards</a>
+against the real stack.</p>
+<h2 id="rc2-lifecycle-pass">rc.2 lifecycle pass<a class="headerlink" href="#rc2-lifecycle-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-09, native Windows, Python 3.12.14, Node 24.19.0, portable Helm 3.18.6.
+The dependency set is unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway full suite</td>
+<td>1,082 passed, 26 skipped; final lifecycle/stream-erasure/concurrency/run-audit/quickstart/telemetry subset: 59 passed. Six optional PostgreSQL tests run against a provided database.</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td>202 passed, 3 optional-framework skips.</td>
+</tr>
+<tr>
+<td>TypeScript SDK build, lint, tests</td>
+<td>Passed; 79 tests.</td>
+</tr>
+<tr>
+<td>Console build, Playwright</td>
+<td>Passed; 76 tests using the separately started Vite preview described below. Final capture-only rerun: 3 passed.</td>
+</tr>
+<tr>
+<td>OpenAPI/config contracts, chart docs, dashboards</td>
+<td>Passed; generated snapshots updated.</td>
+</tr>
+<tr>
+<td>Helm dependencies, strict kind-profile lint/render</td>
+<td>Passed; 19 umbrella chart tests, including encryption Secret references and OTLP flags.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>Changed Python files pass.</td>
+</tr>
+<tr>
+<td>Gateway mypy</td>
+<td>Matches a clean HEAD comparison, with zero new findings.</td>
+</tr>
+<tr>
+<td>Scripted quickstarts</td>
+<td>Native CLI and fixture-based approval/audit checks pass.</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>107 PNGs</strong> in <code>.out/console-v1.0.0-rc.2/</code> cover 360/393/1440, including the gallery,
+installation, secret rotation, retention/export/telemetry, cancellation confirmation, retry
+and operation receipts. Layout assertions check overflow and mid-word wrapping; visual review
+checks readable controls and spacing. Screens use one Insights/Maya Chen fixture. The canceled
+run retains 4,200 tokens/$0.06 and gains two operation receipts; its retry starts with zero
+tokens, spend and receipts. Template descriptions match the actual catalog. Downloads and
+screenshots use synthetic UI fixtures.</p>
+<p>Browser tests ran against a separately started Vite preview, using a temporary ignored config at
+<code>.out/playwright-rc2.config.ts</code> that disables only <code>webServer</code> and keeps the same
+tests/locale/timezone. The permanent test configuration is unchanged.</p>
+<h3 id="rc2-linux-checks">rc.2 Linux checks<a class="headerlink" href="#rc2-linux-checks" title="Permanent link">&para;</a></h3>
+<p>From a Linux/WSL checkout with Docker, Python 3.12+, Helm, kind and kubectl:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>build
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>pull<span class="w"> </span>--ignore-buildable
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>compose
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-gateway:quickstart<span class="w"> </span>src/inference-gateway
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>sdk/python/Dockerfile<span class="w"> </span>-t<span class="w"> </span>agentworkflows-worker:quickstart<span class="w"> </span>.
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>helm<span class="w"> </span>dependency<span class="w"> </span>build<span class="w"> </span>deploy/charts/agentworkflows
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>kind
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>make<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts<span class="w"> </span>test-typescript<span class="w"> </span>test-console
+</code></pre></div>
+<p>The scripts enforce a 300-second limit on the prepared trial; image preparation and
+downloads happen before the clock starts. Record their output and inspect the approved run and verified audit chain.
+For gateway SQL erasure/retention integration, point <code>TEST_POSTGRES_DSN</code> at a <strong>disposable</strong>
+PostgreSQL database where the test user can create schemas, then run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src/inference-gateway<span class="w"> </span>src/inference-gateway/.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>src/inference-gateway/tests/test_postgres_integration.py<span class="w"> </span>-q
+</code></pre></div>
+<p>Also exercise <a href="../runbooks/observability/">OTLP collector/Grafana delivery</a>, and the
+<a href="../team-lifecycle/">team lifecycle</a> export/erasure flow with real Redis/Temporal and a second
+team retained as the isolation control. Verify secret creation/rotation from an authorized
+worker activity and rejection for other teams/projects. Complete these live checks before
+release.</p>
+<h2 id="candidate-readiness-pass">Candidate readiness pass<a class="headerlink" href="#candidate-readiness-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0, Helm 3.18.6.
+This pass prepares <strong>1.0.0-rc.1</strong> with package versions unchanged. Complete the
+Linux checks below to finish the release gate.</p>
+<h3 id="native-checks">Native checks<a class="headerlink" href="#native-checks" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ruff check .</code></td>
+<td>All changed Python files pass.</td>
+</tr>
+<tr>
+<td><code>python scripts/api-contract.py --check</code> / <code>python scripts/config-contract.py --check</code></td>
+<td>Pass.</td>
+</tr>
+<tr>
+<td>Python SDK tests</td>
+<td>200 passed, 3 skipped.</td>
+</tr>
+<tr>
+<td>TypeScript SDK build, lint, tests</td>
+<td>Pass; 77 tests.</td>
+</tr>
+<tr>
+<td>Console build and Playwright suite</td>
+<td>Pass; 73 tests.</td>
+</tr>
+<tr>
+<td>Gateway suite excluding live integrations</td>
+<td>Final run: 1,069 passed, 5 skipped.</td>
+</tr>
+<tr>
+<td>Security/body-limit regression subset after the final fix</td>
+<td>130 passed.</td>
+</tr>
+<tr>
+<td>Umbrella Helm tests</td>
+<td>17 passed.</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td><code>mkdocs build --strict</code> passes with the runbook mirror used by <code>scripts/docs-build.sh</code>.</td>
+</tr>
+<tr>
+<td>Local gateway load</td>
+<td>4,000 requests, all HTTP 200; <a href="../benchmarks-and-evals/#10-candidate-native-gateway-sanity-2026-10-09">endpoint timings</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>The native run used the same test configuration with <code>webServer</code> disabled in a temporary
+config and an explicitly started/stopped Vite preview process. On Linux/WSL, use the
+ordinary <code>npm test</code> command.</p>
+<h3 id="console-review">Console review<a class="headerlink" href="#console-review" title="Permanent link">&para;</a></h3>
+<p>The capture suite writes <strong>80 PNGs</strong> to <code>.out/console-v1.0.0-rc.1/</code>: every route and
+the six starter forms at <strong>360, 393 and 1440 CSS pixels</strong>, plus both phone menus.
+It includes sign-in/SSO policy, approvals, spend limits, trigger history, CSV export,
+key editing, retained step content, and setup states. Three downloaded CSVs are
+saved beside the images. The images were visually reviewed, with these checks:</p>
+<ul>
+<li>Screens are clean: free of debug overlays, raw errors, filler records, overlaps and mid-word prose wraps.</li>
+<li>Text and controls fit 360px; long commands/JSON scroll inside their own panels.</li>
+<li>The Insights team and Maya Chen identity remain consistent across pages.</li>
+<li>One waiting Research run has three calls/receipts, 4,200 tokens and $0.06:
+  $0.01 tool + $0.02 OpenAI + $0.03 Anthropic. Costs, run details, audit and CSV agree.</li>
+<li>Setup shows zero usage before providers are connected. The review gate has zero
+  of two votes, a matching one-hour deadline, and consistent trigger history.</li>
+<li>Spend alerts padding and key/trigger action spacing are correct; layout
+  assertions cover them. Download assertions verify CSV contents.</li>
+</ul>
+<p>These are realistic, deterministic seeded states. Screenshot artifacts and raw local
+results are git-ignored.</p>
+<h3 id="quickstart-command-coverage">Quickstart command coverage<a class="headerlink" href="#quickstart-command-coverage" title="Permanent link">&para;</a></h3>
+<p>All 14 fenced shell blocks were parsed with Bash or PowerShell as appropriate.
+Runtime checks created a native venv, installed <code>./sdk/python</code>, exercised module
+and subcommand help, scaffolded all six templates, and verified the checked-in
+sample receipt log, using the existing checkout. Bash venv activation was
+syntax-checked; the PowerShell environment path was exercised.</p>
+<p>Run the live quickstart steps on a host with Docker/WSL: Compose <code>up --build</code> and
+health waits; <code>runs start</code>, <code>inspect</code>, <code>approve</code>/reject, <code>usage</code>, JSONL and CSV
+exports against that stack; gateway/worker logs and verification of a <strong>fresh</strong>
+receipt export; two-reviewer/expiry walkthrough; <code>stop</code> or <code>down -v</code>; the real
+OpenAI override (with your funded key); and alternate-port <code>.env</code>/Compose
+commands.</p>
+<p>The TypeScript quickstart's 12 shell/JavaScript/TypeScript blocks also passed
+syntax parsing. Its <code>npm ci</code>, build, lint and tests passed; a separate local project
+installed the built source SDK and loaded <code>GatewayClient</code>. Results of snippet
+parsing are in <code>.out/ts-doc-command-checks.json</code>. Run the Compose <code>aw-typescript</code> stack,
+<code>npm run worker</code>, REPL start/inspect/approve/triage calls, admin/export calls,
+<code>npm run smoke</code>, quorum walkthrough and Compose cleanup against a Temporal/gateway stack.</p>
+<h3 id="kubernetes-command-coverage">Kubernetes command coverage<a class="headerlink" href="#kubernetes-command-coverage" title="Permanent link">&para;</a></h3>
+<p>All 18 fenced Bash blocks passed syntax checks. Both <code>helm dependency update</code>
+commands ran. All seven here-document values files were extracted, then strict
+lint and template rendering passed for nine variants: defaults, candidate images,
+TLS, HA, NetworkPolicy, external Redis, external PostgreSQL, TLS+OIDC, and all
+options together. The guide's umbrella test command passed natively. Raw command
+results are in <code>.out/docs-command-checks.json</code>; rendered YAML is in <code>.out/docs-check/</code>.</p>
+<p>Run the cluster commands and walkthroughs on test infrastructure, in guide order:</p>
+<ol>
+<li>Docker image builds, kind creation/image loading, initial <code>helm install</code>,
+   bootstrap Secret read, port-forward and <code>/readyz</code> request.</li>
+<li>Provider Secret creation, provider <code>helm upgrade</code>, rollout after rotation,
+   API-key environment setup, and the paid Research start/inspect/approve flow.</li>
+<li>TLS Secret creation, TLS/cert-manager upgrades and HTTPS probe; OIDC Secret
+   creation/upgrade, auth-config probe, real sign-in/refresh/logout and Secure cookies.</li>
+<li>HA upgrade, pod/PDB inspection and pod-loss/session recovery; NetworkPolicy
+   upgrade/inspection, all three allowed/denied probe pods and unlisted-egress denial.</li>
+<li>External Redis/PostgreSQL Secret creation and upgrades, backup/data migration,
+   persistence after restarts, and combined installation in <code>aw-production-smoke</code>.</li>
+<li>Upgrade with operator-owned <code>my-values.yaml</code>, rollback/restore rehearsal,
+   <code>helm uninstall</code>, namespace deletion and kind cleanup; approval-policy rollout.</li>
+</ol>
+<p>These checks use test infrastructure, provider/IdP credentials, TLS/DNS, a
+NetworkPolicy-capable CNI, and reachable external stores, and they confirm
+existing-Secret reuse. Preserve the candidate image overrides in every
+installation/upgrade values set.</p>
+<h3 id="linux-checks">Linux checks<a class="headerlink" href="#linux-checks" title="Permanent link">&para;</a></h3>
+<p>Use a dedicated Linux venv in a WSL checkout with Docker available. Re-run the documented quickstart and cluster checks above, then:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>make<span class="w"> </span>validate-full
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>make<span class="w"> </span>compose-up
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>make<span class="w"> </span>compose-smoke
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>make<span class="w"> </span>workflow-loadtest
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>make<span class="w"> </span>workflow-upgrade-test
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>make<span class="w"> </span>workflow-helm-upgrade-test
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>make<span class="w"> </span>workflow-restore-drill
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>make<span class="w"> </span>repo-security-scan
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>make<span class="w"> </span>dependency-lock-check
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>make<span class="w"> </span>image-scan
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>make<span class="w"> </span>supply-chain-check
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>make<span class="w"> </span>loadtest-local
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>make<span class="w"> </span>evidence
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>make<span class="w"> </span>release-gate-strict
+</code></pre></div>
+<p>The workflow recovery/Helm checks require their documented test stacks and backups;
+see <a href="../local-evaluation/">local evaluation</a> and <a href="../production-readiness/">production readiness</a>.
+Live-provider tests use your provider credentials. Use these live runs as the
+release evidence.</p>
+<h2 id="published-artifact-verification">Published artifact verification<a class="headerlink" href="#published-artifact-verification" title="Permanent link">&para;</a></h2>
+<p>The commands below target v0.9.1; change <code>RELEASE</code> to verify another published release.
+Set the release and repository once:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE</span><span class="o">=</span>v0.9.1
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REPOSITORY</span><span class="o">=</span>RamazanKara/agentworkflows
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">IMAGE_REPO</span><span class="o">=</span>ghcr.io/ramazankara/agentworkflows
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">RELEASE_IDENTITY</span><span class="o">=</span><span class="s2">"https://github.com/</span><span class="nv">$REPOSITORY</span><span class="s2">/.github/workflows/release.yml@refs/tags/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+</code></pre></div>
+<h2 id="helm-oci-charts">Helm OCI Charts<a class="headerlink" href="#helm-oci-charts" title="Permanent link">&para;</a></h2>
+<p>Tag builds publish each chart to <code>oci://$IMAGE_REPO/charts</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>helm<span class="w"> </span>pull<span class="w"> </span><span class="s2">"oci://</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace"</span><span class="w"> </span>--version<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span>
+</code></pre></div>
+<p>Render the downloaded chart before installing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>helm<span class="w"> </span>template<span class="w"> </span>verify-inference<span class="w"> </span><span class="s2">"inference-gateway-</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">.tgz"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--values<span class="w"> </span>deploy/clusters/customer/values/inference-gateway.yaml<span class="w"> </span>&gt;/tmp/inference.yaml
+</code></pre></div>
+<h2 id="image-signatures">Image Signatures<a class="headerlink" href="#image-signatures" title="Permanent link">&para;</a></h2>
+<p>Release images are signed by digest with Cosign in GitHub Actions.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/inference-gateway:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/rag-service:</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+</code></pre></div>
+<p>Release images are also multi-arch (<code>linux/amd64</code> and <code>linux/arm64</code>); the signature covers the manifest list, so the same <code>cosign verify</code> works on Apple Silicon and arm64 (Graviton/Ampere) clusters.</p>
+<h2 id="chart-signatures">Chart Signatures<a class="headerlink" href="#chart-signatures" title="Permanent link">&para;</a></h2>
+<p>Helm chart OCI artifacts are cosign-signed by digest in the same release workflow as the images.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/inference-gateway:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/rag-service:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>cosign<span class="w"> </span>verify<span class="w"> </span><span class="s2">"</span><span class="nv">$IMAGE_REPO</span><span class="s2">/charts/agent-workspace:</span><span class="si">${</span><span class="nv">RELEASE</span><span class="p">#v</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">  </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">  </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+</code></pre></div>
+<p>Chart OCI tags drop the leading <code>v</code> (<code>${RELEASE#v}</code>) to match the chart <code>version</code>, while runtime image tags keep it.</p>
+<h2 id="release-files">Release Files<a class="headerlink" href="#release-files" title="Permanent link">&para;</a></h2>
+<p>Download the release files into a new directory and check them:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>gh<span class="w"> </span>release<span class="w"> </span>download<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE</span><span class="s2">"</span><span class="w"> </span>--repo<span class="w"> </span><span class="s2">"</span><span class="nv">$REPOSITORY</span><span class="s2">"</span><span class="w"> </span>--dir<span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="o">(</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nb">cd</span><span class="w"> </span><span class="s2">"release-files/</span><span class="nv">$RELEASE</span><span class="s2">"</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span>sha256sum<span class="w"> </span>--check<span class="w"> </span>sdk-checksums.txt
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span>cosign<span class="w"> </span>verify-blob<span class="w"> </span>chart-release-manifest.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span>--bundle<span class="w"> </span>chart-release-manifest.sigstore.json<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span>--certificate-identity<span class="w"> </span><span class="s2">"</span><span class="nv">$RELEASE_IDENTITY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span>--certificate-oidc-issuer<span class="w"> </span>https://token.actions.githubusercontent.com
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="o">)</span>
+</code></pre></div>
+<p><code>sdk-checksums.txt</code> covers the Python wheel, source archive and TypeScript package. The
+signed chart manifest records each chart package and the image digests it embeds.
+Images are built from the tagged commit on GitHub-hosted runners. Run <code>make image-scan</code>
+locally for a vulnerability report before deploying.</p>
+<h2 id="strict-evidence">Strict Evidence<a class="headerlink" href="#strict-evidence" title="Permanent link">&para;</a></h2>
+<p>Generate strict release evidence from current artifacts:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>make<span class="w"> </span>validate-full
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>make<span class="w"> </span>image-scan
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>make<span class="w"> </span>supply-chain-check
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>make<span class="w"> </span>loadtest-local
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>make<span class="w"> </span>evidence
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>make<span class="w"> </span>release-gate-strict
+</code></pre></div>
+<p>For a live customer-style validation path, run the local cluster checks and generate live evidence:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>make<span class="w"> </span>trace-smoke
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>make<span class="w"> </span>tenant-smoke
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>make<span class="w"> </span>agent-smoke
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
+</code></pre></div>
+<p>Record the command output, generated evidence paths under <code>results/</code>, image digests, chart versions, and GitHub Actions run URL in the release notes.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../distribution/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Distribution">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Distribution
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../version-matrix/" class="md-footer__link md-footer__link--next" aria-label="Next: Version matrix">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Version matrix
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Maintained by fluentorbit as project steward. Licensed under Apache-2.0.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.tracking", "navigation.indexes", "navigation.footer", "content.code.copy", "content.tabs.link", "content.action.edit", "search.suggest", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
