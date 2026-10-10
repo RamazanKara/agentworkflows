@@ -11,6 +11,8 @@ test('Compose first run, approval, receipts, provider budgets, costs and team is
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await signIn(page, 'local-development-only');
+  // Earlier smoke steps leave runs behind, so the console opens Workflow runs instead of Get started.
+  await page.getByRole('link', { name: 'Get started', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Your first governed workflow' })).toBeVisible();
   await page.getByRole('link', { name: 'Triggers', exact: true }).click();
   await expect(page.getByRole('row').filter({ hasText: 'Daily report' })).toContainText('Every day at 09:00 UTC');

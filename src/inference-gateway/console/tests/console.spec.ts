@@ -307,7 +307,7 @@ test('schema forms render all supported field types and submit typed values', as
   await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: { FormWorkflow: {
     allowedModels: [], allowedProviders: [], tokenLimit: 1000, costLimitUsd: 1,
     inputSchema: { type: 'object', description: 'A schema supplied by the team.', properties: {
-      title: { type: 'string', description: 'Name this request', examples: ['Example title'] },
+      title: { type: 'string', description: 'Name this request', examples: ['Example title'], minLength: 1, pattern: '\\S' },
       body: { type: 'string', examples: ['First line\nSecond line'] },
       count: { type: 'integer', default: 10000, minimum: 1, maximum: 20000 },
       price: { type: 'number', default: 1.5 },
@@ -329,6 +329,9 @@ test('schema forms render all supported field types and submit typed values', as
   await expect(page.getByLabel('Workflow input (JSON)')).toHaveCount(0);
   await expect(page.getByText('A schema supplied by the team.')).toBeVisible();
   await expect(page.getByLabel('Count', { exact: true })).toHaveValue('10,000');
+  await page.getByRole('button', { name: 'Start run' }).click();
+  expect(submissions).toHaveLength(0);
+  await page.getByLabel('Title', { exact: true }).fill('   ');
   await page.getByRole('button', { name: 'Start run' }).click();
   expect(submissions).toHaveLength(0);
   await page.getByLabel('Title', { exact: true }).fill('Form test');

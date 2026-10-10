@@ -144,6 +144,12 @@ function SchemaFields({ schema, models, onMore }: { schema: InputSchema; models:
   </>;
 }
 
+// JSON Schema patterns match anywhere in the value; HTML patterns must match all of it.
+// Without this, a "\\S" (not blank) pattern rejected every answer longer than one character.
+function htmlPattern(pattern?: string) {
+  return pattern ? `[\\s\\S]*(?:${pattern})[\\s\\S]*` : undefined;
+}
+
 function SchemaField({ name, property, required, models }: { name: string; property: InputProperty; required: boolean; models: string[] }) {
   const id = `field-${name}`;
   const value = property.default;
@@ -161,7 +167,7 @@ function SchemaField({ name, property, required, models }: { name: string; prope
     : modelChoice ? <select {...common} defaultValue={models.includes(String(value)) ? String(value) : models[0]}>{models.map(model => <option key={model}>{model}</option>)}</select>
     : property.type === 'array' || multiline ? <textarea {...common} minLength={property.minLength} defaultValue={fieldText(value)} placeholder={fieldText(example)} rows={multiline ? 6 : 4} spellCheck={!multiline}/>
     : ['number', 'integer'].includes(property.type) ? <NumberInput {...common} step={property.type === 'integer' ? 1 : 'any'} min={property.minimum} max={property.maximum} value={numeric} onChange={setNumeric} placeholder={fieldText(example)}/>
-    : <input {...common} type="text" minLength={property.minLength} pattern={property.pattern} defaultValue={fieldText(value)} placeholder={fieldText(example)}/>;
+    : <input {...common} type="text" minLength={property.minLength} pattern={htmlPattern(property.pattern)} defaultValue={fieldText(value)} placeholder={fieldText(example)}/>;
   const usd = /_usd$/.test(name) && property.type === 'number';
   return <div className="field">
     {property.type !== 'boolean' && <label htmlFor={id}>{fieldLabel(name, property)}{usd && <span className="visually-hidden"> in US dollars</span>}</label>}
