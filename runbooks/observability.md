@@ -21,8 +21,8 @@ observability:
 
 Allow collector egress in the chart's network policy. Configure collector authentication/TLS
 and the standard OTLP exporter headers/environment through your deployment's secret mechanism.
-The console's **Data & privacy** page and `GET /v1/team/telemetry` report configuration,
-not collector health. Check collector logs and Grafana to confirm delivery.
+The console's **Data & privacy** page and `GET /v1/team/telemetry` report configuration;
+check collector logs and Grafana to confirm delivery.
 
 Example collector pipelines, with an existing Tempo OTLP receiver and Prometheus scraping port 8889:
 
@@ -38,7 +38,7 @@ exporters:
   otlp/tempo:
     endpoint: tempo.monitoring.svc.cluster.local:4317
     tls:
-      insecure: true # Only for an isolated local trial; configure TLS in production.
+      insecure: true # Isolated local trial; configure TLS in production.
   prometheus:
     endpoint: 0.0.0.0:8889
 service:
@@ -59,36 +59,36 @@ Grafana sidecar provisioning. Panels cover request rate, server errors, latency 
 states, monthly spend and limits. Team gauges use `max` across replicas because each replica
 reads the same shared state; HTTP counters sum across replicas. Prometheus naming converts
 OTLP `agentworkflows_http_requests` into `agentworkflows_http_requests_total` and replaces dots
-in attribute names with underscores. Do not apply a collector metric namespace prefix unless
-you also update the dashboard queries.
+in attribute names with underscores. If you apply a collector metric namespace prefix,
+update the dashboard queries to match.
 
-HTTP attributes use route patterns and method/status, never raw run IDs or query strings.
-Trace exception messages are suppressed to avoid capturing payloads or credentials. Existing
+HTTP attributes use route patterns and method/status, which keeps raw run IDs and query strings
+out of telemetry. Trace exception messages are suppressed to keep payloads and credentials out of traces. Existing
 trace context propagation and workflow/team metadata remain available for correlation; set
-appropriate collector access and retention. Duration measures the gateway response dispatch;
-streaming body lifetime is not included. The existing Prometheus scrape endpoint is unchanged.
-Provider export failures are asynchronous and require collector monitoring.
+appropriate collector access and retention. Duration measures the gateway response dispatch,
+up to the point a streaming body begins. The Prometheus scrape endpoint keeps working alongside OTLP.
+Export failures surface asynchronously, so monitor the collector.
 
 Validate dashboard metric names/provisioning with `python scripts/dashboard-check.py --check`.
 For live verification enable both signals, perform a run/cancel/retry, wait one metric export
-interval, inspect the collector for both signals and verify the Grafana panels. This live
-collector/Tempo/Prometheus check requires your container or cluster environment.
+interval, inspect the collector for both signals and verify the Grafana panels. Run this live
+collector/Tempo/Prometheus check in your container or cluster environment.
 See [Python exporters](https://opentelemetry.io/docs/languages/python/exporters/) for transport setup.
 
 
 The rc.3 review keeps the existing metric names and dashboard queries. Unknown HTTP methods collapse
-to `_OTHER`; unmatched paths collapse to `/unmatched`. Request IDs, workflow run/step IDs, prompts,
-query strings and credentials must never become metric labels. Sandbox Prometheus labels retain
+to `_OTHER`; unmatched paths collapse to `/unmatched`. Metric labels stay free of request IDs,
+workflow run/step IDs, prompts, query strings and credentials. Sandbox Prometheus labels retain
 the existing 2,000-value cap; team gauges are scoped to configured teams and removed on erasure.
 Use `max` for replicated shared-state gauges and `sum(rate(...))` for per-process counters.
 
 With tracing enabled, an inbound W3C parent creates a gateway SERVER span; the outgoing runtime
-request uses that span as its parent. Cloud routes receive only W3C trace context and their own
-provider credentials, without tenant headers or baggage. Tracing does not automatically instrument
-Temporal history or SDK activities; validate collector delivery and any separately configured
-Temporal instrumentation in the deployment. Spans omit exception payloads and raw URL paths.
+request uses that span as its parent. Cloud routes receive W3C trace context and their own provider
+credentials; tenant headers and baggage stay inside the gateway. Gateway tracing covers the gateway
+request path; configure Temporal history and SDK activity instrumentation separately, and validate
+collector delivery in the deployment. Spans omit exception payloads and raw URL paths.
 
-Audit-store failures still produce ERROR logs and chain-persist error metrics, but omit driver
-tracebacks that may contain DSNs or SQL data. Worker activity errors retain status, machine reason
+Audit-store failures produce ERROR logs and chain-persist error metrics, with driver
+tracebacks (which may contain DSNs or SQL data) omitted. Worker activity errors retain status, machine reason
 and gateway request ID while omitting response bodies; use the retained, access-controlled audit
 trail for investigation. Native regression tests cover these redaction and propagation boundaries.

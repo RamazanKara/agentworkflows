@@ -31,7 +31,7 @@ Run the default gate:
 make validate
 ```
 
-It runs service tests, parser fuzz checks, Ruff, mypy, chart lint/render checks, API and configuration contract checks, governance checks, and production-readiness checks. Optional external tools are reported and skipped. `make validate-full` fails when the strict tool set is incomplete.
+It runs service tests, parser fuzz checks, Ruff, mypy, chart lint/render checks, API and configuration contract checks, governance checks, and production-readiness checks. Optional external tools are reported when absent. `make validate-full` requires the complete strict tool set.
 
 Focused targets are faster while editing:
 
@@ -72,7 +72,7 @@ make smoke RUNTIME_BACKEND=ollama
 make rag-smoke
 ```
 
-The direct path only covers the core runtime charts. Use the Argo CD path when testing GitOps, policy, observability, or backup applications.
+The direct path covers the core runtime charts. Use the Argo CD path when testing GitOps, policy, observability, or backup applications.
 
 ## Tenant and workspace checks
 
@@ -95,7 +95,7 @@ Generated files go under `.out/tenants`. Review them before applying them to any
 
 ## Evals, load tests, and evidence
 
-`make eval-local` and `make loadtest-local` use an ephemeral mock runtime. They exercise the gateway and report pipeline; they do not measure Ollama or vLLM throughput.
+`make eval-local` and `make loadtest-local` use an ephemeral mock runtime. They exercise the gateway and report pipeline. Use `make eval` and `make loadtest` against a running gateway to measure Ollama or vLLM throughput.
 
 ```bash
 make eval-local
@@ -116,7 +116,7 @@ make evidence
 make evidence LIVE=1
 ```
 
-The non-strict release gate may use checked-in `sample-*` reports to test the gate configuration. It is not release evidence. Before a release or customer handoff, generate current reports and run:
+The non-strict release gate can use checked-in `sample-*` reports to test the gate configuration. Before a release or customer handoff, generate current reports and run:
 
 ```bash
 make validate-full

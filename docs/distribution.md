@@ -19,7 +19,7 @@ Release CI publishes `artifacthub-repo.yml` to the chart repository's special
 `artifacthub.io` OCI tag. To finish discoverability, a maintainer must register
 `oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows` once in the Artifact Hub
 control panel, copy the assigned `repositoryID` into `artifacthub-repo.yml`, and cut the next
-release. This external registration cannot be completed from repository code.
+release.
 
 ## Python package
 
@@ -30,13 +30,13 @@ python -m pip install https://github.com/RamazanKara/agentworkflows/releases/dow
 The wheel, source archive, TypeScript SDK package (`agentworkflows-sdk-*.tgz`) and
 `sdk-checksums.txt` are attached to each GitHub release.
 Follow [release verification](release-verification.md) to verify the files before installing.
-The default release channel is GitHub downloads; PyPI publishing requires the setup below.
+The default release channel is GitHub downloads; PyPI publishing uses the setup below.
 To install from a checkout instead, run `python -m pip install ./sdk/python`.
 
 ### Optional PyPI publishing
 
-PyPI is disabled unless the repository Actions variable `PYPI_PUBLISH_ENABLED` is exactly
-`true`. GitHub downloads complete independently of this setting and PyPI environment approval.
+PyPI publishing turns on when the repository Actions variable `PYPI_PUBLISH_ENABLED` is exactly
+`true`. GitHub downloads publish independently of this setting and PyPI environment approval.
 
 Before enabling it, register a pending PyPI Trusted Publisher with owner
 `RamazanKara`, repository `agentworkflows`, workflow `release.yml`, environment `pypi`,
@@ -50,14 +50,13 @@ attestations remain enabled. After completing this setup, set the repository var
 
 Main publishes the `development` documentation alias. A `v*` release tag publishes its exact
 version, moves `latest`, and makes `latest` the site root. The tag build retains its generated
-content on `gh-pages`, then dispatches a run on main to publish that tree. This avoids GitHub
-Pages retaining the earlier main artifact when main and the tag share a commit. Older
+content on `gh-pages`, then dispatches a run on main to publish that tree. This keeps GitHub
+Pages on the tag's content when main and the tag share a commit. Older
 generated versions remain on the `gh-pages` branch and in the version selector.
 
 ## Operator-owned one-time setup
 
-The code and workflows are complete, but these account-level actions require repository-owner
-authority:
+These account-level actions use repository-owner authority:
 
 1. Set GitHub Pages source to **GitHub Actions**.
 2. For optional PyPI publishing, configure its protected environment and trusted publisher,

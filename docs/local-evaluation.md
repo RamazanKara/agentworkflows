@@ -72,8 +72,8 @@ Stop the stack and remove its volumes:
 make compose-down
 ```
 
-Compose does not install Kubernetes network policies, hardened workspaces, GitOps, or
-production availability controls. The local lab below evaluates Kubernetes deployment.
+For Kubernetes network policies, hardened workspaces, GitOps, and production availability
+controls, use the local Kubernetes lab below.
 
 ## Local Kubernetes lab
 
@@ -99,7 +99,7 @@ Docker state, writes a `kind` context to your kubeconfig, and reserves host port
 cluster unless overridden. Stop the Compose stack first (`make compose-down`) if it is running.
 
 On macOS or a managed workstation, install `kind`, `kubectl`, and Helm separately and run
-`make quickstart`; the repository's tool installer is Linux-only.
+`make quickstart`; the repository's tool installer targets Linux.
 
 ### Run it
 
@@ -130,9 +130,9 @@ reduced workstation check that applies the core charts directly, use:
 QUICKSTART_DIRECT_APPLY=1 make quickstart
 ```
 
-Direct apply skips the Argo CD application set, including the full observability, policy,
-cost, and backup add-ons. It is useful for the gateway and RAG smoke path, not as a GitOps or
-production-readiness test.
+Direct apply covers the gateway and RAG smoke path and leaves out the Argo CD application set,
+including the full observability, policy, cost, and backup add-ons. Use the default Argo CD
+path for GitOps and production-readiness checks.
 
 Other switches:
 
@@ -153,8 +153,8 @@ A complete default run ends with:
 ```
 
 These lines confirm that the gateway reached Ollama and that the RAG service returned results.
-They do not validate a customer identity provider, GPU runtime, production storage, backup, or
-external observability system.
+Validate your identity provider, GPU runtime, production storage, backup, and external
+observability system in your target environment.
 
 The lab gateway is a ClusterIP service behind a default-deny network policy. Reach it from
 your workstation with a port-forward:
@@ -210,9 +210,9 @@ kubectl -n ollama logs statefulset/ollama
 make local-down
 ```
 
-This deletes the `kind` cluster. It does not remove downloaded tools, Docker images, or caches.
-`make clean-all` removes repository-local tool environments and generated files; Docker cleanup
-remains a Docker operation.
+This deletes the `kind` cluster and keeps downloaded tools, Docker images, and caches for the next run.
+`make clean-all` removes repository-local tool environments and generated files; use Docker's
+own commands to clean up images.
 
 Continue with [Getting started](getting-started.md) for focused validation and
 customer-deployment commands.

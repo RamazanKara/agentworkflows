@@ -15,8 +15,7 @@ Redis, the audit chain). The question is whether to adopt an existing AI gateway
 
 ## Decision
 
-Build a small, purpose-fit gateway in `src/inference-gateway/app` rather than adopt a general-purpose
-AI gateway.
+Build a small, purpose-fit gateway in `src/inference-gateway/app`.
 
 - It serves the OpenAI-compatible surface under `/v1`: chat completions, embeddings, moderations,
   batches, models, and usage (see the route handlers and OpenAPI tags in
@@ -39,31 +38,26 @@ AI gateway.
 
 ## Consequences
 
-- The gateway is governance-shaped: routing decisions are made against AgentWorkflows' own model catalog,
-  sandbox budgets, and audit chain, instead of being adapted onto a third party's configuration
-  model. New controls (a budget type, an audit field, a route policy) are code in one service.
+- The gateway is governance-shaped: routing decisions are made directly against AgentWorkflows' own
+  model catalog, sandbox budgets, and audit chain. New controls (a budget type, an audit field, a
+  route policy) are code in one service.
 - It is small enough for one maintainer to own, pinned-base containerized, and covered by the API and
   config contract snapshots (`platform/api-contracts`, `platform/config-contracts`).
-- The platform owns the maintenance of this code: provider/model routing breadth, polished per-key spend
-  dashboards, and rate-limit UX are not what this gateway optimizes for. The decision-guide is
-  explicit that LiteLLM does far broader provider routing and richer per-key spend tracking, and that
-  AgentWorkflows' gateway is "not a full Kubernetes operating model" substitute for those proxies; it is
-  the control point inside one.
-- Because it is self-built, it is exactly as featureful as the repo shows; there is no upstream to
-  inherit new provider integrations from.
+- The platform maintains this code and optimizes it for governance: the gateway is the control point
+  inside the Kubernetes operating model.
+- The gateway's feature set is exactly what the repo shows, and new provider integrations land as
+  code in this service.
 
 ## Alternatives considered
 
-- **LiteLLM proxy.** Broader provider/model routing and richer out-of-the-box per-key spend tracking
-  and rate limiting, as the decision-guide acknowledges. Rejected as the platform's control point
-  because the platform needs routing and admission bound to its own governance objects (model catalog,
-  Redis-backed sandbox budgets, the tamper-evident audit chain), and a thin self-built gateway makes
-  those the native data model rather than an adaptation layer. A customer who wants LiteLLM's breadth
-  can place it alongside or behind this gateway.
-- **Kong AI Gateway (or another API-gateway AI plugin).** Strong general API-gateway features (auth,
-  rate limiting, plugins). Rejected as the default because it centers on generic API-gateway concerns
-  and would still require building the model-catalog allowlist, sandbox budgets, canary/shadow, and
-  the audit hash chain on top; the platform chose to write those directly.
-- **No gateway (clients call runtimes directly).** Rejected outright: it removes the single control
-  point and makes auth, allowlists, budgets, and auditing impossible to enforce uniformly, the exact
-  controls the platform exists to provide.
+- **A general-purpose LLM proxy.** Offers broad provider/model routing and out-of-the-box per-key
+  spend tracking and rate limiting. A thin self-built gateway was chosen because the platform binds
+  routing and admission to its own governance objects (model catalog, Redis-backed sandbox budgets,
+  the tamper-evident audit chain) as the native data model. A customer can place a general-purpose
+  proxy alongside or behind this gateway.
+- **An API-gateway AI plugin.** Strong general API-gateway features (auth, rate limiting, plugins).
+  The platform chose to write the model-catalog allowlist, sandbox budgets, canary/shadow, and the
+  audit hash chain directly in a purpose-built gateway.
+- **Clients call runtimes directly.** A single gateway was chosen because one control point enforces
+  auth, allowlists, budgets, and auditing uniformly, the exact controls the platform exists to
+  provide.

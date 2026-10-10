@@ -9,8 +9,8 @@
 The platform needs a model-serving runtime behind the gateway that satisfies two profiles with one
 operating model: a fast laptop/CI lab that runs on CPU without a GPU, and a customer GPU cluster
 serving coding-agent workloads on NVIDIA or AMD hardware. The gateway speaks the OpenAI HTTP API, so
-whatever serves models must expose an OpenAI-compatible endpoint. The choice should not lock the platform
-to a single accelerator vendor.
+whatever serves models must expose an OpenAI-compatible endpoint. The choice should keep the platform
+open to multiple accelerator vendors.
 
 ## Decision
 
@@ -34,32 +34,28 @@ via `RUNTIME_BACKEND`.
 
 ## Consequences
 
-- A contributor reproduces the full request path on a laptop with no GPU (Ollama), and a customer
+- A contributor reproduces the full request path on a CPU-only laptop (Ollama), and a customer
   serves the same OpenAI API on GPUs (vLLM), with the gateway, policies, governance, and evidence
   unchanged between them.
 - GPU vendor neutrality is explicit: NVIDIA clusters expose `nvidia.com/gpu`, AMD clusters expose
   `amd.com/gpu`, GPU nodes are labelled `platform.ai/node-pool=gpu` and
   `platform.ai/gpu-vendor=<nvidia|amd>`, and there are committed value profiles for each.
-- Two runtimes mean two charts, two pinned `appVersion`s, and two sets of capacity assumptions to
-  track. Replica count, context length, tensor parallelism, and GPU requests are explicitly left for
-  the operator to tune before production use.
+- Each runtime has its own chart, pinned `appVersion`, and capacity profile. The operator tunes
+  replica count, context length, tensor parallelism, and GPU requests before production use.
 - The gateway abstracts the choice for callers; it can also fail over and shadow/canary across
-  resolved routes (see [0005](0005-openai-compatible-gateway.md)), but the per-environment default
-  backend is a single value, not a blend.
+  resolved routes (see [0005](0005-openai-compatible-gateway.md)), and the per-environment default
+  backend is a single value.
 
 ## Alternatives considered
 
 - **Hugging Face TGI.** A strong OpenAI-compatible GPU server. vLLM was chosen for the GPU profile
   for its throughput-oriented batching and broad model coverage, and the platform already documents vLLM
-  GPU/ROCm references; TGI would be a viable substitute but adds no capability AgentWorkflows lacks.
-- **TensorRT-LLM.** Excellent NVIDIA-specific performance. Rejected as the default because it is
-  NVIDIA-only and conflicts with the explicit AMD/NVIDIA neutrality goal; a customer who wants it can
-  point a value profile at a TensorRT-LLM-backed OpenAI endpoint.
-- **llama.cpp (server).** Lightweight and great for single-machine CPU/Metal use. Rejected for the
-  local default in favor of Ollama, which provides simpler model pull/management and a clean
-  OpenAI-compatible surface inside a chart; the decision-guide already names "a single-machine
-  personal Ollama setup" as a poor fit for the platform itself, which is a different point from the
-  runtime choice here.
-- **One runtime for both profiles.** Rejected: no single runtime is simultaneously the lightest CPU
-  laptop experience and the highest-throughput multi-vendor GPU server. Splitting by profile keeps
-  each path optimal while the gateway hides the difference from callers.
+  GPU/ROCm references. TGI is a viable substitute.
+- **TensorRT-LLM.** Excellent NVIDIA-specific performance. vLLM was preferred as the default because
+  it serves both AMD and NVIDIA, matching the vendor-neutrality goal; a customer who wants
+  TensorRT-LLM can point a value profile at a TensorRT-LLM-backed OpenAI endpoint.
+- **llama.cpp (server).** Lightweight and great for single-machine CPU/Metal use. Ollama was
+  preferred for the local default because it provides simpler model pull/management and a clean
+  OpenAI-compatible surface inside a chart.
+- **One runtime for both profiles.** Splitting by profile pairs the lightest CPU laptop experience
+  with the highest-throughput multi-vendor GPU server, and the gateway presents one API to callers.

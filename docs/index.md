@@ -21,11 +21,11 @@ docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 
 After the published v0.9.0 images are pulled and services become ready, follow the
 [60-second console walkthrough](quickstart.md#60-second-console-walkthrough): sign in,
-start the sample, and approve its draft. The simulated trial needs no cloud key and makes
-no external model calls. Connect a real provider to evaluate output quality.
+start the sample, and approve its draft. The simulated trial runs locally with fixture
+models. Connect a real provider to evaluate output quality.
 
 This is release **v0.9.0**; Compose pulls the matching published images.
-[Verification and remaining checks](release-verification.md).
+[Release verification](release-verification.md).
 
 ## Choose your path
 
@@ -48,11 +48,11 @@ AgentWorkflows supplies the team application around it. You supply business work
 real tool integrations and operate the deployment.
 
 [Build-or-adopt decision guide](decision-guide.md) · [Architecture](architecture.md).
-There is no hosted service in this repository.
+You deploy and run it on your own infrastructure.
 
-## Know where the evidence ends
+## Security and evidence
 
-Provider keys stay on the server; roles and projects restrict access. Receipt hash chains
+Provider keys stay on the server; roles and projects scope access. Receipt hash chains
 expose edits and internal gaps. External head anchors detect truncation or replacement.
 Inputs and results also remain in Temporal history with separate retention. Configure
 content capture, provider retention, and backups for your team.
@@ -61,5 +61,4 @@ content capture, provider retention, and backups for your team.
 [Data lifecycle](team-lifecycle.md) · [Verification](proof.md)
 
 [Roadmap](https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md) ·
-[Adoption gaps](https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md) ·
 [Apache-2.0 license](https://github.com/RamazanKara/agentworkflows/blob/main/LICENSE).

@@ -2,7 +2,7 @@
 
 Use this runbook when running repeatable prompt checks against the local lab or a customer-owned gateway.
 
-For benchmark and eval interpretation, including what the included suites do and do not prove, see [Benchmarks and evals](https://github.com/RamazanKara/agentworkflows/blob/main/docs/benchmarks-and-evals.md).
+For benchmark and eval interpretation, including what the included suites prove, see [Benchmarks and evals](https://github.com/RamazanKara/agentworkflows/blob/main/docs/benchmarks-and-evals.md).
 
 ## What The Harness Checks
 
@@ -15,7 +15,7 @@ The evaluation harness reads an `EvalSuite`, sends each case to `POST /v1/chat/c
 - forbidden-text checks for secret-leak regression cases
 - per-case pass or fail status
 
-The default smoke suite is intentionally small. The coding-agent suite adds checks for change planning, secret handling, prompt-injection boundaries, and incident triage. These suites are regression tools, not benchmarks or substitutes for domain-specific human review.
+The default smoke suite is intentionally small. The coding-agent suite adds checks for change planning, secret handling, prompt-injection boundaries, and incident triage. These suites are regression tools; pair them with domain-specific human review.
 
 ## Validate Suite Syntax
 

@@ -3,7 +3,7 @@
 Use this runbook when changing the RAG vector store: a new embedding model or dimension count, a
 re-chunking pass, or a knowledge refresh. The RAG service reads a fixed collection name plus a
 logical `collectionVersion`, so migrations are done by writing a new collection version and cutting
-over, never by mutating the live collection in place.
+over, with the live collection kept intact.
 
 See [Vector RAG](vector-rag.md) for the steady-state profile and
 [scripts/rag-ingest.py](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/rag-ingest.py) for the ingestion job this runbook drives.
@@ -22,7 +22,7 @@ coexist in one collection and retrieval filters to the active one.
 
 ## 1. Dry Run (no writes)
 
-Validate the source manifest, embedding provider, and chunk plan without touching Qdrant. The
+Validate the source manifest, embedding provider, and chunk plan before writing to Qdrant. The
 `--check` mode loads and validates the manifest, builds chunks, and prints a summary:
 
 ```bash
@@ -40,8 +40,8 @@ collection is rejected at write time by `ensure_collection`, so catch it here fi
 
 ## 2. Write The New Version
 
-Run the ingestion against Qdrant. `ensure_collection` creates the collection if missing and refuses
-to write if the existing collection's dimensions differ from `--dimensions`:
+Run the ingestion against Qdrant. `ensure_collection` creates the collection if needed and writes
+when the existing collection's dimensions equal `--dimensions`:
 
 ```bash
 python3 scripts/rag-ingest.py --write \
@@ -52,7 +52,7 @@ python3 scripts/rag-ingest.py --write \
   --dimensions 384
 ```
 
-The previous version (`v1`) is untouched, so retrieval keeps serving it until cutover.
+The previous version (`v1`) stays intact, so retrieval keeps serving it until cutover.
 
 ## 3. Cut Over
 
@@ -69,12 +69,12 @@ retrieval:
 make sync                 # or helm upgrade for direct-apply installs
 make rag-smoke            # confirm grounded retrieval returns v2 results
 make rag-eval             # REQUIRED: score recall@k / MRR / nDCG / grounding vs the
-                          # golden set so an embedding or chunking change cannot silently
-                          # regress retrieval quality. Fails when metrics fall below the
+                          # golden set so every embedding or chunking change is scored
+                          # for retrieval quality. Fails when metrics fall below the
                           # suite thresholds (platform/evals/rag-retrieval-suite.yaml).
 ```
 
-`rag-smoke` only checks that grounded results are *present*; `rag-eval` checks they are
+`rag-smoke` checks that grounded results are *present*; `rag-eval` checks they are
 *correct*. Always run `make rag-eval` after changing the embedding model, chunking, or
 collection so a quality regression is caught before promotion. Update the golden suite and
 its thresholds when the corpus or the expected-relevant documents change.
@@ -84,7 +84,7 @@ fixed-dimension); set both `collection` and `collectionVersion` and re-run from 
 
 ## 4. Rollback
 
-Because the old version was never overwritten, rollback is a values revert:
+Because the old version stays intact, rollback is a values revert:
 
 ```yaml
 retrieval:
@@ -97,8 +97,8 @@ make sync
 make rag-smoke
 ```
 
-Retrieval immediately filters back to `v1`. Reclaim the abandoned `v2` points only after the
-rollback is confirmed stable, by deleting them through the Qdrant API filtered on
+Retrieval immediately filters back to `v1`. Once the rollback is confirmed stable, reclaim the
+`v2` points by deleting them through the Qdrant API filtered on
 `collection_version == v2`.
 
 ## Verification

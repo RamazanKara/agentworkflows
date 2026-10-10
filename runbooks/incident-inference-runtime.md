@@ -28,9 +28,9 @@ Capture gateway logs, the `inference_request` audit event for the failed `reques
 ## Team workflow operations
 
 Use `agentworkflows runs list` and `agentworkflows runs inspect RUN_ID` with a team credential.
-Check the step's provider, duration, failure, cost, and receipt ID before retrying; a fresh
-retry can repeat tool side effects. Waiting approvals need an approver/admin credential.
-For no throughput, check the team's worker logs and `<team>-workflows` task queue. For spend
+Check the step's provider, duration, failure, cost, and receipt ID before retrying, because a
+fresh retry runs tool side effects again. Waiting approvals need an approver/admin credential.
+When throughput stops, check the team's worker logs and `<team>-workflows` task queue. For spend
 alerts, inspect `agentworkflows usage` and `budgets.costLimitUsd`; failed/unreported provider
 attempts keep conservative charges. For stale metrics, check Temporal/Redis connectivity
 and history retention. See [team operations](https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service).

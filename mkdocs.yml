@@ -82,8 +82,6 @@ markdown_extensions:
 # pattern to the docs root so runbooks/README.md (the Runbooks nav page) is not excluded.
 exclude_docs: |
   /README.md
-  /codex/
-  /PRODUCT-GAPS.md
 
 validation:
   nav:
@@ -103,7 +101,7 @@ nav:
       - FAQ: faq.md
       - Architecture: architecture.md
       - Security overview: security-overview.md
-      - Scope and non-goals: scope-and-non-goals.md
+      - Scope: scope-and-non-goals.md
   - Guides:
       - Durable workflows and teams: workflows.md
       - Team settings: team-settings.md

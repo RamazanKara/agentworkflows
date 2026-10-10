@@ -26,25 +26,26 @@ for its cost, and writes a receipt. The console, CLI, and SDK share that same ga
 5. Inspect the run's **result**, **budget**, and **timeline**. Export and verify the retained
    audit log when you need evidence beyond receipt IDs in the UI.
 
-The local trial's admin key can perform all human roles for convenience. Separate member
-and worker credentials before team use; [team setup](workflows.md#teams-projects-and-roles)
-describes the existing policy files. Do not give end users direct Temporal or worker access.
+The local trial's admin key performs all human roles for convenience. Give members and
+workers separate credentials for team use; [team setup](workflows.md#teams-projects-and-roles)
+describes the policy files. Keep Temporal and worker access with operators; end users work
+through the gateway.
 
-## Durability and limits
+## Durability and accounting
 
-Temporal saves completed activity results. A worker restart resumes waiting approval and
-completed steps without repeating those results. An activity interrupted during an external
-action may run again: approved tools must honor the supplied idempotency key. Container
-steps do not automatically retry. Cancellation cannot undo a tool action already sent.
+Temporal saves completed activity results. A worker restart resumes waiting approvals and
+completed steps from history. An activity interrupted during an external action runs again,
+so approved tools honor the supplied idempotency key. Container steps run once.
+Cancellation applies to steps that have not yet run.
 
 The tighter of the workflow's requested budget and the team's workflow policy applies.
 All runs also consume the shared team budget. Accounting uses configured token prices and
-conservative reservations, not provider invoices. Failed attempts can still cost money.
+conservative reservations; reconcile it against provider billing.
 
-Receipts detect changes and internal gaps in retained chains. They do not prove an
-unreported action, and external anchors are needed to detect complete rewrites or truncation.
-The fake produces synthetic answers, tool results, and prices. It proves the governed path,
-not research quality or live provider access.
+Receipts cover activity that passes through the gateway. They detect changes and internal
+gaps in retained chains, and external anchors detect complete rewrites or truncation.
+The fake produces synthetic answers, tool results, and prices to demonstrate the governed
+path; connect a real provider to evaluate research quality.
 
 Continue with [templates](templates.md), [architecture](architecture.md),
 [security boundaries](security-overview.md), and the [workflow guide](workflows.md).

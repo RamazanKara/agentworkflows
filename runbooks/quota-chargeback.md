@@ -38,8 +38,8 @@ For each customer tenant:
 
 ## Chargeback
 
-Use the required labels as the stable attribution keys for OpenCost, Prometheus, logs, evidence packs, and customer reporting. Customers can add their own labels, but should keep these stable across upgrades so cost history remains comparable.
+Use the required labels as the stable attribution keys for OpenCost, Prometheus, logs, evidence packs, and customer reporting. Customers can add their own labels; keep these stable across upgrades so cost history remains comparable.
 
 ## Adjusting Quotas
 
-Tune `platform/governance/quota-plans.yaml` first, then update tenant onboarding specs or gateway values. Do not raise live Kubernetes or gateway limits without a matching quota-plan update and refreshed `make quota-report` evidence.
+Tune `platform/governance/quota-plans.yaml` first, then update tenant onboarding specs or gateway values. Raise live Kubernetes or gateway limits together with a matching quota-plan update and refreshed `make quota-report` evidence.

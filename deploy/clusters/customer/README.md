@@ -1,6 +1,6 @@
 # Customer-owned Kubernetes deployment
 
-This overlay is for customers who already operate Kubernetes. It does not create cloud infrastructure and does not assume a specific managed Kubernetes service.
+This overlay is for customers who already operate Kubernetes. It is provider-neutral and deploys onto the customer's existing cluster.
 
 ## What Customers Provide
 
@@ -25,7 +25,7 @@ make customer-overlay \
 ```
 
 Run this in the fork or deployment branch. The command edits tracked Argo CD manifests; review and
-commit the resulting diff before the cluster can reconcile it.
+commit the resulting diff so the cluster can reconcile it.
 
 Use `CUSTOMER_GPU_PROFILE=amd` for AMD ROCm clusters. Use `CUSTOMER_GPU_PROFILE=default` to keep `deploy/clusters/customer/values/vllm.yaml`.
 
@@ -44,10 +44,10 @@ The configurator updates:
 ## 2. Prepare secrets
 
 Gateway and RAG business endpoints read SHA-256 API-key hashes from existing Kubernetes Secrets. The
-checked-in customer values do not create those Secrets. `external-secrets.yaml` is an example and is
-not part of the customer Argo CD application list; install External Secrets Operator and add the
-reviewed manifest to the customer GitOps path, or create the Secrets through the customer's existing
-secret system. Do not store plaintext API keys in Helm values.
+customer supplies those Secrets. `external-secrets.yaml` is an example kept outside the customer Argo
+CD application list: install External Secrets Operator and add the reviewed manifest to the customer
+GitOps path, or create the Secrets through the customer's existing secret system. Store only hashes
+in Helm values and keep plaintext API keys in the secret backend.
 
 Create a hash for each customer API key:
 
@@ -97,7 +97,7 @@ Review these before applying the overlay:
 | `external-secrets.yaml` | Secret store provider and remote secret keys |
 | `gpu-scheduling.yaml` | GPU resource-name and node-label contract |
 
-For regulated or offline teams, start from `tenants/onboarding/regulated-offline-coding-agents.yaml`. It renders confidential labels, no external CIDR egress, and no default job-management RBAC.
+For regulated or offline teams, start from `tenants/onboarding/regulated-offline-coding-agents.yaml`. It renders confidential labels and platform-internal egress only, with default job-management RBAC turned off.
 
 ## 5. Apply
 
@@ -109,8 +109,7 @@ ENVIRONMENT=customer make sync
 ```
 
 Both commands use the active kubeconfig context. Confirm it points to the intended customer cluster
-before running them. Customer sync does not fall back to direct Helm apply when the Git repository is
-unreachable.
+before running them. Customer sync always deploys through Argo CD from the Git repository.
 
 If Argo CD cannot reach the repository, fix the `repoURL` values with `make customer-overlay` and sync again.
 
@@ -139,14 +138,14 @@ make release-gate-strict
 - Model provenance is replaced with customer model-store digests before production use.
 - RAG knowledge and vector collections contain only approved customer content.
 - Agent egress uses reviewed entries from `platform/network/egress-catalog.yaml`.
-- Backups for the stateful stores are wired before go-live. The customer overlay ships no backup of its own. Use `deploy/backup/velero/schedule.yaml` as the template and protect the data-bearing namespaces (Qdrant in `vector`, agent workspace PVCs in `ai-agents`, GitOps state in `argocd`); a metadata-only backup restores empty data stores, so PVC contents must be captured (CSI volume snapshots, or `defaultVolumesToFsBackup`). Velero (or an equivalent) with a configured `BackupStorageLocation` and `VolumeSnapshotLocation` is a prerequisite: the restore-drill app presupposes a backup source the customer must provide, and without one the restore drill validates nothing.
+- Backups for the stateful stores are wired before go-live through the customer's backup system. Use `deploy/backup/velero/schedule.yaml` as the template and protect the data-bearing namespaces (Qdrant in `vector`, agent workspace PVCs in `ai-agents`, GitOps state in `argocd`); capture PVC contents along with resource metadata (CSI volume snapshots, or `defaultVolumesToFsBackup`). Velero (or an equivalent) with a configured `BackupStorageLocation` and `VolumeSnapshotLocation` is a prerequisite: it provides the backup source that the restore-drill app validates.
 - Restore-drill evidence is generated and retained under the customer policy.
-- SLO, quota, retention, egress, model, eval, load, and evidence reports pass strict release gates without falling back to checked-in samples.
+- SLO, quota, retention, egress, model, eval, load, and evidence reports pass strict release gates with current evidence.
 
 ## Security policy customization for forks
 
-If you fork or mirror this repo, review these guardrails before deploying. They are intentionally restrictive and hardcode upstream identities, so forks that republish artifacts must update them.
+If you fork or mirror this repo, review these guardrails before deploying. They are intentionally strict and pin upstream identities, so update them in forks that republish artifacts.
 
-- **GitOps source is pinned and locked.** Set `CUSTOMER_REVISION` to an immutable tag (for example `v0.9.0`), not `HEAD`: `make customer-overlay-check` rejects `HEAD` or a branch so every sync is reproducible and revertible. The `agentworkflows` AppProject in `deploy/clusters/customer/appprojects.yaml` locks `spec.sourceRepos` to the upstream repo and the destination to the in-cluster API server, giving blast-radius control. If you fork, update its `sourceRepos` to your repo (running `make customer-overlay CUSTOMER_REPO_URL=...` rewrites it for you) so Argo CD will accept syncs from your fork.
-- **Kyverno image verification is Enforce.** The `ai-platform-verify-project-images` policy in `deploy/policies/kyverno/policies.yaml` is set to `Enforce` and hardcodes the upstream registry plus a keyless signing identity. Forks that republish images to their own registry MUST update its `imageReferences` and the keyless `subject`/`issuer` to their own GitHub org/repo and registry, or admission will reject your images.
-- **Egress is governed by a reviewed catalog.** `platform/network/egress-catalog.yaml` is the source of truth for approved external egress. The CI check only scans the reviewed tenant spec files; at render time the agent-workspace chart rejects any `allowedEgressCidrs` entry that lacks a matching `catalogRef`; and at admission the Kyverno `ai-platform-restrict-egress-cidrs` policy denies broad CIDRs (`0.0.0.0/0` and broad RFC1918 ranges). Add new destinations to the catalog and reference them by `catalogRef` rather than widening CIDRs.
+- **GitOps source is pinned and locked.** Set `CUSTOMER_REVISION` to an immutable tag (for example `v0.9.0`): `make customer-overlay-check` accepts only tags, so every sync is reproducible and revertible. The `agentworkflows` AppProject in `deploy/clusters/customer/appprojects.yaml` locks `spec.sourceRepos` to the upstream repo and the destination to the in-cluster API server, giving blast-radius control. If you fork, update its `sourceRepos` to your repo (running `make customer-overlay CUSTOMER_REPO_URL=...` rewrites it for you) so Argo CD will accept syncs from your fork.
+- **Kyverno image verification is Enforce.** The `ai-platform-verify-project-images` policy in `deploy/policies/kyverno/policies.yaml` is set to `Enforce` and hardcodes the upstream registry plus a keyless signing identity. Forks that republish images to their own registry update its `imageReferences` and the keyless `subject`/`issuer` to their own GitHub org/repo and registry so admission accepts their images.
+- **Egress is governed by a reviewed catalog.** `platform/network/egress-catalog.yaml` is the source of truth for approved external egress. The CI check scans the reviewed tenant spec files; at render time the agent-workspace chart requires a matching `catalogRef` for every `allowedEgressCidrs` entry; and at admission the Kyverno `ai-platform-restrict-egress-cidrs` policy denies broad CIDRs (`0.0.0.0/0` and broad RFC1918 ranges). Add new destinations to the catalog and reference them by `catalogRef` rather than widening CIDRs.

@@ -1,19 +1,19 @@
 # Client API examples
 
-The gateway implements a documented subset of the OpenAI API. Clients that use those
-routes can point their base URL at the gateway and send the platform headers. Check the
+The gateway implements the documented OpenAI API routes. Clients that use those
+routes can point their base URL at the gateway and send the platform headers. The
 [OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json)
-and [scope](scope-and-non-goals.md) before assuming that an SDK feature is supported.
+and [scope](scope-and-non-goals.md) list the exact routes and fields.
 These examples use `http://127.0.0.1:8080`, where the [Docker Compose stack](quickstart.md)
 serves the gateway with API key `local-development-only`. In the `kind` lab, port-forward the
 gateway service first; in a customer cluster, use your ingress host.
 
 For durable, budgeted agent steps, start with [bring your agent](workflows.md#bring-your-agent):
 the workflow adapters configure these clients with run correlation and show OpenAI Agents SDK,
-LangGraph, and approved MCP tools. The standalone examples below do not create Temporal runs.
+LangGraph, and approved MCP tools. The standalone examples below call the gateway directly, outside Temporal runs.
 
 The `model` id must be on the active profile's allowlist. Compose defaults to the synthetic
-`demo-openai` route; its fixtures demonstrate chat, not embeddings or model quality.
+`demo-openai` route; its fixtures demonstrate the chat flow.
 Configure an approved provider for real inference using [model selection](model-selection.md#cloud-routes-milestone-1).
 The optional local lab allows `qwen2.5:0.5b`; customer self-hosted profiles use `qwen3.5:0.8b` (Ollama) and
 `Qwen/Qwen3-Coder-Next` (vLLM). Streaming is admitted by default in every shipped
@@ -25,8 +25,8 @@ All business endpoints accept:
 
 - `Authorization: Bearer <api-key-or-jwt>` (or the `X-API-Key` header) when auth is enabled
 - `X-Sandbox-ID: <sandbox>`: the tenant/sandbox the request is attributed to. A credential
-  bound to a sandbox (an API-key record or a JWT tenant claim) needs no header, and a
-  different value is rejected with `403`.
+  bound to a sandbox (an API-key record or a JWT tenant claim) supplies it automatically,
+  and a header naming a different sandbox returns `403`.
 - `X-Request-ID` and W3C `traceparent`: optional, echoed back for tracing
 
 Responses echo `X-Request-ID`, `X-Sandbox-ID`, and `traceparent` for correlation. When
@@ -40,7 +40,7 @@ frameworks parse to pace themselves:
   and what remains of it, floored at zero
 
 Each pair is present only when the corresponding limit is configured (greater than zero);
-cache hits (`X-Cache: HIT`) consume no budget and omit them. See the
+cache hits (`X-Cache: HIT`) are free of budget and omit them. See the
 [budget controls runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md) for sizing and triage.
 
 ## curl
@@ -86,36 +86,32 @@ curl -fsS "$GATEWAY/v1/moderations" \
   -d '{"input":"text to classify"}'
 ```
 
-## Moderations taxonomy (not OpenAI's harm categories)
+## Moderations taxonomy (governance categories)
 
-`/v1/moderations` is OpenAI-compatible in shape but classifies against the platform
-*governance* taxonomy, not OpenAI's harm taxonomy. The response carries a top-level
+`/v1/moderations` is OpenAI-compatible in shape and classifies against the platform
+*governance* taxonomy. The response carries a top-level
 `"taxonomy": "governance"` marker and the `categories`/`category_scores` keys are
-`credential`, `pii`, and `blocked_terms` (rule-based credential/PII/denylist detection),
-not `hate`, `violence`, `self-harm`, etc. Branch on the `taxonomy` field if you consume
-both a real OpenAI moderation endpoint and this one. A semantic toxicity classifier can be
-layered behind the same endpoint later without changing callers.
+`credential`, `pii`, and `blocked_terms` (rule-based credential/PII/denylist detection).
+Branch on the `taxonomy` field if you consume both an OpenAI moderation endpoint and this one.
 
 ## Legacy `/v1/completions` (prompt-based)
 
 The gateway also exposes the pre-chat `/v1/completions` endpoint for tools that still use a
 `prompt` (a string or list of strings) instead of `messages`. It runs through the **same**
 governance path as chat (model allowlist, admission limits, prompt secret policy, sandbox
-budget, output guardrail, and audit), so legacy-completion traffic is not a control bypass.
-Streaming is **not** supported on `/v1/completions` in this release (send `stream: false`,
-or use `/v1/chat/completions` for streaming); a streaming request is rejected with a clear
-`streaming_not_supported` error. Prefer `/v1/chat/completions` for new integrations.
+budget, output guardrail, and audit), so legacy-completion traffic gets the same controls.
+`/v1/completions` is non-streaming: send `stream: false`, and use `/v1/chat/completions`
+for streaming (a streaming request returns `streaming_not_supported`). Prefer
+`/v1/chat/completions` for new integrations.
 
 ## Native Anthropic Messages API (`/v1/messages`)
 
 The gateway exposes a **native** Anthropic-shaped `/v1/messages` endpoint, so Anthropic-SDK
-and Claude-style agents can point at the gateway directly, with no translation sidecar required
-for the common case. The Anthropic request and response are translated to and from the
+and Claude-style agents can point at the gateway directly. The Anthropic request and response are translated to and from the
 internal OpenAI chat shape and run through the **same** governance path as chat (model
 allowlist, admission limits, prompt secret policy, sandbox budget, output guardrail, and
-audit), so `/v1/messages` traffic is not a control bypass. Anthropic **requires**
-`max_tokens`; a request that omits it is rejected, and the value is also enforced against the
-gateway's completion-token cap. The response is an Anthropic `Message` (`type: "message"`,
+audit), so `/v1/messages` traffic gets the same controls. Anthropic **requires**
+`max_tokens`; the gateway validates it and enforces it against the completion-token cap. The response is an Anthropic `Message` (`type: "message"`,
 `content` blocks, `stop_reason`, `usage.input_tokens`/`output_tokens`).
 
 ```bash
@@ -130,20 +126,18 @@ curl -fsS "$GATEWAY/v1/messages" \
       }'
 ```
 
-Translation is faithful but pragmatic: message and `system` text are exact; Anthropic tool
+Message and `system` text translate exactly. Anthropic tool
 definitions (`name`/`description`/`input_schema`) and `tool_use`/`tool_result` content blocks
-are mapped to their closest OpenAI equivalents on a best-effort basis. For Anthropic-shaped
-features the native endpoint does not cover, such as content blocks with no OpenAI
-equivalent, the translation-sidecar approach below remains available.
+map to their closest OpenAI equivalents. For other Anthropic-shaped content blocks, the
+translation-sidecar approach below is available.
 
 ### Streaming
 
 `stream: true` returns the Anthropic event sequence (`message_start`, then a
 `content_block_start` / `content_block_delta` / `content_block_stop` run per content block,
 then `message_delta` with the stop reason and usage, then `message_stop`), translated from
-the same governed chat stream `/v1/chat/completions` uses. This is what an interactive
-Claude-style agent needs: the Anthropic SDKs stream by default, so before this the native
-endpoint served scripts rather than agents.
+the same governed chat stream `/v1/chat/completions` uses. Interactive Claude-style agents
+use this path, since the Anthropic SDKs stream by default.
 
 ```python
 import anthropic
@@ -160,23 +154,22 @@ with client.messages.stream(
 ```
 
 Streaming obeys the same `admission.allowStreaming` toggle as chat, so one setting governs
-both surfaces. Two behaviors are worth knowing:
+both surfaces. Streaming works as follows:
 
 - **Token counts arrive at the end.** OpenAI-compatible runtimes only report usage on a
   terminal event, which is after `message_start` has to be sent, so `message_start` carries
   zeros and the true counts ride on the final `message_delta`. The Anthropic SDKs reconcile
   the final usage from there, so `get_final_message().usage` is correct.
-- **The output guardrail flags rather than redacts.** Streamed bytes are already committed to
-  the wire, so the guardrail scans the assistant text at end-of-stream and records a finding.
-  Use non-streaming requests where the guardrail must be able to block.
+- **The output guardrail flags streamed output.** The guardrail scans the assistant text at
+  end-of-stream and records a finding. Use non-streaming requests where the guardrail
+  should block output.
 
-Reasoning and thinking deltas cannot leak through this path: the translator reads only
-`delta.content` and `delta.tool_calls`, so anything else a runtime streams has no route into
-the Anthropic events.
+The translator reads `delta.content` and `delta.tool_calls` only, so reasoning and thinking
+deltas stay out of the Anthropic events.
 
 The service tests exercise translated payloads and streaming. The Compose walkthrough
-uses local protocol fixtures; live vendor compatibility must be verified with your provider
-and client versions.
+uses local protocol fixtures; run it against your provider and client versions to confirm
+your setup.
 
 ## OpenAI Responses API (`/v1/responses`)
 
@@ -184,7 +177,7 @@ The gateway exposes the synchronous OpenAI **Responses API**, so tooling built
 on `client.responses.create(...)` can point at the gateway directly. The Responses request and
 response are translated to and from the internal OpenAI chat shape and run through the **same**
 governance path as chat (model allowlist, admission limits, prompt secret policy, sandbox
-budget, output guardrail, and audit), so `/v1/responses` traffic is not a control bypass.
+budget, output guardrail, and audit), so `/v1/responses` traffic gets the same controls.
 `input` accepts a plain string or an array of input items/messages; `instructions` is prepended
 as a system message; `max_output_tokens` maps to the gateway's completion-token cap and is
 enforced against it. The response is a Responses object (`object: "response"`, `status`,
@@ -203,14 +196,14 @@ curl -fsS "$GATEWAY/v1/responses" \
       }'
 ```
 
-Server-side state is opt-in and off by default because it persists raw conversation content.
+Server-side state is opt-in, since it persists raw conversation content.
 Set `RESPONSES_STORE_ENABLED=true` and use the Redis backend for multi-replica deployments;
 then `store: true`, `previous_response_id`, `GET`/`DELETE /v1/responses/{id}`, and
-`GET /v1/responses/{id}/input_items` are tenant-scoped and TTL-bounded. When state is disabled,
-those requests fail explicitly with `stateful_not_supported`. Streaming is **not** supported on `/v1/responses` (send
-`stream: false`, or use `/v1/chat/completions` for OpenAI-shaped streaming); a streaming request
-is rejected with a clear `streaming_not_supported` error. Assistant `tool_calls` are mapped to
-`function_call` output items (`name`, `arguments`, `call_id`) on a best-effort basis, and a
+`GET /v1/responses/{id}/input_items` are tenant-scoped and TTL-bounded. With state off,
+those requests return `stateful_not_supported`. `/v1/responses` is non-streaming: send
+`stream: false`, and use `/v1/chat/completions` for OpenAI-shaped streaming (a streaming request
+returns `streaming_not_supported`). Assistant `tool_calls` map to
+`function_call` output items (`name`, `arguments`, `call_id`), and a
 `length` finish maps to `status: "incomplete"` with `incomplete_details.reason:
 "max_output_tokens"`.
 
@@ -235,7 +228,7 @@ Every gateway error body is OpenAI-shaped:
 `authentication_error`, `permission_error`, `rate_limit_error`, `api_error`, …) so an
 OpenAI SDK's typed exceptions (e.g. `RateLimitError`) map correctly. `error.code` carries
 the gateway's machine reason. The legacy `detail` object is preserved alongside for one
-release while callers migrate; do not depend on it long-term. Pydantic request-validation
+release while callers migrate; build new integrations on `error`. Pydantic request-validation
 errors (HTTP 422) keep FastAPI's default `{"detail": [...]}` shape.
 
 ## Python (openai SDK)
@@ -293,7 +286,7 @@ print(r.json()["choices"][0]["message"]["content"])
 ## Python (first-party client)
 
 The platform ships a minimal, retry-aware first-party client (`sdk/python`, packaged as
-`agentworkflows`) for scripts that do not want the full `openai` dependency:
+`agentworkflows`) for lightweight scripts:
 
 ```bash
 python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.0/agentworkflows-0.9.0-py3-none-any.whl
@@ -314,9 +307,8 @@ with GatewayClient("http://127.0.0.1:8080", api_key="local-development-only") as
 ## Agent & coding frameworks (drop-in)
 
 Because the gateway is OpenAI-compatible, agent and coding frameworks work by pointing their
-OpenAI base URL at the gateway and adding the `X-Sandbox-ID` header. Always route framework traffic
-through the gateway (not the runtime directly) so auth, model allowlists, budgets, guardrails, and
-audit apply.
+OpenAI base URL at the gateway and adding the `X-Sandbox-ID` header. Route all framework traffic
+through the gateway so auth, model allowlists, budgets, guardrails, and audit apply.
 
 ### LangChain
 
@@ -355,7 +347,7 @@ your gateway host.
 ```bash
 export OPENAI_API_BASE=http://127.0.0.1:8080/v1
 export OPENAI_API_KEY=local-development-only
-# Aider forwards no custom header, so bind the sandbox with a JWT tenant claim (auth.jwt.tenantClaim)
+# Bind Aider's sandbox with a JWT tenant claim (auth.jwt.tenantClaim)
 # or run Aider from inside an agent-workspace namespace whose egress sets X-Sandbox-ID at the proxy.
 aider --model openai/Qwen/Qwen3-Coder-Next
 ```
@@ -366,15 +358,14 @@ Point the assistant at an OpenAI-compatible provider with `apiBase:
 http://<gateway-host>/v1`, the API key, and a `requestOptions.headers` entry setting
 `X-Sandbox-ID`. The gateway's `/v1/models` lists the approved models to configure.
 
-> Frameworks that cannot set a custom header should bind the sandbox with a JWT tenant claim
-> (`auth.jwt.tenantClaim`) so per-sandbox budgets and attribution cannot be spoofed.
+> For frameworks without custom header support, bind the sandbox with a JWT tenant claim
+> (`auth.jwt.tenantClaim`) so per-sandbox budgets and attribution stay tied to the verified tenant.
 
 ## Anthropic SDK / Claude-style agents (translation sidecar as an alternative)
 
 The gateway now exposes a native Anthropic `/v1/messages` endpoint (see above), which is the
-preferred path for Anthropic-SDK and Claude-style agents. A translation **sidecar** remains a
-supported **alternative** for Anthropic-shaped features the native endpoint does not yet cover,
-such as content blocks with no OpenAI equivalent. For example, a
+preferred path for Anthropic-SDK and Claude-style agents. A translation **sidecar** is a
+supported **alternative** for additional Anthropic-shaped content blocks. For example, a
 [LiteLLM](https://docs.litellm.ai/) proxy that exposes an Anthropic-shaped `/v1/messages`
 endpoint and forwards to the gateway's `/v1/chat/completions`. The sidecar does the
 Anthropic-to-OpenAI request/response translation; the gateway still applies auth, model
@@ -399,8 +390,6 @@ model_list:
 litellm --config config.yaml   # serves an Anthropic-compatible /v1/messages
 ```
 
-Anthropic-SDK clients then point `base_url` at the sidecar (rather than the gateway's native
-`/v1/messages`) only when they need Anthropic behavior the native endpoint does not yet cover:
-this is a translation shim, and features without an OpenAI chat-completions equivalent are
-limited by what the sidecar can map. See [Scope and non-goals](scope-and-non-goals.md) for the
-exact list of protocol surfaces the gateway does and does not implement.
+Anthropic-SDK clients that use the sidecar point `base_url` at it in place of the gateway's
+native `/v1/messages`; the sidecar maps requests onto OpenAI chat completions. See
+[scope](scope-and-non-goals.md) for the exact list of protocol surfaces the gateway implements.

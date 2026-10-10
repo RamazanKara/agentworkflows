@@ -17,7 +17,7 @@ with the [GPU capacity](https://github.com/RamazanKara/agentworkflows/blob/main/
 | `agentWorkspace.pvcSize` | `100Gi` | Larger workspace for model and build artifacts. |
 | `agentWorkspace.rbac.allowJobManagement` | `true` | Agents may create and manage Jobs (e.g. eval/build jobs). |
 
-Unlike the [regulated offline profile](regulated-offline-tenant-example.md), this one renders a
+Compared with the [regulated offline profile](regulated-offline-tenant-example.md), this one renders a
 NetworkPolicy that permits the two named external CIDRs on port 443 in addition to DNS and the
 in-cluster gateway and RAG service.
 
@@ -61,7 +61,7 @@ kubectl apply -f .out/tenants/
 make tenant-smoke
 ```
 
-Verify egress is allowlisted, not open:
+Verify egress follows the allowlist:
 
 ```bash
 # Approved mirror reachable (replace with a real host in the approved CIDR):
@@ -79,4 +79,4 @@ kubectl -n ai-gpu-coding-agents run blocked --rm -it --image=curlimages/curl --r
   reviewed mirror ranges before applying; keep the `catalogRef`/`description` so each allow is
   auditable.
 - Tune `quotas`, `limitRange`, and `agentWorkspace.pvcSize` to the GPU footprint.
-- Set `allowJobManagement: false` if the team should not create Jobs.
+- Set `allowJobManagement: false` to remove Job management for the team.

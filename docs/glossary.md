@@ -19,7 +19,7 @@ runbooks.
 
 **Agent sandbox (workspace runtime)**: The hardened kubernetes-sigs/agent-sandbox `Sandbox` that
 every coding-agent workspace runs on ([ADR 0010](adr/0010-agent-sandbox-standard-runtime.md)):
-non-root, read-only root filesystem, no ambient ServiceAccount token, and an optional
+non-root, read-only root filesystem, ambient ServiceAccount token disabled, and an optional
 kernel-isolation runtime class (`sandbox.runtimeClassName`). Each workspace is bound 1:1 to the
 sandbox id the gateway sees as `X-Sandbox-ID`. The controller is a platform prerequisite (synced
 as the `agent-sandbox-controller` Application, or installed with `make agent-sandbox-install`),
@@ -48,7 +48,7 @@ watch the 99.5 percent objective on short and long horizons. See
 **Canary vs shadow (progressive delivery)**: Two gateway routing behaviors used to roll out a model
 or backend change safely. *Canary* sends a weighted fraction of live traffic to a candidate route and
 counts it with `inference_gateway_canary_routed_total`. *Shadow* mirrors requests fire-and-forget to a
-candidate route without returning its response to the caller
+candidate route and discards its response
 (`inference_gateway_shadow_requests_total`). Both are first-class in the gateway; see
 [ADR 0005](adr/0005-openai-compatible-gateway.md) and [Architecture](architecture.md).
 
@@ -68,8 +68,8 @@ attribute usage to the same owner. Kept stable across upgrades so cost history s
 **Cross-encoder reranker**: An optional second retrieval stage that reorders over-fetched candidates
 by joint query-document relevance, raising precision where dense retrieval is weakest (paraphrase,
 synonymy, multi-hop). Configured via `retrieval.reranker` in the RAG chart; the default provider is
-`none`, and an `openai-compatible` provider calls a Cohere/Jina/TEI-style `/rerank` endpoint. A
-reranker outage is non-fatal; the first-stage hybrid ranking is kept. See
+`none`, and an `openai-compatible` provider calls a Cohere/Jina/TEI-style `/rerank` endpoint.
+During a reranker outage, the RAG service keeps the first-stage hybrid ranking. See
 [`src/rag-service/app/reranker.py`](https://github.com/RamazanKara/agentworkflows/blob/main/src/rag-service/app/reranker.py).
 
 ## D
@@ -139,8 +139,8 @@ config is operator-owned. See
 **Model card**: The human-readable companion to a model's machine-checked catalog entry and
 provenance record. Every `status: approved` model must have a card under
 [`platform/model-catalog/model-cards/`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/model-cards/README.md);
-cards introduce no new facts; every field is copied from the governed YAML, and `make model-check`
-fails if an approved model is missing one.
+every card field is copied from the governed YAML, and `make model-check` checks that every
+approved model has one.
 
 **Model provenance / immutableRef / digest**: The attested origin of a served model artifact, recorded
 in `platform/governance/model-provenance.yaml`. Each approved model carries a `sourceUri`, an
@@ -155,9 +155,9 @@ files against the inventory before production. See
 
 **Output guardrail**: A response-path control that inspects the model's completion before it is
 returned or cached, contributing controls for OWASP LLM02:2025 (sensitive information disclosure)
-and LLM05:2025 (improper output handling); the input-side prompt secret detection cannot catch a
-secret the *model* emits. Modes are
-`flag`, `redact` (default), and `block`; streaming responses are detected/flagged only. Configured
+and LLM05:2025 (improper output handling); it complements input-side prompt secret detection by
+covering secrets the *model* emits. Modes are
+`flag`, `redact` (default), and `block`; streaming responses are flagged. Configured
 under `guardrails.outputGuardrail`. See
 [Guardrails](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/guardrails.md).
 
@@ -167,8 +167,8 @@ under `guardrails.outputGuardrail`. See
 their tenant on the configured `retrieval.tenantIsolation.field` (default `owner`, stamped per point at
 ingest and matched against the caller's `X-Sandbox-ID`). Both backends enforce it (the Qdrant query
 filter appends the match; the lexical corpus is stamped with the default sandbox id) and it fails closed:
-a missing or unasserted tenant returns no documents, never the whole corpus. **Enabled by default;**
-the single-tenant local lexical lab is the only shipped profile that turns it off. See
+a missing or unasserted tenant returns an empty result. **Enabled by default;**
+the single-tenant local lexical lab turns it off. See
 [`src/rag-service/app/retriever.py`](https://github.com/RamazanKara/agentworkflows/blob/main/src/rag-service/app/retriever.py).
 
 **Pod Security Admission (restricted)**: The Kubernetes built-in that enforces the `restricted` Pod
@@ -180,15 +180,15 @@ use a restricted seccomp profile.
 
 **Promotion request**: A reviewed `ModelPromotionRequest` (under
 `platform/model-catalog/promotion-requests/`) that authorizes moving a model to a target status. It
-records `targetStatus`, `requestedBy`, `approvers`, and a `businessJustification`. A model cannot reach
-`approved` or a gateway allowlist without a matching promotion request, provenance digest, and evidence.
+records `targetStatus`, `requestedBy`, `approvers`, and a `businessJustification`. A model reaches
+`approved` or a gateway allowlist only with a matching promotion request, provenance digest, and evidence.
 See [Model governance](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/model-governance.md).
 
 **Prompt secret detection**: An input-path guardrail that rejects requests appearing to carry
 credential material (e.g. `private_key`, `github_token`, `bearer_token`), protecting coding-agent
 prompts that may accidentally include repo files or env output. PII detectors (`email`, `us_ssn`,
 `credit_card`) are built in but opt-in. A match returns HTTP 400 with `prompt_secret_detected` and
-names the pattern without echoing the matched text. See
+names the pattern and keeps the matched text out of the response. See
 [Guardrails](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/guardrails.md).
 
 ## Q
@@ -211,9 +211,9 @@ failed gate means the handoff evidence is incomplete or below threshold. See
 [Release gates](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/release-gates.md).
 
 **Response cache**: An exact-match, per-sandbox cache of non-streaming chat completions, keyed by
-`(sandbox_id, canonical-payload)` so a repeated identical request skips the runtime and one tenant's
-cached answer is never served to another. TTL + LRU bounded; `stream` is excluded from the key and
-streaming responses are never cached. Off by default (`responseCache` in
+`(sandbox_id, canonical-payload)` so a repeated identical request skips the runtime and each tenant's
+cached answers stay scoped to that tenant. TTL + LRU bounded; `stream` is excluded from the key and
+only non-streaming responses are cached. Off by default (`responseCache` in
 [`deploy/charts/inference-gateway/values.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/inference-gateway/values.yaml));
 use the Redis backend for a cache shared across replicas. See
 [`src/inference-gateway/app/cache.py`](https://github.com/RamazanKara/agentworkflows/blob/main/src/inference-gateway/app/cache.py).
@@ -243,9 +243,8 @@ For a tenant lab it equals the namespace sandbox id. See
 **Strict release gate**: The stricter form of the release gate, run with `make release-gate-strict`
 for customer demos, release reviews, restore-drill reviews, and production-readiness handoff. It fails
 when a required gate falls back to checked-in `sample-*` evidence or when selected evidence is older
-than `RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS` (default 24h), so the report is based on the current build
-rather than only validating sample report shapes. It does not establish production readiness by
-itself. See
+than `RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS` (default 24h), so the report reflects the current build.
+See
 [Release gates](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/release-gates.md)
 and [Evidence and validation](proof.md).
 
@@ -254,8 +253,8 @@ and [Evidence and validation](proof.md).
 **Tamper-evident audit chain**: A per-process SHA-256 hash chain linking the gateway's redacted audit
 events (`h_i = SHA-256(h_{i-1} || canonical(record_i))`) so any edit, insertion, deletion, or reordering
 is detectable by recomputation. The live construction matches the offline auditor/verifier reference in
-`scripts/audit-verify.py` byte for byte. The chain is per replica; cross-replica and
-long-horizon integrity depend on log shipping and an external head commitment. See
+`scripts/audit-verify.py` byte for byte. The chain is per replica; log shipping and an external
+head commitment extend integrity across replicas and over time. See
 [ADR 0006](adr/0006-tamper-evident-audit-hash-chain.md).
 
 **Tensor-parallel**: Splitting a single model's tensors across the GPUs of one node via
@@ -273,7 +272,7 @@ coding-agent workspace values. Driven by a spec under `tenants/onboarding/` via 
 
 **Traceable sandbox**: The `ai-sandbox` namespace deployed by the `traceable-sandbox` Application:
 quota, default resource limits, restricted Pod Security Admission labels, and default-deny network
-policy, proving that a request can be traced end to end without leaking prompt text. Exercised by
+policy, proving that a request can be traced end to end while prompt text stays out of the trace. Exercised by
 `make trace-smoke` (renamed from the retired `sandbox-smoke` target in
 [ADR 0010](adr/0010-agent-sandbox-standard-runtime.md)). Distinct from the *agent sandbox* workspace
 runtime (see above). See

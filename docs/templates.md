@@ -9,16 +9,15 @@ Installation pins that version in the team's revisioned settings and records an 
 repeating the same installation is idempotent. New runs retain the template ID and version.
 Unknown versions return 422; an unapproved workflow returns 409.
 
-This installs the catalog selection, not remote executable code. The Compose worker already
+Installation selects a catalog entry; your worker supplies the code. The Compose worker
 registers all nine implementations. For Kubernetes, register the implementation in your worker
 and approve `inference-gateway.sandboxPolicy.policy.policies[].workflows` in Helm first;
-the gallery never expands model, tool or egress permissions. Operator policy remains authoritative.
-Source changes still require a worker deployment. The existing scaffold command below is
-the way to edit a template. See [lifecycle API and SDK methods](team-lifecycle.md).
+the gallery works within the model, tool and egress permissions set in operator policy.
+Deploy the worker to ship source changes. Use the scaffold command below to edit a template. See [lifecycle API and SDK methods](team-lifecycle.md).
 
 Pick one team task, run its fixture, then adapt its inputs and tools. Each walkthrough takes
-about five minutes after the [quickstart](quickstart.md). All nine run in the same Compose
-trial without credentials for any external service, a GPU, or framework extras.
+about five minutes after the [quickstart](quickstart.md). All nine run in the same
+credential-free Compose trial on CPU with the base SDK.
 
 | Team task | `--template` | What you can inspect |
 | --- | --- | --- |
@@ -39,15 +38,15 @@ Every command below works in Bash and PowerShell. Replace `RUN_ID` with the UUID
 by `runs start`; repeat `inspect` while a run is still working. The console at
 <http://127.0.0.1:8080/console/> offers the same workflows and sample inputs under **Run workflow**.
 
-`init` works offline and refuses to overwrite a nonempty directory. It writes `workflow.py`,
+`init` works offline and writes into a new or empty directory. It writes `workflow.py`,
 `worker.py`, `input.json`, a pinned SDK requirement, `.gitignore`, and local instructions.
 The built-in worker already runs these unchanged examples. Input edits apply to the next
 run immediately; source edits require [your own worker](#run-your-edits).
 
-The fake returns **canned answers and synthetic data**, even if you change the input. It
-proves the workflow, policy, approval and receipt paths; it does not evaluate model quality
-or connect to your GitHub, ticketing, logging, or document system. The `example.test` source
-links identify fixtures and are not live pages. All examples request the existing default
+The fake returns **canned answers and synthetic data** for any input. It demonstrates the
+workflow, policy, approval and receipt paths; connect a real model and your own GitHub,
+ticketing, logging, or document system to evaluate quality. The `example.test` source links
+identify fixtures. All examples request the existing default
 budget of 10,000 tokens / $5, further limited by team policy; fixture prices are synthetic.
 
 ## PR review with human approval {#code-review}
@@ -71,15 +70,14 @@ agentworkflows runs inspect RUN_ID
 
 Expect `status: completed`, `result.approved: true`, the review and reviewer, and model and
 approval receipts. Start another run and use `runs approve RUN_ID --reject` to see
-`result.approved: false`. Both decisions finish the run; neither posts, executes or merges
-code. Approval expires after seven days. The trial's Slack/webhook/email alerts go to the
+`result.approved: false`. Both decisions finish the run with the review as its result.
+Approval expires after seven days. The trial's Slack/webhook/email alerts go to the
 [local notification inbox](#notifications-and-next-steps).
 
 **Adapt it:** put a sanitized unified diff in `my-review/input.json`. Include file names and
 hunk line numbers so findings can be checked. Use separate builder and approver identities
 from [team setup](workflows.md#teams-projects-and-roles). A PR webhook needs an adapter that
-fetches the diff and submits `{"diff":"..."}`; this template does not accept a raw GitHub
-event. If you add a comment-posting tool, call it only after a true approval and make the
+fetches the diff and submits `{"diff":"..."}`. If you add a comment-posting tool, call it only after a true approval and make the
 endpoint honor the gateway's idempotency key. Check findings against the actual diff.
 
 ## Support ticket triage {#support-triage}
@@ -96,8 +94,8 @@ agentworkflows runs inspect RUN_ID
 The input's `ticket` describes three teammates unable to sign in after password resets.
 Expect `status: completed` and a text `result` with category `access`, priority `high`, owner
 `identity-support`, and a draft asking for the error and time without requesting secrets.
-There is one model receipt and no customer message is sent. No approval is required to
-create this internal draft.
+There is one model receipt, and the draft stays in the run for your team. This internal
+draft runs without an approval step.
 
 **Adapt it:** replace `ticket` with a sanitized ticket body. Edit the prompt to use your
 actual queues, severity definitions and escalation criteria. Connect a ticket-system
@@ -125,8 +123,8 @@ and one model receipt. The report stays in the run result.
 **Adapt it:** implement the existing `report_source` POST contract, accepting `source` and
 `period` and returning `{id, url, period, text}`. Point its team tool URL at an authenticated
 adapter for your repositories, helpdesk and incident tracker. Bound date ranges and response
-sizes, and use stable source links. A failed source call fails the run after retries; this
-template does not silently turn missing data into a successful report.
+sizes, and use stable source links. A failed source call fails the run after retries, so
+every successful report covers all three sources.
 
 For a Monday 09:00 **UTC** run, merge this into the existing `WeeklyReportWorkflow` policy
 in `deploy/compose/sandbox-policy.yaml`, preserving its models, tools, egress and budgets:
@@ -151,8 +149,8 @@ agentworkflows triggers pause WeeklyReportWorkflow weekly
 ```
 
 Use `triggers resume WeeklyReportWorkflow weekly` when ready. The manual run above exercises
-the same report immediately, so there is no need to wait until Monday. See
-[schedule semantics](workflows.md#triggers-and-notifications) for overlap and catch-up limits.
+the same report immediately, so you can try it right away. See
+[schedule semantics](workflows.md#triggers-and-notifications) for overlap and catch-up behavior.
 
 ## Incident summary from logs {#incident-summary}
 
@@ -169,13 +167,13 @@ log lines. Expect `status: completed`, `result.logs` retaining those lines, and
 `result.summary` citing `[L1]` through `[L4]`: deployment at 09:00 UTC, errors at 09:05,
 rollback at 09:12, and a return to baseline at 09:20. The fixture labels the deployment
 as an unconfirmed cause and asks for the affected-user count. There is one tool and one
-model receipt. It performs no remediation and declares no incident closed.
+model receipt. The summary is a draft handoff; remediation and closure stay with the incident team.
 
 **Adapt it:** replace the `incident_logs` endpoint with a read-only log adapter accepting
 `{incident_id}` and returning `{incident_id, source, lines}`. Enforce the team's access,
 redaction, time window and size limits there. Keep UTC timestamps and stable log IDs.
 The incident commander should verify the draft against logs and metrics before sharing it.
-Raw logs and results enter Temporal history; receipt redaction alone does not remove that data.
+Raw logs and results enter Temporal history; apply redaction in the adapter and set Temporal retention for that data.
 
 ## Document Q&A with citations {#document-qa}
 
@@ -195,8 +193,8 @@ retrieval tool receipt and one model receipt.
 
 Change the question in `my-docs/input.json` to `What is the weather on Mars?` and start a new
 run. The fixture retrieves nothing: expect `I don't know from the supplied documents.`,
-empty citations, and no model call. Fixture retrieval recognizes approval and receipt
-questions only; it is independent of the optional RAG service in Compose.
+empty citations, and no model call. Fixture retrieval answers approval and receipt
+questions and runs separately from the optional RAG service in Compose.
 
 **Adapt it:** connect `search_documents` to your approved search/RAG backend. It accepts
 `{query}` and returns a list of `{id, title, url, text}` excerpts, each with a unique stable
@@ -204,8 +202,8 @@ ID and source link. Enforce document access in that adapter and limit excerpt si
 The workflow requires JSON model output and checks that inline citation IDs match the
 returned IDs and retrieved excerpts. Malformed JSON or fabricated/mismatched IDs fail the
 run with a non-retryable error; an empty citation list yields the same abstention.
-Review the error and source before starting a corrected run. Valid IDs do **not** prove
-the cited text supports every claim; evaluate answer quality and abstention on your corpus.
+Review the error and source before starting a corrected run. Evaluate answer quality and
+abstention on your corpus.
 
 ## Research starter {#research}
 
@@ -223,14 +221,13 @@ timeline for receipt IDs; use the quickstart's [receipt export](quickstart.md#3-
 to verify the retained chain.
 
 Compose sends approval-waiting, failure, and budget-threshold notifications to a local
-fake inbox at <http://127.0.0.1:8025/> (JSON). Nothing goes to a real Slack workspace or
-mailbox. Completed reports are run results, not automatic outbound report deliveries.
+fake inbox at <http://127.0.0.1:8025/> (JSON). Completed reports are delivered as run results.
 [Triggers and notifications](workflows.md#triggers-and-notifications) explains setup for
 your team's authorized destinations.
 
 Before real use, configure approved tools/models, separate team credentials and budgets,
 and evaluate model output. Sanitize input before submitting it: workflow inputs, activity
-results and drafts are retained in Temporal even though gateway receipts fingerprint prompts.
+results and drafts are retained in Temporal, while gateway receipts fingerprint prompts.
 See [production readiness](production-readiness.md). When finished with the trial, follow
 [Stop the trial](quickstart.md#stop-the-trial) to remove its containers and volumes.
 
@@ -262,8 +259,8 @@ and start the worker:
     ```
 
 Wait for `Worker ready on demo-workflows`. Start and inspect runs from the original
-terminal using its human credential. Your worker registers only this project's workflow;
-do not start other templates on that queue until restoring the built-in worker.
+terminal using its human credential. Your worker registers this project's workflow;
+start other templates after restoring the built-in worker.
 Restart your worker after changing source. Stop it with Ctrl+C, then restore Compose:
 
 ```sh
@@ -326,14 +323,14 @@ agentworkflows runs approve RUN_ID
 Input field: `changes` (required text); `model` defaults to `demo-openai`.
 Example: REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint.
 
-The draft turn merged changes into release notes with a reviewer decision.
+The workflow turns merged changes into release notes with a reviewer decision.
 It waits for human approval and returns `approved`, `release_notes`, and `reviewer`.
-Rejection returns `approved: false`; it sends no external message or publication.
+Rejection returns `approved: false`; both outcomes keep the result in the run.
 Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
 further constrained by team policy.
 
 **Adapt it:** supply sanitized merged changes with stable issue/PR IDs; have the reviewer check breaking changes and migration instructions against the diff before publishing.
-The local fake produces a labeled synthetic draft. A real model is needed to assess quality.
+The local fake produces a labeled synthetic draft; connect a real model to assess quality.
 
 ## Meeting actions {#meeting-actions}
 
@@ -353,14 +350,14 @@ agentworkflows runs approve RUN_ID
 Input field: `transcript` (required text); `model` defaults to `demo-openai`.
 Example: 09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is still open.
 
-The draft extract decisions, owners, and due dates from a meeting transcript.
+The workflow extracts decisions, owners, and due dates from a meeting transcript.
 It waits for human approval and returns `approved`, `action_plan`, and `reviewer`.
-Rejection returns `approved: false`; it sends no external message or publication.
+Rejection returns `approved: false`; both outcomes keep the result in the run.
 Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
 further constrained by team policy.
 
 **Adapt it:** supply a transcript with timestamps and consent to process it; verify every proposed owner and deadline before transferring actions to your task tracker.
-The local fake produces a labeled synthetic draft. A real model is needed to assess quality.
+The local fake produces a labeled synthetic draft; connect a real model to assess quality.
 
 ## Security questionnaire {#security-questionnaire}
 
@@ -380,11 +377,11 @@ agentworkflows runs approve RUN_ID
 Input field: `evidence` (required text); `model` defaults to `demo-openai`.
 Example: Q1: Are approvals required? E1: The team policy requires two reviewers before publication. Q2: Is SOC 2 certification current? No certification evidence supplied.
 
-The draft draft evidence-backed questionnaire answers and flag unsupported claims.
+The workflow drafts evidence-backed questionnaire answers and flags unsupported claims.
 It waits for human approval and returns `approved`, `answers`, and `reviewer`.
-Rejection returns `approved: false`; it sends no external message or publication.
+Rejection returns `approved: false`; both outcomes keep the result in the run.
 Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
 further constrained by team policy.
 
-**Adapt it:** supply numbered questions and authoritative evidence excerpts with IDs; require a security reviewer to check each cited statement. Missing evidence must remain an explicit gap, especially certification claims.
-The local fake produces a labeled synthetic draft. A real model is needed to assess quality.
+**Adapt it:** supply numbered questions and authoritative evidence excerpts with IDs; require a security reviewer to check each cited statement. Mark questions without evidence as unanswered, especially certification claims.
+The local fake produces a labeled synthetic draft; connect a real model to assess quality.

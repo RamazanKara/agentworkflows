@@ -41,26 +41,26 @@ Use Kyverno as the admission policy engine.
   conditions), so a maintainer reads a policy and the object it constrains in the same dialect.
 - The signed-image policy turns the CI Cosign signing investment into a real runtime guarantee: only
   images keylessly signed by this repo's `ci.yml` workflow on `refs/heads/main` are admitted in
-  non-infra namespaces. Forks that republish images must update `imageReferences` and the
-  subject/issuer, which is a deliberate manual edit, not an auto-rewrite.
+  non-infra namespaces. Forks that republish images update `imageReferences` and the
+  subject/issuer as a deliberate manual edit.
 - Both engines and the rest of the platform are excluded from the restricted-pod and label policies
-  by namespace (`kube-system`, `argocd`, `kyverno`, `monitoring`, and so on), so infrastructure is
-  not blocked by tenant rules.
-- Kyverno is an in-cluster admission dependency; if it is unhealthy, admission of new workloads in
-  governed namespaces is affected. This is the intended fail-closed posture for `Enforce` policies.
+  by namespace (`kube-system`, `argocd`, `kyverno`, `monitoring`, and so on), so infrastructure runs
+  independently of tenant rules.
+- Kyverno is an in-cluster admission dependency, and `Enforce` policies fail closed: admission of
+  new workloads in governed namespaces waits on a healthy Kyverno. Operators monitor it alongside
+  other platform operators.
 
 ## Alternatives considered
 
 - **OPA Gatekeeper.** A mature CNCF policy controller with a large constraint-template ecosystem.
-  Rejected as the default because authoring requires Rego, a separate language from the Kubernetes
-  manifests it guards; Kyverno's Kubernetes-native YAML lowers the authoring and review cost for a
+  Authoring uses Rego, a separate language from the Kubernetes manifests it guards; Kyverno's Kubernetes-native YAML lowers the authoring and review cost for a
   single maintainer, and its built-in `verifyImages` covers the Cosign keyless verification AgentWorkflows
   needs without a separate component.
-- **Plain Pod Security Admission (PSA).** Built in and zero-dependency, and it would cover the
-  non-root/privileged/read-only baseline. Rejected as sufficient on its own because PSA cannot
-  express the label requirements, the pinned-image and resource rules, signed-image verification, the
-  egress-CIDR backstop, or the PVC encryption attestation. PSA can still be layered underneath; the
-  decision here is which engine carries the platform-specific rules.
-- **Validating Admission Policy (CEL, in-tree).** Promising and dependency-free for validation, but
-  it does not perform image signature verification and the rule set predates broad reliance on it.
-  Kyverno consolidates validation and image verification in one already-pinned operator.
+- **Plain Pod Security Admission (PSA).** Built in and zero-dependency, and it covers the
+  non-root/privileged/read-only baseline. Kyverno adds the label requirements, the pinned-image and
+  resource rules, signed-image verification, the egress-CIDR backstop, and the PVC encryption
+  attestation. PSA can be layered underneath; the decision here is which engine carries the
+  platform-specific rules.
+- **Validating Admission Policy (CEL, in-tree).** Dependency-free for validation. Kyverno was
+  preferred because it consolidates validation and image signature verification in one
+  already-pinned operator.

@@ -3,8 +3,8 @@
 The inference gateway chart deploys the OpenAI-compatible gateway, admission controls, sandbox budgets, metrics, audit logging, auth configuration, and runtime egress policy.
 
 Set `adminConsole.enabled=true` to serve the bundled team console at `/console/` on the
-gateway host. It uses the existing team authentication and workflow API, with no extra pod,
-port, or CORS configuration. Configure teams, Redis, and Temporal workers as described in
+gateway host. It uses the existing team authentication and workflow API and is served from
+the gateway's own pod, port, and origin. Configure teams, Redis, and Temporal workers as described in
 the [workflow guide](../../../docs/workflows.md#web-console). Provider secrets stay in
 gateway Secrets; the admin page shows references and key presence only.
 

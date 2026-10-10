@@ -1,7 +1,7 @@
 # Agent-sandbox integration
 
 Agent workspaces run as `agents.x-k8s.io/v1beta1` `Sandbox` resources managed by the
-vendored `kubernetes-sigs/agent-sandbox` controller. This is the only workspace runtime in
+vendored `kubernetes-sigs/agent-sandbox` controller. It is the standard workspace runtime in
 release `v0.9.0`.
 
 The decisions are recorded in [ADR 0009](adr/0009-adopt-agent-sandbox-workspace-runtime.md)
@@ -34,14 +34,14 @@ last-applied annotation.
 
 The pod template runs as UID/GID `10001`, uses `RuntimeDefault` seccomp, drops all Linux
 capabilities, disables privilege escalation, and makes the root filesystem read-only. The
-default Kubernetes service-account token is not mounted.
+default Kubernetes service-account token mount is disabled.
 
 ## Kernel isolation
 
-The controller-managed pod is a lifecycle and policy boundary. It is not automatically a separate
-kernel boundary. `sandbox.runtimeClassName` is empty in the checked-in local and customer values.
-Set it to a cluster-provided runtime such as gVisor or Kata when that isolation is required, and
-verify that the runtime exists on every node that may host a workspace.
+The controller-managed pod is a lifecycle and policy boundary that shares the node kernel by
+default; `sandbox.runtimeClassName` is empty in the checked-in local and customer values. For a
+separate kernel boundary, set it to a cluster-provided runtime such as gVisor or Kata, and verify
+that the runtime exists on every node that may host a workspace.
 
 ## Platform credential
 
@@ -49,31 +49,27 @@ The chart projects a service-account token at `/var/run/platform/token`. It is s
 `inference-gateway` audience, expires after 600 seconds by default, and is rotated by the kubelet.
 The gateway only accepts it when JWT/JWKS verification is configured against the cluster issuer.
 
-This token is still a credential. Audience binding and expiry reduce its usefulness elsewhere but
-do not make the workspace trusted.
+Handle this token as a credential. Audience binding and expiry scope it to the gateway for a short
+window.
 
 ## Network boundary
 
-The direct `Sandbox` resource does not create an upstream NetworkPolicy. The chart's
-NetworkPolicies are therefore the network boundary for this path. They require a CNI that enforces
-NetworkPolicy; the local profile uses Calico. The smoke check refuses to treat kindnet as valid
-egress evidence.
+The chart's NetworkPolicies form the network boundary for the direct `Sandbox` path. They require
+a CNI that enforces NetworkPolicy; the local profile uses Calico. The smoke check requires an
+enforcing CNI for egress evidence.
 
 Every external CIDR entry needs a `catalogRef` from
-`platform/network/egress-catalog.yaml`. Approved destinations can still receive data, so the
-catalog must stay narrow and be reviewed as an exfiltration boundary.
+`platform/network/egress-catalog.yaml`. Approved destinations receive workspace traffic, so keep
+the catalog narrow and review it as an exfiltration boundary.
 
 ## Updates and lifecycle
 
 `workspace.shutdownTime` and `workspace.shutdownPolicy` can bound a workspace lifetime. They are
 unset by default.
 
-The v0.5.0 controller does not replace its singleton pod when the `Sandbox` pod template changes.
+The v0.5.0 controller keeps its singleton pod running when the `Sandbox` pod template changes.
 After a chart update, delete the managed pod so the controller recreates it from the current
 template. `make agent-sandbox-smoke` detects image or volume drift and performs that refresh.
-
-Warm pools, `SandboxClaim`, multi-cluster scheduling, and workspace snapshot/restore are not
-implemented by this chart.
 
 ## Validation
 
@@ -94,7 +90,7 @@ README animation.
 
 `await WorkflowGateway().container("coder", {"task": "Review this code"})` executes an
 administrator-approved command in an **existing** agent-sandbox workspace. It reuses this
-chart and controller; there is no additional execution service or Docker socket on the worker.
+chart and controller, so the worker runs it without an additional execution service or Docker socket.
 The included `CodeWorkflow` and
 [container agent](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/container_agent.py)
 write `review.txt` inside `/workspace` and call the gateway with a short-lived credential.
@@ -119,8 +115,8 @@ Set `networkPolicy.gateway.namespace` and `port` if your gateway uses different 
 After changing an existing Sandbox template, recreate its pod as described above.
 The worker checks the actual pod's owner, hardening, volumes, image, and namespace policies
 before execution. Extra egress policies, external CIDRs, sidecars, secret/projected volumes,
-or ambient environment credentials cause an actionable refusal. An enforcing CNI is still
-a deployment prerequisite; inspecting policy objects cannot prove CNI enforcement.
+or ambient environment credentials produce an actionable refusal. An enforcing CNI is a
+deployment prerequisite; confirm enforcement with `make agent-sandbox-smoke`.
 
 Add the agent to the team's gateway policy (substitute your approved routes/origins):
 
@@ -145,8 +141,7 @@ workflows:
 The route named `demo-openai` must exist in this gateway; the Compose fixture route uses
 `http://cloud-fake:8000`, while a live OpenAI route uses its configured origin. The example
 agent's model is explicit in its source. Credentials for providers stay on the gateway.
-Commands, namespace, and Sandbox names come only from this reviewed policy, never from
-workflow input. Agent input is JSON on stdin, scanned for secrets before authorization.
+Commands, namespace, and Sandbox names come only from this reviewed policy. Agent input is JSON on stdin, scanned for secrets before authorization.
 
 In your existing workflows Helm values, grant the worker access to that workspace:
 
@@ -161,7 +156,7 @@ worker:
 
 Upgrade the workflows release with those values. Its worker service account receives read
 access to the named Sandbox/pod and namespace policies, and exec access to that pod only.
-It cannot create pods, change network policies, or read Secrets. Use the actual gateway
+Pod creation, network-policy changes and Secret reads stay outside its role. Use the actual gateway
 Service DNS URL: container steps validate that the approved egress rule reaches its namespace
 and port. Workers running outside Kubernetes instead need kubectl and equivalently scoped
 kubeconfig access. The example worker already registers `CodeWorkflow` on `research`:
@@ -186,29 +181,28 @@ PY
 The gateway issues an opaque credential scoped to the team, run, step, and classification;
 it expires with `timeoutSeconds` (at most ten minutes). Only governed model/tool endpoints
 accept it, even when the agent omits correlation headers. The worker passes it through stdin,
-never command-line arguments or Temporal results, and revokes it when the step finishes.
-No team key, provider key, or Kubernetes credential enters the workspace. Failed/crashed
+keeping it out of command-line arguments and Temporal results, and revokes it when the step
+finishes. Team keys, provider keys and Kubernetes credentials stay outside the workspace. Failed/crashed
 steps retain their conservative cost; expiry bounds grants after a lost worker. A Redis lease
 prevents simultaneous workflow steps in one workspace. Failed execution holds the lease until
 its timeout plus 30 seconds, since remote work may still be stopping.
 
-Container steps default to **one attempt**: arbitrary code side effects cannot safely be
-replayed. The runner bounds runtime and output, kills its process group, and sends output
+Container steps default to **one attempt**, so code side effects run once. The runner bounds runtime and output, kills its process group, and sends output
 through gateway DLP before returning it to Temporal. `agent_start` and `agent_exec` receipts
-correlate authorization and completion; a missing completion is an unknown outcome, not
-proof of success. Each model/tool call has its own receipt. Filesystem/process actions are
-not individually intercepted. Workspace data persists on its PVC; dedicate workspaces to a
+correlate authorization and completion; a start receipt without a completion receipt marks
+an unknown outcome. Each model/tool call has its own receipt. Workspace data persists on its PVC; dedicate workspaces to a
 trust boundary and clean/recreate them between untrusted workloads.
 
 Compose validates framework/MCP flows without Kubernetes. Container unit tests validate the
 runner contract and refusals; `make agent-sandbox-smoke` verifies the actual cluster boundary.
 Use a gVisor/Kata RuntimeClass when a separate kernel boundary is required.
 
-## Limits
+## Operator hardening
 
-- A missing isolation `RuntimeClass` means the workspace shares the node kernel.
-- NetworkPolicy restricts connections but does not encrypt them.
-- Namespace RBAC does not restrict actions performed through an approved external service.
-- The gateway audit chain records governed model calls, not every process or file operation inside
-  the workspace.
-- PVC availability, backup, retention, and secure deletion depend on the cluster storage system.
+- Set an isolation `RuntimeClass` to give workspaces a kernel separate from the node.
+- Add CNI or mesh mTLS to encrypt workspace connections; NetworkPolicy controls which connections
+  are allowed.
+- Review each approved external service as part of the workspace's effective permissions.
+- The gateway audit chain records governed model and tool calls; use node or runtime monitoring for
+  process and file activity inside the workspace.
+- Configure PVC availability, backup, retention, and secure deletion in the cluster storage system.

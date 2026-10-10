@@ -1,12 +1,12 @@
 # Chaos Drills Runbook
 
 Use this runbook to prove how platform components behave under controlled
-disruption. Be precise about what each drill proves:
+disruption. Each drill type proves something specific:
 
 - **Rollout/recovery drills** (`*-rollout`) restart a workload with `kubectl
   rollout restart` and assert it comes back healthy. They prove graceful
-  restart and post-restart smoke. They are *not* fault injection -- nothing is
-  taken away or broken, the workload is simply rolled.
+  restart and post-restart smoke. The workload is rolled with every dependency
+  left in place.
 - **Capacity preflight** (`gpu-capacity-preflight`) is a non-mutating check of
   GPU node labels and allocatable capacity.
 - **Fault-injection drills** (`rag-degradation-fault`) actively remove a
@@ -87,9 +87,9 @@ A successful rollout/recovery drill shows:
 A successful `rag-degradation-fault` fault-injection drill shows:
 
 - Qdrant was scaled to 0 (the fault was actually injected).
-- The RAG Deployment stayed `Available` while Qdrant was down (no hard crash; PDB/error-budget held).
+- The RAG Deployment stayed `Available` while Qdrant was down (PDB/error-budget held).
 - Qdrant was restored to its original replica count.
 - Post-fault RAG smoke passed against the qdrant backend.
 
-Record failed drills as incidents if a component does not roll out, does not
-stay available under the injected fault, or the smoke check fails after recovery.
+Record a drill as an incident when a component fails to roll out, loses
+availability under the injected fault, or fails the smoke check after recovery.

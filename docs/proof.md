@@ -1,6 +1,6 @@
 # Evidence and validation
 
-This page separates repository checks and sample report shapes from evidence that must be regenerated
+This page lists the repository checks, the sample report shapes, and the evidence you generate
 for a release or customer handoff.
 
 ## Current checks
@@ -30,9 +30,9 @@ The source of truth is [platform/tools/validation-toolchain.yaml](https://github
 make toolchain-report TOOLCHAIN_PROFILE=strict
 ```
 
-The generated JSON and Markdown reports show which tools were present, missing, and used for the
-validation run.
+The generated JSON and Markdown reports show the status of each tool and which tools were used for
+the validation run.
 
 ## What sample evidence means
 
-Checked-in files named `sample-*` prove report shape and gate behavior. They do not prove the current release. Strict gates must use freshly generated non-sample artifacts.
+Checked-in files named `sample-*` show report shape and gate behavior. Strict gates use freshly generated non-sample artifacts as evidence for the current release.

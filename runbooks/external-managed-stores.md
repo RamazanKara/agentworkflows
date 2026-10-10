@@ -7,19 +7,19 @@ production-style handoff.
 ## Why this exists
 
 AgentWorkflows' stateful stores ship as **single-node, reference footprints** so a `kind` laptop
-lab and a fresh cluster come up with zero external dependencies. Each is a deliberate
-dev/reference default, not a production topology:
+lab and a fresh cluster come up with zero external dependencies. Each is a dev/reference
+default, and this runbook covers the production topology:
 
-| Store | Bundled footprint | What it holds | SPOF? |
+| Store | Bundled footprint | What it holds | Topology |
 | --- | --- | --- | --- |
-| Budget / response-cache Redis | [`deploy/charts/budget-redis`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis), 1 replica, AOF and PVC persistence, `podDisruptionBudget.minAvailable: 0` | Shared per-sandbox budget counters and the optional exact-match response cache | Yes; no replication or automatic failover, an outage fails budgets closed (503) |
-| Qdrant vector store | [`deploy/charts/qdrant-vector-store`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store), single-instance, **enforced** by [`values.schema.json`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store/values.schema.json) (`replicaCount` max 1) on one RWO PVC | RAG dense vectors / hybrid retrieval corpus | Yes; a node drain briefly evicts retrieval |
-| Loki logging | [`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml), `deploymentMode: SingleBinary`, `replication_factor: 1`, filesystem storage, 31-day retention | Pod stdout including the redacted gateway/RAG audit JSON | Yes; filesystem-backed, not replicated |
+| Budget / response-cache Redis | [`deploy/charts/budget-redis`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/budget-redis), 1 replica, AOF and PVC persistence, `podDisruptionBudget.minAvailable: 0` | Shared per-sandbox budget counters and the optional exact-match response cache | Single node; an outage fails budgets closed (503) |
+| Qdrant vector store | [`deploy/charts/qdrant-vector-store`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store), single-instance, **enforced** by [`values.schema.json`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/qdrant-vector-store/values.schema.json) (`replicaCount` max 1) on one RWO PVC | RAG dense vectors / hybrid retrieval corpus | Single node; a node drain briefly pauses retrieval |
+| Loki logging | [`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml), `deploymentMode: SingleBinary`, `replication_factor: 1`, filesystem storage, 31-day retention | Pod stdout including the redacted gateway/RAG audit JSON | Single binary, filesystem-backed |
 
-None of these should be relied on as the durable system of record in a regulated or
-multi-tenant production environment. The sections below make each one a clean opt-in swap to
-an external/HA service **without ripping out the bundled dev default**. You point config at
-your managed endpoint and stop syncing the bundled Application.
+For a regulated or multi-tenant production environment, use an external/HA service as the
+durable system of record. The sections below make each one a clean opt-in swap that **keeps the
+bundled dev default in the repo**: you point config at your managed endpoint and stop syncing
+the bundled Application.
 
 For the control-by-control map that references this runbook, see the
 [Production readiness matrix](https://github.com/RamazanKara/agentworkflows/blob/main/docs/production-readiness.md).
@@ -28,8 +28,7 @@ For the control-by-control map that references this runbook, see the
 
 ## 1. External / managed Redis (budget + response cache)
 
-The gateway talks to Redis over a plain URL, so "bring your own HA Redis" is a config change,
-not a code change. The same guidance covers a managed cloud Redis (ElastiCache, MemoryStore,
+The gateway talks to Redis over a plain URL, so "bring your own HA Redis" is a config change. The same guidance covers a managed cloud Redis (ElastiCache, MemoryStore,
 Azure Cache), a self-run **Redis Sentinel** failover pair, or a **Redis Cluster**.
 
 
@@ -41,8 +40,8 @@ Two independent URLs, both in the gateway values
 - `budget.redisUrl` (env `SANDBOX_BUDGET_REDIS_URL`): shared budget counters. Requires
   `budget.backend: redis`. This is the correctness-critical one under multi-replica scale-out.
 - `responseCache.redisUrl` (env `RESPONSE_CACHE_REDIS_URL`): the optional shared response
-  cache. Requires `responseCache.backend: redis`. Cache loss is a performance event, not a
-  correctness event (the gateway degrades to a miss and calls the runtime).
+  cache. Requires `responseCache.backend: redis`. Cache loss affects performance only (the
+  gateway treats it as a miss and calls the runtime).
 
 They may point at the same server on different logical databases (the defaults use `/0` and
 `/1`) or at entirely separate services.
@@ -50,10 +49,10 @@ They may point at the same server on different logical databases (the defaults u
 ### Steps
 
 1. **Provision** the managed/HA Redis and get its endpoint. For Sentinel, front the failover
-   set with a stable Service/DNS name (or a Sentinel-aware proxy) so the URL does not change on
+   set with a stable Service/DNS name (or a Sentinel-aware proxy) so the URL stays stable across
    failover. For a cloud managed Redis, use its primary endpoint.
 
-2. **Store the AUTH secret** through your secret manager, never in values. The bundled
+2. **Store the AUTH secret** in your secret manager. The bundled
    `budget-redis` chart has an optional `auth.existingSecret`; for an external Redis you supply
    the password in the URL, sourced from a Kubernetes Secret via External Secrets
    ([`deploy/clusters/customer/external-secrets.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/external-secrets.yaml)).
@@ -72,12 +71,12 @@ They may point at the same server on different logical databases (the defaults u
           backend: redis
           redisUrl: rediss://:PASSWORD@managed-redis.internal:6379/1
 
-4. **Stop deploying the bundled Redis.** Remove (or set to not-sync) the `budget-redis`
+4. **Stop deploying the bundled Redis.** Remove (or stop syncing) the `budget-redis`
    Argo `Application` in
    [`deploy/clusters/customer/apps.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/apps.yaml)
-   so the reference Redis is not deployed alongside your managed one. The local lab
+   so your managed Redis is the one serving the gateway. The local lab
    ([`deploy/clusters/local/apps.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local/apps.yaml))
-   keeps the bundled chart, so the dev default is untouched.
+   keeps the bundled chart as the dev default.
 
 5. **Open egress.** The gateway namespace runs under a default-deny NetworkPolicy. Add an
    egress allowance to the managed Redis endpoint/port. If Redis is off-cluster, this is an
@@ -93,13 +92,12 @@ They may point at the same server on different logical databases (the defaults u
    Confirm `SANDBOX_BUDGET_REDIS_URL` / `RESPONSE_CACHE_REDIS_URL` in the rendered Deployment
    point at the managed endpoint, then check `GET /v1/sandbox/budget` returns live counters.
 
-### Fail policy during a Redis outage (deliberate tradeoff)
+### Fail policy during a Redis outage
 
 When the shared Redis is unreachable:
 
 - **Budgets always fail CLOSED**: the gateway returns `503 budget_backend_unavailable` with
-  `Retry-After`. This is not configurable and is not weakened by any setting: an outage of the
-  spend-enforcement store must never silently admit unmetered traffic.
+  `Retry-After`. This behavior is fixed, so every admitted request is metered.
 - **The rate limiter fails CLOSED by default** too (`503 rate_limit_backend_unavailable`), so a
   Redis outage throttles all traffic. Operators who prefer **availability over the throttle**
   during a Redis outage can opt into failing **OPEN**:
@@ -110,10 +108,10 @@ When the shared Redis is unreachable:
 
   With `failOpen: true`, a rate-limit-backend outage admits the request with a logged warning
   and increments `inference_gateway_rate_limit_fail_open_total{sandbox}` so the degraded window
-  is visible on the dashboard. This is a **deliberate availability-vs-enforcement tradeoff**:
-  during the outage the per-sandbox burst throttle is not enforced. It changes the rate limiter
-  only; budgets stay fail-closed. Leave it `false` (the default) when the throttle is a hard
-  abuse control you would rather 503 than drop.
+  is visible on the dashboard. This **trades enforcement for availability**: during the outage
+  the per-sandbox burst throttle is paused. It changes the rate limiter only; budgets stay
+  fail-closed. Keep it `false` (the default) when the throttle is a hard abuse control and you
+  prefer a 503.
 
 - **The response cache always degrades to a miss** (no error). Cache is an optimization.
 
@@ -124,17 +122,16 @@ See [Budget controls](budget-controls.md) for budget sizing and
 
 ## 2. External / HA Qdrant (vector RAG)
 
-The bundled Qdrant chart is **single-instance by design and enforced**: `replicaCount` is
-capped at 1 by its `values.schema.json`, because raising replicas on the shared RWO PVC would
-corrupt data, not scale it. For production RAG at scale or with an availability target, use an
-external managed Qdrant or a Qdrant cluster instead of raising the bundled replica count.
+The bundled Qdrant chart is **single-instance by design**: its `values.schema.json` caps
+`replicaCount` at 1 to protect the data on the shared RWO PVC. For production RAG at scale or
+with an availability target, use an external managed Qdrant or a Qdrant cluster.
 
 ### Options
 
 - **External managed Qdrant** (Qdrant Cloud or a separately-operated Qdrant cluster): point
   the RAG service at it and stop deploying the bundled chart.
 - **Self-run Qdrant cluster**, a multi-node deployment with sharding/replication, operated
-  outside this chart (the bundled chart intentionally does not model clustering).
+  outside this chart (the bundled chart models a single instance).
 
 ### Steps
 
@@ -150,7 +147,7 @@ external managed Qdrant or a Qdrant cluster instead of raising the bundled repli
             collection: agentworkflows
             dimensions: 384
 
-   Supply the Qdrant API key from your secret manager, not in values.
+   Supply the Qdrant API key from your secret manager.
 
 3. **Stop deploying the bundled Qdrant**: remove/stop-syncing the `qdrant-vector-store` Argo
    `Application` from your customer `apps.yaml` so only the managed instance serves retrieval.
@@ -172,32 +169,29 @@ external managed Qdrant or a Qdrant cluster instead of raising the bundled repli
 ## 3. HA Loki (audit / log durability)
 
 The bundled Loki is `SingleBinary` with `replication_factor: 1` and **filesystem** storage,
-fine for a lab, but not a durable or replicated log store. The redacted, tamper-evident audit
-receipts the gateway emits should not live **only** in this Loki; ship them onward to a SIEM /
-object store for long-term hold (see [Audit chain & SIEM forwarding](audit-chain.md)).
+sized for a lab. Ship the redacted, tamper-evident audit receipts the gateway emits onward to a
+SIEM / object store for long-term hold (see [Audit chain & SIEM forwarding](audit-chain.md)).
 
 ### Production path
 
 1. **Move Loki to a scalable mode with object storage.** In the `loki` Argo `Application`
    values ([`deploy/observability/applications.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml)),
-   switch `deploymentMode` off `SingleBinary` (e.g. `SimpleScalable` or the distributed mode),
+   switch `deploymentMode` from `SingleBinary` to `SimpleScalable` or the distributed mode,
    set `replication_factor` above 1, and configure an object-storage backend (S3/GCS/Azure Blob)
    instead of `filesystem`. Size `retention_period` to your evidence-retention obligation.
 
-2. **If enabling multi-tenancy** (`auth_enabled: true`): the bundled Promtail pushes without an
-   `X-Scope-OrgID` header, so you must also set `clients[].tenant_id` on the Promtail values AND
-   add the same `X-Scope-OrgID` header on every read path (the Grafana Loki datasource and any
+2. **If enabling multi-tenancy** (`auth_enabled: true`): the bundled Promtail pushes
+   single-tenant, so also set `clients[].tenant_id` on the Promtail values AND add the same
+   `X-Scope-OrgID` header on every read path (the Grafana Loki datasource and any
    `audit-anchor` Loki query). The in-file comment in `applications.yaml` documents this exact
-   hardening path; follow it or every push 401s and the audit stream silently drops.
+   hardening path; follow it so every push and read authenticates.
 
-3. **Forward audit receipts onward.** Regardless of Loki topology, treat Loki as a queryable
-   buffer, not the durable audit hold. The [Audit chain & SIEM forwarding](audit-chain.md)
+3. **Forward audit receipts onward.** With any Loki topology, use Loki as a queryable buffer
+   and the SIEM as the durable audit hold. The [Audit chain & SIEM forwarding](audit-chain.md)
    runbook covers exporting/anchoring the chain head and shipping receipts to a SIEM.
 
-Loki is an operator-owned platform service the platform does not run for you (see
-[Scope and non-goals](https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md));
-the bundled footprint is a working reference, and the object-storage/replicated topology is
-yours to size and operate.
+Loki is an operator-owned platform service: the bundled footprint is a working reference, and
+the operator sizes and operates the object-storage/replicated topology.
 
 ---
 
@@ -206,7 +200,7 @@ yours to size and operate.
 Every step above is reversible by re-enabling the bundled Argo `Application` and pointing the
 config URL back at the in-cluster Service (`budget-redis.budget.svc.cluster.local:6379`,
 `qdrant-vector-store.vector.svc.cluster.local:6333`, `loki.monitoring.svc.cluster.local:3100`).
-Because the bundled charts are never removed from the repo, rolling back to the reference
+Because the bundled charts stay in the repo, rolling back to the reference
 footprint for a demo or a debugging session is a one-line values change.
 
 ## Related runbooks

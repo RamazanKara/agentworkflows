@@ -15,7 +15,7 @@ The `agent-workspace` chart creates:
 - workspace PVC
 - `agent-platform-contract` ConfigMap with gateway URL, RAG URL, sandbox ID, and required headers
 
-The workspace does not grant cluster-admin privileges and does not include runtime secrets. Customers should wire Git credentials, API keys, package mirrors, ticketing tools, or artifact stores through their own secret backend and explicit egress allowlists.
+The workspace RBAC is namespace-scoped, and runtime secrets come from the customer. Wire Git credentials, API keys, package mirrors, ticketing tools, or artifact stores through your own secret backend and explicit egress allowlists.
 
 External egress must also be approved in `platform/network/egress-catalog.yaml` and referenced with `catalogRef`. Run `make egress-check` before applying a workspace that adds external CIDRs.
 
@@ -53,9 +53,9 @@ admission.
 
 Operational notes:
 
-- The controller does **not** roll the singleton pod when the Sandbox pod template
-  changes; delete the pod (`kubectl -n ai-agents delete pod <sandbox-id>`) and the
-  controller recreates it from the current spec. The smoke does this automatically
+- To apply a changed Sandbox pod template, delete the singleton pod
+  (`kubectl -n ai-agents delete pod <sandbox-id>`) and the controller recreates it
+  from the current spec. The smoke does this automatically
   when it detects image or volume drift.
 - The projected workspace credential is on by default: a short-lived,
   audience-bound token replaces long-lived secrets; the token path and audience
@@ -64,9 +64,9 @@ Operational notes:
 - The workspace PVC is ReadWriteOnce and is held by the sandbox pod; the
   `agent-smoke` Job shares it on the same node (fine on single-node labs; on
   multi-node clusters co-schedule them or use RWX storage).
-- NetworkPolicy enforcement requires a policy-capable CNI; on kindnet the smoke
-  reports non-enforcement instead of passing vacuously (see the threat model).
-  For a genuinely fail-closed local lab, create it with `LOCAL_CNI=calico
+- NetworkPolicy enforcement requires a policy-capable CNI. The smoke reports the
+  enforcement status it observes, so on kindnet it reports non-enforcement (see the
+  threat model). For a fail-closed local lab, create it with `LOCAL_CNI=calico
   make quickstart`.
 - For an end-to-end demonstration (real coding agent, allow/deny receipts on the
   audit chain, evidence pack), run `make agent-sandbox-demo`.

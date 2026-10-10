@@ -1,6 +1,6 @@
 # Traceability And Sandbox Runbook
 
-Use this runbook when proving that a local lab request can be traced without leaking prompt text, or when debugging a customer sandbox.
+Use this runbook when proving that a local lab request can be traced while prompt text stays private, or when debugging a customer sandbox.
 
 ## Request Contract
 
@@ -51,7 +51,7 @@ Gateway audit log lines are JSON. They include:
     usage
     error
 
-The audit event intentionally excludes raw prompt and completion text. Use `prompt_sha256` only for correlation between controlled test inputs and audit records.
+Raw prompt and completion text stay out of the audit event by design. Use `prompt_sha256` only for correlation between controlled test inputs and audit records.
 
 ## Kubernetes Checks
 

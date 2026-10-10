@@ -44,7 +44,7 @@ Goal: prove the gateway accepts tokens signed with a newly rotated key without d
 stops accepting retired keys.
 
 1. **Publish the new key.** Add the new signing key to the IdP so the JWKS document serves both
-   the current key (`kid-old`) and the new key (`kid-new`). Do not retire the old key yet.
+   the current key (`kid-old`) and the new key (`kid-new`). Keep the old key published.
 2. **Wait for cache expiry.** The gateway refreshes its JWKS cache after at most
    `JWT_CACHE_SECONDS`. New gateway pods refresh on first authenticated request.
 3. **Verify new-key acceptance.** Mint a token signed with `kid-new` and confirm a
@@ -56,8 +56,8 @@ stops accepting retired keys.
      -d '{"messages":[{"role":"user","content":"ping"}]}' \
      "$GATEWAY_URL/v1/chat/completions"
    ```
-4. **Confirm old-key tokens still validate** until they expire, so in-flight sessions are not
-   broken during the overlap window.
+4. **Confirm old-key tokens still validate** until they expire, so in-flight sessions continue
+   through the overlap window.
 5. **Retire the old key.** Once all `kid-old` tokens have expired (after their `exp`), remove
    `kid-old` from the IdP. After the next cache refresh the gateway rejects any token still
    presenting `kid-old` with `401` and reason `invalid_or_missing_api_key`.
@@ -69,8 +69,8 @@ stops accepting retired keys.
 If new-key tokens are rejected after the cache window, re-add `kid-old` to the JWKS document
 (reverting step 5) so existing tokens validate, then investigate the new key's `kid`, `alg`,
 and `use` fields. Lowering `JWT_CACHE_SECONDS` shortens the propagation window for the next
-attempt. Tightening `issuer`, `audience`, or `requiredScopes` only affects claim validation,
-not key selection.
+attempt. `issuer`, `audience`, and `requiredScopes` govern claim validation; key selection
+follows `kid`.
 
 ## Validation
 

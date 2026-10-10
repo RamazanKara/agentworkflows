@@ -6,9 +6,8 @@ and tool call goes through a governed activity; credentials stay on the worker.
 The gateway applies team policy, per-run budgets, and correlated receipts.
 
 You need Git, **Node.js 24/npm**, and Docker Compose. Use native Windows Git and
-Node.js in PowerShell, with Docker in Ubuntu WSL. No Python installation, GPU,
-provider credentials, or cloud account is needed. The trial uses canned responses
-and synthetic prices from the existing Compose fakes.
+Node.js in PowerShell, with Docker in Ubuntu WSL; that is everything this trial uses.
+The trial uses canned responses and synthetic prices from the Compose fakes.
 
 ## 1. Install and start the fake gateway
 
@@ -53,11 +52,10 @@ Keep this terminal open. The worker caps concurrent activities and workflow task
 at two. It registers `CodeReviewWorkflow`, `SupportTriageWorkflow`, and the schedule
 delivery helper `AgentWorkflowsTrigger` on `demo-workflows` in namespace `default`.
 
-The gateway chooses the team's queue. Do not run the Python worker alongside this
-worker on that queue: workers polling the same queue must register the same workflow
-types. Start new runs for this trial; Python workflow histories are not a migration
-path to TypeScript. The two examples do not register the Python daily-report or
-webhook templates; add those workflow implementations before enabling their triggers.
+The gateway chooses the team's queue. Run this worker on its own on that queue:
+workers polling the same queue register the same workflow types. Start new runs for
+this trial. To enable the Python daily-report or webhook triggers here, add those
+workflow implementations to this worker first.
 
 ## 2. Start, inspect, and approve a review
 
@@ -83,9 +81,8 @@ console.log(await client.run(review.run_id));
 ```
 
 The completed result contains `approved`, `review`, and `reviewer`. To reject a
-new review, use `approveRun(runId, { approved: false })`. Neither path posts a PR
-comment, executes the diff, or merges code. The server supplies the authenticated
-reviewer; clients cannot set it.
+new review, use `approveRun(runId, { approved: false })`. Both decisions finish the
+run with the review as its result. The server supplies the authenticated reviewer.
 Keep direct Temporal access restricted to workers and operators; human reviewers
 use the gateway API or console.
 
@@ -93,8 +90,8 @@ Inspect the same run in the [console](http://127.0.0.1:8080/console/) using the 
 keys above. The API result's `budget` shows usage and effective limits; `timeline`
 links each step to its `receipt_id` and `chain_id`. Model and tool receipts include
 `workflow_run_id` and `workflow_step_id`. Temporal activity IDs remain stable on
-retry, including the gateway's tool idempotency key. Tools must honor that key;
-activity retries alone do not guarantee exactly-once external side effects.
+retry, including the gateway's tool idempotency key. Have tools honor that key so
+each external side effect applies once across retries.
 
 ## 3. Run support triage
 
@@ -106,7 +103,8 @@ console.log(await client.run(triage.run_id));
 ```
 
 Repeat the inspection until `status` is `completed`. `result` is a suggested triage
-and reply, with one model-call receipt. Nothing is sent to the customer. Source for
+and reply, with one model-call receipt. The reply stays in the run result for your
+team to send. Source for
 both examples is in
 [`sdk/typescript/src/examples/workflows.ts`](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/typescript/src/examples/workflows.ts).
 Change the prompt and rebuild with `npm run build` before restarting the worker.
@@ -114,8 +112,8 @@ Change the prompt and rebuild with `npm run build` before restarting the worker.
 ## Write a workflow
 
 Install the built SDK in your own Node project from your checkout. Replace the
-path below with your checkout path (this is a local install, not an npm registry package;
-the release also attaches `agentworkflows-sdk-0.9.0.tgz`):
+path below with your checkout path (a local install; the release also attaches
+`agentworkflows-sdk-0.9.0.tgz`):
 
 ```sh
 npm install /path/to/agentworkflows/sdk/typescript
@@ -158,19 +156,19 @@ argument with Temporal's `retry`, `startToCloseTimeout`, `scheduleToCloseTimeout
 without retries; transient gateway failures retry, honoring `Retry-After`.
 Approval defaults to one reviewer and seven days; a run snapshots the team's quorum
 and expiry policy when it starts.
-Worker credentials and HTTP clients must never be imported into a workflow module.
+Keep worker credentials and HTTP clients out of workflow modules.
 
 The workflow client methods are `startRun`, `runs`, `run`, `approveRun`, `cancelRun`,
 `retryRun`, `triggers`, and `pauseTrigger`. Use `{ paused: false }` to resume a
 trigger and `{ project, cursor }` to page through runs. JSON response fields retain
 the API's snake_case names. This SDK covers governed model/tool workflows and the
-workflow and team administration APIs; Python's framework adapters and container runner remain Python APIs.
+workflow and team administration APIs; framework adapters and the container runner are in the Python SDK.
 
 `GatewayError` exposes `statusCode`, `reason`, `requestId`, and `detail`.
 `GatewayTransportError` gives a redacted connection failure.
 `GatewayRetryAfterError.retryAfter` is a delay in seconds above the client's retry
 cap (30 seconds by default). Read requests and idempotent starts retry twice;
-approval, cancel, retry-run, trigger, key and settings mutations are not automatically repeated.
+approval, cancel, retry-run, trigger, key and settings mutations run once per call.
 Keep a `requestId` and reuse it with identical input after an ambiguous start.
 Inside workflows, gateway failures arrive as Temporal `ActivityFailure` with an
 `ApplicationFailure` cause whose `type` is the gateway reason. See the Python
@@ -186,7 +184,7 @@ a credential without a project restriction.
 | `listKeys()` | `KeyList`, including revoked and expired keys |
 | `createKey(name, { role, project, expires_at })` | `CreatedKey`; save the one-time plaintext `key`; options are optional and role defaults to viewer |
 | `updateKey(keyId, { name, role, project, expires_at })` | `ManagedKey`; omitted fields stay unchanged; `null` clears project or expiry |
-| `revokeKey(keyId)` | Revoked `ManagedKey`; the current key cannot revoke itself |
+| `revokeKey(keyId)` | Revoked `ManagedKey`; use a different key to revoke the current one |
 | `teamSettings()` | `TeamSettings`: revision, update metadata, effective fields with value/source/policy_default and available route/provider/approver choices |
 | `updateTeamSettings(fields, { revision })` | Atomically apply a field/value map and return `TeamSettings` |
 | `resetTeamSetting(field, { revision })` | Remove one override and return `TeamSettings` |
@@ -203,8 +201,8 @@ with a timezone. Response timestamps are Unix seconds.
 Read and review settings before writing. Pass the returned integer revision (or
 a quoted ETag string) to either mutation; the SDK sends it as `If-Match`. A stale
 write throws `GatewayError` with `statusCode: 409` and
-`reason: 'team_settings_conflict'`. Reload, review and reapply; the SDK does not
-refresh the revision or retry the change. A 422 rejects the whole patch and
+`reason: 'team_settings_conflict'`. Reload, review and reapply the change with the
+new revision. A 422 rejects the whole patch and
 retains `detail.fields` entries containing `field` and `message`. See
 [team settings](team-settings.md) for field names and limits.
 
@@ -235,9 +233,9 @@ Audit times are inclusive Unix seconds. List/export filters match exactly;
 when omitted and preserves all filters across pages. Verification accepts only
 time bounds and includes events hidden by other filters. Check `enabled` on list
 and verification results; a disabled view has `ok: null`, and export throws an
-`Error` with the gateway's message. Gateway read failures propagate and can leave
-partial output. Retention continues during paging; these team exports are not
-complete process logs for the operator verifier. See [audit log](audit-log.md)
+`Error` with the gateway's message. Gateway read failures propagate to the caller.
+Retention continues during paging; the operator verifier reads the complete process
+logs. See [audit log](audit-log.md)
 for range boundaries and what verification proves.
 
 ## Run history and export
@@ -269,10 +267,9 @@ try {
 ```
 
 As in the audit example, import `GatewayClient` and `open` above. Gateway and
-transport errors propagate and can leave partial output. Retention and status
-changes continue during export; this is not a transactional snapshot or backup.
-Expired runs/content are not recovered, and the stored start input is omitted.
-Downloaded files need their own retention policy. See [CLI and SDK paging](sdk-reference.md#cli).
+transport errors propagate to the caller. Retention and status changes continue
+during export, so the file reflects the runs retained at read time; the stored start
+input stays out of the export. Give downloaded files their own retention policy. See [CLI and SDK paging](sdk-reference.md#cli).
 
 ## Company group access
 
@@ -281,14 +278,14 @@ With an unrestricted team-admin credential,
 See the [typed contract and example](sdk-reference.md#company-group-access).
 Configure your existing identity provider using the
 [group mapping guide](workflows.md#sso-group-to-role-mapping); the local fixture
-workflow does not require SSO.
+workflow signs in with API keys.
 
 ## Trigger history and usage CSV
 
 Run history is available
 from each console trigger; `runs({ workflow, trigger, project, cursor })` and
 `exportRuns({ workflow, trigger })` use the same project-scoped filter. A trigger name
-requires a workflow. Manual runs have no trigger provenance; existing
+requires a workflow. Trigger provenance covers scheduled and webhook launches, and
 run retention applies. Manual retries are separate runs.
 
 `await gateway.exportUsage()` returns UTF-8 CSV for the current UTC month. Write it
@@ -299,16 +296,15 @@ reservations. See the [column and scope reference](sdk-reference.md#trigger-hist
 ## Verify and stop
 
 From `sdk/typescript`, run `npm run build`, `npm run lint`, and `npm test`. Vitest
-uses at most two workers. The equivalent repository target is `make test-typescript`.
-It stays local because installing the Temporal toolchain adds minutes to the short
-existing CI job.
+uses at most two workers. The equivalent repository target is `make test-typescript`,
+which runs locally to keep the CI job short.
 
 For the integration check, stop the example worker with Ctrl+C, then run `npm run
 smoke` in that terminal. This starts and stops its own workers against the fake
 Compose stack and verifies both templates, restart/replay, approval/rejection,
 tool receipts, token/cost denials, roles, cancellation, and retry. It uses only the
 public demo keys. The existing full-stack gate remains `make compose-smoke` with
-the Python worker running; do not run the two smoke suites simultaneously.
+the Python worker running; run the two smoke suites one at a time.
 
 Exit the REPL with `.exit`. Stop any remaining example worker with Ctrl+C, then
 remove this disposable trial's containers and volumes from the repository root:

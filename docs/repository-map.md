@@ -22,7 +22,7 @@ its contracts and validation commands.
 
 The directory inventory is declared in `scripts/paths.py`. `make paths` prints it
 and `make paths-check` checks for missing or undeclared top-level directories.
-Directory moves still require updating paths in scripts, manifests, CI, and docs.
+When you move a directory, update its paths in scripts, manifests, CI, and docs.
 
 ## Runtime boundaries
 
@@ -43,9 +43,9 @@ requests to the gateway separately.
 
 Read the service code maps for module-level entry points and the
 [architecture guide](architecture.md) for deployed request flows.
-Do not import one service's `app` package from the other service or the SDK.
-Similar service utilities are currently packaged separately; a shared library would
-also need explicit Docker packaging, dependency, and test changes.
+Keep each service's `app` package self-contained: the other service and the SDK import
+only their own code. Shared modules are copied into each service and kept byte-identical
+([ADR 0015](adr/0015-shared-service-modules.md)).
 
 ## Sources and generated files
 
@@ -65,8 +65,8 @@ extend them through `requirements-dev.txt`. Root quality, docs, coverage, SDK bu
 and SDK test environments have separate requirement files. Keep the lock associated
 with each environment aligned with its input.
 
-Files named `sample-*` under `results/` describe report formats. They are not current
-validation evidence. AgentWorkflows releases require freshly generated reports.
+Files named `sample-*` under `results/` describe report formats. AgentWorkflows releases
+use freshly generated reports as validation evidence.
 
 ## Where to put a change
 

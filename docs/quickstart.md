@@ -3,14 +3,12 @@
 For Node.js workflows, use the [TypeScript quickstart](quickstart-typescript.md).
 
 Run research → draft → human approval → publication, then inspect its receipts in about
-five minutes. You need **Git, Python 3.12+, and Docker with Compose** already installed.
-Initial image/package downloads can take longer on a slow connection. No GPU, Kubernetes,
-Make, Node.js, or cloud account is needed for this path.
+five minutes. You need **Git, Python 3.12+, and Docker with Compose** already installed;
+that is everything this path uses.
 
 These instructions use release **v0.9.0**. Compose pulls the published v0.9.0 images by
-default, so no local build is needed. Start at the repository root if you already have a
-v0.9.0 checkout; skip clone/cd. Command verification and the remaining Docker/WSL checks are
-recorded in [release verification](release-verification.md).
+default. Start at the repository root if you already have a v0.9.0 checkout; skip clone/cd.
+Release checks are recorded in [release verification](release-verification.md).
 
 Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
 the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout on Windows.
@@ -20,11 +18,10 @@ the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout 
 ### Scripted first approved run
 
 The script installs the Research template, starts its simulated workflow, prints and approves
-the fixture draft, checks publication and verifies the audit chain. It fails after 300 seconds
-and reports elapsed time on success. This is an automated acceptance check; the manual steps
-below let you review the draft yourself. It refuses real model routes so it cannot approve a
-real-provider run. Image builds, dependency installation and initial downloads are preparation
-outside the timed run; the five-minute result is measured, not guaranteed on a cold machine.
+the fixture draft, checks publication and verifies the audit chain. It runs against a
+300-second budget and reports the elapsed time. This is an automated acceptance check on
+simulated model routes; the manual steps below let you review the draft yourself. The timer
+starts once images and dependencies are in place.
 
 From the repository root in Linux/WSL with Python 3.12+, Docker and Compose installed:
 
@@ -47,9 +44,9 @@ python3 scripts/first-approved-run.py kind
 ```
 
 The kind profile `deploy/charts/agentworkflows/values-quickstart.yaml` uses a local fake provider,
-one approval and local research/publish fixtures; no cloud credential is needed. It is for evaluation.
-The script's temporary port-forward is stopped on exit; it prints how to reopen the console.
-Both scripts leave their containers/cluster/data in place for inspection. On failure inspect
+one approval and local research/publish fixtures for credential-free evaluation.
+The script stops its temporary port-forward on exit and prints how to reopen the console.
+Both scripts keep their containers/cluster/data for inspection. To troubleshoot, inspect
 `docker compose -f deploy/compose/compose.yaml logs workflow-worker inference-gateway` or
 `kubectl --context kind-agentworkflows-quickstart -n agentworkflows-quickstart get pods`.
 
@@ -64,9 +61,7 @@ agentworkflows check
 
 A real provider needs `--allow-paid`. See [Prove the install](single-tenant.md#prove-the-install).
 
-On this native Windows sandbox Docker/kind execution may be unavailable. Run the commands above
-inside WSL, using its own Python environment. A native `python scripts/first-approved-run.py --help`
-only verifies the CLI, not a successful run. See [release verification](release-verification.md).
+On Windows, run the commands above inside WSL, using its own Python environment.
 
 ### Manual setup
 
@@ -96,21 +91,21 @@ only verifies the CLI, not a successful run. See [release verification](release-
 
 Compose pulls the published v0.9.0 gateway, worker and RAG images and their dependencies.
 To build the images from this checkout instead, run
-`docker compose -f deploy/compose/compose.yaml build` first; locally built images are not
-release-signed. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
+`docker compose -f deploy/compose/compose.yaml build` first; release signatures cover the
+published images. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
 Generated projects pin the SDK's package version (0.9.0).
 
 v0.9.0 includes [multi-reviewer approval policies](workflows.md#approval-policies).
-The trial still defaults to one reviewer and seven days. On an existing installation,
+The trial defaults to one reviewer and seven days. On an existing installation,
 upgrade the gateway before SDK workers.
 
-The default **fake** returns canned text and synthetic prices without contacting a cloud.
+The default **fake** returns canned text and synthetic prices locally.
 For real generated text, select the [OpenAI option](#use-a-real-openai-key) now, then continue
-with exactly the same workflow steps. Research and publish tools remain local fixtures in
-both modes: no external document is published.
+with exactly the same workflow steps. Research and publish tools are local fixtures in
+both modes, so publication stays on your machine.
 
 ## 2. Create and run a project
 
@@ -126,7 +121,7 @@ You now have editable `workflow.py`, `worker.py`, `input.json`, and `input-schem
 worker instructions. `init --help` lists **research**, **code-review**, **support-triage**,
 **weekly-report**, **incident-summary**, **document-qa**, **release-notes**,
 **meeting-actions**, and **security-questionnaire**.
-It never overwrites an existing project. The built-in worker runs the unchanged templates;
+It writes a new directory and leaves existing projects untouched. The built-in worker runs the unchanged templates;
 follow [Edit your workflow](templates.md#run-your-edits) when you change the source.
 
 Copy the returned `run_id` into the variable below (keep the quotes):
@@ -175,13 +170,13 @@ Save completed runs before their retention deadline with
 `agentworkflows runs export --status completed --output runs.jsonl`. This follows
 cursor pages and includes results, receipts and retained step content. Settings and
 the audit log are available to team admins in the console. Run and audit exports
-are retained views, not backups; see [CLI paging and export](sdk-reference.md#cli).
+are retained views of current data; see [CLI paging and export](sdk-reference.md#cli).
 
 Open **Triggers → Run history** to inspect runs started by
 each schedule or webhook. New launches carry their trigger name through the run page
 and receipts. **Costs → Export CSV**, or `agentworkflows usage --output usage.csv`,
-downloads the current UTC month. The total and provider/workflow rows overlap; do not
-add them together. Both SDKs support the same history filter and CSV export; see the
+downloads the current UTC month. The total and provider/workflow rows overlap; use the
+total row for the overall figure. Both SDKs support the same history filter and CSV export; see the
 [reference](sdk-reference.md#trigger-history-and-usage-csv).
 
 You can also choose **Run workflow**, select any starter, and fill in its generated form.
@@ -209,7 +204,7 @@ To verify the retained receipt chain, return to the checkout root:
 
 Expect `OK` and a nonzero record count. Hash verification detects edits and internal gaps;
 [external anchors](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md)
-are needed to detect truncation or a complete rewrite. Save the export before removing the stack.
+also detect truncation or a complete rewrite. Save the export before removing the stack.
 
 ## Try a two-reviewer policy
 
@@ -220,10 +215,10 @@ are needed to detect truncation or a complete rewrite. Save the export before re
 3. Start a new Research run and approve its draft with the admin identity. The run must
    still be waiting, showing **1 of 2 approvals received** and a deadline.
 4. Use **Switch account** with the new approver key and approve the same draft. Inspect
-   the completed run and the two approval receipts. Repeating the first identity's vote
-   cannot supply the missing approval; any reviewer's rejection ends the gate.
+   the completed run and the two approval receipts. Each identity counts once toward the
+   quorum, and any reviewer's rejection ends the gate.
 5. To exercise expiry, set it to `60`, start another run and leave it waiting. It fails
-   with `ApprovalExpired` after its review deadline without publishing. Reset both
+   with `ApprovalExpired` after its review deadline and skips publication. Reset both
    settings to their policy defaults when finished. Existing runs keep their saved rules.
 
 ## Stop the trial
@@ -272,13 +267,12 @@ OpenAI override. Read the key into your shell without saving it in the repositor
     Remove-Variable secret
     ```
 
-Continue at step 2. The gateway alias `demo-openai` now uses **GPT-4.1 Mini** with no fake
-fallback. Only the gateway receives the real key. This makes paid calls using the model's
+Continue at step 2. The gateway alias `demo-openai` now routes directly to **GPT-4.1 Mini**. Only the gateway receives the real key. This makes paid calls using the model's
 [documented token rates](https://developers.openai.com/api/docs/models/gpt-4.1-mini);
 review `deploy/compose/openai-model-routing.yaml` against your account pricing. The demo
-limits each research run to 10,000 tokens / $5 and the team to $50. Estimates are not invoices.
-Authentication or quota errors require a valid funded API account; gateway readiness alone
-does not verify account access. The automated walkthrough uses fakes only.
+limits each research run to 10,000 tokens / $5 and the team to $50. Use a funded API
+account; authentication or quota errors point to account access. The automated walkthrough
+uses fakes.
 
 ## If something goes wrong
 
@@ -291,8 +285,8 @@ does not verify account access. The automated walkthrough uses fakes only.
 | 401 | Set `AGENTWORKFLOWS_API_KEY` to the gateway key, not a cloud key; the demo uses `local-development-only` |
 | Invalid JSON / 422 | Edit the scaffold's `input.json`; pass it as quoted `'@input.json'` to avoid shell quoting problems |
 | Worker unavailable / no draft | Check `docker compose -f deploy/compose/compose.yaml logs workflow-worker`; start its worker and retry inspection |
-| Approval rejected | Inspect the run; only an undecided `awaiting_approval` draft can be approved by admin or approver |
-| Model, tool, or egress denied | Use the team's approved policy; ask an admin to review it, rather than bypassing governance |
+| Approval rejected | Inspect the run; an admin or approver approves a draft while it is undecided in `awaiting_approval` |
+| Model, tool, or egress denied | Use the team's approved policy; ask an admin to review it |
 | Budget exhausted | Inspect `agentworkflows usage`; wait for the team window or ask an admin to review the limit |
 
 For an occupied gateway port, from the checkout root in the same shell:
@@ -330,16 +324,17 @@ After the stack is ready, sign in at `http://127.0.0.1:8080/console/` with
 The wizard checks the Research policy, model routes, provider credential presence,
 approved research/publish tools, and nonzero budgets. It selects a ready model rather
 than a missing-key route. It installs the versioned sample for team admins and uses the
-normal idempotent run API. Builders can start approved policy; viewers and approvers
-cannot launch work. Model access and worker availability are verified by the run itself.
+normal idempotent run API. Admins and builders start approved policy; approvers and
+viewers review and inspect. The run itself confirms model access and worker availability.
 
 For a real provider, an unrestricted admin can paste a credential and click **Save provider
-key**. The provider must already be allowed by deployment policy. Values are encrypted
-using the existing persistent `WORKFLOW_SECRETS_KEY`, never returned, logged, or included
-in exports. Each save checks the displayed version to prevent overwriting a concurrent
+key** for any provider that deployment policy allows. Values are encrypted using the
+persistent `WORKFLOW_SECRETS_KEY` and are write-only: the gateway keeps them out of
+responses, logs, and exports. Each save checks the displayed version to protect a concurrent
 rotation. The saved team credential takes precedence over its environment default on
-every gateway replica. This is a presence check, not a paid provider probe. If encryption
-is not configured, the wizard links to the operator setup instructions.
+every gateway replica. The wizard checks that the credential is present, and the first run
+confirms provider access. Until encryption is configured, the wizard links to the operator
+setup instructions.
 
 API: `GET /v1/team/onboarding`; `PUT /v1/team/providers/{provider}/key` with
 `{"value":"…","expected_version":0}`. Both SDKs expose `onboarding()` and

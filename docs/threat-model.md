@@ -17,7 +17,7 @@ This threat model covers the local lab and customer-owned Kubernetes deployment 
 - Tenant and coding-agent namespaces.
 - Customer secret manager and External Secrets.
 - Model registries, package mirrors, Git hosts, and other approved egress destinations.
-- The RAG corpus and retrieved context: untrusted document content crosses into the prompt path.
+- The RAG corpus and retrieved context: document content crosses into the prompt path.
 - The build and release pipeline: source, GitHub Actions, the GHCR registry, and signing identity.
 
 ## Primary Risks
@@ -26,8 +26,8 @@ This threat model covers the local lab and customer-owned Kubernetes deployment 
 - Unapproved model IDs bypass the model catalog and gateway allowlist.
 - A tenant or agent workspace reaches unapproved network destinations.
 - Runtime images or dependencies are promoted with high or critical vulnerabilities.
-- Sample evidence is mistaken for current production proof.
-- Budget exhaustion is treated as a client error instead of capacity/rate exhaustion.
+- Release decisions rely on sample evidence in place of current results.
+- Budget exhaustion is reported as a client error in place of capacity/rate exhaustion.
 
 ## Current Controls
 
@@ -37,9 +37,9 @@ This threat model covers the local lab and customer-owned Kubernetes deployment 
 - Output-side guardrail: model completions are inspected for leaked credentials/PII/blocked
   content and flagged, redacted, or blocked before return (OWASP LLM02:2025/LLM05:2025).
 - Default-deny NetworkPolicies and catalog-backed external egress.
-- Hardened agent-sandbox workspace runtime, the standard and only workspace runtime (ADR 0009,
-  ADR 0010): controller-managed sandbox pods with no service-account token, read-only root
-  filesystem, no capabilities, a short-lived projected platform credential instead of long-lived
+- Hardened agent-sandbox workspace runtime, the standard workspace runtime (ADR 0009,
+  ADR 0010): controller-managed sandbox pods with the service-account token disabled, read-only root
+  filesystem, all capabilities dropped, a short-lived projected platform credential in place of long-lived
   secrets, and an optional kernel-isolation runtime class, admission-enforced by the Kyverno
   `ai-platform-hardened-sandboxes` policy.
 - Pinned runtime images, hashed Python lockfiles, SBOMs, Trivy scans, and Cosign signing.
@@ -52,66 +52,63 @@ see [owasp-llm-top-10-mapping.md](owasp-llm-top-10-mapping.md) and
 
 ### Transport confidentiality
 
-The in-cluster data plane is **plaintext HTTP** by default: NetworkPolicies restrict who may
-connect but do not encrypt traffic, so prompts, completions, retrieved RAG context, and the
-API-key header traverse the pod network in cleartext. Encrypting the data plane is delegated to a
-documented, operator-owned CNI/mesh control. See the opt-in overlay and options in
+The in-cluster data plane is **plaintext HTTP** by default. NetworkPolicies restrict who may
+connect, and an operator-owned CNI/mesh control encrypts prompts, completions, retrieved RAG
+context, and the API-key header on the pod network. See the opt-in overlay and options in
 [deploy/clusters/customer/mtls/README.md](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/mtls/README.md) (service-mesh
-mTLS, Cilium WireGuard/IPsec, or cert-manager-issued TLS). Treat enabling it as required before
+mTLS, Cilium WireGuard/IPsec, or cert-manager-issued TLS). Enable it before
 handling regulated data in a multi-tenant cluster (see Required Customer Hardening).
 
 ### Detective / runtime monitoring
 
-Admission (Kyverno) and NetworkPolicies are preventive; they do not observe post-admission
-behavior of a hijacked agent or compromised runtime pod. An optional runtime-detection layer
-(Falco/Tetragon) is provided. See [runbooks/runtime-threat-detection.md](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/runtime-threat-detection.md).
+Admission (Kyverno) and NetworkPolicies are preventive controls. The optional runtime-detection
+layer (Falco/Tetragon) observes post-admission behavior of agent and runtime pods. See
+[runbooks/runtime-threat-detection.md](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/runtime-threat-detection.md).
 
 ### Agent workspace isolation boundary
 
-Coding-agent workspaces execute model-generated code and always run on the agent-sandbox runtime
-(ADR 0009, ADR 0010): controller-managed sandbox pods without ambient Kubernetes credentials on a
-hardened template. The platform credential is a projected, audience-bound ServiceAccount token
-with a short TTL, useless against the Kubernetes API and self-expiring, replacing long-lived
-secrets. Without a kernel-isolation runtime class the syscall boundary is still the container
-runtime plus the restricted pod profile; set `sandbox.runtimeClassName` (gVisor/Kata) where the
-cluster provides one, expected at the `high` risk tier (`C-ISOLATE`). What kernel isolation does **not** change: prompt injection and tool abuse remain
-application-layer threats (bounded by the egress catalog, budgets, and gateway guardrails, not by
-the sandbox), and exfiltration through *approved* catalog destinations remains a governance
-decision. NetworkPolicy enforcement depends on the CNI: the local lab therefore defaults to
-pinned Calico, and `make agent-sandbox-smoke` fails if the non-enforcing kindnet CNI is present.
-Its deny target is the otherwise reachable Kubernetes API, so a failed connection is meaningful
-evidence of policy enforcement rather than an unroutable-address false positive.
+Coding-agent workspaces execute model-generated code and run on the agent-sandbox runtime
+(ADR 0009, ADR 0010): controller-managed sandbox pods on a hardened template with ambient
+Kubernetes credentials disabled. The platform credential is a projected, audience-bound
+ServiceAccount token with a short TTL that expires on its own and carries no Kubernetes API
+access, replacing long-lived secrets. The syscall boundary is the container runtime plus the
+restricted pod profile; set `sandbox.runtimeClassName` (gVisor/Kata) where the cluster provides
+one, expected at the `high` risk tier (`C-ISOLATE`), to add kernel isolation. Prompt injection and
+tool abuse are bounded at the application layer by the egress catalog, budgets, and gateway
+guardrails, and the set of approved catalog destinations is a governance decision. The CNI enforces
+NetworkPolicy: the local lab defaults to pinned Calico, and `make agent-sandbox-smoke` fails if the
+kindnet CNI is present. Its deny target is the Kubernetes API, which is otherwise reachable, so a
+refused connection is direct evidence of policy enforcement.
 
 ## AI-Specific Threats
 
 These are the threats that distinguish an AI platform from a generic web service.
-The controls below are mechanisms already in this repo; none of them make the
-threat go away, so treat them as defense in depth, not a guarantee.
+The controls below are mechanisms in this repo and work together as defense in depth.
 
 ### Indirect / RAG prompt injection
 
-- **Primary Risk.** Untrusted text in the RAG corpus, a retrieved document, or a
-  file in a coding-agent workspace carries instructions that the model follows --
+- **Primary Risk.** Text in the RAG corpus, a retrieved document, or a
+  file in a coding-agent workspace carries instructions that the model follows,
   exfiltrating private context, calling tools, or reaching an attacker-controlled
-  destination. The injection rides in on data, not on the caller's prompt, so
-  request-level auth does not stop it.
+  destination. The injection rides in on data, so it reaches the model alongside
+  an authenticated caller's prompt.
 - **Current Controls.** Coding-agent and tenant namespaces run default-deny
-  NetworkPolicies, so a hijacked agent cannot freely reach the network; external
+  NetworkPolicies, so an agent reaches only approved destinations; external
   egress is allowed only through reviewed `platform/network/egress-catalog.yaml` entries
-  referenced by `catalogRef` (no broad CIDRs, enforced at render time and by the
+  referenced by `catalogRef` (broad CIDRs are rejected at render time and by the
   Kyverno `ai-platform-restrict-egress-cidrs` policy). RAG knowledge is mounted
   read-only and ingestion/retention is reviewed per the customer handoff. The
-  gateway redacts and fingerprints prompts/queries instead of logging raw text,
+  gateway redacts and fingerprints prompts/queries in place of logging raw text,
   runs prompt secret detection, and applies sandbox budgets and admission limits
   that cap the blast radius of a runaway agent loop. Coding-agent eval suites
-  include `forbiddenAny` secret-leak checks. Residual risk remains: these reduce
-  what an injected instruction can *reach*, not whether the model is *influenced*.
-  Review which documents enter the corpus and keep agent egress narrow.
+  include `forbiddenAny` secret-leak checks. These controls limit what an injected
+  instruction can reach. Review which documents enter the corpus and keep agent
+  egress narrow.
 
 ### Model-artifact tampering / weight poisoning
 
 - **Primary Risk.** A model is swapped, backdoored, or pulled from an
-  unverified source, so the served weights are not the reviewed artifact --
+  unverified source, so the served weights differ from the reviewed artifact,
   producing attacker-chosen behavior, leaking data, or degrading evals while
   appearing legitimate.
 - **Current Controls.** Only catalog-approved model IDs pass the gateway
@@ -123,9 +120,8 @@ threat go away, so treat them as defense in depth, not a guarantee.
   models pin a commit and safetensors checksum inventory; Ollama entries record
   registry weight-layer digests. Customers verify downloaded bytes before
   production. vLLM/Ollama model caches are isolated per the sandbox and runtime
-  security context. Residual risk: provenance proves *what* was pulled, not that
-  the upstream training was clean -- weight-level backdoors are out of scope for
-  digest verification.
+  security context. Provenance records exactly which artifact was pulled; pair it
+  with model evals and upstream source review when selecting weights.
 
 ### Build / release pipeline trust boundary
 
@@ -133,26 +129,26 @@ threat go away, so treat them as defense in depth, not a guarantee.
   forged keyless signing identity injects a malicious image or chart into the
   release stream, which GitOps then deploys cluster-wide because every
   Application syncs automatically.
-- **Current Controls.** All GitHub Actions are pinned to a full commit SHA (not a
-  floating tag) in `.github/workflows/ci.yml`. Image and chart signing is keyless
+- **Current Controls.** All GitHub Actions are pinned to a full commit SHA (in place
+  of a floating tag) in `.github/workflows/ci.yml`. Image and chart signing is keyless
   Cosign over OIDC (`id-token: write`), and the Kyverno
   `ai-platform-verify-project-images` policy is set to `Enforce` with the keyless
   `subject` restricted to this repo's CI workflow on `refs/heads/main` and the
-  `issuer` to `token.actions.githubusercontent.com`, so an image signed by any
-  other identity is rejected at admission. Provenance and SBOM attestations,
+  `issuer` to `token.actions.githubusercontent.com`, so admission accepts only images
+  signed by that identity. Provenance and SBOM attestations,
   Trivy HIGH/CRITICAL gating, and OpenSSF Scorecard run in CI; releases publish
-  supply-chain checksums. Forks that republish must update the registry and the
-  keyless subject/issuer to their own identity, or admission denies their images.
+  supply-chain checksums. Forks that republish update the registry and the
+  keyless subject/issuer to their own identity so admission accepts their images.
 
 ## Data Residency And PII
 
-Prompts, RAG queries, and retrieved context may contain PII or regulated data;
-the platform stores only redacted, length-and-SHA-256 fingerprinted audit
-records (never raw prompt/query text) and pins all data-bearing stores (Qdrant,
+Prompts, RAG queries, and retrieved context may contain PII or regulated data.
+The platform stores only redacted, length-and-SHA-256 fingerprinted audit
+records in place of raw prompt/query text, and pins all data-bearing stores (Qdrant,
 agent PVCs) to the customer cluster, so data residency follows wherever the
-customer runs the cluster and its backups. Customers are responsible for
-classifying ingested content, setting retention per `platform/governance/data-retention.yaml`,
-and confirming the deployment region meets their residency obligations.
+customer runs the cluster and its backups. Customers classify ingested content,
+set retention per `platform/governance/data-retention.yaml`,
+and confirm the deployment region meets their residency obligations.
 
 ## Required Customer Hardening
 

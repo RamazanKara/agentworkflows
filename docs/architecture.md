@@ -1,7 +1,7 @@
 # Architecture and deployment profiles
 
-The cloud gateway is the product entry point; self-hosted deployment profiles are optional.
-The repository has a local profile, a customer-cluster profile, and tenant onboarding examples. They share the first-party services and Helm charts, but they do not install the same Argo CD application set and they do not provide the same security or availability guarantees.
+The cloud gateway is the product entry point. Self-hosted deployment profiles are available when you want to run the platform yourself.
+The repository has a local profile, a customer-cluster profile, and tenant onboarding examples. They share the first-party services and Helm charts. Each profile installs its own Argo CD application set and carries its own security and availability posture.
 
 Use the [feature inventory](feature-inventory.md) for endpoint and default status, and the [threat model](threat-model.md) for trust boundaries.
 
@@ -19,9 +19,9 @@ The inference gateway is the entry point for model API traffic. A normal request
 6. the optional output guardrail;
 7. metrics and a redacted audit event.
 
-The exact HTTP surface is generated into [`platform/api-contracts/inference-gateway.openapi.json`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json). Not every route performs model inference, and optional controls only apply when enabled in the active values.
+The exact HTTP surface is generated into [`platform/api-contracts/inference-gateway.openapi.json`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json). Optional controls apply when they are enabled in the active values.
 
-RAG is a separate service. It returns retrieved passages and grounded message objects; it does not automatically intercept gateway calls. The local profile uses the checked-in lexical corpus. The customer values select Qdrant and an embedding endpoint.
+RAG is a separate service. It returns retrieved passages and grounded message objects, and clients call it directly alongside the gateway. The local profile uses the checked-in lexical corpus. The customer values select Qdrant and an embedding endpoint.
 
 The bundled React console calls same-origin `/v1` APIs. API credentials are exchanged
 for opaque Redis-backed sessions; browser writes require a CSRF header and cookie.
@@ -29,12 +29,12 @@ OIDC uses authorization code, PKCE, state and nonce checks. Team/project roles a
 checked by the gateway, including reads of runs, SSO policy, spend and exports.
 
 Run start, cancellation and review operations coordinate with Temporal. Workers poll
-Temporal task queues and send governed activities back through the gateway; Temporal
-does not replace gateway authorization. Redis retains live accounting, sessions,
+Temporal task queues and send governed activities back through the gateway, so the gateway
+remains the authorization point. Redis retains live accounting, sessions,
 coordination and captured content. Gateway history, receipts, audit, managed-key metadata
-and settings may use Redis (default) or PostgreSQL. Temporal has its own PostgreSQL
+and settings use Redis (default) or PostgreSQL. Temporal has its own PostgreSQL
 databases, separate from optional gateway storage. Worker and Temporal access are trusted
-operator surfaces; protect them from direct tenant access.
+operator surfaces; keep them on the operator side of the tenant boundary.
 
 Framework agents execute inside Temporal activities and point their clients at this gateway.
 Workflow policies and MCP registrations extend the existing `SandboxPolicySet`; run accounting
@@ -60,7 +60,7 @@ its enabled components together in the release namespace; Compose uses container
 | Agent-sandbox controller | `agent-sandbox-system` | `deploy/vendor/agent-sandbox` | Cluster-scoped prerequisite |
 | Policies and catalog | cluster/inference | `deploy/policies`, `platform/model-catalog` | Admission policy and approved model records |
 
-The data plane uses plaintext HTTP by default. NetworkPolicy restricts reachability but does not encrypt traffic. The customer must supply transport encryption where it is required.
+The data plane uses plaintext HTTP by default, and NetworkPolicy restricts reachability. Add transport encryption at the cluster or mesh layer where your environment requires it.
 
 ## Local profile
 
@@ -76,27 +76,27 @@ The local profile uses:
 - a bundled Redis and Qdrant footprint;
 - local-path storage and single-node availability.
 
-The default Argo CD path includes platform operators, observability, policies, cost controls, and backup examples. `QUICKSTART_DIRECT_APPLY=1` is intentionally smaller: it applies the core runtime charts directly and omits those add-ons.
+The default Argo CD path includes platform operators, observability, policies, cost controls, and backup examples. `QUICKSTART_DIRECT_APPLY=1` is intentionally smaller: it applies the core runtime charts directly and leaves out those add-ons.
 
-The local path needs network access for downloads and image/model pulls. It keeps inference requests on the local cluster after those components are installed, but it is not an air-gapped installation procedure.
+The local path downloads images and models over the network during setup. Once those components are installed, inference requests stay on the local cluster. For an offline installation, follow the restricted-egress guidance in the [`regulated-offline` tenant example](#regulated-offline-tenant-example).
 
 ## Customer profile
 
 ![Customer profile](assets/architecture-customer.svg)
 
-The customer profile assumes that the cluster, Argo CD, ingress, secret integration, observability, and backup systems already exist. Its Argo CD application list is deliberately smaller than the local list and does not install the local observability, cost-control, platform-operator, or Velero applications.
+The customer profile runs on a cluster that already has Argo CD, ingress, secret integration, observability, and backup systems. Its Argo CD application list is deliberately smaller than the local list: it installs the platform services and relies on the cluster's own observability, cost-control, platform-operator, and backup tooling.
 
-The checked-in customer values deploy both Ollama and vLLM routes. They also add a separate vLLM embedding service and configure RAG to use Qdrant. The NVIDIA example requests four GPUs per vLLM replica and keeps at least two replicas when KEDA is enabled. Those values describe a large reference configuration, not a minimum or recommendation.
+The checked-in customer values deploy both Ollama and vLLM routes. They also add a separate vLLM embedding service and configure RAG to use Qdrant. The NVIDIA example requests four GPUs per vLLM replica and keeps at least two replicas when KEDA is enabled. Those values describe a large reference configuration; size your own deployment from your workload.
 
-Before deployment, the operator must at least:
+Before deployment, the operator:
 
-- configure a reachable, immutable Git revision;
-- install and configure the required operators, including External Secrets if those manifests are used;
-- replace identity and secret placeholders;
-- select storage classes and backup targets;
-- choose model artifacts and verify their provenance;
-- size GPU count, context length, replicas, and persistent volumes;
-- connect metrics, logs, alerts, ingress, and transport encryption.
+- configures a reachable, immutable Git revision;
+- installs and configures the required operators, including External Secrets if those manifests are used;
+- replaces identity and secret placeholders;
+- selects storage classes and backup targets;
+- chooses model artifacts and verifies their provenance;
+- sizes GPU count, context length, replicas, and persistent volumes;
+- connects metrics, logs, alerts, ingress, and transport encryption.
 
 See [the customer deployment guide](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md).
 
@@ -104,21 +104,21 @@ See [the customer deployment guide](https://github.com/RamazanKara/agentworkflow
 
 ![Restricted-egress tenant](assets/architecture-regulated-offline.svg)
 
-`tenants/onboarding/regulated-offline-coding-agents.yaml` is a tenant policy example. It renders a namespace with no external CIDR egress and allows only DNS plus the in-cluster gateway and RAG service.
+`tenants/onboarding/regulated-offline-coding-agents.yaml` is a tenant policy example. It renders a namespace with external CIDR egress closed and allows only DNS plus the in-cluster gateway and RAG service.
 
-The profile name does not make the cluster air-gapped. It does not control image pulls, model downloads, Argo CD, the gateway namespace, the identity provider, or other cluster services. An offline deployment also needs private registries and mirrors, preloaded model weights, internal Git and identity endpoints, and cluster-wide egress controls.
+The tenant policy governs the tenant namespace. A fully offline deployment adds private registries and mirrors, preloaded model weights, internal Git and identity endpoints, and cluster-wide egress controls for image pulls, model downloads, Argo CD, the gateway namespace, the identity provider, and other cluster services.
 
 Use the [restricted-egress tenant walkthrough](regulated-offline-tenant-example.md) to render and inspect the manifests.
 
 ## Stateful and failure boundaries
 
-The bundled Redis, PostgreSQL, Qdrant, and Loki configurations are development/reference footprints. Redis uses AOF and a PVC for run budgets; Temporal has dedicated PostgreSQL storage. Both are single instances. Qdrant is a single instance, and the local observability stack is not an HA logging service. The [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) describes the handoff path.
+The bundled Redis, PostgreSQL, Qdrant, and Loki configurations are development/reference footprints. Redis uses AOF and a PVC for run budgets; Temporal has dedicated PostgreSQL storage. Both are single instances. Qdrant is a single instance, and the local observability stack is a single-node logging setup. For production availability, move these to managed stores using the [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md).
 
-Workflow state lives in Temporal, not in the gateway. The SDK schedules model/tool activities
+Workflow state lives in Temporal. The SDK schedules model/tool activities
 on the existing governed gateway path; Redis holds accounting only. See [workflows](workflows.md)
-for replay, ambiguous in-flight calls, idempotent tools, and approval trust boundaries.
+for replay, in-flight calls, idempotent tools, and approval trust boundaries.
 
-The gateway audit chain is per process/replica. Export records and store chain-head anchors outside the gateway if the log is intended as tamper or rollback evidence.
+The gateway audit chain is per process/replica. To use the log as tamper or rollback evidence, export records and store chain-head anchors outside the gateway.
 
 ## Team operations
 
@@ -126,5 +126,5 @@ Teams extend sandbox identity with projects and verified roles. The gateway API 
 Temporal executions on each team's task queue; workers retain team-bound execution keys.
 Run metadata/timeline indices and atomic cross-provider spend reservations share the existing
 budget Redis. Provider secrets stay on the gateway and are selected by verified team identity.
-Temporal history remains the execution authority. The receipt index does not replace retained
+Temporal history remains the execution authority, and the receipt index works alongside retained
 audit chains and external anchors. See [team operations](workflows.md#operate-the-service).

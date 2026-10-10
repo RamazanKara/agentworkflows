@@ -34,16 +34,12 @@ Keep external egress narrow:
 - Use TLS ports unless a reviewed exception exists.
 - Use one catalog entry per trust boundary.
 - Keep `expiresOn` current and review entries before renewal.
-- Do not add `0.0.0.0/0` or broad private ranges to coding-agent workspaces.
+- Use specific destination CIDRs for coding-agent workspaces in place of `0.0.0.0/0` or broad private ranges.
 
-## Expiry in the cluster, not just in CI
+## Expiry in the cluster
 
-`make egress-check` validates `expiresOn` at review time. On its own that meant an exception
-expired in the repository and not on the wire: GitOps converges the cluster to the repository,
-and the repository still held the old NetworkPolicy until somebody edited it, so CI went red
-while the traffic kept flowing.
-
-The expiry now travels with the policy. Each `allowedEgressCidrs` entry must carry
+`make egress-check` validates `expiresOn` at review time, and the expiry also travels with the
+policy into the cluster, where Kyverno and a CronJob act on it. Each `allowedEgressCidrs` entry must carry
 `expiresOn` (required at render time, and cross-checked against its catalog entry), and the
 chart stamps it onto the rendered NetworkPolicy:
 
@@ -56,20 +52,18 @@ chart stamps it onto the rendered NetworkPolicy:
 
 Two controls read it:
 
-- **Kyverno** (`ai-platform-restrict-egress-cidrs`) rejects a governed exception with no
-  expiry annotation, and denies one whose date has passed. The rule runs in background scan
-  too, so an exception that lapses while applied is reported without waiting for the next
-  admission.
+- **Kyverno** (`ai-platform-restrict-egress-cidrs`) requires the expiry annotation on every
+  governed exception and denies one whose date has passed. The rule also runs in background
+  scan, so an exception that lapses while applied is reported ahead of the next admission.
 - **A CronJob** in the workspace namespace (`networkPolicy.expiryEnforcement`) checks the
   annotation daily. It is **report-only by default**: it fails the job and logs that traffic
-  is still allowed. Set `removeExpired: true` to have it delete the approved-egress policy,
-  which leaves default-deny in force so the workspace fails closed to platform-internal
-  traffic rather than losing all governance.
+  is still allowed. Set `removeExpired: true` to have it delete the approved-egress policy;
+  default-deny then stays in force, so the workspace keeps platform-internal traffic and
+  fails closed for everything else.
 
-Report-only is the default because deleting the policy is a real availability event for
-whatever depended on that egress. Turn enforcement on once you are alerting on the job's
-failure. The `delete` permission is only granted when `removeExpired` is true, so the
-capability does not sit in the cluster waiting for the day it might be used.
+Report-only is the default because deleting the policy cuts that egress for whatever depended
+on it. Turn enforcement on once you are alerting on the job's failure. The CronJob receives the
+`delete` permission only when `removeExpired` is true.
 
 ## Troubleshooting
 

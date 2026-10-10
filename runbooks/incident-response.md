@@ -11,7 +11,7 @@ linked runbook, and capture evidence as you go.
 | --- | --- | --- | --- |
 | **SEV1** | Platform-wide outage or confirmed data loss/exposure. Core business endpoints down, customer data lost or leaked. | Inference gateway has zero ready endpoints; Qdrant data lost with no good backup; confirmed prompt/secret exfiltration. | Page on-call immediately, open an incident channel, engage platform + security leads. All hands until mitigated. |
 | **SEV2** | Major degradation, single critical component down, or error budget fast-burn. Service usable but impaired; no confirmed data loss. | One runtime backend absent; RAG service high error rate; budget Redis down (budgets fail open/closed); restore drill failing. | Page on-call. Mitigate within the hour; keep stakeholders updated. |
-| **SEV3** | Minor or contained issue, slow-burn, or single-tenant impact. Workarounds exist. | One sandbox over budget; elevated p95 latency; a single Kyverno-blocked deploy; backup stale but last backup good. | Handle in business hours. Track to closure; no paging unless it escalates. |
+| **SEV3** | Minor or contained issue, slow-burn, or single-tenant impact. Workarounds exist. | One sandbox over budget; elevated p95 latency; a single Kyverno-blocked deploy; backup stale but last backup good. | Handle in business hours. Track to closure; page only if it escalates. |
 
 When unsure, round up: treat a possible data-loss or data-exposure event as SEV1
 until proven otherwise.
@@ -44,17 +44,16 @@ backend-absent and restore alerts also name the runbook in their summary.
 | Upgrade gone wrong / need to roll back | `runbooks/upgrade.md` |
 | Vector store schema / collection migration | `runbooks/qdrant-migration.md` |
 
-## Gap Sections
+## First-Response Procedures
 
-The following failures did not have a dedicated runbook. Each section is the
-first-response procedure; escalate per the tiers above.
+Each section below is the first-response procedure for its failure; escalate per
+the tiers above.
 
 ### Budget Redis Outage
 
 **Severity.** Usually SEV2: the shared budget backend (`deploy/charts/budget-redis`,
-`budget` namespace) is down, so the gateway cannot read or write per-sandbox
-usage. Inference availability itself may be unaffected, but budget enforcement is
-degraded.
+`budget` namespace) is down and the gateway's per-sandbox usage reads and writes
+fail, which degrades budget enforcement.
 
 **What to check.**
 
@@ -64,7 +63,7 @@ degraded.
 
 Confirm `SANDBOX_BUDGET_BACKEND=redis` and that `SANDBOX_BUDGET_REDIS_URL`
 resolves the `budget` namespace service. Check the gateway's
-`SANDBOX_BUDGET_REDIS_TIMEOUT_SECONDS` -- a slow Redis can manifest as timeouts.
+`SANDBOX_BUDGET_REDIS_TIMEOUT_SECONDS`: a slow Redis shows up as timeouts.
 
 **How to recover.**
 
@@ -75,7 +74,7 @@ resolves the `budget` namespace service. Check the gateway's
    broken NetworkPolicy can also sever the gateway-to-Redis path.
 3. While Redis is down, decide budget posture deliberately: a managed/enterprise
    Redis can be swapped in by pointing `budget.redisUrl` at it (see
-   `runbooks/budget-controls.md`). Do not silently disable budgets in production.
+   `runbooks/budget-controls.md`). Keep budgets enabled in production.
 4. Validate with the budget endpoint once recovered:
    `curl -H 'X-Sandbox-ID: <id>' http://127.0.0.1:18082/v1/sandbox/budget`.
 
@@ -106,9 +105,8 @@ unreachable pod) and check the RAG service health for `retrieval_backend=qdrant`
    assert point count) is in `runbooks/restore-drill.md` under "Real
    Data-Recovery Drill (Qdrant)"; the production restore follows the same
    snapshot-restore path against the real collection. Backups are a customer
-   prerequisite -- a metadata-only Velero backup restores an empty store, so the
-   PVC/snapshot contents must have been captured (see
-   `deploy/clusters/customer/README.md` handoff checklist).
+   prerequisite: capture the PVC/snapshot contents along with the Velero metadata
+   (see `deploy/clusters/customer/README.md` handoff checklist).
 3. After restore, re-run RAG smoke and confirm recovered point counts match
    expectations before declaring recovery.
 4. If no good backup exists, this is a SEV1 data-loss event: engage the customer
@@ -135,14 +133,14 @@ that fails signature verification (`ai-platform-verify-project-images`, set to
 
 **How to recover.**
 
-1. For a policy/manifest mismatch, fix the manifest -- see
-   `runbooks/policy-blocked-deploy.md`. Do not bypass policy; exceptions must be
+1. For a policy/manifest mismatch, fix the manifest: see
+   `runbooks/policy-blocked-deploy.md`. Keep policy enforced, and make any exception
    time-boxed, documented, and reviewed.
 2. For an image-verification block on a fork, the keyless `subject`/`issuer` in
    `deploy/policies/kyverno/policies.yaml` and the image registry must point at your own
    identity (see `docs/threat-model.md` and `deploy/clusters/customer/README.md`). A
    rejected image signed by an unexpected identity is the policy working as
-   intended -- treat an unexplained verification failure as a potential
+   intended; treat an unexplained verification failure as a potential
    supply-chain event and escalate to the security lead.
 3. For a broad-egress block, add the destination to
    `platform/network/egress-catalog.yaml` and reference it by `catalogRef` rather than
@@ -152,5 +150,5 @@ that fails signature verification (`ai-platform-verify-project-images`, set to
 
 For every incident, record: the firing alert and severity, timeline, the runbook
 followed, mitigation steps (including any paused Argo CD automation per
-`runbooks/upgrade.md`), affected deploy/sandbox/request IDs, and -- for data-loss or
-security events -- the deploy/backup/restore artifacts and the security-lead handoff.
+`runbooks/upgrade.md`), affected deploy/sandbox/request IDs, and, for data-loss or
+security events, the deploy/backup/restore artifacts and the security-lead handoff.

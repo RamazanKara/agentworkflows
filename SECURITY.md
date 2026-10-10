@@ -74,13 +74,13 @@ tests, not a penetration test or a production deployment certification.
   webhook replay protection, cursor validation and CSV formula protection. Provider
   transport errors and notification failures avoid logging credential-bearing URLs.
 
-Production boundaries still require operator configuration: enable shared rate limits,
-bound unauthenticated API abuse at ingress, use TLS/Secure cookies, restrict trusted
-proxy addresses, and keep Temporal and workers inaccessible to tenants. Rate limiting
-is off by default in the standalone chart; do not interpret an available control as an
-enabled one. Captured content is policy-controlled and may still be sensitive; exports
-outlive server retention. Live IdP, proxy, cluster isolation and store failover checks
-remain in the [caller verification list](docs/release-verification.md#candidate-readiness-pass).
+For production, configure the operator-owned boundaries: enable shared rate limits,
+bound unauthenticated API traffic at ingress, use TLS/Secure cookies, restrict trusted
+proxy addresses, and keep Temporal and workers reachable only from the platform. Turn on
+rate limiting in the standalone chart, where it is off by default. Set content capture per
+policy and handle exports under your own retention rules. Run the live IdP, proxy, cluster
+isolation and store failover checks in the
+[verification list](docs/release-verification.md#candidate-readiness-pass).
 
 ## Validation
 

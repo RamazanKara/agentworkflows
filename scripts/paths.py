@@ -34,6 +34,7 @@ DIRECTORIES: dict[str, str] = {
     "scripts": "Automation, governance gates, and tooling.",
     "runbooks": "Operational runbooks (also shipped as Prometheus runbook_url targets).",
     "docs": "User-facing documentation and the mkdocs site source.",
+    "internal": "Maintainer backlog and bug-hunt notes; not published on the docs site.",
     "results": "Sample evidence (tracked) and generated reports (git-ignored except sample-*).",
     "sdk": "First-party, dependency-light client SDKs for the gateway API.",
 }

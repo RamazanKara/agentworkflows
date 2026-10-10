@@ -1,6 +1,6 @@
 # Vector RAG Runbook
 
-Use this runbook when the customer knowledge base is too large for the bundled lexical RAG profile or when coding agents need stable semantic retrieval across platform, repository, and incident context.
+Use this runbook when the customer knowledge base outgrows the bundled lexical RAG profile or when coding agents need stable semantic retrieval across platform, repository, and incident context.
 
 ## Profile Contract
 
@@ -11,7 +11,7 @@ The Qdrant profile provides:
 - a dedicated `vector` namespace through GitOps or local direct apply
 - a pinned Qdrant deployment with Service, ServiceAccount, NetworkPolicy, PDB, and optional PVC
 - RAG env vars for backend, URL, collection, collection version, timeout, vector dimensions, and bootstrap behavior
-- deterministic local hashed embeddings for lab validation without calling an external embedding API
+- deterministic local hashed embeddings for fully local lab validation
 - optional OpenAI-compatible embedding endpoints owned by the customer
 - optional bootstrap from the approved RAG knowledge ConfigMap
 - optional manifest-driven Qdrant ingestion Job with classification, retention, owner, and embedding metadata
@@ -29,7 +29,7 @@ Embedding settings live under the RAG chart:
         collectionVersion: v1
         dimensions: 384
 
-Keep `retrieval.vectorStore.dimensions` exactly aligned with the embedding endpoint response size. Increment `retrieval.vectorStore.collectionVersion` when re-ingesting with an incompatible chunking, embedding model, or metadata policy so old and new points do not mix during migration.
+Keep `retrieval.vectorStore.dimensions` exactly aligned with the embedding endpoint response size. Increment `retrieval.vectorStore.collectionVersion` when re-ingesting with an incompatible chunking, embedding model, or metadata policy so old and new points stay separate during migration.
 
 ## Customer Sizing
 
@@ -86,4 +86,4 @@ If queries return `vector_store_unavailable`, inspect:
 - matching collection name, collection version, and vector dimensions
 - Qdrant logs for collection creation or upsert errors
 
-Do not load unreviewed private repository or incident data into the vector store. Treat embedded content as customer confidential data and align backup, retention, and deletion procedures with `platform/governance/data-retention.yaml`.
+Load only reviewed private repository and incident data into the vector store. Treat embedded content as customer confidential data and align backup, retention, and deletion procedures with `platform/governance/data-retention.yaml`.

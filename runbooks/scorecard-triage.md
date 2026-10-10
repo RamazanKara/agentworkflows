@@ -15,7 +15,7 @@ repo). Use this runbook to read the findings and decide what to fix.
 
 ## Triage Order
 
-Score each finding by exploitability, not just the raw number. Work top-down:
+Score each finding by exploitability as well as the raw number. Work top-down:
 
 1. **Critical / high-risk checks first**: `Dangerous-Workflow`, `Token-Permissions`,
    `Branch-Protection`, `Binary-Artifacts`. A failing `Dangerous-Workflow` or broad
@@ -34,17 +34,17 @@ Score each finding by exploitability, not just the raw number. Work top-down:
 | --- | --- |
 | `Token-Permissions` | Add least-privilege `permissions:` to the workflow or job; default to `contents: read`. |
 | `Pinned-Dependencies` | Pin the action to a full-length commit SHA or release tag; regenerate hashed Python locks with `pip-compile`. |
-| `Dangerous-Workflow` | Remove `pull_request_target` + untrusted checkout patterns; never interpolate untrusted input into `run:`. |
+| `Dangerous-Workflow` | Remove `pull_request_target` + untrusted checkout patterns; keep untrusted input out of `run:` interpolation. |
 | `Branch-Protection` | Enable required reviews and required status checks on `main` in repo settings. |
 | `Vulnerabilities` | Bump the offending dependency and regenerate locks; confirm `make image-scan` is clean. |
 | `Signed-Releases` | Already handled by Cosign signing in [ci.yml](https://github.com/RamazanKara/agentworkflows/blob/main/.github/workflows/ci.yml); confirm the signing step ran. |
 
 ## Accepting A Finding
 
-Some checks (for example `Fuzzing`, `Branch-Protection` on a solo-maintained repo) may be
-intentionally out of scope. Record the decision and rationale in the pull request that touches the
-related area, and dismiss the code-scanning alert with the matching reason so it does not re-surface
-as actionable. Do not silence a finding without a written rationale.
+Some checks (for example `Fuzzing`, `Branch-Protection` on a solo-maintained repo) can be accepted
+deliberately. Record the decision and rationale in the pull request that touches the related area,
+and dismiss the code-scanning alert with the matching reason so it stays resolved. Give every
+dismissed finding a written rationale.
 
 ## Verification
 

@@ -45,9 +45,9 @@ batch:
     apiKey: { existingSecret: { name: batch-worker, key: batch-worker-api-key } }
 ```
 
-The object store (MinIO or cloud S3) is operator-provided. The `filesystem`/`memory` object
-backends are for single-process local runs only; they are **not** shared across the gateway and
-worker pods, so a cluster must use `s3`.
+The operator provides the object store (MinIO or cloud S3). Use `s3` in a cluster so the gateway
+and worker pods share blobs; the `filesystem` and `memory` object backends serve single-process
+local runs.
 
 ## Normal flow
 
@@ -74,7 +74,7 @@ else lands in the `error_file_id` file. Partial completion is normal.
 
 The design behind this section and the next is recorded in [ADR 0016](https://github.com/RamazanKara/agentworkflows/blob/main/docs/adr/0016-batch-claims-checkpoints-and-replay-identity.md).
 
-The worker replays every tenant's items, so its key cannot be bound to one sandbox. Give it an
+The worker replays every tenant's items, so its key spans sandboxes. Give it an
 API-key record with the `batch_replay` scope and no `sandbox`:
 
 ```yaml
@@ -85,11 +85,11 @@ records:
 ```
 
 With that scope, the gateway accepts the key's `X-Sandbox-ID` only when the request also names,
-in `X-Batch-ID`, a batch that exists for that tenant and is `in_progress`. A leaked worker key
-therefore cannot act for a tenant with no running batch. Each item's receipt records the worker
-key, the batch id, and the batch's submitter as `principal.on_behalf_of`. A worker key without
-the scope still works but is an unrestricted service key; the tenant-scoped Files and Batch
-routes refuse it.
+in `X-Batch-ID`, a batch that exists for that tenant and is `in_progress`. A worker key
+therefore acts for a tenant only while that tenant has a running batch. Each item's receipt
+records the worker key, the batch id, and the batch's submitter as `principal.on_behalf_of`.
+Always give the worker key this scope: a key without it acts as an unrestricted service key,
+and the tenant-scoped Files and Batch routes refuse it.
 
 ## Progress, restarts, and memory
 
@@ -101,12 +101,12 @@ so at most one part of items is replayed and charged again. Parts are combined i
 and error files when the batch finishes, then deleted.
 
 Claims carry an owner token. A worker that stalls past `BATCH_WORKER_RECLAIM_SECONDS` loses its
-claim at the next heartbeat and stops without touching the replica that took over.
+claim at the next heartbeat and stops, leaving the batch to the replica that took over.
 
 ## Cancellation and expiry
 
 - `POST /v1/batches/{id}/cancel` flips the batch to `cancelling`; the worker finalizes it to
-  `cancelled` at its next chunk boundary (best-effort; in-flight items may still complete).
+  `cancelled` at its next chunk boundary. Items already in flight run to completion first.
 - A batch not finished within its `completion_window` (default `24h`, honored as an expiry
   bound) becomes `expired` at the next chunk boundary or when a worker next picks it up.
   Results finished before cancellation or expiry are kept in the output and error files.
@@ -119,7 +119,7 @@ claim at the next heartbeat and stops without touching the replica that took ove
 | Worker logs "BATCH_API_ENABLED is false" | The worker Deployment did not get `BATCH_API_ENABLED=true`; it is set by the chart when `batch.enabled` is true. |
 | Items fail with `batch_replay_not_authorized` | The worker key has the `batch_replay` scope but the batch was not `in_progress` when the item ran (for example, it was cancelled), or the worker and gateway use different batch stores. |
 | Items all fail with 401/403 in the error file | The worker's service key (`batch.worker.apiKey`) is missing or not allowlisted by the gateway; or a JWT tenant mismatch. |
-| Batch fails with "input file content is missing" | The gateway and worker are not pointed at the same object store, or the input file was deleted. Use `s3` (shared) in-cluster, not `filesystem`. |
+| Batch fails with "input file content is missing" | The gateway and worker are not pointed at the same object store, or the input file was deleted. Use `s3` (shared) in-cluster. |
 | A batch is stuck `in_progress` after a worker crash | The reaper re-queues it after `BATCH_WORKER_RECLAIM_SECONDS` (default 300s); another worker replica picks it up. Re-delivery is idempotent. |
 
 Batched requests appear in the gateway audit log like any other request, so the tamper-evident

@@ -1,22 +1,21 @@
 # Incident Runbook: Restore Drill Failure
 
-## What The Restore Drills Prove (read this first)
+## What The Restore Drills Prove
 
-There are two distinct drills, and they prove different things. Do not conflate
-them when reviewing evidence:
+There are two distinct drills, and each proves something specific:
 
 - **Restore-tooling smoke (Redis AOF fixture).** The default `make restore-drill`
   replays a *synthetic 2-key Redis AOF fixture* into a disposable container and
-  runs data checks. This proves the restore *pipeline/tooling* works -- it can
-  stand up a target, replay a backup, and validate it. It does **not** prove
-  that any production data store is recoverable. Treat a green
-  `restore-pass-rate` from this path as "the restore tooling runs," nothing more.
+  runs data checks. This proves the restore *pipeline/tooling* works: it
+  stands up a target, replays a backup, and validates it. A green
+  `restore-pass-rate` from this path means the restore tooling runs; the Qdrant
+  drill below covers stored data.
 - **Real data-recovery drill (Qdrant).** `RUNTIME=local RESTORE_DRILL_QDRANT_DATA=1
   make restore-drill` runs an end-to-end recovery of real vectors: it seeds a
   known set of points into a throwaway probe collection, exports a Qdrant
   snapshot, deletes the collection, restores it from the snapshot, and asserts
-  the recovered point count matches. This is the drill that actually proves
-  stored vector data is recoverable. The spec lives at
+  the recovered point count matches. This drill proves stored vector data is
+  recoverable. The spec lives at
   `chaos/drills/qdrant-data-restore.yaml`.
 
 ## Symptoms
@@ -37,8 +36,8 @@ For the local Docker runtime (restore-tooling smoke):
 
 Run against a live local cluster with a reachable Qdrant (port-forward or
 in-cluster). It is guarded behind `RUNTIME=local` and `RESTORE_DRILL_QDRANT_DATA=1`
-so it never runs by accident, and it only touches its own ephemeral probe
-collection (never the production `customer-platform-knowledge` collection).
+so it runs only on request, and it works on its own ephemeral probe collection,
+leaving the production `customer-platform-knowledge` collection untouched.
 
     # Make Qdrant reachable (example: port-forward the vector service)
     kubectl -n vector port-forward svc/qdrant-vector-store 6333:6333 &
@@ -57,8 +56,8 @@ Tunables: `RESTORE_DRILL_QDRANT_URL` (default `http://127.0.0.1:6333`),
 `RESTORE_DRILL_QDRANT_COLLECTION`, `RESTORE_DRILL_QDRANT_DIMENSIONS`,
 `RESTORE_DRILL_QDRANT_POINTS`. The report is written to
 `results/restore-drill/qdrant-data-restore-<stamp>.json`. A failed assertion or
-an unreachable Qdrant produces a `validation_passed: false` record -- results
-are never faked.
+an unreachable Qdrant produces a `validation_passed: false` record, so every
+result reflects the real run.
 
 ## Likely Causes
 
@@ -66,7 +65,7 @@ The backup artifact is missing, object-storage credentials are wrong, the restor
 
 ## Mitigation
 
-Rerun with `--no-cleanup`, inspect the retained target pod or container, fix credentials or backup source paths, and only then update checks if the data contract intentionally changed.
+Rerun with `--no-cleanup`, inspect the retained target pod or container, fix credentials or backup source paths, and update checks only when the data contract intentionally changed.
 
 ## Evidence
 

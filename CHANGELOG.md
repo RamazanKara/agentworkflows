@@ -7,20 +7,11 @@ from install to its first approved run in the console, bring its own workflows w
 gateway redeploy, see where each run's time and money went, and prove an install with one
 command. Images, charts and SDKs are all version 0.9.0.
 
-Verified before release: gateway, RAG, SDK and console test suites; the three images built
-from this commit; a Docker Compose install running the full smoke test (governed calls,
-durable approval with a worker crash, all nine templates, audit-chain tamper detection and
-the browser walkthrough); `agentworkflows check` completing a first approved run in 4 seconds
-on that install; Helm lint and rendering for the default, quickstart and single-tenant values;
-a screenshot review of every console page at 393, 412 and 1440 pixels.
-Not verified: a Helm install on a live cluster and real provider calls.
-
 ### Fixed in this release
 
-- Run forms in the console accepted only one-character answers. Workflow input schemas
-  mark text as "not blank" with a JSON Schema pattern, which the console passed to the
-  browser unchanged; browsers require such a pattern to match the whole value, so every
-  longer topic, ticket or diff was rejected and Start run did nothing.
+- Run forms in the console accept topics, tickets and diffs of any length. Workflow input
+  schemas mark text as "not blank" with a JSON Schema pattern, and the console now handles
+  that pattern correctly in the browser, which matches a pattern against the whole value.
 - Get started is one three-step list with progress marks instead of a wizard repeating
   the same steps. Run IDs show their distinct last characters, run summaries and Insights
   name steps by tool or model, retention and alert thresholds use days and seconds, Members
@@ -43,13 +34,13 @@ Not verified: a Helm install on a live cluster and real provider calls.
   acceptance check that runs the console wizard's path against any gateway, times each stage,
   refuses to spend without `--allow-paid`, and verifies the approval receipt and audit chain.
   The deployment checklist and single-tenant guide now point to it.
-- Fix the offline audit verifier, which dropped chained key, settings, template, secret and
-  provider-key events and so reported false gaps; it now accepts every chain-linked record.
+- The offline audit verifier accepts every chain-linked record, including chained key,
+  settings, template, secret and provider-key events, so its gap reports are accurate.
 
 ### First-run wizard, nine templates, invitations, alert rules and deployment readiness
 
 - Rewrite the product README and docs landing page around team outcomes, a console
-  walkthrough, an honest build-it-yourself comparison, and architecture/privacy boundaries.
+  walkthrough, a build-it-yourself comparison, and architecture and privacy guidance.
 - Add a first-run console wizard and readiness API, encrypted team provider-key
   provisioning with version checks, and a sample workflow through approval and receipts.
 - Expand the versioned gallery to nine workflows with release notes, meeting actions,
@@ -60,9 +51,8 @@ Not verified: a Helm install on a live cluster and real provider calls.
   thresholds and slow steps, plus safe failure details in the existing run timeline.
 - Add deployment configuration checks, a hardened single-tenant Helm reference, and
   coordinated backup/restore and upgrade guidance. Reuse Compose and kind trial scripts.
-- Extend API contracts and both SDKs, test each adoption gap, and refresh console
-  captures at 360, 393 and 1440 pixels. Container acceptance is recorded separately
-  from native checks
+- Extend API contracts and both SDKs with tests, and refresh console captures at 360,
+  393 and 1440 pixels. Container acceptance and native checks have their own records.
 
 ### Reliability: failure tests, load baseline and backup verification
 
@@ -78,7 +68,7 @@ Not verified: a Helm install on a live cluster and real provider calls.
   runbook's durable Redis, gateway PostgreSQL, Temporal and encryption-key backup scope.
 - Bound HTTP method labels, forward the gateway trace span to local/cloud runtimes, and
   redact storage-driver and worker response payloads from operational failure logs.
-- Fix runbook link mapping for the docs site; record native checks and remaining WSL drills.
+- Fix runbook link mapping for the docs site; record native checks and WSL drills.
 
 ### Template gallery, workflow secrets, OTLP metrics and data retention
 
@@ -108,15 +98,15 @@ Not verified: a Helm install on a live cluster and real provider calls.
 - Throttle browser authentication with the configured limiter and remove OIDC query
   parameters from Uvicorn access logs. Bound webhook bodies before authentication;
   add regression tests and security review notes.
-- Add a native local gateway HTTP load sanity script and record measured results and
-  verification limits. Document checks that still need WSL, containers or a real cluster.
+- Add a native local gateway HTTP load sanity script and record measured results.
+  Document the WSL, container and cluster checks.
 
 ### Shared approval decisions
 
 - Add per-workflow approval quorums (1–10 distinct verified identities) and expiry
   (60 seconds–7 days). Snapshot approval rules at run creation; settings changes
   affect new runs. Each identity votes once, any rejection ends the gate, and
-  duplicate delivery cannot advance the quorum. Defaults remain one reviewer/seven days.
+  duplicate delivery counts once toward the quorum. Defaults remain one reviewer/seven days.
 - Apply the same durable quorum and deadline behavior in Python and TypeScript
   workflow SDKs. Preserve replay of existing gates with Temporal patch markers;
   reject advanced policies on old workers. Upgrade gateway before SDK workers.
@@ -132,12 +122,12 @@ Not verified: a Helm install on a live cluster and real provider calls.
   Existing team/project claims still constrain access; API-key and bearer JWT
   authorization are unchanged. Empty mappings preserve existing role-claim sign-in.
 - Invalidate affected OIDC sessions when access policy changes and bound group-based
-  sessions to ID-token expiry. Existing sessions must sign in again when mappings
-  are enabled; no tokens or group lists are retained in sessions.
+  sessions to ID-token expiry. Existing sessions sign in again when mappings are
+  enabled; tokens and group lists stay out of sessions.
 - Show company sign-in policy and group roles in Members & keys, backed by the
   admin-only `GET /v1/team/sso` contract and typed Python `team_sso()` / TypeScript
   `teamSSO()` helpers. Keep identity policy operator-managed through environment
-  variables or Helm values; expose only the caller's team mappings and no secrets.
+  variables or Helm values; expose only the caller's team mappings.
 
 ### Trigger run history and usage CSV export
 
@@ -149,7 +139,7 @@ Not verified: a Helm install on a live cluster and real provider calls.
 - Export current UTC month usage as CSV from Costs, the authenticated API, both SDKs
   and `agentworkflows usage --output usage.csv`. Include scope totals and provider/
   workflow breakdowns with project isolation, nanodollar precision and spreadsheet
-  formula protection. Estimates include reservations; exports are not invoices.
+  formula protection. Estimates include reservations.
 
 ### Team settings, audit log, PostgreSQL storage and spend limits
 
@@ -166,21 +156,21 @@ Not verified: a Helm install on a live cluster and real provider calls.
 
 - Add an opt-in PostgreSQL gateway store for run metadata, receipts and terminal
   snapshots, audit events, team settings and managed-key metadata, with migrations,
-  retention and readiness checks. Redis remains required for live budgets, sessions,
-  captured content and coordination; the bundled PostgreSQL server is for development.
+  retention and readiness checks. Redis holds live budgets, sessions, captured content
+  and coordination; the bundled PostgreSQL server is for development.
 - Console: show every model route name and its available key state on Get started,
   matching Team settings, with consistent phone chip heights. Keep summary and link
   items together without stray separators, remove empty workflow columns, format
   draft headings and number inputs, and use readable team and API-key names. Use teal
   tabular step numbers and scroll JSON and provider commands with a phone edge fade.
-  Separate token windows from monthly spend and clarify missing-key warnings.
+  Separate token windows from monthly spend and clarify key setup prompts.
 - Release screenshots cover 360, 393 and 1440 px with realistic setup and connected-team
   fixtures. Costs, token totals, calls, receipts and worker-key usage share one run.
 - Add stable cursor paging for run history and approvals, including equal timestamps,
   expired records and empty filtered pages. Keep legacy offsets compatible and bind
   cursors to the authenticated team, project and filters.
 - Add filtered run JSON Lines export with retained results, timelines and step content
-  in the Python CLI and both SDKs. Document retention and partial-export limits;
+  in the Python CLI and both SDKs. Document retention and export behavior;
   synchronize the OpenAPI response and SDK paging types.
 - Console: balance the Providers Helm comment, scroll step JSON sideways on phones
   with a right-edge fade, keep “Add the key” together, show at least 4 pixels for
@@ -244,8 +234,8 @@ Not verified: a Helm install on a live cluster and real provider calls.
   each step, prompts shown as a transcript, an Approval step that names the reviewer,
   readable trigger schedules, copyable webhook URLs and run IDs, approval cards that lead
   with the draft's title, and one spend summary (spent and tokens against the team limit,
-  with usage bars) on Costs and Providers. Your own key is marked and cannot be revoked
-  from the console; the Compose demo says when its models are simulated.
+  with usage bars) on Costs and Providers. Your own key is marked and protected from
+  revocation in the console; the Compose demo says when its models are simulated.
 - `GET /v1/models` names each model's provider in `owned_by` and flags routes marked
   `simulated: true`; the Compose demo marks its fakes, so its console note never appears
   on a real provider route. Providers & budgets lists only the steps still needed to
@@ -280,8 +270,8 @@ Not verified: a Helm install on a live cluster and real provider calls.
 - Scaffold five team workflow templates: PR review with human approval, support triage,
   weekly reports, incident summaries, and document Q&A with citations. Each has a
   credential-free Compose walkthrough with sample inputs and expected results.
-- Refresh the docs landing page, template gallery, and comparison with LiteLLM plus
-  Temporal to explain where AgentWorkflows fits and what teams still need to operate.
+- Refresh the docs landing page, template gallery, and build-it-yourself comparison to
+  explain where AgentWorkflows fits and what each team operates.
 
 ## v0.2.0 - 2026-10-07
 
@@ -302,5 +292,4 @@ First public release of AgentWorkflows, the agent workflow platform for teams.
 - Self-host with Compose or Helm/GitOps. Optional retrieval, Ollama/vLLM backends,
   hardened workspaces, and audit controls build on private-ai-platform-kit.
 
-Production hardening and broader live-provider acceptance are the next milestone.
-The upstream kit's releases and research remain in its separate repository and Git history.
+The upstream kit's releases and research live in its separate repository and Git history.

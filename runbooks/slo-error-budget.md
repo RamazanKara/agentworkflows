@@ -42,10 +42,10 @@ Treat a failed SLO objective as a customer-readiness blocker for that profile.
 - Error-rate failures usually mean the gateway, runtime, budget backend, or API-key clients are unhealthy.
 - Latency failures usually mean runtime capacity, model size, GPU placement, or queueing policy needs tuning.
 - Eval failures usually mean the selected model or prompt path is not ready for the customer's task mix.
-- Restore failures mean backup evidence is not trustworthy enough for handoff.
+- Restore failures mean the backup evidence needs a passing rerun before handoff.
 - Evidence-control failures mean a required coding-agent platform control is missing from the handoff pack.
 
-Tune targets only through reviewed changes to `platform/slo/objectives.yaml`. Do not edit generated evidence to make an SLO pass.
+Tune targets only through reviewed changes to `platform/slo/objectives.yaml`. Regenerate evidence with the commands above.
 
 ## Customer Adaptation
 

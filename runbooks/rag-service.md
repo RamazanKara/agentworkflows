@@ -11,11 +11,11 @@ The RAG service exposes:
 - `GET /v1/rag/documents`
 - `POST /v1/rag/query`
 
-Queries return retrieved document excerpts, a query SHA-256 fingerprint, optional context, and OpenAI-compatible `grounded_messages` that can be passed to the inference gateway. Audit logs include query length and hash, not raw query text.
+Queries return retrieved document excerpts, a query SHA-256 fingerprint, optional context, and OpenAI-compatible `grounded_messages` that can be passed to the inference gateway. Audit logs record the query length and hash in place of raw query text.
 
 When `auth.enabled` is true, `POST /v1/rag/query` and `GET /v1/rag/documents` require `X-API-Key` or `Authorization: Bearer`. Health and metrics remain unauthenticated for Kubernetes probes and scraping.
 
-When `auth.jwt.enabled` is true (see "Trust boundary" below), the service additionally verifies its own audience-bound bearer token (JWKS/issuer/audience/exp/nbf) and derives the caller's tenant from the verified claim. With both enabled, send the API key in `X-API-Key` and the JWT in `Authorization: Bearer`; a JWT-shaped bearer value is never treated as an API key. `auth.jwt.audience` is required whenever JWT verification is on, so a token minted for another service (for example the gateway) is rejected.
+When `auth.jwt.enabled` is true (see "Trust boundary" below), the service additionally verifies its own audience-bound bearer token (JWKS/issuer/audience/exp/nbf) and derives the caller's tenant from the verified claim. With both enabled, send the API key in `X-API-Key` and the JWT in `Authorization: Bearer`; the service reads a JWT-shaped bearer value as a JWT. `auth.jwt.audience` is required whenever JWT verification is on, so a token minted for another service (for example the gateway) is rejected.
 
 The local profile uses lexical retrieval. Customer values can switch to the Qdrant vector-store profile with `retrieval.backend=qdrant`; see `runbooks/vector-rag.md` for storage, network, and collection operations.
 
@@ -72,27 +72,27 @@ Write to Qdrant only after source ownership, classification, retention class, an
       --write
 
 The Helm chart can run an optional ingestion Job when `sourceManifest.enabled=true` and `ingestion.enabled=true`.
-The service stores `collection_version` in each Qdrant point and filters queries by `retrieval.vectorStore.collectionVersion`, which lets operators stage re-ingestion or embedding-model migrations in the same collection without mixing old and new vectors.
+The service stores `collection_version` in each Qdrant point and filters queries by `retrieval.vectorStore.collectionVersion`, which lets operators stage re-ingestion or embedding-model migrations in the same collection with old and new vectors kept apart.
 
 ## Per-Tenant Isolation
 
 Per-tenant retrieval isolation is **enabled by default** (`RAG_RETRIEVAL_TENANT_ISOLATION_ENABLED` defaults `true`). When enabled, a query returns only documents whose tenant field (`RAG_RETRIEVAL_TENANT_FIELD`, default `owner`) equals the caller's `X-Sandbox-ID`.
 
 - **Both backends enforce it.** The Qdrant path appends an `owner` match to the query filter; the lexical path stamps its on-disk corpus with the service's default sandbox id (`DEFAULT_SANDBOX_ID`) and applies the same owner scoping.
-- **Fail-closed, always.** A tenant with no matching documents gets none. A request that does not *explicitly* send `X-Sandbox-ID` (so the service fell back to `DEFAULT_SANDBOX_ID`) is not treated as a tenant assertion and returns no documents rather than the default sandbox's corpus. A missing-tenant query never issues an unfiltered search. Isolation is never fail-open.
-- **Ingest must stamp the owner.** For isolation to match anything, each source's `owner` in the `RagSourceManifest` must be the owning tenant/sandbox id (see `scripts/rag-ingest.py`). The bootstrap knowledge corpus is stamped `owner=platform-team`; with isolation on, those platform documents are invisible to tenant-scoped queries by design (the service logs this at startup).
+- **Fail-closed, always.** A query returns only documents that match the caller's tenant. A tenant assertion requires an *explicit* `X-Sandbox-ID`: a request that falls back to `DEFAULT_SANDBOX_ID` returns an empty result set. Every search is tenant-filtered.
+- **Ingest stamps the owner.** Set each source's `owner` in the `RagSourceManifest` to the owning tenant/sandbox id (see `scripts/rag-ingest.py`). The bootstrap knowledge corpus is stamped `owner=platform-team`; with isolation on, those platform documents stay scoped to `platform-team` by design (the service logs this at startup).
 
-The bundled **local lexical lab** ships with isolation **off** (`retrieval.tenantIsolation.enabled: false`) because it serves shared platform documents to every caller as a single tenant. **Multi-tenant / customer profiles must set `retrieval.tenantIsolation.enabled: true`** (the customer values file does; confirm it when handing off).
+The bundled **local lexical lab** ships with isolation **off** (`retrieval.tenantIsolation.enabled: false`) because it serves shared platform documents to every caller as a single tenant. **Set `retrieval.tenantIsolation.enabled: true` for multi-tenant / customer profiles** (the customer values file does; confirm it when handing off).
 
-**Trust boundary.** By default the tenant id is the client-asserted `X-Sandbox-ID` header, verified only insofar as a trusted upstream sets it: the inference gateway derives `X-Sandbox-ID` from a verified JWT tenant claim (`JWT_TENANT_CLAIM`, rejecting mismatches), or a workspace egress proxy stamps it. Under header-trust a direct caller holding the shared RAG API key can still assert another tenant's id, so keep the RAG service reachable only via the gateway or a header-stamping proxy and treat the shared API key as an auth-N control, not a tenant boundary.
+**Trust boundary.** By default the tenant id is the client-asserted `X-Sandbox-ID` header, set by a trusted upstream: the inference gateway derives `X-Sandbox-ID` from a verified JWT tenant claim (`JWT_TENANT_CLAIM`, rejecting mismatches), or a workspace egress proxy stamps it. Under header-trust the shared RAG API key authenticates the caller and the trusted upstream sets the tenant, so keep the RAG service reachable only via the gateway or a header-stamping proxy, and use the shared API key as an authentication control.
 
-**Audience-bound JWT verification (shipped).** The RAG service now verifies its **own** token so the tenant is derived from a *verified* claim rather than a trusted header. Set `auth.jwt.enabled: true` (with `jwksUrl`, `issuer`, `audience`, and `tenantClaim`; `RAG_JWT_*` env, mirroring the gateway's `jwt_auth`). When enabled, `POST /v1/rag/query` and `GET /v1/rag/documents`:
+**Audience-bound JWT verification.** The RAG service verifies its **own** token so the tenant is derived from a *verified* claim. Set `auth.jwt.enabled: true` (with `jwksUrl`, `issuer`, `audience`, and `tenantClaim`; `RAG_JWT_*` env, mirroring the gateway's `jwt_auth`). When enabled, `POST /v1/rag/query` and `GET /v1/rag/documents`:
 
-- Verify the bearer JWT against the JWKS (algorithm pinned to the `HS256`/`RS256`/`ES256` allowlist, never the token header, so alg-confusion is rejected; issuer/audience/exp/nbf enforced).
-- **Derive the tenant from the verified `tenantClaim`** and use *that* for the tenant-isolation filter, ignoring/validating `X-Sandbox-ID`: a header that contradicts the verified claim is rejected (`403 sandbox_identity_mismatch`), and a token that names no tenant is rejected (`403 sandbox_claim_invalid`).
+- Verify the bearer JWT against the JWKS (algorithm pinned to the `HS256`/`RS256`/`ES256` allowlist rather than read from the token header, which rejects alg-confusion; issuer/audience/exp/nbf enforced).
+- **Derive the tenant from the verified `tenantClaim`** and use *that* for the tenant-isolation filter, validating `X-Sandbox-ID` against it: a header that contradicts the verified claim is rejected (`403 sandbox_identity_mismatch`), and a token that names no tenant is rejected (`403 sandbox_claim_invalid`).
 - Fail closed when `auth.jwt.required: true`: a missing or invalid token is `401`. An unreachable JWKS issuer with no cached keys is `503` (retry), distinct from a token rejection; a transient outage is covered by the last-known-good key cache (`cacheSeconds`).
 
-Header-trust is the fallback when JWT is off (the default; the base chart and local lab keep it off, backward compatible). The customer overlay ships it on as an operator-completed template (`deploy/clusters/customer/values/rag-service.yaml`): replace the placeholder issuer/JWKS/audience with the real IdP, and point `tenantClaim` at whatever claim uniquely identifies the tenant (it must match the `owner` documents are ingested with). The overlay sets `required: true`, which the multi-tenant profile needs: with `required: false` a caller could omit the token and fall back to the spoofable header. Use `required: false` only where the RAG service is reachable exclusively through a component that stamps a verified `X-Sandbox-ID`.
+Header-trust applies when JWT is off (the default in the base chart and local lab). The customer overlay ships it on as an operator-completed template (`deploy/clusters/customer/values/rag-service.yaml`): replace the placeholder issuer/JWKS/audience with the real IdP, and point `tenantClaim` at the claim that uniquely identifies the tenant (matching the `owner` documents are ingested with). The overlay sets `required: true` for the multi-tenant profile, so every caller presents a verified token. Use `required: false` only where the RAG service is reachable exclusively through a component that stamps a verified `X-Sandbox-ID`.
 
 ## Troubleshooting
 

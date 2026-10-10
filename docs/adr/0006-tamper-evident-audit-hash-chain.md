@@ -8,10 +8,10 @@
 
 The gateway emits one redacted audit event per request. For customer handoff and regulated tenants,
 an auditor must be able to detect whether that event stream has been edited, reordered, truncated, or
-had records inserted after the fact, without trusting the process that wrote it. Plain append-only
-logging does not give that property: a log writer (or anyone with log access) can rewrite history
-silently. The control must be cheap (no extra infrastructure), verifiable by independent tooling, and
-must not weaken the existing redaction guarantees.
+had records inserted after the fact, independently of the process that wrote it. Plain append-only
+logging leaves history open to silent rewrites by a log writer or anyone with log access. The
+control must be cheap (no extra infrastructure), verifiable by independent tooling, and preserve the
+existing redaction guarantees.
 
 ## Decision
 
@@ -30,16 +30,14 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
   reintroducing raw prompt or credential data.
 - Each record carries a chain-covered wall-clock timestamp (`ts`, Unix epoch seconds as a float),
   so WHEN an action happened is protected by the same chain as WHAT happened; timestamps added by
-  the log transport sit outside the chain and could be rewritten silently. The auditor reference's
-  time-window query reads this field (treating a missing `ts` as `-1`). Events emitted before
-  v0.16.0 lack the field.
+  the log transport sit outside the chain. The auditor reference's time-window query reads this
+  field (a record without `ts` reads as `-1`). Events carry the field from v0.16.0 onward.
 - Each record also carries a chain-covered `chain_id` (`HOSTNAME:process_start`, set once at
   `create_app`), identifying the per-replica chain the record belongs to. It lets the verifier
-  group records into independent per-process chains and anchor each head, instead of guessing
-  chain boundaries from genesis restarts in interleaved multi-replica logs. Events emitted before
-  v0.20.0 lack the field; the verifier falls back to genesis-restart segmentation for them.
-  Per-process chains (a new one per replica and per restart) are expected, and verification is
-  per chain.
+  group records into independent per-process chains and anchor each head directly in interleaved
+  multi-replica logs. Events carry the field from v0.20.0 onward; for earlier events the verifier
+  segments chains at genesis restarts. Each replica and each restart starts its own chain, and
+  verification is per chain.
 - The operator verifier in `scripts/audit-verify.py` checks the live record hashes using
   the same genesis, canonical form, and `SHA-256(prev || canonical(record))`.
 
@@ -48,10 +46,10 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
 - Any edit, insertion, deletion, or reordering of emitted records breaks the chain and is detectable
   by recomputation. The control adds one SHA-256 per request and two fields per event, which is
   effectively free, with no extra service to operate.
-- Detecting a wholesale rewrite (re-chaining every record from genesis) requires an external
-  commitment to the head hash. The reference model is explicit about this: editing a record without
-  re-chaining is caught by the internal consistency check, while a full re-chain is caught only by an
-  anchor mismatch against an externally committed head.
+- Detecting a wholesale rewrite (re-chaining every record from genesis) uses an external
+  commitment to the head hash: editing a record without re-chaining is caught by the internal
+  consistency check, and a full re-chain is caught by an anchor mismatch against an externally
+  committed head.
 - As of v0.20.0 the operator tooling for both checks ships in-tree:
   [`scripts/audit-verify.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/audit-verify.py)
   (`make audit-verify`) reads a gateway JSONL log, deduplicates the double-logged copies, groups by
@@ -62,29 +60,26 @@ Link each audit event into a per-process tamper-evident SHA-256 hash chain.
   (`make audit-anchor`) emits the per-chain head (`{chain_id, count, last record_hash}`); a later
   `audit-verify --anchor <file>` flags a shrunk chain (rollback), a changed head (re-chain), or a
   missing chain. A CronJob example that anchors the head into a ConfigMap and the SIEM-forwarding
-  procedure are documented in `runbooks/audit-chain.md`. Committing/exporting the anchor externally
-  remains the operator's decision.
-- The chain is per gateway replica (per process); the head lives in `app.state`. With multiple
-  replicas there are multiple chains, and a process restart starts a new chain from genesis.
-  Verification therefore operates per-chain, and cross-replica/long-horizon integrity depends on the
-  log shipping and anchoring the operator puts around it.
-- Keeping the gateway implementation and the operator verifier in lockstep is a maintenance
-  obligation: the canonical form and genesis must not drift, or the auditor tooling stops matching.
+  procedure are documented in `runbooks/audit-chain.md`. The operator chooses where to commit and
+  export the anchor.
+- The chain is per gateway replica (per process); the head lives in `app.state`. Each replica keeps
+  its own chain, and a process restart starts a new chain from genesis. Verification operates
+  per-chain, and the operator's log shipping and anchoring provide cross-replica and long-horizon
+  integrity.
+- The gateway implementation and the operator verifier share one canonical form and genesis, and
+  maintainers keep them in lockstep so the auditor tooling always matches.
 
 ## Alternatives considered
 
-- **Plain append-only logging (no chaining).** Simplest, but provides no detection of after-the-fact
-  edits or reordering, the exact property the audit trail needs for handoff. Rejected.
+- **Plain append-only logging.** Simplest. The hash chain was chosen because it adds detection of
+  after-the-fact edits and reordering, the exact property the audit trail needs for handoff.
 - **External managed audit log / SIEM with immutability guarantees.** Strong for retention and
-  cross-service correlation, and operators are encouraged to ship these events into one. Rejected as
-  the in-service mechanism because it adds an infrastructure dependency to get a property a few lines
-  of SHA-256 provide locally, and it does not let the bundled operator tooling verify
-  integrity offline.
-- **Merkle tree per batch.** Gives efficient inclusion proofs at scale. Rejected as over-engineered
-  for a per-request, per-process event stream; a linear hash chain (Crosby & Wallach style, as the
-  reference notes) detects the same tampering with far less complexity. A future ADR could revisit
-  this if external anchoring and inclusion proofs become requirements.
-- **HMAC/keyed signing of each record.** Adds authenticity if a key is held outside the writer, but
-  introduces key management and still needs anchoring to defeat a full rewrite. Rejected for now in
-  favor of the unkeyed chain plus an external head commitment, which keeps the control dependency-free
-  while leaving anchoring to the operator.
+  cross-service correlation, and operators ship these events into one. The in-service chain was
+  chosen because a few lines of SHA-256 provide the integrity property locally and let the bundled
+  operator tooling verify integrity offline.
+- **Merkle tree per batch.** Gives efficient inclusion proofs at scale. For a per-request,
+  per-process event stream, a linear hash chain (Crosby & Wallach style, as the reference notes)
+  detects the same tampering with far less complexity.
+- **HMAC/keyed signing of each record.** Adds authenticity when a key is held outside the writer,
+  together with key management and anchoring. The unkeyed chain plus an external head commitment was
+  chosen because it keeps the control dependency-free, with anchoring in the operator's hands.

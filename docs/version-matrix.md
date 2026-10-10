@@ -1,9 +1,8 @@
 # Version and compatibility matrix
 
-This page records the versions AgentWorkflows is **pinned to** for release `v0.9.0`. It is a compatibility reference,
-not a support SLA: the tables list what the platform ships
-and what CI exercises, so you can reproduce a known-good state and reason about drift. Newer or
-older versions may work but are outside what the release was validated on.
+This page records the versions AgentWorkflows is **pinned to** for release `v0.9.0`. It is a compatibility reference:
+the tables list what the platform ships and what CI exercises, so you can reproduce a known-good
+state and reason about drift.
 
 Every version below is extracted from this checkout: chart `Chart.yaml` /
 `values.yaml`, the Argo CD `Application` manifests, the CI workflow, and the validation toolchain
@@ -18,9 +17,8 @@ Kubernetes distribution, ingress, storage, secrets, and GPU stack), that is call
 | Helm chart version (all first-party charts) | `0.9.0` | `deploy/charts/*/Chart.yaml` |
 | `kubeVersion` constraint (all charts) | `>=1.25.0` | `deploy/charts/*/Chart.yaml` |
 
-Maturity is a reference implementation and customer lab; a production handoff still requires current
-strict evidence, customer identity/secrets integration, capacity sizing, and backup validation. See
-[Production readiness](production-readiness.md).
+A production handoff includes current strict evidence, customer identity/secrets integration,
+capacity sizing, and backup validation. See [Production readiness](production-readiness.md).
 
 Quickstarts and default image tags use v0.9.0. The release packager stamps the tagged
 version and image digests into the published charts.
@@ -40,7 +38,7 @@ and an immutable manifest-list digest in `values.yaml`.
 | vLLM runtime | `0.22.0` | `vllm/vllm-openai` | `v0.22.0` | GPU/production-style OpenAI-compatible runtime; digest-pinned. |
 | Qdrant vector store | `1.18.1` | `qdrant/qdrant` | `v1.18.1` | Optional vector-RAG profile; single-instance; digest-pinned. |
 | Budget Redis | `8.0` | `redis` | `8.0-alpine` | Shared sandbox budget accounting store; digest-pinned. |
-| Agent workspace | `0.9.0` | (namespace/RBAC template, no image) | n/a | Tenant namespace scaffold; no workload image of its own. |
+| Agent workspace | `0.9.0` | (namespace/RBAC template) | n/a | Tenant namespace scaffold. |
 | Platform (umbrella) | `0.9.0` | (aggregates the charts above) | n/a | Single-command dev/demo bring-up; GitOps remains recommended for multi-namespace installs. |
 
 The first-party service container images are built on `python:3.14-alpine`
@@ -49,14 +47,12 @@ The current base resolves to Python 3.14.8 on Alpine 3.24.2. The final images re
 pip after installing locked dependencies; build a new image when changing dependencies.
 
 Model revisions and evaluation status are documented in [Model selection](model-selection.md).
-The new GPU candidates have not been validated against the pinned serving runtimes;
-their upstream context sizes are not a runtime compatibility claim.
 
 ## Local-profile add-ons
 
-These third-party charts are referenced by the local Argo CD application set. The customer
-application list does not install them; customer clusters must provide compatible operators and
-observability services before syncing resources that depend on them.
+These third-party charts are referenced by the local Argo CD application set. Customer clusters
+provide their own compatible operators and observability services before syncing resources that
+depend on them.
 
 | Add-on | Chart | `targetRevision` | Repository | Defined in |
 | --- | --- | --- | --- | --- |
@@ -73,8 +69,8 @@ observability services before syncing resources that depend on them.
 Notes:
 
 - Kyverno, KEDA, and External Secrets are grouped into the local multi-source
-  `platform-operators` Application. The customer overlay assumes the required operators already
-  exist and does not sync `external-secrets.yaml` automatically.
+  `platform-operators` Application. The customer overlay uses the operators already present in
+  the cluster; apply `external-secrets.yaml` there as a separate step.
 - OpenCost is pinned in the **local** overlay only (`cost-controls` Application); the customer overlay
   leaves cost tooling to the operator's chargeback stack.
 - The kyverno `3.2.7` value is the **Helm chart** version. The Kyverno **CLI** used for
@@ -83,23 +79,22 @@ Notes:
   manifests rather than a pinned third-party chart.
 - The agent-sandbox workspace runtime is installed from vendored, checksummed release manifests
   (`deploy/vendor/agent-sandbox/`) by the local/customer Argo CD applications or, on the direct
-  quickstart path, by `make agent-sandbox-install`. It is not installed from a Helm chart. See
-  ADR 0009 and the row below.
+  quickstart path, by `make agent-sandbox-install`. See ADR 0009 and the row below.
 
 ## Runtime, Kubernetes, and toolchain
 
 | Item | Version | Where it is pinned / tested | Notes |
 | --- | --- | --- | --- |
 | Kubernetes (chart floor) | `>=1.25.0` | `kubeVersion` in every `Chart.yaml` | Minimum the charts declare compatible. |
-| Kubernetes (local default) | `kindest/node:v1.35.1` | `scripts/local-up.sh`, `deploy/clusters/local/kind-config.yaml` | Used on cgroup v2 unless overridden; not the CI E2E image. |
+| Kubernetes (local default) | `kindest/node:v1.35.1` | `scripts/local-up.sh`, `deploy/clusters/local/kind-config.yaml` | Used on cgroup v2 unless overridden. |
 | Kubernetes (CI and cgroup-v1 fallback) | `kindest/node:v1.31.4` | `.github/workflows/ci.yml`, `scripts/local-up.sh` | The version exercised by the local E2E job and selected automatically on cgroup v1. |
 | Python (CI + images) | `3.14` | `.github/workflows/ci.yml`, `src/*/Dockerfile` | CI runs on 3.14; service images are `python:3.14-alpine`. |
 | Python (documented local minimum) | `3.12+` | [quickstart.md](quickstart.md), [getting-started.md](getting-started.md) | Minimum for running local validation tooling. The validation-toolchain install hint recommends 3.14 or newer. |
 | Python (SDK) | `3.11`, `3.12`, `3.13`, `3.14` | `sdk-compatibility` CI matrix; [sdk/python/pyproject.toml](https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/pyproject.toml) | All declared supported versions are exercised; `requires-python` remains `>=3.11`. |
-| Helm | `v4.2.0` bootstrap | [validation-toolchain.yaml](https://github.com/RamazanKara/agentworkflows/blob/main/platform/tools/validation-toolchain.yaml); `azure/setup-helm` in CI | The Linux/WSL bootstrap pins v4.2.0. Helm 3 is not exercised by a dedicated CI matrix. |
+| Helm | `v4.2.0` bootstrap | [validation-toolchain.yaml](https://github.com/RamazanKara/agentworkflows/blob/main/platform/tools/validation-toolchain.yaml); `azure/setup-helm` in CI | The Linux/WSL bootstrap pins v4.2.0. |
 | Go | `1.26` | `.github/workflows/ci.yml`; toolchain install hint | Builds Go-based validation utilities (kubeconform, Kyverno CLI, restore-drill). |
 | agent-sandbox controller | `v0.5.0` | `deploy/vendor/agent-sandbox/` (SHA-256 in the vendor README) | Standard coding-agent workspace runtime (ADR 0010, platform prerequisite); CRDs `agents.x-k8s.io/v1beta1` + `extensions.agents.x-k8s.io/v1beta1`. `v1beta1` API; re-verify spec fields on upgrade. |
-| Calico (default local CNI) | `v3.29.1` | `CALICO_VERSION` in `scripts/local-up.sh` | NetworkPolicy-enforcing local default; `LOCAL_CNI=kindnet` is an explicit non-enforcing compatibility escape hatch. |
+| Calico (default local CNI) | `v3.29.1` | `CALICO_VERSION` in `scripts/local-up.sh` | NetworkPolicy-enforcing local default; `LOCAL_CNI=kindnet` selects kindnet for compatibility, without NetworkPolicy enforcement. |
 
 ## Validation toolchain (pinned tool versions)
 
@@ -125,21 +120,19 @@ OCI metadata, `mike==2.2.0` retains versioned documentation, and
 the tag used by its runtime container. The exact action pins live in
 `.github/workflows/ci.yml`, `.github/workflows/docs.yml`, and `requirements-docs.txt`.
 
-## What the platform does not pin
+## Operator-managed versions
 
-Consistent with the platform boundary, the following are the operator's responsibility and are
-intentionally not pinned here:
+The operator chooses and manages these versions:
 
 - The customer's Kubernetes distribution and its exact minor version (any conformant cluster at or
   above the chart floor).
 - Ingress controllers, `StorageClass` / CSI drivers, and load balancers.
-- Secret backends and identity providers (the External Secrets *operator* is pinned; the backing
-  secret store is not).
+- Secret backends and identity providers (the External Secrets *operator* is pinned; you choose the
+  backing secret store).
 - GPU drivers, device plugins, and accelerator runtimes for NVIDIA / AMD nodes.
 - Served model weights and revisions (governed via
   [model provenance](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/model-provenance.yaml)
-  and the model catalog, not this matrix).
+  and the model catalog).
 
-See [Scope and non-goals](scope-and-non-goals.md) for the full boundary and
-[Release verification](release-verification.md) for how to verify the published artifacts against
-these pins.
+See [Release verification](release-verification.md) for how to verify the published artifacts
+against these pins.

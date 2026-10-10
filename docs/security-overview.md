@@ -1,19 +1,19 @@
 # Security overview
 
-This page summarizes the security-relevant defaults in release `v0.9.0`. The [threat model](threat-model.md) has the detailed trust boundaries and residual risks. The [production readiness matrix](production-readiness.md) lists validation commands.
+This page summarizes the security-relevant defaults in release `v0.9.0`. The [threat model](threat-model.md) has the detailed trust boundaries and controls. The [production readiness matrix](production-readiness.md) lists validation commands.
 
 ## Defaults that matter
 
-- The local profile uses the public key `local-development-only`. It is for the local lab only.
-- In-cluster application traffic is plaintext HTTP. NetworkPolicy controls reachability, not encryption.
-- The output guardrail and stored Responses state are off in the base chart.
-- The local RAG profile disables tenant isolation because it uses one shared demo corpus.
-- Without a tenant-bound key record or verified JWT claim, `X-Sandbox-ID` is caller-supplied.
-- The agent-sandbox pod template is restricted, but a separate kernel boundary exists only when the cluster supplies and the values select an isolation `RuntimeClass` such as gVisor or Kata.
+- The local profile uses the public key `local-development-only` for the local lab.
+- In-cluster application traffic is plaintext HTTP. NetworkPolicy controls reachability.
+- The output guardrail and stored Responses state are off in the base chart and enabled per deployment.
+- The local RAG profile turns tenant isolation off because it serves one shared demo corpus.
+- A tenant-bound key record or verified JWT claim binds `X-Sandbox-ID` to the caller's identity.
+- The agent-sandbox pod template is restricted. Select an isolation `RuntimeClass` such as gVisor or Kata in the values to add a separate kernel boundary.
 - The bundled Redis, Qdrant, and Loki footprints are single-node reference services.
-- Sample reports under `results/` are not current security evidence.
+- Generate current security evidence for your deployment; sample reports under `results/` show the report format.
 
-Do not deploy the customer values unchanged.
+Review and adapt the customer values before you deploy them.
 
 ## Gateway controls
 
@@ -28,27 +28,27 @@ Before forwarding an inference request, the gateway can enforce:
 - input credential-pattern detection;
 - a per-process concurrency limit and load shedding.
 
-The optional output guardrail can flag, redact, or block configured credential, PII, and denied-content patterns. Redact and block behavior require a non-streaming response. Streaming can only be flagged after the stream has already been emitted.
+The optional output guardrail can flag, redact, or block configured credential, PII, and denied-content patterns. Redact and block apply to non-streaming responses. Streaming responses are flagged after the stream is emitted.
 
-These are deterministic application checks. They do not make model output trustworthy or prevent prompt injection.
+These are deterministic application checks. Pair them with tool approvals, least-privilege credentials, and egress controls for prompt-injection defense.
 
 ## Tenant and RAG identity
 
-The customer RAG values enable owner-based tenant filtering. That filtering is only a security boundary when the tenant identity is trustworthy.
+The customer RAG values enable owner-based tenant filtering, which acts as a security boundary when the tenant identity is trustworthy.
 
-The RAG service can verify its own JWT and derive the tenant from a claim. When JWT verification is off, it trusts `X-Sandbox-ID`; a caller with the shared key can assert another sandbox ID. Put direct RAG access behind a trusted identity-stamping path or enable RAG-side JWT verification for multi-tenant use.
+The RAG service can verify its own JWT and derive the tenant from a claim. With JWT verification off, it uses `X-Sandbox-ID` as supplied by the caller. For multi-tenant use, put direct RAG access behind a trusted identity-stamping path or enable RAG-side JWT verification.
 
-Tenant NetworkPolicies default to deny and add explicit DNS, gateway, RAG, and reviewed external CIDR rules. Enforcement depends on the cluster CNI. The local cluster uses Calico by default because kindnet does not enforce NetworkPolicy.
+Tenant NetworkPolicies default to deny and add explicit DNS, gateway, RAG, and reviewed external CIDR rules. The cluster CNI enforces them. The local cluster uses Calico by default so that NetworkPolicy is enforced.
 
 ## Workspace isolation
 
-Agent workspaces use the vendored `kubernetes-sigs/agent-sandbox` controller and a restricted pod template: non-root user, read-only root filesystem, dropped capabilities, no ambient service-account token, resource limits, namespace RBAC, and default-deny egress.
+Agent workspaces use the vendored `kubernetes-sigs/agent-sandbox` controller and a restricted pod template: non-root user, read-only root filesystem, dropped capabilities, ambient service-account token disabled, resource limits, namespace RBAC, and default-deny egress.
 
-The projected platform token is short-lived and audience-bound, but it is still a credential. The workspace can also exfiltrate through any approved destination. Keep the egress catalog narrow and treat files, retrieved text, model output, and tool arguments as untrusted.
+The projected platform token is short-lived and audience-bound. Treat it as a credential. Keep the egress catalog narrow and treat files, retrieved text, model output, and tool arguments as untrusted.
 
 ## Audit records
 
-The gateway audit event stores request metadata and hashes rather than raw prompt or completion text. Records are linked into a per-process hash chain.
+The gateway audit event stores request metadata and hashes in place of raw prompt or completion text. Records are linked into a per-process hash chain.
 
 Cloud calls use the same controls and record the selected provider, routing attempts,
 classification, usage, and estimated cost on that chain. Classification refusals are
@@ -57,19 +57,17 @@ or Kubernetes Secret references, never caller headers or bodies. See
 [cloud route configuration](model-selection.md#cloud-routes-milestone-1) for egress,
 credential rotation, and protocol boundaries.
 
-The chain detects edits and reordering in an exported sequence. It does not by itself prevent deletion, survive a lost log stream, join replicas into one chain, or prove that the first and last records are complete. Export logs, retain the `chain_id`, and commit chain-head anchors to a separate trusted system. Use `make audit-verify` and follow the [audit-chain runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md).
+The chain detects edits and reordering in an exported sequence. For deletion and completeness evidence across replicas and log streams, export logs, retain the `chain_id`, and commit chain-head anchors to a separate trusted system. Use `make audit-verify` and follow the [audit-chain runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md).
 
-Also review runtime, ingress, proxy, RAG, object-store, and application logs. Gateway redaction does not control what another component logs.
+Review runtime, ingress, proxy, RAG, object-store, and application logs as well, since each component manages its own logging.
 
 ## Supply chain
 
 The tag-only release workflow builds the first-party images, signs image and chart digests with Cosign, and attaches SDK checksums. SBOM and vulnerability scans run locally with `make supply-chain-check` and `make image-scan`. GitHub Actions are pinned by commit.
 
-That boundary does not cover the integrity or license of customer model weights, customer base images, external Helm charts, private mirrors, or the target cluster. Verify those separately. Forks that publish their own images must update the Kyverno image reference and signing identity or admission will reject them.
+Verify the integrity and license of customer model weights, customer base images, external Helm charts, private mirrors, and the target cluster through your own process. Forks that publish their own images update the Kyverno image reference and signing identity so admission accepts them.
 
-## Production work left to the operator
-
-At minimum:
+## Production checklist for operators
 
 - connect gateway and RAG auth to the customer identity boundary;
 - source secrets from the customer secret system;

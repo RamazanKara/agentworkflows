@@ -1,6 +1,6 @@
 # Customer handoff example
 
-This example uses a fake customer organization, `acme-ai`, to show the expected handoff flow without assuming a cloud provider.
+This example uses a fake customer organization, `acme-ai`, to show the expected handoff flow on a provider-neutral cluster.
 
 ## Inputs
 
@@ -9,8 +9,8 @@ This example uses a fake customer organization, `acme-ai`, to show the expected 
 - GPU profile: `nvidia`
 - Runtime model: `Qwen/Qwen3-Coder-Next`
 - Secret integration: customer-operated External Secrets or an equivalent mechanism. The
-  checked-in `external-secrets.yaml` is an example and is not synced by the customer application
-  set.
+  checked-in `external-secrets.yaml` is an example that you adapt and apply separately from the
+  customer application set.
 
 ## Configure the overlay
 
@@ -37,8 +37,8 @@ Review the generated changes in:
 - Confirm the active kubeconfig points at the intended cluster and that Argo CD, Kyverno, and the
   required CRDs are already installed.
 - Confirm GPU nodes expose `nvidia.com/gpu` and have `platform.ai/node-pool=gpu`.
-- Confirm API-key hashes are sourced from the customer secret backend; do not apply the example
-  secret manifest unchanged.
+- Confirm API-key hashes are sourced from the customer secret backend; adapt the example secret
+  manifest to that backend before applying it.
 - Verify downloaded weights against the pinned inventory or registry digest, and record customer model-store changes in provenance.
 - Replace sample RAG knowledge with approved customer documents and matching Qdrant dimensions.
 - Review agent workspace egress against `platform/network/egress-catalog.yaml`.

@@ -12,14 +12,14 @@ The inference gateway can enforce three budget ceilings per `X-Sandbox-ID`:
 
 Estimated tokens are reserved at admission as `ceil(prompt characters / estimatedCharsPerToken) + requested max_tokens`. If the caller omits `max_tokens`, the gateway uses the configured `admission.maxCompletionTokens` ceiling for the estimate.
 
-That reservation is the worst case the request could cost, because admission has to charge before the model runs. Once the runtime reports what the call actually consumed, the gateway **settles** the reservation: the estimate is replaced by the measured total, and the difference is returned to the window. This matters most for exactly the traffic this platform exists for, since a coding agent typically asks for a large `max_tokens` and emits a fraction of it; without settlement it would be metered as if it had emitted all of it and hit the window limit long before its real spend justified it.
+That reservation is the worst case the request could cost, because admission has to charge before the model runs. Once the runtime reports what the call actually consumed, the gateway **settles** the reservation: the estimate is replaced by the measured total, and the difference is returned to the window. This matters most for exactly the traffic this platform exists for, since a coding agent typically asks for a large `max_tokens` and emits a fraction of it; settlement meters it on what it actually emitted.
 
 Settlement runs on the streaming and non-streaming paths alike, and the correction is recorded on the request's audit receipt as `budget_settlement` (reserved, actual, refunded, overrun, settled). Two behaviors are deliberate:
 
-- A runtime that reports **no usage** leaves the reservation standing rather than refunding it, so a request that burned runtime capacity and then failed late is still charged.
-- A settlement that fails never fails a request that already succeeded. The response is committed, and an unsettled reservation can only over-charge, never hand out free budget.
+- When a runtime reports **no usage**, the reservation stands, so a request that burned runtime capacity and then failed late is still charged.
+- A request that succeeded stays successful even if its settlement fails. The response is committed, and the unsettled reservation stays at the full estimate, so any error is on the side of over-charging.
 
-`estimatedCharsPerToken` is calibrated per model in [the model catalog](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/models.yaml) and carried into the routing policy, because one global divisor is wrong in opposite directions for different models: prose in a Latin script runs near four characters per token, source code nearer three, and non-Latin scripts closer to one. A model that declares none falls back to the gateway default.
+`estimatedCharsPerToken` is calibrated per model in [the model catalog](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/models.yaml) and carried into the routing policy, because the ratio differs by model and content: prose in a Latin script runs near four characters per token, source code nearer three, and non-Latin scripts closer to one. A model without its own value uses the gateway default.
 
 The gateway supports two budget backends. `memory` stores usage in the gateway process and is useful for unit tests or single-pod development. `redis` stores usage in a Redis-compatible service and is the default for local and customer values because it works across multiple gateway replicas.
 
@@ -93,7 +93,7 @@ When budgets are enabled, successful `/v1/chat/completions` (including streaming
     x-ratelimit-limit-tokens: 150000
     x-ratelimit-remaining-tokens: 148900
 
-Remaining values are floored at zero. A header pair is omitted when its limit is 0 (unlimited), and cache hits (`X-Cache: HIT`) omit all four because they reserve no budget. Token values are the same estimated tokens the budget enforces, not runtime-reported usage.
+Remaining values are floored at zero. A header pair appears when its limit is set (0 means unlimited). Cache hits (`X-Cache: HIT`) reserve no budget and omit all four. Token values are the estimated tokens the budget enforces.
 
 ## Triage Rejections
 
@@ -125,11 +125,11 @@ If the sandbox is intentionally load testing or running an approved evaluation, 
 ## Shared team spend
 
 Teams are existing sandbox identities. Add `projects`, `providerCredentials`, and
-`budgets.costLimitUsd` to the SandboxPolicySet; role-bound keys cannot raise team limits.
+`budgets.costLimitUsd` to the SandboxPolicySet; role-bound keys work within team limits.
 Redis atomically reserves cost across eligible providers and tools. `agentworkflows usage`
 reports monthly team/project spend and conservative reservations. Configure prices
 for every route, including local models. See [team operations](https://ramazankara.github.io/agentworkflows/workflows/#operate-the-service)
-for examples, window semantics, retained history, and accounting limits.
+for examples, window semantics, retained history, and accounting rules.
 
 Team admins can change dollar budgets and per-workflow caps in the console's
 Team settings, Providers & budgets, or Costs page. No gateway restart is needed.
@@ -140,17 +140,17 @@ field names, defaults and API examples.
 For `team_cost_budget_exceeded` or `project_cost_budget_exceeded`, inspect
 `GET /v1/usage` and `GET /v1/team/settings` before raising a limit. Team and project
 dollars now use UTC calendar months, independently of token/request windows.
-Zero denies positive-cost reservations; changing a limit does not reset counters.
-On upgrade, old fixed-window spend keys remain historical data and are not merged
-into the new month's counter. Retain the audit log for a complete history.
+A limit of zero denies positive-cost reservations. Counters keep running when a
+limit changes. On upgrade, old fixed-window spend keys stay as historical data and
+the new month's counter starts fresh. Retain the audit log for a complete history.
 
 For workflow budget rejections, the current workflow cap and the worker's requested
 run budget both apply. Repeated worker initialization uses the original requested
 limits and remains idempotent when policy changes.
 
-On a 409 from a save or reset, reload the settings and review the other admin's
-change. Do not retry with a fabricated revision. To undo a change, DELETE only the
-overridden field with the current `If-Match` revision; do not delete the Redis
-document, which would also discard its revision history. Back up the
-`<budget-prefix>:team-settings:*` documents with budget Redis. Settings cannot be
-edited or reliably enforced during a Redis outage; restore Redis before retrying.
+On a 409 from a save or reset, reload the settings, review the other admin's
+change, and retry with the current revision. To undo a change, DELETE only the
+overridden field with the current `If-Match` revision; this keeps the Redis
+document and its revision history. Back up the
+`<budget-prefix>:team-settings:*` documents with budget Redis. Settings edits and
+enforcement depend on Redis, so restore Redis before retrying.

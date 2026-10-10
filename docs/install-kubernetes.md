@@ -14,7 +14,7 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 
 This guide describes release v0.9.0 (package/chart version 0.9.0). The chart defaults to the
 published v0.9.0 gateway and worker images. See [command verification](release-verification.md)
-for the native results and the cluster commands still requiring WSL and operator infrastructure.
+for the release verification commands.
 
 Prepare the local chart's dependencies once, in this order:
 
@@ -24,8 +24,8 @@ helm dependency update deploy/charts/agentworkflows
 ```
 
 Published umbrella packages include those dependencies. Component Service names are
-fixed: install one release per namespace. No ingress controller, GPU, KEDA or
-Prometheus CRDs are required.
+fixed: install one release per namespace. The base install runs without an ingress
+controller, GPU, KEDA or Prometheus CRDs.
 
 ## Install
 
@@ -58,15 +58,15 @@ helm install aw deploy/charts/agentworkflows -n aw --create-namespace -f source-
 ```
 
 For another cluster, make source-built images available in its approved registry and
-change the image references. Chart metadata alone does not change image references
-in an existing release.
+change the image references. Set image references through values to update an
+existing release.
 
 The chart generates `temporal-postgres-auth` (`password`), `workflow-gateway-key`
-(`api-key`), and `agentworkflows-admin` (`api-key`) if they are missing. Pre-create
+(`api-key`), and `agentworkflows-admin` (`api-key`) if they are absent. Pre-create
 these Secrets to supply your own credentials. For different names, set
 `workflows.postgres.existingSecret` (and both Temporal SQL datastore `existingSecret`
 values), `workflows.worker.existingSecret`, or `bootstrapAdmin.existingSecret`.
-Gateway key records contain hashes; the worker has execution scope and cannot approve.
+Gateway key records contain hashes; the worker key carries execution scope only.
 
 ## Sign in
 
@@ -79,15 +79,15 @@ kubectl port-forward -n aw svc/inference-gateway 8080:8080
 
 Open <http://127.0.0.1:8080/console/> and paste that key. The console uses the `default`
 team and project. In another terminal, `curl -fsS http://127.0.0.1:8080/readyz` checks
-Redis and Temporal. Missing provider credentials leave the console
-available; **Providers & budgets** identifies the missing key and Secret setup.
-Inference still rejects requests until a provider key is configured.
+Redis and Temporal. The console is available before provider credentials are set;
+**Providers & budgets** shows which key to add and how to set up its Secret.
+Inference serves requests once a provider key is configured.
 
 ## Store gateway records in PostgreSQL
 
-For optional durable gateway records, follow [PostgreSQL gateway storage](postgresql-storage.md).
+For durable gateway records, follow [PostgreSQL gateway storage](postgresql-storage.md).
 It supports an external DSN Secret or a separate bundled PostgreSQL for development.
-Redis remains the default and is still used for live accounting and sessions.
+Redis remains the default store and handles live accounting and sessions.
 
 ## Add a provider key
 
@@ -112,7 +112,7 @@ The `research` route uses [GPT-4.1 Mini](https://developers.openai.com/api/docs/
 `anthropic` uses [Claude Haiku 4.5](https://platform.claude.com/docs/en/about-claude/models/overview). Review the
 routes, provider access and configured price estimates before paid calls. Set reviewed
 routes under `inference-gateway.routing.policy.models` and team/workflow permissions under
-`inference-gateway.sandboxPolicy.policy.policies`. There is no automatic cross-provider fallback.
+`inference-gateway.sandboxPolicy.policy.policies`. Each route calls its configured provider.
 
 With the Python SDK installed as in the [quickstart](quickstart.md), run:
 
@@ -128,8 +128,8 @@ agentworkflows runs inspect "$RUN_ID"
 ```
 
 Repeat inspection until `status: completed` and `result.status: published`. Use
-`"model":"anthropic"` for that provider. The example's research source and publication
-are synthetic; no document is published externally. Model calls are real and paid.
+`"model":"anthropic"` for that provider. The example uses a synthetic research source and
+publication target, so publishing stays inside the example. Model calls are real and paid.
 Replace the tool URLs with your integrations when adapting the workflow. The default
 ceilings are 10,000 tokens / $5 per run and 200,000 tokens / $50 per team budget window.
 
@@ -163,14 +163,14 @@ curl -fsS https://agents.example.com/readyz
 ```
 
 Replace the host, class and controller-specific annotations. The `/` prefix serves both
-the API and `/console/`; the metrics port is not exposed. TLS ingress automatically sets
+the API and `/console/`; the metrics port stays internal. TLS ingress automatically sets
 `SESSION_COOKIE_SECURE=true`, overriding `inference-gateway.adminConsole.cookieSecure=false`.
 The default port-forward install keeps HTTP localhost sessions working. After enabling
-TLS, use the HTTPS console; HTTP port-forwarding no longer supports its Secure cookies.
+TLS, sign in through the HTTPS console, which carries the Secure session cookie.
 
 For cert-manager, omit the `kubectl create secret tls` command and add
 `cert-manager.io/cluster-issuer: letsencrypt` to `ingress.annotations` in the file above.
-`secretName` is still required: cert-manager writes the issued certificate there. Supply
+Keep `secretName`: cert-manager writes the issued certificate there. Supply
 your own ClusterIssuer and verify issuance before signing in. The equivalent command is:
 
 ```bash
@@ -214,9 +214,9 @@ curl -fsS https://agents.example.com/v1/auth/config
 
 An empty `auth.oidc.redirectUrl` derives the HTTPS callback from the enabled TLS ingress
 host, only when `issuer` is configured. An explicit `redirectUrl` takes precedence.
-Without chart-managed TLS ingress, supply the explicit HTTPS callback and Secure cookie
-setting yourself. Scopes must include `openid`; missing roles use `defaultRole` (viewer).
-The client secret is referenced from the existing Secret, not copied into Helm values.
+When TLS terminates outside the chart's ingress, set the explicit HTTPS callback and Secure
+cookie setting. Scopes must include `openid`; users without a role claim get `defaultRole`
+(viewer). The client secret stays in the existing Secret; Helm values only reference it.
 OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.
 
 `inference-gateway.auth.oidc.groupsClaim` and
@@ -246,11 +246,11 @@ kubectl get pods -n aw -l app.kubernetes.io/name=inference-gateway -o wide
 kubectl get pdb inference-gateway -n aw
 ```
 
-Use at least two schedulable nodes. Anti-affinity prefers different hostnames; it permits
-co-location when capacity is constrained, including the surge pod during a rolling update.
+Use at least two schedulable nodes. Anti-affinity prefers different hostnames and
+co-locates pods when capacity is constrained, including the surge pod during a rolling update.
 Verify placement and leave capacity for that extra pod. The PDB covers voluntary
-disruptions; it does not protect against node failure or make Redis/PostgreSQL/Temporal
-highly available. Keep Redis-backed budgets and audit heads; if you enable response
+disruptions; run Redis, PostgreSQL and Temporal on highly available services for
+node-failure resilience. Keep Redis-backed budgets and audit heads; if you enable response
 caching, Responses state or Batch, select their Redis backends too (Batch also needs S3).
 
 ## Network isolation
@@ -259,10 +259,10 @@ Use a CNI that enforces Kubernetes NetworkPolicy. The umbrella policy selects ga
 pods, admits HTTP from the named ingress controller namespace and the workflow worker
 (also the Batch worker when enabled), and allows egress to CoreDNS, bundled Redis,
 Temporal frontend, Research tools and enabled Ollama/vLLM pods. Bundled Redis accepts
-only gateway/Batch-worker traffic and has no outbound connections. Other stack pods
-retain their existing networking; this is not a namespace-wide isolation policy.
+traffic from the gateway and Batch worker only, with egress closed. The policy covers the
+gateway and bundled Redis; other stack pods keep their existing networking.
 
-External egress is closed until you list destination CIDRs and TCP ports. Include your
+External egress opens for the destination CIDRs and TCP ports you list. Include your
 providers, the OIDC discovery/token/JWKS endpoints, and external Redis if used. These are
 documentation addresses; replace them with your approved destinations before applying:
 
@@ -280,21 +280,20 @@ helm upgrade aw deploy/charts/agentworkflows -n aw --reuse-values -f network-val
 kubectl describe networkpolicy -n aw
 ```
 
-Standard NetworkPolicy cannot allow DNS names; maintain provider IP ranges or deploy
-your CNI's FQDN policy separately. There is no blanket HTTPS allow rule. Verify your CNI's
+Standard NetworkPolicy matches IP ranges: maintain provider IP ranges, or deploy your
+CNI's FQDN policy separately for DNS names. List each external destination explicitly. Verify your CNI's
 Service/NAT behavior and adapt DNS rules for NodeLocal DNS. Policies are additive, so
 review other policies selecting these pods; keep the component `networkPolicy.enabled`
 values false. See [Kubernetes NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
 Metrics scraping, custom tools, notifications, OTLP collectors, RAG and other integrations
-need separately reviewed rules. The default `helm test` gateway probe is not an allowed
-client with this policy; test through the ingress controller as shown below.
+need separately reviewed rules. With this policy enabled, run gateway probes from the
+ingress controller namespace as shown below.
 
 ## External Redis
 
 Use a persistent Redis service supporting the gateway's Redis commands and Lua scripts;
 keep eviction disabled for durable state. Before changing an existing installation,
 back up and migrate Redis data: disabling `budget-redis` removes its chart-managed PVC.
-This setting does not copy data or turn the bundled Redis into a cluster.
 
 ```bash
 read -rs -p 'Redis URL (rediss://user:password@host:6379/0): ' REDIS_URL; echo
@@ -317,14 +316,14 @@ a certificate trusted by the gateway image. It replaces all five Redis URL envir
 budgets/sessions/workflow records, audit heads, response cache, Batch and Responses state.
 The Batch processor uses the same reference. Distinct key prefixes keep stores separate
 in one logical database; preserve those prefixes and migrate all previously used databases.
-The Secret is never generated or owned by this chart. The `redis.existingSecret` setting
+You create and own this Secret. The `redis.existingSecret` setting
 also works with authenticated bundled Redis without disabling `budget-redis`.
 
 ## External PostgreSQL for Temporal
 
 Provision `temporal` and `temporal_visibility` databases and a user that can manage their
-schemas. Back up and restore both databases before switching an existing installation;
-Helm does not migrate them. The old bundled PostgreSQL claim remains when it is disabled.
+schemas. Back up both databases and restore them into the external server before switching
+an existing installation. The bundled PostgreSQL claim is retained after you disable it.
 
 ```bash
 read -rs -p 'PostgreSQL password: ' POSTGRES_PASSWORD; echo
@@ -363,7 +362,7 @@ helm upgrade aw deploy/charts/agentworkflows -n aw --reuse-values -f postgres-va
 ```
 
 The connection and existing Secret are supplied to both Temporal datastores and the schema
-Job; no bundled PostgreSQL Service, StatefulSet or generated password Secret is rendered.
+Job; the bundled PostgreSQL Service, StatefulSet and generated password Secret are omitted.
 Use a trusted CA (mount private CAs into both Temporal server and schema-job containers
 and set each SQL `tls.caFile` when needed). If your DBA manages schemas, set `manageSchema`
 false for both stores after applying the matching Temporal migrations separately.
@@ -375,8 +374,8 @@ so a fresh installation can create PostgreSQL first.
 Back up PostgreSQL, Redis and the bootstrap Secrets together. Preserve the namespace,
 release name and credential Secret names. `lookup` reuses existing credentials on
 `helm upgrade`; Helm needs permission to read those Secrets. User-owned Secrets are
-read without being adopted. Offline `helm template` cannot look up live Secrets and
-generates new example credentials on each render; do not apply those over a running release.
+read without being adopted. Offline `helm template` generates new example credentials on
+each render; use `helm upgrade` for a running release so its existing credentials are reused.
 
 Keep your overrides in a values file and review new chart defaults before upgrading:
 
@@ -395,8 +394,7 @@ describe the separate GitOps namespaces.
 
 ## Verify the optional settings on kind
 
-These are caller-run checks; no cluster install is part of chart render validation.
-Prepare dependencies as above. Render defaults and each file from the preceding sections:
+Run these checks against your own kind cluster. Prepare dependencies as above. Render defaults and each file from the preceding sections:
 
 ```bash
 helm lint deploy/charts/agentworkflows --strict
@@ -419,8 +417,8 @@ the mapped team and role. With HA, check two ready gateway pods and `ALLOWED DIS
 delete one gateway pod, wait for recovery and verify the existing session/run still works.
 Use a multi-node kind cluster to check anti-affinity placement.
 
-Network enforcement needs a NetworkPolicy-capable CNI; kind's default networking alone
-does not establish this. With the policy enabled, run these probes (the two denied probes
+Network enforcement needs a NetworkPolicy-capable CNI installed in the kind cluster.
+With the policy enabled, run these probes (the two denied probes
 must time out/fail; the first must succeed):
 
 ```bash
@@ -436,8 +434,9 @@ Also complete a provider-backed Research run (worker, Redis, Temporal and tool t
 exercise OIDC under the policy, and confirm an unlisted destination fails from a gateway
 pod. Test external Redis and PostgreSQL in a **fresh namespace with restored/test data**
 and the same Secret names, using their values files; confirm `/readyz`, sign-in, a complete
-run, and persistence after restarting gateway/Temporal pods. No bundled Redis resources
-or PostgreSQL Service/StatefulSet should exist there. Finally render and install the
+run, and persistence after restarting gateway/Temporal pods. Confirm the namespace runs
+with the external stores only, without bundled Redis resources or a PostgreSQL
+Service/StatefulSet. Finally render and install the
 combined configuration with all six `-f` files, using reachable endpoints and reviewed
 CIDRs. Create the referenced Secrets in `aw-production-smoke` first, then run:
 
@@ -471,8 +470,8 @@ kubectl delete namespace aw
 kind delete cluster --name aw
 ```
 
-Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
-`temporal-postgres-auth` Secret or delete the old claim before a fresh evaluation install.
+To reuse an old PostgreSQL claim, restore its matching `temporal-postgres-auth` Secret;
+otherwise delete the old claim before a fresh evaluation install.
 
 
 ### Approval policies

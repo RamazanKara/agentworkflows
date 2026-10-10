@@ -1,8 +1,8 @@
 # Restricted-egress tenant example
 
-The file `tenants/onboarding/regulated-offline-coding-agents.yaml` defines a tenant named `regulated-offline`. The name describes its intended use; the generated manifests enforce a narrower fact: pods in that tenant namespace receive no external CIDR egress rule.
+The file `tenants/onboarding/regulated-offline-coding-agents.yaml` defines a tenant named `regulated-offline`. The generated manifests restrict pods in that tenant namespace to in-cluster egress: DNS, the inference gateway and the RAG service.
 
-This is not an air-gap configuration for the cluster. Image pulls, model downloads, GitOps, identity, and services outside the tenant namespace need separate offline controls.
+The profile scopes egress for the tenant namespace. Image pulls, model downloads, GitOps, identity, and services outside the tenant namespace use their own offline controls, listed at the end of this page.
 
 ## Render the manifests
 
@@ -23,27 +23,27 @@ The checked-in spec requests:
 | Evidence retention | 730 days metadata value |
 | Job-management RBAC | disabled |
 
-`requirePrivateRegistry` and `evidenceRetentionDays` are contract fields. They do not configure a registry, storage lifecycle, or retention job by themselves.
+`requirePrivateRegistry` and `evidenceRetentionDays` are contract fields that record the tenant's requirements. Configure the registry, storage lifecycle and retention job to match them.
 
 ## Review before apply
 
 Confirm that:
 
 - the target namespace and sandbox ID are correct;
-- the CNI actually enforces Kubernetes NetworkPolicy;
-- no generated rule contains an external CIDR;
+- the CNI enforces Kubernetes NetworkPolicy;
+- every generated egress rule targets an in-cluster destination;
 - the gateway and RAG namespace selectors match the target cluster;
 - the workspace image is available from an internal registry;
 - storage class, quota, and PVC size are appropriate;
-- identity and API-key material are supplied without being written to Git.
+- identity and API-key material are supplied from a secret store, outside Git.
 
-Apply the reviewed files through the customer's GitOps process. A direct `kubectl apply` can be used in a disposable lab, but it is not the documented customer handoff path.
+Apply the reviewed files through the customer's GitOps process. Reserve a direct `kubectl apply` for a disposable lab.
 
 ## Test the boundary
 
-Use an image that is already present or available from the internal registry. From a pod in the tenant namespace, test both an allowed in-cluster destination and a destination that is otherwise reachable from the cluster. A timeout to an unroutable address does not prove that NetworkPolicy is working.
+Use an image that is already present or available from the internal registry. From a pod in the tenant namespace, test both an allowed in-cluster destination and a destination that is otherwise reachable from the cluster, so the denied result reflects NetworkPolicy.
 
-The repository's agent-sandbox smoke test uses the Kubernetes API as the deny target for this reason:
+The repository's agent-sandbox smoke test uses the Kubernetes API as the deny target:
 
 ```bash
 make agent-sandbox-smoke

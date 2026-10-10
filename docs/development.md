@@ -11,12 +11,12 @@ Make, and Python 3.12 or newer with `venv` support. CI and runtime images use Py
 3.14; use that version when reproducing a CI-only failure. The separately distributed
 Python SDK supports Python 3.11 and newer.
 
-Service tests use fake runtimes and temporary data. They do not need Docker,
-Kubernetes, a GPU, or downloaded model weights. Initial environment setup installs
+Service tests use fake runtimes and temporary data, so they run on a plain workstation
+with Python alone. Initial environment setup installs
 hash-pinned packages and needs access to the package index, or a populated local
 package cache.
 
-The web console uses Node.js 24/npm, React, TypeScript, and Vite without a component library.
+The web console uses Node.js 24/npm, React, TypeScript, and Vite with its own components.
 Its source is `src/inference-gateway/console`; `make console-build` installs the lockfile
 and emits ignored static assets into the gateway's `app/console/`. Docker builds the same
 assets in a Node build stage; the runtime remains Python-only. Gateway tests build these
@@ -27,7 +27,7 @@ a gateway on port 8080; Vite proxies `/v1` to it.
 with at most two workers. `make test` and `make validate` include them. On Linux, install
 browser libraries once with `cd src/inference-gateway/console && npm ci && npx playwright install --with-deps chromium`.
 `make compose-smoke` additionally tests the real gateway, Temporal worker, and local provider
-fakes from the browser. No cloud credentials are needed. Keep the API contract snapshot
+fakes from the browser, entirely on local fakes. Keep the API contract snapshot
 current with `make api-contract-update` when changing filters or other endpoint parameters.
 
 ## First development check
@@ -43,7 +43,7 @@ RAG tests. The service test scripts create their own environments under
 
 `make quality` installs Ruff and mypy into `.venv-quality`. It lints the repository's
 Python code, checks formatting under `src/`, and type-checks each service separately.
-You do not need to activate any of these environments.
+The targets use these environments directly, so there is nothing to activate.
 
 For a documentation-only change:
 
@@ -64,7 +64,7 @@ The build writes the site to `site/`. Use `make docs-serve` to preview it locall
 | First-party SDK | `make test-gateway` includes its suite; see the focused command below | Package version for a release |
 | Repository automation | `make test-scripts`, `make repo-hygiene`, `make quality` | Reports only when intentionally updating sample formats |
 | Helm charts or cluster values | `make chart-docs`, `make config-contract`, `make production-check` | Chart value tables and configuration contracts |
-| Documentation or runbooks | `make repo-hygiene`, `make docs-build` | No generated site files are committed |
+| Documentation or runbooks | `make repo-hygiene`, `make docs-build` | Site output stays local (generated, uncommitted) |
 | Runtime dependencies or Dockerfiles | `make dependency-lock-check`, `make image-scan`, `make repo-security-scan` | Hashed lockfiles and image scan evidence |
 
 After focused checks, run `make validate` for the default repository gate. It also
@@ -91,9 +91,8 @@ PYTHONPATH=sdk/python src/inference-gateway/.venv/bin/python -m pytest -q \
   sdk/python/tests
 ```
 
-The two services both expose a package named `app`. Keep their tests in separate
-Python processes; collecting both service directories in one pytest invocation can
-import the wrong package. `make test` handles this separation.
+The two services both expose a package named `app`. Run each service's tests in its own
+Python process so each imports its own package. `make test` handles this separation.
 
 Repository tooling tests need only Python and Git:
 
@@ -121,7 +120,7 @@ make dashboard-update
 
 Run only the generators relevant to the change. Their check targets are
 `make api-contract`, `make config-contract`, `make chart-docs`, and
-`make dashboard-check`. Do not fix a failed check by hand-editing the snapshot.
+`make dashboard-check`. Fix a failed check by regenerating the snapshot from its source.
 
 Keep runtime requirements separate from test requirements and regenerate hashed
 locks when changing pins. The runtime images install `requirements.lock`; service
@@ -147,8 +146,8 @@ The MkDocs hook keeps each mirrored page's edit link pointed at its source.
 
 `make repo-hygiene` checks tracked and new, unignored Markdown files, including
 service READMEs. It checks inline local links and images for file existence and
-recognizes Make target references in code. It does not validate remote URLs,
-reference-style Markdown links, or heading anchors; preview the affected pages too.
+recognizes Make target references in code. Preview the affected pages to check remote URLs,
+reference-style Markdown links, and heading anchors.
 
 ## Common development problems
 

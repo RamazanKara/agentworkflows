@@ -1,6 +1,6 @@
 # Capacity and sizing
 
-The chart values are examples, not sizing recommendations. Measure the selected model and workload before setting production requests, limits, or autoscaling bounds.
+The chart values are starting examples. Measure the selected model and workload before setting production requests, limits, or autoscaling bounds.
 
 ## Inputs
 
@@ -15,7 +15,7 @@ Collect these first:
 - retention and backup requirements;
 - allowed cold-start time and maximum replica cost.
 
-`make loadtest-local` does not measure model capacity. It starts a mock OpenAI-compatible runtime. Use it for gateway-path regression tests, then run `make loadtest` against the real deployment.
+`make loadtest-local` starts a mock OpenAI-compatible runtime for gateway-path regression tests. Run `make loadtest` against the real deployment to measure model capacity.
 
 ## Gateway
 
@@ -26,9 +26,9 @@ The gateway chart can scale with KEDA on four Prometheus signals:
 - load-shed rate;
 - p95 request latency.
 
-The current customer values set a floor of 2 and a ceiling of 20 replicas. Treat the thresholds as initial configuration. Verify that the Prometheus queries return data in the target cluster before relying on them.
+The current customer values set a floor of 2 and a ceiling of 20 replicas. Treat the thresholds as initial configuration. Verify that the Prometheus queries return data in the target cluster.
 
-`concurrency.maxConcurrentRequests` is a per-process load-shed limit. `0` disables that limit. A higher value does not add model capacity; it only lets more work reach the runtime. Size the gateway and runtime together and watch 503 responses, queue depth, and tail latency.
+`concurrency.maxConcurrentRequests` is a per-process load-shed limit. `0` disables that limit. A higher value lets more work reach the runtime; model capacity comes from the runtime itself. Size the gateway and runtime together and watch 503 responses, queue depth, and tail latency.
 
 ## vLLM
 
@@ -54,19 +54,19 @@ KEDA uses `vllm:num_requests_waiting` in the provided values. Confirm the metric
 
 ## Qdrant and RAG
 
-The bundled Qdrant chart supports one replica and a single PVC. It is a reference footprint, not an HA topology. Estimate raw vector storage as:
+The bundled Qdrant chart runs one replica on a single PVC as a reference footprint; use an external Qdrant cluster for HA. Estimate raw vector storage as:
 
 ```text
 vectors * dimensions * 4 bytes
 ```
 
-Then add payload, HNSW index, segment, compaction, snapshot, and growth headroom. Measure memory and query latency after loading representative data. The customer values currently request a 100 GiB PVC; that number alone says nothing about supported document count.
+Then add payload, HNSW index, segment, compaction, snapshot, and growth headroom. Measure memory and query latency after loading representative data. The customer values request a 100 GiB PVC; size it from your own document count with the formula above.
 
-Embedding dimensions in the RAG values must match the selected embedding model and collection. Changing them is a collection migration, not an in-place tuning change.
+Embedding dimensions in the RAG values must match the selected embedding model and collection. Changing them is a collection migration.
 
 ## Redis, object storage, and logs
 
-The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. Disk loss or deleting the PVC can still lose counters and optional state. Use the [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md) before relying on it for a multi-replica customer deployment.
+The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. For a multi-replica customer deployment, move it to an external store with the [external stores runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md).
 
 Files and asynchronous batches require an object store when enabled. Include upload limits, object retention, failed-batch output, and cleanup in the storage estimate.
 

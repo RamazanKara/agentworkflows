@@ -6,11 +6,11 @@ profiles. AgentWorkflows follows the cloud-first [product scope](../scope-and-no
 and [roadmap](https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md).
 
 This directory records the significant architecture decisions behind AgentWorkflows:
-why a particular tool, pattern, or boundary was chosen, what was rejected, and what the choice
-costs. Read an ADR when you want the reasoning behind a default in `deploy/`, `src/`, or
-`platform/`, not just the configuration itself.
+why a particular tool, pattern, or boundary was chosen, which alternatives were weighed, and what
+the choice gives the product and its operators. Read an ADR when you want the reasoning behind a
+default in `deploy/`, `src/`, or `platform/` alongside the configuration itself.
 
-ADRs are not a manual. For setup follow [docs/getting-started.md](../getting-started.md); for
+ADRs record reasoning. For setup follow [docs/getting-started.md](../getting-started.md); for
 project fit and alternatives follow [docs/decision-guide.md](../decision-guide.md); for the
 controls inventory follow [docs/production-readiness.md](../production-readiness.md). ADRs explain
 the choices those documents assume.
@@ -19,8 +19,8 @@ the choices those documents assume.
 
 - `Accepted`: the decision is in force and reflected in the repo today.
 - `Superseded by NNNN`: replaced by a later ADR; kept for history.
-- `Proposed`: under discussion, not yet reflected in the default configuration.
-- `Deprecated`: no longer recommended, but not yet removed.
+- `Proposed`: under discussion before it becomes the default configuration.
+- `Deprecated`: retired from recommendations and kept in the repo until removal.
 
 All ADRs in this set are `Accepted` and describe the current repository.
 
@@ -57,7 +57,7 @@ immutable once `Accepted`, and grounded in real files in this repo.
 3. Add a row to the index table above (ADR pages are reached through this index; only
    the index itself is listed in the `mkdocs.yml` nav).
 4. Open it for review like any other change (see [CONTRIBUTING.md](https://github.com/RamazanKara/agentworkflows/blob/main/CONTRIBUTING.md)). Once
-   merged and `Accepted`, do not rewrite it; if the decision changes, write a new ADR and mark the
+   merged and `Accepted`, keep it as written; if the decision changes, write a new ADR and mark the
    old one `Superseded by NNNN`.
 
 ### Template
@@ -80,9 +80,9 @@ What was chosen, stated plainly, with the concrete repo evidence (paths, default
 
 ## Consequences
 
-What this makes easy, what it makes harder, and what the operator now owns.
+What the decision gives the product and what the operator does.
 
 ## Alternatives considered
 
-Each realistic option, what it does better, and the specific reason it was not chosen here.
+Each realistic option, its strengths, and the specific reason the chosen option fits better here.
 ```

@@ -13,21 +13,21 @@ scaffolding, and cleanup. The [template gallery](templates.md) adds PR review, s
 weekly reports, incident summaries and document Q&A, with instructions for running your edits.
 
 `approve --reject` finishes without publishing. Approval expires after seven days.
-The API records the authenticated key name or verified JWT subject; clients cannot supply
-a reviewer name. A Temporal update accepts one decision for the waiting draft. Early or
+The API records the reviewer as the authenticated key name or verified JWT subject.
+A Temporal update accepts one decision for the waiting draft. Early or
 conflicting decisions return `409 approval_not_waiting`. Retrying the same identity's
 decision is idempotent, including after a lost response. Run IDs identify exact executions.
 
 The fake research draft deliberately falls back from OpenAI to Anthropic. Both tools are
 local fixtures. `make compose-smoke` additionally kills and replaces the worker while
-approval waits, then verifies no repeated completed model calls. See [local evaluation](local-evaluation.md).
+approval waits, then verifies that each completed model call ran once. See [local evaluation](local-evaluation.md).
 
 ## Web console
 
 After `make compose-up`, open <http://127.0.0.1:8080/console>:
 
 1. Sign in with `local-development-only` (demo admin). Keep the local fake providers on
-   **Get started**; no cloud key or paid call is needed.
+   **Get started**; the trial runs entirely on local fakes.
 2. Choose **Run workflow**, select **Research**, enter a topic (or select **Use the example**),
    and select **Start run**. Optional inputs such as the model and budgets sit under
    **More options**. The run's detail page refreshes while the workflow is active.
@@ -36,42 +36,42 @@ After `make compose-up`, open <http://127.0.0.1:8080/console>:
 4. Open the run from **Workflow runs**. Model steps preview their answer; expand
    **Prompt and response** (model steps) or **Arguments and result** (tool steps) to read the
    captured content with redaction/truncation notes. **Receipt** and **Step logs** show
-   provider/model, usage, cost, routing attempts, and fingerprints without captured text.
+   provider/model, usage, cost, routing attempts, and fingerprints, separate from captured text.
 5. Open **Costs** for current-window team, provider, and workflow costs. **Providers & budgets**
    shows admins key presence and limits, with a copyable fragment and links for configuring
    real providers through the existing reviewed policy and gateway Secret deployment.
 
 Use project, workflow, and status filters to find runs. **Load more** advances through older
 index pages, including pages with no matches. The approvals inbox walks every page of every
-available project. Expired Temporal executions are omitted from lists; direct inspection
-reports that the run is unavailable. Terminal Redis run records expire after 30 days by
-default; reading a run does not extend its retention.
+available project. Lists show retained Temporal executions; direct inspection of an expired
+execution reports that the run is unavailable. Terminal Redis run records expire after 30 days by
+default, counted independently of reads.
 
 Sign-in exchanges a team API key or signed JWT for a server-side Redis session. Reloading
 restores the workspace; **Sign out** invalidates the session on every replica.
 **Switch account** replaces the active session after verifying another credential.
-The browser retains an HttpOnly session cookie, never the API key or JWT.
+The browser holds only an HttpOnly session cookie; the API key or JWT stays on the server.
 When OIDC is configured, **Sign in with your company account** comes first; if the provider
-declines or the account maps to no team, the console explains why instead of showing an error page.
+declines or the account has no team mapping, the console explains why on the sign-in page.
 Use `demo-builder`, `demo-approver`, `demo-viewer`, or `demo-other-team` to explore roles.
 
-The gateway image includes the built console; no Node server or extra container runs in
-production. Compose enables it. For a standalone gateway Helm release, set
+The gateway image includes the built console and serves it directly in production.
+Compose enables it. For a standalone gateway Helm release, set
 `adminConsole.enabled=true`; the umbrella chart uses `inference-gateway.adminConsole.enabled=true`.
 Keep the existing team auth, Redis, workflow worker, TLS ingress, and Temporal settings.
-The same gateway host serves `/console/` and `/v1/`; no cross-origin API setting is needed.
+The same gateway host serves `/console/` and `/v1/`, so the console and API share one origin.
 
 Run `make compose-smoke` for browser checks as well as gateway/worker recovery checks.
-It requires Node.js 24/npm and installs Chromium on first use. Linux hosts missing browser
-libraries can run `cd src/inference-gateway/console && npm ci && npx playwright install --with-deps chromium`.
+It requires Node.js 24/npm and installs Chromium on first use. To install browser libraries
+on a Linux host, run `cd src/inference-gateway/console && npm ci && npx playwright install --with-deps chromium`.
 CI installs those libraries before validation. Keyboard users can use **Skip to content**,
 standard Tab/Enter navigation, and native disclosure controls. Tables scroll within their
 panels on small screens.
 
-Step logs here are gateway event/routing records, not worker stdout or full Temporal history.
-Receipt hashes must still be checked against the retained audit export and head anchors.
-Provider keys and budget edits remain reviewed deployment configuration; key presence does
-not prove live provider acceptance.
+Step logs show gateway event and routing records. Worker stdout lives in the worker logs, and
+the full workflow history lives in Temporal. Verify receipt hashes against the retained audit
+export and head anchors. Provider keys and the limits on **Providers & budgets** come from
+reviewed deployment configuration; the page shows whether each key is present.
 
 ### Workflow forms and step content
 
@@ -79,20 +79,21 @@ Set `inputSchema` on a workflow in the `SandboxPolicySet`. `GET /v1/workflow-pol
 returns it to the console, which renders text fields, longer text areas, numbers,
 checkboxes, enum selects, and string arrays with one item per line. Required fields come
 first and the rest sit under **More options**; a string property named `model` becomes a
-list of the workflow's allowed models. Workflows without a schema retain the JSON input box. The supported draft 2020-12 subset is an object with
+list of the workflow's allowed models. Workflows without a schema use the JSON input box.
+Schemas use a flat draft 2020-12 subset: an object with
 string, number, integer, boolean, or array-of-string properties, optional `enum`,
 `required`, `description`, `default`, and `examples`. `additionalProperties: false`
-rejects unknown fields. Nested objects and schema references are not supported.
+rejects unknown fields.
 The templates retain their nonempty text and budget checks with `minLength`, `pattern`,
 `minimum`, `maximum`, and `exclusiveMinimum` constraints.
 Defaults prefill the console; examples are hints. The gateway validates submitted input
-without inserting defaults or coercing types. Invalid input returns HTTP 422 before
+exactly as sent, keeping its values and types as submitted. Invalid input returns HTTP 422 before
 starting Temporal, with `detail.reason: workflow_input_invalid` and
 `detail.fields: [{field: "input.topic", message: "Field is required."}]`.
 
 The Python `@input_schema({...})` decorator and TypeScript `withInputSchema(schema, workflow)`
 attach schema metadata to workflow code. Copy that schema into the reviewed workflow
-policy; workers cannot override the gateway's policy. `agentworkflows init` includes
+policy; the gateway's policy is authoritative for workers. `agentworkflows init` includes
 the declaration in `workflow.py` and writes `input-schema.json` for that purpose.
 
 `captureContent` can be `none`, `redacted`, or `full` at the team level or on a workflow.
@@ -101,11 +102,11 @@ capture is off. Compose's demo team defaults to `redacted`. Both SDKs' governed 
 tool activities capture automatically through the gateway, after admission and output
 checks. `redacted` additionally applies the gateway's configured secret/PII and blocked-term
 redactors to the stored text; `full` stores the admitted request and guarded result as-is.
-Neither mode bypasses DLP. Each input/output field is limited to `CONTENT_MAX_BYTES`
+Both modes apply DLP. Each input/output field stores up to `CONTENT_MAX_BYTES`
 (default 16,384 UTF-8 bytes), after redaction.
 
-Admins can change team and workflow capture modes in **Team settings**, without a
-redeploy. Both SDKs expose `set_content_capture` / `setContentCapture` with a settings
+Admins can change team and workflow capture modes in **Team settings**, with changes applied
+live. Both SDKs expose `set_content_capture` / `setContentCapture` with a settings
 revision. Changes affect future steps and preserve existing content TTLs; see
 [capture settings and spend alerts](team-settings.md).
 
@@ -113,7 +114,7 @@ Run timeline steps expose `content: {input, output, truncated: {input, output}, 
 Input and output are text (structured values are JSON text); an unfinished/failed call can
 have a null output. A retried step shows its latest captured attempt. Content is separate
 from receipts and expires after `CONTENT_RETENTION_SECONDS` (default seven days).
-Missing content is `null` with `content_reason: capture_off` or `expired`. The same team,
+Uncaptured or expired content is `null` with `content_reason: capture_off` or `expired`. The same team,
 project, and role checks that protect run details protect content; all four read roles
 can inspect it. See the [retention runbook](https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/data-retention.md)
 for TTL migration and Temporal history handling.
@@ -122,8 +123,8 @@ for TTL migration and Temporal history handling.
 
 A **team is the existing sandbox ID**. Projects group and restrict run access. Operators
 bootstrap team policies and an admin with `SANDBOX_POLICY_PATH` and `API_KEY_RECORDS_PATH`
-or verified identity-provider claims. Admins then issue and revoke member keys in
-**Members & keys**, without editing YAML or restarting the gateway.
+or verified identity-provider claims. Admins then issue and revoke member keys live in
+**Members & keys**, while the gateway keeps running.
 Managed teams require authentication, `SANDBOX_BUDGET_ENABLED=true`,
 `SANDBOX_BUDGET_BACKEND=redis`, and `AUDIT_LOG_ENABLED=true`; Compose sets these already.
 
@@ -161,14 +162,14 @@ the trial. Keep a bootstrap admin record and add a policy for each team:
   # then replace model IDs and allowedEgress with approved destinations.
 ```
 
-`providerCredentials` names gateway environment variables/Secret references, never keys.
-Each route, including fallback and streaming, selects the bound team's provider key;
-a missing provider mapping fails closed for managed teams. `agentworkflows team` shows
-available projects and provider names without exposing secrets. Project-bound credentials
-cannot read or control another project's runs. Identity comes from a verified sandbox
-binding, never a caller-supplied team/project header. Existing signed JWTs can supply `role`
+`providerCredentials` names the gateway environment variables or Secret references that hold
+the keys. Each route, including fallback and streaming, selects the bound team's provider key;
+managed teams require a provider mapping for every route and fail closed otherwise.
+`agentworkflows team` shows available projects and provider names while secrets stay on the
+gateway. Project-bound credentials read and control their own project's runs. Identity comes
+from a verified sandbox binding. Existing signed JWTs can supply `role`
 and optional `project` claims with a nonempty `sub`; configure `JWT_TENANT_CLAIM` and control claim issuance.
-Legacy unbound keys cannot use the team run API. Enabling projects requires roles on the
+The team run API uses sandbox-bound keys. Enabling projects requires roles on the
 team's existing credentials. Team policies remain declarative; membership keys are managed
 in the console, CLI, or team key API, and team admins can
 [register their own workflow types](#register-your-own-workflow) inside the policy's models, tools and limits.
@@ -176,7 +177,7 @@ in the console, CLI, or team key API, and team admins can
 ### Members and API keys
 
 Admins can list, create, update, and revoke keys for their own team. Project-bound admins
-can only manage keys in that project. The console lists name, role, project, last use,
+manage keys in their own project. The console lists name, role, project, last use,
 expiry, and revocation status. Creation displays the new `aw_` key once, with a copy button;
 save it securely before leaving the page. The store retains only its SHA-256 digest and
 metadata, including creator and timestamps. Last use is written at most once per minute.
@@ -184,11 +185,11 @@ Every create, update, and revoke produces a hash-chained audit receipt.
 
 Choose **Edit** next to an existing key to change its name, role, project or expiry.
 Expiry in the editor is UTC; blank clears it, and a past date immediately disables
-access. Revoked keys and your currently signed-in key have no edit control.
+access. The edit control appears on active keys other than your currently signed-in key.
 Errors keep your draft for review. SDK equivalents are
 `gateway.update_key(key_id, name="Build bot", role="builder", project="engineering", expires_at=None)`
 and `gateway.updateKey(keyId, { name: 'Build bot', role: 'builder', project: 'engineering', expires_at: null })`.
-These edit access metadata without reissuing or exposing the secret.
+These edit access metadata and keep the existing secret unchanged and private.
 
 ```bash
 agentworkflows keys list
@@ -202,13 +203,14 @@ POST accepts `name`, `role` (default `viewer`), optional `project`, and optional
 PATCH accepts those same fields; `null` clears project or expiry. Expiry accepts epoch seconds
 or an ISO-8601 timestamp with a timezone. DELETE retains a revoked record. Revocation,
 expiry, and role changes apply on the next request on every replica, including key-backed
-browser sessions. An admin cannot revoke or demote the key authenticating their request.
+browser sessions. To prevent self-lockout, the key authenticating a request stays protected
+from revocation or demotion by that request.
 File-based bootstrap credentials remain managed through the existing configuration.
 
 The managed store uses the existing budget Redis client and key prefix, with schema version 2;
 enable Redis persistence and back up this state along with the existing runs and budgets.
-There is no managed-key feature flag. Existing flat hashes, key-record files, and JWT/JWKS
-automation remain supported. The flat allowlist and file are checked before the managed
+Managed keys are always on. Existing flat hashes, key-record files, and JWT/JWKS
+automation continue to work alongside them. The flat allowlist and file are checked before the managed
 store, then JWT verification; a duplicate file record still enforces its binding and expiry
 even when its digest is also flat-listed.
 
@@ -232,11 +234,11 @@ OIDC_DEFAULT_ROLE=viewer
 Source the client secret from your deployment's secret store. Omit it for a registered
 public client. The gateway discovers authorization, token, and JWKS endpoints from the
 issuer; it supports `client_secret_basic` and `client_secret_post` for confidential clients.
-OIDC is disabled when its settings are absent. `OIDC_TEAM_CLAIM` defaults to
+OIDC turns on when its settings are present. `OIDC_TEAM_CLAIM` defaults to
 `JWT_TENANT_CLAIM`; the role/project defaults are `role`/`project`. Claims are top-level
 strings (group mapping below uses an array). The team must name an existing sandbox policy, and any project must belong to it.
-A missing role uses `OIDC_DEFAULT_ROLE`; an invalid supplied role is rejected. Only the
-identity provider's administrators should be able to set membership claims.
+A token without a role uses `OIDC_DEFAULT_ROLE`; an invalid supplied role is rejected.
+Restrict membership claims to the identity provider's administrators.
 
 In Helm, use `auth.oidc` for these settings and `auth.oidc.existingSecret.name/key` for
 the client secret. `adminConsole.cookieSecure` defaults to true. The umbrella chart nests
@@ -246,13 +248,13 @@ token and JWKS endpoints in your existing network policy.
 | Provider | Configuration |
 | --- | --- |
 | [Okta](https://developer.okta.com/docs/guides/customize-tokens-returned-from-okta/) | Use your authorization server's issuer, register the redirect URL, and emit `team`, `role`, and optional `project` in the **ID token**, including them for the requested scopes. |
-| [Microsoft Entra](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc) | Use the tenant-specific issuer `https://login.microsoftonline.com/TENANT_UUID/v2.0`, register a Web redirect, and map `OIDC_TEAM_CLAIM=tid` to a policy whose sandbox ID is that tenant UUID. Missing roles default to viewer. For other roles, emit a single string custom claim; the `roles` array is not a scalar role claim. |
-| [Google](https://developers.google.com/identity/openid-connect/openid-connect) | Use issuer `https://accounts.google.com` and an OAuth web client with the exact redirect URL. Direct Google ID tokens do not provide the gateway's team/role/project claims, and the dotted `hd` domain is not a valid sandbox ID. Use an OIDC broker that emits controlled membership claims, or keep team API-key sessions. |
+| [Microsoft Entra](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc) | Use the tenant-specific issuer `https://login.microsoftonline.com/TENANT_UUID/v2.0`, register a Web redirect, and map `OIDC_TEAM_CLAIM=tid` to a policy whose sandbox ID is that tenant UUID. Users without a role claim get viewer. For other roles, emit a single string custom claim (the role claim is a scalar string, unlike the `roles` array). |
+| [Google](https://developers.google.com/identity/openid-connect/openid-connect) | Use issuer `https://accounts.google.com` and an OAuth web client with the exact redirect URL. Place an OIDC broker that emits controlled team, role and project claims in front of Google, or use team API-key sessions. Sandbox IDs come from those broker claims rather than the dotted `hd` domain. |
 
 The flow uses [PKCE S256](https://www.rfc-editor.org/rfc/rfc7636), single-use state bound
 to the browser, and a nonce. ID tokens must pass signature, issuer, audience, expiry,
-issued-at, subject, nonce, and authorized-party checks. Tokens and the client secret are
-never sent to browser storage. Keep all replicas on the same Redis and auth configuration.
+issued-at, subject, nonce, and authorized-party checks. Tokens and the client secret stay
+on the server. Keep all replicas on the same Redis and auth configuration.
 
 Sessions and approval receipts record a display name: the managed key's name, or the ID
 token's `name` (else `email`) claim. The console shows it in the account card and on each
@@ -265,19 +267,20 @@ or existing JWT. `GET /v1/auth/session` restores it and returns the CSRF token;
 `POST /v1/auth/logout` invalidates it. Browser sign-in is enabled by the console or OIDC
 configuration and requires Redis. Sessions slide for 12 hours with an absolute seven-day
 limit; pasted JWT and group-mapped OIDC sessions also stop at token expiry. OIDC claim changes take effect on
-the next sign-in. Logout ends the gateway session, not the provider's own login session.
+the next sign-in. Logout ends the gateway session; the provider manages its own login session.
 
 Cookies are HttpOnly (session), Secure, and SameSite=Lax. The separate CSRF cookie must
 match both the session's token and `X-CSRF-Token` on non-GET cookie-authenticated requests.
-The console sends credentials and that header automatically. Bearer and `X-API-Key`
-automation do not require CSRF. Serve the console and gateway on the same HTTPS origin.
+The console sends credentials and that header automatically. CSRF applies to cookie
+authentication; Bearer and `X-API-Key` automation authenticate with their headers. Serve the
+console and gateway on the same HTTPS origin.
 For HTTP localhost only, set `SESSION_COOKIE_SECURE=false`; Compose already does so and
-`local-development-only` continues to work. The demo adds no identity-provider container;
-connect an existing provider using the settings above.
+`local-development-only` continues to work. To try OIDC with the demo, connect an existing
+provider using the settings above.
 
 ### SSO group-to-role mapping
 
-With the v0.9.0 gateway, map existing company groups instead of requiring a scalar
+With the v0.9.0 gateway, map existing company groups to roles in place of a scalar
 role claim. Keep the OIDC setup above, then configure:
 
 ```text
@@ -288,40 +291,39 @@ OIDC_GROUP_ROLE_MAPPINGS={"default":{"engineering-builders":"builder","engineeri
 The JSON object is keyed by the **verified team claim** (here `default`). Each team
 maps exact group names or IDs to `admin`, `builder`, `approver` or `viewer`.
 `OIDC_GROUPS_CLAIM` names one exact top-level ID-token claim, including names that
-contain dots or URLs; it is not a nested path. The claim must be an array of nonempty
-strings. Group matching is case-sensitive, with no trimming, wildcards, hierarchy
-or automatic role combination. Multiple groups mapping to the same role are allowed.
+contain dots or URLs; the gateway reads it as a literal claim name. The claim must be an array of nonempty
+strings. Group matching is exact: case-sensitive, untrimmed and literal, with each group
+mapping to one role. Multiple groups mapping to the same role are allowed.
 
 Any nonempty mapping object enables group mode for **all OIDC sign-ins**. The team
 must have a mapping and the caller's groups must resolve to exactly one distinct
-role. Missing groups, only unmatched groups, and conflicting mapped roles reject
-sign-in, even if the token also claims `role: admin`. The role claim and default role
-are ignored in this mode. An empty object preserves the previous role-claim mode.
+role. Sign-in is rejected when groups are absent, all unmatched, or mapped to conflicting
+roles, even if the token also claims `role: admin`. In this mode the groups alone decide the
+role. An empty object keeps the role-claim mode.
 Team and optional project claims must still identify configured policies/projects;
-group mapping never grants another team or expands a project-bound identity.
+group mapping assigns a role within the verified team and project.
 
 Configure your provider to include the group array in the **ID token** for this
 client and request the provider's group scope if needed. Use the actual values it
-emits (for example, group IDs instead of display names). Missing/overage claims do
-not trigger directory or UserInfo lookups; sign-in is denied. Identity-provider
+emits (for example, group IDs in place of display names). The gateway reads groups from the
+ID token only, so include the full array there. Identity-provider
 administrators must control these claims and group assignments.
 
 Group membership is a sign-in snapshot. Sessions end at ID-token expiry (or the
 existing idle/absolute deadline, whichever comes first). Group removal at the
-provider takes effect on the next sign-in; no background directory synchronization
-is provided. Changing the affected team's mapping, claim settings, issuer or client
+provider takes effect on the next sign-in. Changing the affected team's mapping, claim settings, issuer or client
 invalidates its existing OIDC sessions on their next request. Enabling mappings also
 requires old browser JWT/OIDC sessions to sign in again. API-key sessions and direct
 bearer JWT authorization retain their existing rules. Roll out the same configuration
-to every gateway replica before testing access; the gateway stores a policy hash,
-not the raw groups or ID token, in Redis sessions.
+to every gateway replica before testing access; Redis sessions store a hash of the
+group policy.
 
 In **Members & keys → Company sign-in**, team admins can inspect the provider,
 claim names, mappings and denial rules. `GET /v1/team/sso` returns the same typed
 view; it requires a team admin credential without a project restriction and returns
-only that team's mappings. It never returns the client secret or another team's
-group names. Configure mappings through the deployment, not the API; the public
-`/v1/auth/config` response does not expose them. Both SDKs provide the
+only that team's mappings, with the client secret kept on the server. Configure mappings
+through the deployment; the API view is read-only, and the public `/v1/auth/config`
+response lists sign-in methods only. Both SDKs provide the
 [same inspection method](sdk-reference.md#company-group-access).
 
 For the umbrella chart, merge this into your existing OIDC values:
@@ -343,17 +345,16 @@ Use `auth.oidc` directly for the standalone gateway chart. Keep an operator's
 team-admin API key available while configuring sign-in.
 
 Acceptance: sign in as a builder-group member and verify the team/project and
-builder controls; sign out and repeat for an approver. Unmapped users and users
-in both differently mapped groups must be rejected. Change a mapping and verify
+builder controls; sign out and repeat for an approver. Confirm that unmapped users and users
+in both differently mapped groups are rejected. Change a mapping and verify
 the existing session requires sign-in, then verify the new role. Confirm
-`team_sso()` / `teamSSO()` show only the current team's mapping. The credential-free
-Quickstart tests workflow execution separately; it does not configure a real IdP.
+`team_sso()` / `teamSSO()` show only the current team's mapping.
 
 Use one trusted worker per team with a bound builder key carrying `workflows:execute`.
 Set `TEMPORAL_TASK_QUEUE=research-team-workflows`; the API selects that queue from the
-verified team. Human credentials do not carry the worker scope. In Helm, set `worker.team`
-and `worker.existingSecret`. Workers and Temporal operators are trusted: end users must
-not receive direct Temporal access or worker keys.
+verified team. The worker scope is reserved for worker keys. In Helm, set `worker.team`
+and `worker.existingSecret`. Workers and Temporal operators are trusted: give direct
+Temporal access and worker keys only to operators and workers.
 
 ## Authenticated workflow API
 
@@ -383,8 +384,8 @@ agentworkflows usage
 
 Retry accepts failed, canceled, terminated, or timed-out runs. It starts a new execution
 and run budget; team spend is retained. Repeating retry on a failed run returns the same
-replacement. Review side effects first: tools may execute again. Cancellation cannot undo
-already-sent actions. `runs list` returns `next_offset`; pass it as `--offset` for the next page.
+replacement. Review side effects before retrying, since tools run again in the new execution.
+Cancellation stops the run from its current step onward. `runs list` returns `next_offset`; pass it as `--offset` for the next page.
 `runs start` defaults to `ResearchWorkflow`; use `runs start YourWorkflow --input '<JSON>'
 --project engineering` for another registered workflow. Input is its single argument.
 
@@ -404,10 +405,10 @@ runs with their status, approval review, costs and receipts, filtered by workflo
 trigger name. The API/CLI/SDK filters and retention boundaries are documented in the
 [SDK reference](sdk-reference.md#trigger-history-and-usage-csv).
 This uses `inference-gateway.workflowRecords.runRecordRetentionSeconds` in Helm (30
-days by default), with Redis or PostgreSQL; no new store or setting is required.
+days by default), with Redis or PostgreSQL, on the existing store and settings.
 
 For monthly reporting, **Costs → Export CSV** uses `GET /v1/usage/export` and the
-existing Redis accounting. Project-bound credentials can export only their project.
+existing Redis accounting. Project-bound credentials export their own project.
 
 Open **Triggers** in the console to see cron expressions, upcoming times, signed webhook
 endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
@@ -460,19 +461,19 @@ notifications:
 
 Store secrets in the gateway environment/Secret deployment. Use a separate randomly
 generated webhook secret of at least 32 characters for each team. Webhook destination
-variables hold full HTTP(S) URLs; values and recipient addresses are never put in receipts.
-Only configure destinations your team is authorized to notify. Omit unused channels.
-SMTP authentication requires TLS; only the local fake uses unauthenticated plaintext SMTP.
+variables hold full HTTP(S) URLs; values and recipient addresses stay out of receipts.
+Configure destinations your team is authorized to notify, and omit unused channels.
+SMTP authentication uses TLS; the local fake uses unauthenticated plaintext SMTP for evaluation.
 Set `consoleUrl` to the externally reachable console address, including any path prefix.
-Notification links carry no credentials: recipients sign in normally.
+Notification links open the console, where recipients sign in normally.
 
 Recreate the gateway after configuration changes. It reconciles
-[Temporal Schedules](https://docs.temporal.io/develop/python/workflows/schedules), never a
-custom cron scheduler. Expressions use UTC, overlap policy is **SKIP**, and catch-up is
-limited to five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
+[Temporal Schedules](https://docs.temporal.io/develop/python/workflows/schedules).
+Expressions use UTC, overlap policy is **SKIP**, and the catch-up window is
+five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
 the schedule action open until the target run ends. Each launch goes through the same
 governed start API. Redis persists interactive pauses across restarts; `paused: true` in
-configuration prevents console/CLI resumption until the admin changes the configuration.
+configuration keeps a trigger paused, and only a configuration change by the admin resumes it.
 Removing a cron trigger removes its managed schedule on the next reconciliation. Schedule
 errors appear in the console; check Temporal and the gateway log for invalid expressions.
 
@@ -498,44 +499,44 @@ print(urllib.request.urlopen(request).read().decode())
 ```
 
 Compose uses the public fake value `compose-webhook-secret-not-for-production` for this
-example. The original JSON becomes the workflow input; it is not stored in receipts.
+example. The original JSON becomes the workflow input and stays out of receipts.
 For GitHub, configure the shown endpoint as the repository webhook URL, use JSON content,
 select Issues events, and set its secret to the team's webhook secret. Native GitHub
-`X-Hub-Signature-256` plus `X-GitHub-Delivery` are also accepted. GitHub does not sign a
-timestamp or delivery ID, so the gateway persists the signed body fingerprint across
-the team: changing the delivery ID or destination cannot replay an accepted payload.
-Identical GitHub payload bytes are treated as retries. No GitHub credential or live GitHub
-write is used by the triage example.
+`X-Hub-Signature-256` plus `X-GitHub-Delivery` are also accepted. For GitHub signatures,
+the gateway persists the signed body fingerprint across the team, so an accepted payload
+is accepted once regardless of delivery ID or destination.
+Identical GitHub payload bytes are treated as retries. The triage example needs only the
+webhook secret.
 
 Completed delivery IDs return `409 webhook_replayed`; concurrent delivery and ambiguous
 Temporal failures use the same deterministic run ID. After a `503`, retry with the same
-delivery ID/body and a fresh timestamp/signature. Changed input for that ID is refused.
-Keep Redis trigger state, run start intents and Temporal history together in backups.
-Deleting that state removes the replay guarantee. A paused trigger returns `409 trigger_paused`.
+delivery ID/body and a fresh timestamp/signature. Each delivery ID accepts only its original input.
+Keep Redis trigger state, run start intents and Temporal history together in backups;
+the replay guarantee relies on that state. A paused trigger returns `409 trigger_paused`.
 
 Notifications cover console-managed runs: waiting approval, failure (including execution
 timeout), and reaching the configured fraction of either the run token or USD limit.
 The existing run monitor checks roughly every 30 seconds; SDK approval events are persisted
-so a quick review is not missed. Accounting includes conservative outstanding reservations.
-Budget crossings are also persisted at reservation/settlement, even if usage subsequently falls.
-Custom workflows should inherit `ApprovalWorkflow` (or expose the existing `status` query).
+so every review is captured. Accounting includes conservative outstanding reservations.
+Budget crossings are also persisted at reservation and settlement.
+Have custom workflows inherit `ApprovalWorkflow` (or expose the existing `status` query).
 Already-running histories remain replay-compatible via a Temporal patch marker.
 
 Each channel has persistent per-run/event delivery state and a replica-safe lease. Attempts
-retry up to five times with exponential backoff, without blocking approval. Every attempt
+retry up to five times with exponential backoff, alongside approval. Every attempt
 and outcome appears in the run timeline; `retrying` or `failed` means inspect the destination
 and gateway configuration. Successful deliveries are deduplicated across restarts. Delivery
-is **at least once**, not exactly once: a crash after sending but before recording success
-can duplicate a message. Outgoing webhooks carry a stable `Idempotency-Key` and JSON `id`;
-SMTP uses a stable Message-ID. Notifications contain IDs, event type and a console link,
-not drafts, prompts or raw failure details. Approvals remain in the console/API.
+is **at least once**. Outgoing webhooks carry a stable `Idempotency-Key` and JSON `id` for
+receiver-side deduplication; SMTP uses a stable Message-ID. Notifications contain IDs, event
+type and a console link; drafts, prompts and failure details stay in the console. Reviewers
+approve in the console or API.
 
 The Compose trial includes both workflows and `notification-fake`, a Slack/webhook sink
 and SMTP catcher. View its inbox at `http://127.0.0.1:8025/` (override the published port
 with `AGENTWORKFLOWS_INBOX_PORT`). `make compose-smoke` backfills a daily schedule through
 Temporal, posts a signed issue payload, checks pause/replay protection, exercises approval
-and failure delivery to all three channels, and verifies the receipt chain. It uses no
-real credentials. Both examples return reviewed content without publishing to external services.
+and failure delivery to all three channels, and verifies the receipt chain. It runs entirely
+on local fakes. Both examples return reviewed content to the run.
 
 ## Operate the service
 
@@ -544,20 +545,20 @@ real credentials. Both examples return reviewed content without publishing to ex
 of `SANDBOX_BUDGET_WINDOW_SECONDS`. Team admins can edit budgets, approval rules and
 existing model alias selections in the console; see [team settings](team-settings.md).
 Workflow cost rows accumulate from this version onward, in the same month as provider
-costs. They count governed model/tool calls, not run starts, and exclude standalone calls.
-Project-bound credentials see only their project's rows. Earlier windows are not backfilled.
+costs. They count governed model and tool calls inside workflows.
+Project-bound credentials see their own project's rows.
 Token/request budgets retain their existing window semantics. Spend reservations are
 atomic in the existing Redis, covering eligible fallbacks before a call. Managed-team
 calls retry through the caller or Temporal so each attempt has a budget and receipt.
 Unused fallback capacity is refunded; measured usage replaces the successful
 attempt's reservation. Failed/unknown attempts remain conservatively charged. Configure
-prices for every route, including local models; tools charge per attempt. These are
-configured-price estimates, not provider invoices or billing guarantees.
+prices for every route, including local models; tools charge per attempt. Costs are
+estimates based on configured prices.
 
 Persist Redis with AOF and no eviction. Run metadata, timeline indices, and cost windows
 survive gateway/worker restarts; back up Redis alongside Temporal PostgreSQL. Historical
 cost keys remain available for operator export under `...:<team>:cost:month:<month-start>`;
-older fixed-window keys remain under `...:<team>:cost:<window-start>` and are not backfilled.
+older fixed-window keys remain under `...:<team>:cost:<window-start>`.
 The API reports the current month. Retain run metadata/timeline keys with Temporal history
 and audit evidence. Expired Temporal executions return 404; retained receipts remain in
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
@@ -567,29 +568,27 @@ Temporal; restrict access and retention for both stores.
 alongside the legacy `next_offset`. Send that cursor with unchanged project,
 workflow and status filters to continue toward older runs. Empty filtered pages
 can have a continuation: `limit` bounds records scanned before filtering, keeping
-Temporal calls bounded. Cursor order uses creation time and run ID, so concurrent
-starts and pruning do not shift pages. `agentworkflows runs export --output runs.jsonl`
+Temporal calls bounded. Cursor order uses creation time and run ID, so pages stay stable
+during concurrent starts and pruning. `agentworkflows runs export --output runs.jsonl`
 and both SDKs follow these pages and export full retained run details. Retention and
-status changes continue while exporting; missing details fail the export, possibly
-after partial output. See [paging and export](sdk-reference.md#cli) for limits.
-Gateway run/audit records remain Redis-backed; this does not add a PostgreSQL store.
+status changes continue while exporting; if a run's details expire mid-export, the export
+stops with an error, so rerun it for a complete file. See [paging and export](sdk-reference.md#cli) for limits.
 
 The **AgentWorkflows Team Operations** Grafana dashboard sits beside existing dashboards
 in `deploy/observability/dashboards`: throughput, failures, run states, approvals waiting,
 and shared spend. State/spend gauges refresh every 30 seconds; queries use `max` across
 replicas to avoid double counting. Alerts cover stalled throughput, failed runs, approvals
 waiting 30 minutes, spend above 80%, and stale collection. The existing Kubernetes
-observability deployment loads them; Compose does not install Grafana.
+observability deployment loads them.
 
-The timeline is a convenience index of gateway receipts; write failures are logged and
-may leave gaps. Verify the separately retained audit export and external head anchors.
-Hashes establish linkage within retained chains; they do not prove unreported tool activity,
-model correctness, or that a release was signed/published.
+The timeline is a convenience index of gateway receipts. The separately retained audit
+export and external head anchors are the authoritative record; verify against them.
+Hashes establish linkage within retained chains.
 
 ## Write your workflow
 
-Use Temporal's decorators and the SDK's call methods. Do not perform model, network,
-or tool I/O directly in workflow code; replay must remain deterministic.
+Use Temporal's decorators and the SDK's call methods. Perform model, network, and tool I/O
+through the SDK call methods so replay stays deterministic.
 
 ```python
 from temporalio import workflow
@@ -625,20 +624,20 @@ then start with `agentworkflows runs start Briefing --input '"your topic"' --pro
 Use `ApprovalWorkflow` and `await self.approval(draft)` for the standard reviewed-draft
 flow. The [template guide](templates.md) shows the complete code and how to replace a worker.
 Native Temporal workers and `GatewayActivities.call` remain available for advanced agent
-registrations. Cancel through `agentworkflows runs cancel RUN_ID`; cancellation cannot
-undo a tool action already sent.
+registrations. Cancel through `agentworkflows runs cancel RUN_ID`; cancellation stops the
+run from its current step onward.
 
 Defaults are five activity attempts with exponential backoff (1 second initially, capped
 at 30 seconds), three minutes per attempt, and fifteen minutes including retries and queue
 wait. Pass Temporal's `RetryPolicy` and `timedelta` values to `WorkflowGateway` when the
 workload needs different timeouts. HTTP requests time out after 120 seconds. Policy, DLP,
-and run-budget refusals are non-retryable; transient gateway failures honor `Retry-After`.
+and run-budget refusals are final; transient gateway failures honor `Retry-After`.
 
 ## Approve tools and budgets
 
 Add tools to the existing `SandboxPolicySet`, mounted through `SANDBOX_POLICY_PATH` (Helm:
-`sandboxPolicy.policy.policies`). The absence of a tool denies its execution. Clients send
-a tool name and JSON arguments; only the administrator can set the destination URL:
+`sandboxPolicy.policy.policies`). Only listed tools can run. Clients send a tool name and
+JSON arguments; the administrator sets the destination URL:
 
 ```yaml
 apiVersion: platform.ai/v1alpha1
@@ -682,7 +681,7 @@ The result includes the run ID and answers from plain OpenAI and Anthropic clien
 OpenAI Agents SDK, and LangGraph. The first agent calls `team.search` through MCP.
 Open Temporal at <http://localhost:8233> and inspect that run; use its ID with
 `GET /v1/workflow-runs/{run_id}` for usage. `make compose-smoke` checks these calls,
-policy refusals, DLP, and their receipts. No cloud credentials are needed.
+policy refusals, DLP, and their receipts. The examples run on the local fakes.
 
 For your own worker, install `python -m pip install './sdk/python[frameworks]'`.
 Register your async agent function with the existing activity:
@@ -708,7 +707,7 @@ activities = GatewayActivities(
 ```
 
 `context.openai()` and `context.anthropic()` configure the official async clients with
-the gateway URL, team authentication, run/step headers, and no nested HTTP retries.
+the gateway URL, team authentication, and run/step headers, leaving retries to Temporal.
 Use `context.agents_model(model)` with the Agents SDK's `Agent` and `Runner.run`;
 set `RunConfig(tracing_disabled=True)` to keep prompts out of external tracing.
 In LangGraph, use `context.openai()` in your graph nodes and `graph.ainvoke(...)`.
@@ -716,16 +715,15 @@ The [complete examples](https://github.com/RamazanKara/agentworkflows/blob/main/
 show all four, including a governed Agents SDK function tool.
 
 Each model/tool request gets its own step suffix and receipt. The activity result is
-durable; a crash before completion can replay the **whole agent loop** and charge new
-calls. Break long loops into separate workflow steps when finer recovery is needed.
-Streaming, Responses, and background model APIs are not workflow step transports here;
-use non-streaming Chat Completions or Anthropic Messages. Standalone gateway API support
-is unchanged. The optional frameworks are pinned in the worker/test locks.
+durable once the agent function returns; recovery from a crash mid-loop reruns the
+**whole agent loop** as new calls. Break long loops into separate workflow steps for
+finer-grained recovery. Workflow steps use non-streaming Chat Completions or Anthropic
+Messages. The optional frameworks are pinned in the worker/test locks.
 
 Framework callbacks run as trusted worker code. Route every side-effecting tool through
-`context.tool`; arbitrary local function tools and direct network clients are not intercepted.
+`context.tool` so the gateway governs and records it.
 Use [container steps](agent-sandbox-integration.md#container-workflow-steps) for code execution.
-Do not enable external LangSmith tracing with sensitive activity data.
+Keep external LangSmith tracing off for sensitive activity data.
 
 ## MCP tools
 
@@ -746,36 +744,34 @@ The map explicitly approves remote tool names and their cost in USD per attempt.
 call `await gateway.tool("team.search", {"query": topic})` in workflow code or
 `await context.tool(...)` in an agent callback. `GET /v1/tools` discovers team tools;
 add run/step headers to see only that workflow's allowed tools. Credentials and server URLs
-never come from agent arguments. Add the server's origin to the workflow's `allowedEgress`.
+come from policy. Add the server's origin to the workflow's `allowedEgress`.
 
 The gateway negotiates MCP **2025-03-26 Streamable HTTP**, initializes a session, invokes
 `tools/call`, and closes the session. Both JSON and SSE responses are bounded by the gateway
-body limit. Legacy SSE/stdio servers, resources, prompts, sampling, and server-initiated
-requests are not supported. The registered allowlist is authoritative; discovery from an
-untrusted server cannot grant another tool. The gateway does not execute model-returned
-tool instructions automatically. See the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports).
+body limit. The registered allowlist is authoritative, and tools run when workflow code
+calls them. See the [MCP transport specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports).
 
 Nested JSON arguments use the existing input size, blocked-term, and secret policies before
 any server contact. Set `PROMPT_SECRET_MODE=block` (the Compose default) to prevent disclosure;
 `redact` rewrites matching arguments. Output follows the existing output DLP policy. Denied,
 successful, and failed calls receive run-linked tool receipts, with argument fingerprints
-rather than raw arguments. MCP errors and `isError` results are failures, never successful
-results. Failed/ambiguous attempts retain their cost. For side effects, the server **must**
-persist and honor `Idempotency-Key`; MCP itself does not promise idempotent execution.
+in place of raw arguments. MCP errors and `isError` results are recorded as failures.
+Failed/ambiguous attempts retain their cost. For side effects, the server **must**
+persist and honor `Idempotency-Key`.
 
 ## Register your own workflow
 
-A team admin can register a workflow type without editing YAML or restarting the gateway.
+A team admin can register a workflow type live, while the gateway keeps running.
 Open **Templates → Your workflows** in the console, or use the CLI, API or either SDK.
-Registration only narrows what your operator already approved for the team:
+Registration narrows what your operator already approved for the team:
 
 | Setting | Rule |
 | --- | --- |
 | Name | The Temporal workflow type your worker registers: a letter, then letters, digits or underscores (64 maximum). Names defined in operator policy and the nine built-in template names are reserved. A team can register 50 workflows. |
 | Models | Canonical model IDs the team may already use. Providers default to the providers serving those models. |
 | Tools | Tool names already approved for the team. |
-| Network egress | Derived from the chosen models' routes and tools' URLs. It cannot be edited. |
-| Limits | Tokens and dollars per run, no higher than the team's own limits. A team without limits gets ceilings of 5,000,000 tokens and $100; operator YAML can still grant more. |
+| Network egress | Derived automatically from the chosen models' routes and tools' URLs. |
+| Limits | Tokens and dollars per run, up to the team's own limits. Teams without their own limits get ceilings of 5,000,000 tokens and $100; operator YAML can grant more. |
 | Approval | The same controls as reviewed workflows: required or not, approver role, 1-10 distinct reviewers, 60 seconds to 7 days. |
 | Input schema | Optional flat JSON Schema (the subset used by the templates). It validates every run input and renders the console run form. |
 
@@ -797,8 +793,8 @@ TypeScript uses `registerWorkflow(name, models, options?, revision?)`, `teamWork
 `removeWorkflow(name, revision?)`. The API is `GET /v1/team/workflows` (registrations, reserved
 names, the models/tools you may choose, and your limits), `PUT /v1/team/workflows/{name}` and
 `DELETE /v1/team/workflows/{name}`. Writes need the current `If-Match` revision, which is shared with
-team settings and alert rules; a stale revision returns 409 and nothing changes. Repeating an identical
-registration changes nothing. Invalid choices return 422 with the offending fields.
+team settings and alert rules; a stale revision returns 409 and leaves everything unchanged. Repeating
+an identical registration is idempotent. Invalid choices return 422 with the offending fields.
 
 Registered workflows appear in `GET /v1/workflow-policies` and use the same admission, budget, approval
 and receipt paths as YAML workflows, so their approval, limit and capture settings can also be tuned
@@ -806,11 +802,11 @@ under **Team settings**. Every registration and removal is a chained audit recei
 denies new calls from its existing runs and new starts; run history remains until retention expires it.
 If the operator later defines the same name in policy, the reviewed policy wins.
 
-Registration does not deploy code. Run your worker on the team's task queue as shown in the
-[template guide](templates.md), then register the same name. Triggers and container agents still
+Registration sets policy; your worker supplies the code. Run your worker on the team's task queue as shown in the
+[template guide](templates.md), then register the same name. Triggers and container agents
 come from operator policy. Operators who want every workflow type reviewed in YAML set
 `selfServiceWorkflows: false` on the team's policy entry; the console then explains that
-registration is managed by the operator, the API returns 403, and earlier registrations stop applying.
+registration is managed by the operator, the API returns 403, and only operator-defined workflows apply.
 
 ## Workflow policy
 
@@ -828,43 +824,42 @@ workflows:
 ```
 
 Use canonical gateway model IDs, provider names from the model catalog, and exact URL origins
-(scheme, hostname, and optional port; no paths or wildcards). An empty allowlist denies that
-capability. The existing team model/tool rules still apply. Every fallback must satisfy the
-workflow's provider, model, and egress lists. Container direct egress is restricted to DNS
-and the gateway; `allowedEgress` governs the gateway's upstream model/tool connections.
+(scheme, hostname, and optional port). An empty allowlist turns that capability off. The existing
+team model/tool rules still apply. Every fallback must satisfy the
+workflow's provider, model, and egress lists. Container direct egress goes to DNS
+and the gateway only; `allowedEgress` governs the gateway's upstream model/tool connections.
 
 `GET /v1/workflow-policies` shows the authenticated team's policies and approved container
 agents. The SDK sends Temporal's workflow type when initializing the run. Once a team defines
-workflow policies, unknown workflow types are refused. Existing teams without a `workflows`
-map retain Milestone 2 behavior. Limits requested by the SDK are capped by configured limits;
-the run's effective budget and workflow binding cannot change on retry. Current allowlists
+workflow policies, only listed workflow types can run. Teams without a `workflows`
+map keep Milestone 2 behavior. Limits requested by the SDK are capped by configured limits;
+the run's effective budget and workflow binding stay fixed across retries. Current allowlists
 are checked on every call; removing a bound policy revokes access. After changing budget caps,
-start a reviewed new run rather than changing an existing run's limits.
+start a reviewed new run to apply the new limits.
 
-Workers and team keys are trusted to select the correct workflow and run IDs. Restrict who
-can submit code to those workers; these headers are correlation, not proof of Temporal identity.
-Container step credentials cannot change their team/run binding or initialize another run.
+Workers and team keys select the workflow and run IDs, which act as correlation headers.
+Restrict who can submit code to those workers. Container step credentials stay bound to
+their team and run.
 
 ## Run accounting
 
 Each run defaults to 10,000 tokens and $5 estimated cost. Limits are initialized atomically
-and cannot be raised by a retry. They are scoped to the authenticated team and Temporal run
+and stay fixed across retries. They are scoped to the authenticated team and Temporal run
 UUID; `GET /v1/workflow-runs/{run_id}` returns only that team's accounting. Every attempted
 provider route reserves estimated input plus maximum output at its higher token price.
-Reported usage settles that reservation; missing usage and failed/ambiguous attempts keep
-the conservative charge. Fallbacks and activity retries reserve separately. Tool attempts
-charge their configured `costUsd`, including failed attempts. A refused reservation prevents
-the downstream call. Configure both input and output prices on **every** eligible model.
+Reported usage settles that reservation; attempts without reported usage and failed/ambiguous
+attempts keep the conservative charge. Fallbacks and activity retries reserve separately. Tool attempts
+charge their configured `costUsd`, including failed attempts. The downstream call runs once its
+reservation succeeds. Configure both input and output prices on **every** eligible model.
 
-These are estimates, not billing guarantees: input token estimates can differ from provider
-usage; an actual overrun is charged and blocks later calls. The SDK's run limit supplements
-the existing team budgets. It does not grant models, tools, or credentials.
+Costs are estimates. An actual overrun is charged and blocks later calls. The SDK's run limit
+supplements the existing team budgets; models, tools and credentials come from team policy.
 
 ## Deployment and recovery
 
 Compose installs Temporal with its own PostgreSQL volume, UI, a worker, and persistent Redis
 for gateway budget counters. Ports bind only to loopback: gateway 8080, Temporal 7233, UI
-8233. The fixture stack has public development passwords and is for evaluation.
+8233. The fixture stack uses public development passwords for evaluation.
 
 For Kubernetes, `deploy/charts/workflows` depends on the pinned
 [official Temporal chart](https://github.com/temporalio/helm-charts). It includes a dedicated
@@ -887,25 +882,24 @@ helm upgrade --install workflows deploy/charts/workflows -n workflows --wait --t
 Build `sdk/python/Dockerfile` with the repository root as context for your worker image;
 set `worker.image` to an image reachable by the cluster. Replace the example workflow with
 your registered workflows. The bundled Postgres and Redis are single-instance reference
-stores: provision backups and tested restores, storage classes, and availability before
-team production use. Redis needs AOF persistence and no eviction; run counters have no
-window/TTL. Retain them for the run's entire lifetime, including resets; remove the team's
-`agentworkflows:sandbox-budget:workflow:<team>:<run-id>` key only after replay/reset is no
-longer permitted. Back up both PostgreSQL history and Redis accounting.
+stores. For team production use, provision backups with tested restores, storage classes,
+and availability. Redis needs AOF persistence and no eviction; run counters are persistent.
+Retain them for the run's entire lifetime, including resets; remove the team's
+`agentworkflows:sandbox-budget:workflow:<team>:<run-id>` key once the run is past replay and
+reset. Back up both PostgreSQL history and Redis accounting.
 
-Temporal replays recorded activity results after a worker crash without calling the model
-again. Activities whose completion was **not recorded** can run again, including the window
-between a provider answering and Temporal acknowledging completion. There is no claim of
-exactly-once cloud inference. Unknown attempts remain charged; idempotent tools prevent
-duplicate publications. Version workflow code using Temporal's deployment/patching rules
-before changing the command sequence of running workflows.
+Temporal replays recorded activity results after a worker crash, reusing each recorded
+model answer. Temporal reruns an activity whose completion is still unrecorded, including one
+where the provider answered just before Temporal acknowledged completion. Those attempts
+remain charged, and idempotent tools prevent duplicate publications. Version workflow code
+using Temporal's deployment/patching rules before changing the command sequence of running workflows.
 
 Temporal history contains workflow inputs and activity results. Gateway DLP protects the
-provider/tool boundary and receipts, not already-written Temporal inputs. Restrict history
+provider/tool boundary and receipts. Restrict history
 access and retention; use Temporal payload encryption for sensitive history. Keep API keys
 in worker/gateway environments. Production Temporal and its UI require authentication,
-authorization, and TLS. The gateway verifies approval identities; direct Temporal clients
-can bypass that check and must be restricted to operators and workers. Use separate Temporal
+authorization, and TLS. The gateway verifies approval identities; restrict direct Temporal
+clients to operators and workers. Use separate Temporal
 namespaces/deployments for stronger trust boundaries, and restrict signals and updates.
 
 | Symptom | Next action |
@@ -940,8 +934,8 @@ approverRole: approver
 In the umbrella chart these fields live under
 `inference-gateway.sandboxPolicy.policy.policies[].workflows.<Workflow>`; see the
 existing ResearchWorkflow in `deploy/charts/agentworkflows/values.yaml`. Runtime
-settings overrides take precedence over YAML defaults. There is no new service,
-secret, environment variable or datastore migration.
+settings overrides take precedence over YAML defaults. Approval policies run on the
+existing services, secrets, environment variables and datastores.
 
 All approval fields are saved when the gateway starts a run, including cron/webhook
 starts. Settings changes apply to new runs; repeating a start's request ID keeps its
@@ -951,28 +945,27 @@ The enclosing eight-day run execution timeout can end a run earlier.
 
 Each verified subject (`sub`, otherwise `key_id`) can decide once. A positive vote
 counts toward the quorum; any eligible reviewer's rejection ends the gate immediately.
-An admin can review but still contributes only one vote. A repeated delivery of the
-same identity/decision is idempotent; changing a recorded vote is refused. Separate
+An admin's review counts as one vote. A repeated delivery of the
+same identity/decision is idempotent; a recorded vote is final. Separate
 keys count as separate identities, so use individual SSO accounts for human review
-and restrict who can create keys. This is not proof of separate natural persons.
+and restrict who can create keys.
 
-`POST /v1/workflow-runs/{run_id}/approve` still accepts only `{"approved": true|false}`.
-Its `approved` result describes that reviewer's vote, not the final quorum outcome.
+`POST /v1/workflow-runs/{run_id}/approve` accepts `{"approved": true|false}`.
+Its `approved` result describes that reviewer's vote; the quorum outcome appears in the run's progress.
 Inspect the run's `progress.required_approvals`, `approved_by`, `expires_at` (UTC), and
 `approver_role`. The console shows counts/deadlines and keeps partial reviews visible.
 Deadlines and duplicate decisions are enforced by synchronous Temporal update handlers,
-so gateway replicas cannot race past the quorum. Expiry fails the run with
-`ApprovalExpired`; votes at or after the deadline cannot revive it.
+so the quorum holds across gateway replicas. Expiry fails the run with
+`ApprovalExpired`, and the deadline is final.
 
-Approval disabled or spend below the saved threshold still yields an audited automatic
-decision without a human quorum. These settings govern `ApprovalWorkflow.approval()`;
-they do not insert gates into arbitrary workflow code. Workers and direct Temporal
-access remain trusted operator surfaces. Approval escalation is not implemented.
+With approval disabled, or spend below the saved threshold, the gateway records an audited
+automatic decision. These settings govern `ApprovalWorkflow.approval()`. Workers and direct
+Temporal access remain trusted operator surfaces.
 
 Upgrade the gateway first, then Python/TypeScript workers, before enabling nondefault
 quorum/expiry. New SDKs request `{"policy_version": 1}` from the worker-only
 `/approval-waiting` endpoint and wait for its policy before accepting reviews. Advanced
-policies reject old workers instead of falling back to one reviewer. Temporal patch
+policies require the upgraded workers. Temporal patch
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
 [two-reviewer Quickstart](quickstart.md#try-a-two-reviewer-policy).
@@ -982,13 +975,12 @@ reviewer and seven-day timeout. Configure a fresh run to try the new policy; see
 In **Members & keys → Invite a teammate**, choose a name, role, and project. Create and
 copy the invitation link, then share it privately. The recipient opens it and chooses
 **Accept invitation** to sign in. Links expire after 24 hours and can be redeemed once;
-a lost acceptance response requires a new invitation. The console grants 90 days of
+if an acceptance response is lost, create a new invitation. The console grants 90 days of
 access; admins can edit or revoke the resulting credential in Members & keys.
 
-A link is a bearer invitation: anyone holding it can receive the chosen access. The
-display name is assigned by the admin, not verified by an email provider. Use OIDC for
-company-verified identity and group-based access. Invitations do not change SSO policy
-or identity-provider group membership. Delivery is an explicit copy/share step.
+A link is a bearer invitation: anyone holding it can receive the chosen access, so share it
+privately. The admin assigns the display name. Use OIDC for
+company-verified identity and group-based access. Delivery is an explicit copy/share step.
 
 The API lists pending, accepted, revoked, and expired invitations without tokens or key
 values. Invitation credentials are encrypted with a key derived from the random link
@@ -1000,7 +992,7 @@ both invitation metadata and encrypted delivery state.
 Contracts: `GET/POST /v1/team/invitations`, `DELETE /v1/team/invitations/{id}`, and
 `POST /v1/auth/invitations/accept` with `{"token":"…"}`. Creation uses the same
 name/role/project/credential expiry fields as key creation. Acceptance returns a
-`CreatedKey` once and does not retry automatically. Python exposes `invitations()`,
+`CreatedKey` once. Python exposes `invitations()`,
 `create_invitation()`, `revoke_invitation()`, `accept_invitation()`; TypeScript uses
 `invitations()`, `createInvitation()`, `revokeInvitation()`, `acceptInvitation()`.
 
@@ -1010,25 +1002,24 @@ Team admins open **Team settings → Alert rules** to choose waiting approvals, 
 run budget thresholds, and slow model/tool steps. Select Slack, email, or webhook from the
 operator-approved destinations. Choose the percentage of a run's token/dollar budget and
 the slow-step threshold in milliseconds. Clear events or destinations to pause delivery.
-A missing destination points to operator setup instead of accepting a URL that bypasses
-the deployment's network policy.
+Destinations come from operator setup, which keeps them inside the deployment's network
+policy; when none is configured, the console points to that setup.
 
 The existing gateway sweep checks retained runs every 30 seconds. Events persist, and
 each run/event/channel has a stable delivery ID. Delivery retries up to five times with
-backoff. Already delivered events are not resent after a rule edit; enabling a rule can
-deliver retained events. Inspect attempted, retrying, delivered, or failed notification
-receipts in the run timeline. External services may duplicate a delivery after an ambiguous
-transport failure; webhook receivers should deduplicate by the supplied idempotency key.
+backoff. Rule edits keep each event's delivery record, so delivered events stay delivered;
+enabling a rule can deliver retained events. Inspect attempted, retrying, delivered, or failed notification
+receipts in the run timeline. Have webhook receivers deduplicate by the supplied idempotency key.
 Destinations and their credentials remain in the existing team notification policy.
 
-A failed run now includes `error.code` and safe recovery guidance. The console points to
+A failed run includes `error.code` and safe recovery guidance. The console points to
 step receipts and worker logs and explains what to check before a retry. Gateway responses
-do not copy exception messages that could contain inputs or credentials. Each existing
+carry safe error codes and guidance in place of raw exception messages. Each existing
 model/tool timeline step still shows its measured latency, cost, HTTP status, and receipt.
 
 API: `GET/PUT /v1/team/alert-rules`; PUT requires the current `If-Match` revision and
 `events`, `channels`, `budget_threshold` (0–1, exclusive of zero), and `slow_step_ms`.
-Changes conflict with concurrent team settings edits rather than overwriting them.
+A concurrent team settings edit returns a conflict, which preserves both edits for review.
 Python: `alert_rules()`, `set_alert_rules(rules, revision=...)`.
 TypeScript: `alertRules()`, `setAlertRules(rules, revision)`.
 
@@ -1050,16 +1041,15 @@ The workflow table adds, for recent runs of each workflow: outcomes (completed, 
 reviewer, failed, canceled, awaiting review, running), the completion rate among finished runs, the
 median and 95th-percentile run time, the median review wait, the average cost of a finished run,
 the slowest step by median time and the step costing the most. A rejected draft is a reviewer's
-decision, not a failure, so it is counted separately. Statuses come from Temporal, so a run is
+decision and is counted separately from failures. Statuses come from Temporal, so a run is
 as current as its last status refresh.
 
-Limits to keep in mind: the API reads at most the 200 most recent runs in the window and sets
-`truncated` when there were more; a run older than the team's retention is gone, so a 30-day
-window needs 30-day retention; review wait is an estimate between two receipts, not a measured
-timer; costs use configured prices, not invoices. Credentials bound to one project see only that
+The API reads the 200 most recent runs in the window and sets `truncated` when there were more.
+Insights cover retained runs, so a 30-day window uses 30-day retention. Review wait is computed
+between two receipts, and costs use configured prices. Credentials bound to one project see that
 project. Viewers can read insights.
 
 API: `GET /v1/workflow-insights?days=7&project=&workflow=` (`days` 1-30). A single run's
-detail (`GET /v1/workflow-runs/{run_id}`) includes `summary`; run listings do not.
+detail (`GET /v1/workflow-runs/{run_id}`) includes `summary`.
 Python: `workflow_insights(days=7, project=None, workflow=None)`; CLI: `agentworkflows insights --days 30`.
 TypeScript: `workflowInsights({ days, project, workflow })`.

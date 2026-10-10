@@ -43,6 +43,6 @@ Local Redis-compatible store for shared sandbox budget accounting.
 | --- | --- |
 | Minimal (chart defaults) | `helm install budget-redis deploy/charts/budget-redis` |
 
-This chart ships only the minimal profile; tune values inline for your environment.
+This chart ships the minimal profile; tune values inline for your environment.
 
 In GitOps installs these value files are applied by the matching Argo CD Application in `deploy/clusters/<env>/apps.yaml`; the commands above are for direct `helm` workstation checks.

@@ -6,29 +6,25 @@ the [EU AI Act](https://eur-lex.europa.eu/eli/reg/2024/1689/oj) (Regulation (EU)
 [ISO/IEC 42001:2023](https://www.iso.org/standard/81230.html). It also defines the `riskTier`
 semantics used across the model catalog and provenance records.
 
-The NIST mapping is explicitly versioned to AI RMF 1.0. It should be reviewed rather than carried
-forward unchanged when NIST publishes a later revision.
+The NIST mapping is versioned to AI RMF 1.0. Review it when NIST publishes a later revision.
 
 The machine-readable companion is
 [`platform/governance/control-framework-map.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/control-framework-map.yaml).
 That file carries the per-control framework citations and the risk-tier-to-control mapping; this
 document is the human-readable explanation.
 
-## What this is and is not
+## How to read the crosswalk
 
-The platform ships mechanisms, not certifications. Each row below points at a control that exists in the
-repo and the framework obligation it contributes evidence toward. A framework citation means "this
-control helps you meet that obligation," not "this deployment is conformant." Conformity is a
-property of your deployment, your use case, and your evidence, not of the platform alone. In particular,
-whether your deployment is an EU AI Act high-risk system depends on your use case (Annex III), which
-the platform cannot determine for you. See [docs/threat-model.md](threat-model.md) for the residual risks
-that none of these controls remove and [docs/production-readiness.md](production-readiness.md) for the
-control matrix and validation commands.
+Each row below points at a control that exists in the repo and the framework obligation it
+contributes evidence toward. A framework citation means "this control helps you meet that
+obligation." Conformity is established for your deployment, your use case, and your evidence. Your
+use case (Annex III) determines whether your deployment is an EU AI Act high-risk system. See
+[docs/threat-model.md](threat-model.md) for the threats these controls address and
+[docs/production-readiness.md](production-readiness.md) for the control matrix and validation commands.
 
-The platform also delegates several obligations to the operator. Where a framework expects something the
-platform does not implement (fundamental-rights impact assessment, conformity assessment, registration,
-post-market incident reporting to authorities), that work is yours. Those gaps are called out in the
-[Operator responsibilities](#operator-responsibilities) section.
+Some framework obligations are organizational and sit with the operator: fundamental-rights impact
+assessment, conformity assessment, registration, and post-market incident reporting to authorities.
+The [Operator responsibilities](#operator-responsibilities) section lists them.
 
 ## Risk-tier semantics
 
@@ -37,26 +33,25 @@ post-market incident reporting to authorities), that work is yours. Those gaps a
 [`platform/governance/model-provenance.yaml`](https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/model-provenance.yaml). The enum
 `low | medium | high` is validated by `VALID_RISK_TIERS` in
 [`scripts/model-catalog.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py) and re-checked in
-[`scripts/model-provenance.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-provenance.py). Until now the field was validated but
-not defined. This section gives it meaning: what each tier represents and which controls it mandates.
+[`scripts/model-provenance.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-provenance.py). This section defines what each tier
+represents and which controls it mandates.
 
 `riskTier` is the model artifact's inherent risk: its capability, autonomy, and blast radius if it
-misbehaves. It is distinct from two neighbouring concepts:
+misbehaves. It sits alongside two neighbouring concepts:
 
 - `dataClassification` (`public | internal | confidential | restricted`) is the sensitivity of the
-  data the model is pointed at, not the model's own risk. A low-tier model can still handle
-  confidential data; the two fields are set independently.
-- An EU AI Act "high-risk system" is a property of the deployment use case, not the model artifact.
-  A `riskTier: high` model is the one most likely to make a deployment high-risk, but the operator
-  makes that determination.
+  data the model is pointed at. A low-tier model can handle confidential data; the two fields are
+  set independently.
+- An EU AI Act "high-risk system" is a property of the deployment use case. A `riskTier: high`
+  model is the one most likely to make a deployment high-risk, and the operator makes that
+  determination.
 
 Higher tiers inherit every control of the tiers below them.
 
 ### low
 
 Small, bounded, non-autonomous models with low blast radius: laptop smoke models, single-purpose
-embedding models, CPU demo models. A failure degrades a demo or a retrieval result, not a customer
-decision or an autonomous action. The shipped catalog rates `qwen2.5:0.5b`, `qwen3.5:0.8b`, and
+embedding models, CPU demo models. A failure affects a demo or a retrieval result. The shipped catalog rates `qwen2.5:0.5b`, `qwen3.5:0.8b`, and
 `BAAI/bge-small-en-v1.5` as low.
 
 Mandated controls: governed provenance (`C-PROV`), promotion request with separation of duties
@@ -82,17 +77,16 @@ pinned inventory or registry digest before production, and the coding-agent eval
 ### high
 
 Models the operator designates as decision-supporting, customer-facing, or otherwise consequential,
-where an error, bias, or injection can affect a person or a regulated decision. No model in the
-shipped catalog is rated high; this tier is reserved for the operator to apply when a deployment's use
-case warrants it. It is the tier most likely to make the deployment EU AI Act high-risk.
+where an error, bias, or injection can affect a person or a regulated decision. The operator applies
+this tier when a deployment's use case warrants it; the shipped catalog rates its models low or medium. It is the tier most likely to make the deployment EU AI Act high-risk.
 
 Mandated controls: everything in medium, plus explicit SLO and burn-rate alert coverage (`C-SLO`),
 documented retention and data-classification review (`C-RETAIN`), and reviewed RBAC with a named
 human-oversight owner (`C-RBAC`). The hardened agent-sandbox workspace runtime (`C-ISOLATE`) is
 the standard at every tier (ADR 0010). High-tier promotion expects:
 
-- Two named approvers on the promotion request. Separation of duties (requester is not an approver)
-  is already enforced by [`scripts/model-catalog.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py); high tier adds a
+- Two named approvers on the promotion request. Separation of duties (requester and approver are
+  different people) is enforced by [`scripts/model-catalog.py`](https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py); high tier adds a
   documented human-oversight owner.
 - `dataClassification` reviewed and recorded; `restricted` data requires explicit sign-off in the
   customer handoff.
@@ -138,8 +132,8 @@ The four NIST AI RMF functions map to the platform as follows.
 - **Measure.** Evaluation and monitoring: eval evidence on promotion (`C-EVAL`), audit logging
   (`C-AUDIT`), admission/budget measurement (`C-ADMIT`), and SLOs (`C-SLO`).
 - **Manage.** Containment and response: approved-only serving (`C-ALLOW`), egress governance
-  (`C-EGRESS`), prompt secret detection (`C-SECRET`), budgets (`C-ADMIT`), kernel-isolated agent
-  hardened agent workspaces (`C-ISOLATE`), and signed-image admission (`C-SUPPLY`).
+  (`C-EGRESS`), prompt secret detection (`C-SECRET`), budgets (`C-ADMIT`), hardened agent
+  workspaces (`C-ISOLATE`), and signed-image admission (`C-SUPPLY`).
 
 ## EU AI Act technical-obligation coverage
 
@@ -162,11 +156,11 @@ Chapter III, Section 2 technical obligations:
   budgets (`C-ADMIT`), SLOs (`C-SLO`), egress containment (`C-EGRESS`), isolation of code-executing
   agent workspaces (`C-ISOLATE`), and signed-image admission (`C-SUPPLY`).
 - **Article 72 (post-market monitoring).** SLO burn-rate alerting and the audit/metrics surface
-  (`C-SLO`, `C-AUDIT`) feed operational monitoring; reporting to authorities remains the operator's.
+  (`C-SLO`, `C-AUDIT`) feed operational monitoring; the operator handles reporting to authorities.
 
 ## ISO/IEC 42001 clause coverage
 
-The platform supports an AI management system rather than being one. It maps onto the standard at the
+The platform supports an AI management system. It maps onto the standard at the
 operational-control and lifecycle clauses:
 
 - **Clause 5.3 / 6.1 (roles, risk treatment).** Named owners and quota plans (`C-RBAC`), promotion
@@ -181,8 +175,7 @@ operational-control and lifecycle clauses:
 
 ## Operator responsibilities
 
-The platform does not implement, and cannot substitute for, the following. These are the operator's
-obligations under one or more of the frameworks:
+The operator owns the following obligations under one or more of the frameworks:
 
 - Determining whether a deployment is an EU AI Act high-risk system (Annex III) or a prohibited
   practice (Article 5).
@@ -196,7 +189,7 @@ obligations under one or more of the frameworks:
 - Setting `riskTier` and `dataClassification` to reflect the actual use case, and applying the
   high-tier requirements above when a deployment warrants them.
 - Organizational AI policy, training, supplier agreements, and the management-review cadence that an
-  ISO/IEC 42001 AIMS requires beyond the technical controls.
+  ISO/IEC 42001 AIMS requires alongside the technical controls.
 
 ## Maintaining the crosswalk
 

@@ -17,7 +17,7 @@ The workload is missing required labels, uses `latest`, lacks CPU or memory requ
 
 ## Mitigation
 
-Fix the manifest. Do not bypass policy unless the exception is time-boxed, documented, and reviewed. Use audit mode only for rollout of new signature verification rules.
+Fix the manifest. Keep policy enforced, and make any exception time-boxed, documented, and reviewed. Reserve audit mode for rolling out new signature verification rules.
 
 ## Evidence
 

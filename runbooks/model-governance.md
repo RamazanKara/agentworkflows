@@ -55,12 +55,12 @@ The 2026-09-23 review records Qwen3.8-27B, Qwen3.8-Flash-Next, GLM-5.3-Flash,
 DeepSeek-V4.1-Flash, and the existing Qwen3.6-35B-A3B comparison candidate. Each
 entry links to an immutable upstream model card and records its review date.
 See [model selection](https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md) for licenses, context sizes,
-compatibility limits, and upgrade notes.
+compatibility, and upgrade notes.
 
-These are discovery records, not promotion approvals. They need real-model evals,
-load tests, pinned artifact inventories, and reviewed promotion requests before
-entering gateway allowlists. In particular, Qwen3.8-Flash-Next uses Qwen Community
-1.0 terms; do not copy Apache-2.0 metadata from another Qwen model.
+These are discovery records. Each one enters gateway allowlists through the
+promotion workflow above: real-model evals, load tests, pinned artifact inventories,
+and a reviewed promotion request. Qwen3.8-Flash-Next uses Qwen Community 1.0 terms;
+record that license in its own metadata.
 
 The local CPU smoke and customer CPU profiles retain their existing models and
 reverified Ollama weight-layer digests. The approved coding and embedding profiles

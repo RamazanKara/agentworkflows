@@ -37,8 +37,7 @@ The client includes bounded retry/backoff and a streaming helper (`chat_stream`,
 delay, as long as the header stays within the `retry_after_cap` constructor argument
 (default `30.0` seconds). If the gateway advertises a delay beyond the cap (typically a
 budget-window 429, where `Retry-After` is the time until the window resets and can be hours),
-the client raises `GatewayRetryAfterError` immediately without sleeping, because retrying
-sooner cannot succeed; its `retry_after` attribute says how many seconds to wait before coming
+the client raises `GatewayRetryAfterError` immediately; its `retry_after` attribute says how many seconds to wait before coming
 back. `GatewayRetryAfterError` subclasses `httpx.HTTPStatusError`, so existing handlers keep
 working. For typed response models and the full
 OpenAI parameter surface, point the official
@@ -48,5 +47,5 @@ OpenAI parameter surface, point the official
 Release tags are built in an unprivileged CI job and attached to the GitHub release with
 `sdk-checksums.txt`. The package version must exactly match the Git tag; the release workflow
 rejects mismatches before publishing. Follow the [release verification guide](../docs/release-verification.md)
-to check downloaded files. PyPI publishing is optional and disabled by default; see
+to check downloaded files. PyPI publishing is optional and opt-in; see
 [distribution setup](../docs/distribution.md#optional-pypi-publishing).

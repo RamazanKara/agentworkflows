@@ -8,10 +8,10 @@ The retention policy lives in `platform/governance/data-retention.yaml`.
 
 Default policy:
 
-- Gateway and RAG audit logs keep hashes, lengths, IDs, timing, status, usage, and result IDs. They must not store raw prompts, completions, or RAG queries.
+- Gateway and RAG audit logs keep hashes, lengths, IDs, timing, status, usage, and result IDs. Raw prompts, completions, and RAG queries stay out of the audit logs.
 - Generated evidence is retained for release and audit review, with sample files committed and generated run files ignored.
 - RAG knowledge and vector-store collections require review before customer use.
-- Coding-agent workspace PVC data should be purged on tenant offboarding.
+- Purge coding-agent workspace PVC data on tenant offboarding.
 - Model governance evidence has longer retention because it supports model lifecycle audit.
 
 ## Workflow records and captured content
@@ -38,22 +38,23 @@ and the `redaction` mode. After content expiry the API returns `content: null` w
 
 The run monitor checks Temporal every 30 seconds and applies a fixed expiry at Temporal's
 close time plus the run retention period for completed, failed, canceled, terminated,
-timed-out, and continued-as-new runs. Inspection also applies retention. Reads and duplicate worker
-initialization do not extend deadlines. Active runs do not get a run-record TTL.
-Shorter existing TTLs, including content TTLs, are preserved. Expired run IDs are pruned
-from project indexes during listing and monitoring, without breaking pagination.
+timed-out, and continued-as-new runs. Inspection also applies retention. Deadlines stay fixed
+across reads and duplicate worker initialization. Active runs keep their run records until
+they close. Shorter existing TTLs, including content TTLs, are preserved. Expired run IDs are
+pruned from project indexes during listing and monitoring, and pagination stays consistent.
 
 An idempotent online state migration runs in the monitor after gateway startup. It scans
 existing run metadata in batches and asks Temporal for each execution's state, because
-older Redis metadata did not store terminal status. It backfills terminal TTLs without
-resetting active runs, audit chains, budgets for other runs, or identity/session keys.
+older Redis metadata predates the terminal status field. It backfills terminal TTLs and leaves
+active runs, audit chains, budgets for other runs, and identity/session keys untouched.
 Already-old terminal records expire immediately. When Temporal has already purged a run,
 the migration starts its final Redis retention window at discovery. Transient failures
 leave the migration pending for retry; check gateway warnings, Redis, and Temporal health.
 
-These TTLs do not erase Temporal history, backups, exported audit logs, or workflow side
-effects. Configure Temporal namespace retention and backup expiry separately. Changing
-retention settings affects new deadlines; existing earlier deadlines are never extended.
+These TTLs apply to the gateway's Redis records. Temporal history, backups, exported audit
+logs, and workflow side effects follow their own retention: configure Temporal namespace
+retention and backup expiry separately. Changing retention settings applies to new deadlines;
+existing earlier deadlines stay in place.
 
 ## Validate Retention
 
@@ -71,7 +72,7 @@ Reports are written under `results/retention/`.
 
 Before handoff, confirm:
 
-- audit logs do not contain raw prompt, completion, or query text
+- audit logs are free of raw prompt, completion, and query text
 - generated evidence is retained according to customer policy
 - RAG knowledge and vector-store collections have been approved for the environment
 - agent workspace PVCs have an offboarding and purge process
@@ -79,8 +80,8 @@ Before handoff, confirm:
 
 ## Erasing a RAG Source (Right-to-Erasure)
 
-Ingestion is upsert-only, so removing a source from the manifest leaves its vectors in
-Qdrant. To purge a source's vectors (right-to-erasure or source decommission), delete by
+Ingestion is upsert-only, so a source's vectors stay in Qdrant until you delete them,
+including after the source leaves the manifest. To purge a source's vectors (right-to-erasure or source decommission), delete by
 `source_id`:
 
 ```bash

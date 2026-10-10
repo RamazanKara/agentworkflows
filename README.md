@@ -1,6 +1,6 @@
 # AgentWorkflows
 
-**Put your team's AI agents to work—with approvals, spend limits, and an audit trail in one platform.**
+**Put your team's AI agents to work, with approvals, spend limits, and an audit trail in one platform.**
 
 [![CI](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml/badge.svg)](https://github.com/RamazanKara/agentworkflows/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-AgentWorkflows-0b7285)](https://ramazankara.github.io/agentworkflows/)
@@ -21,12 +21,12 @@ Gemini. Keep provider keys on the server and workflow code in Python or TypeScri
 
 ## Built for teams shipping agents
 
-- **Developers:** turn a working script into a durable job without writing an approval app, usage ledger, and scheduler.
+- **Developers:** turn a working script into a durable job, with the approval app, usage ledger, and scheduler built in.
 - **Team leads:** review drafts before publication and see what each run costs.
 - **Platform engineers:** provide shared model access with scoped roles, budgets, and retained evidence.
 
 The platform is self-hosted and built for cloud providers; local models and GPUs are optional. The current
-release is **v0.9.0**. No hosted service is offered. Images and Helm charts are on GHCR; the Python wheel, source
+release is **v0.9.0**. Images and Helm charts are on GHCR; the Python wheel, source
 archive and TypeScript SDK are assets of the
 [GitHub release](https://github.com/RamazanKara/agentworkflows/releases/tag/v0.9.0).
 
@@ -40,19 +40,18 @@ cd agentworkflows
 docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 ```
 
-Compose pulls the published v0.9.0 images; image downloads are setup time, outside the console walkthrough.
-No cloud key, GPU, or Kubernetes cluster is needed. Once the stack is ready:
+Compose pulls the published v0.9.0 images. The walkthrough runs on your laptop with simulated
+models, so you can start without a cloud key, GPU, or Kubernetes cluster. Once the stack is ready:
 
 1. Open [the console](http://127.0.0.1:8080/console/) and sign in with `local-development-only`.
 2. In **Get started**, check readiness and start the sample Research workflow.
 3. Read the draft, approve it, and inspect the completed run's timeline and receipts.
 
-The demo uses simulated models and local tools: no provider is billed and nothing is
-published externally. For the scripted approval and audit check, run
+The demo uses simulated models and local tools, so runs stay on your machine and cost
+nothing. For the scripted approval and audit check, run
 `python scripts/first-approved-run.py compose`. See the [full quickstart](docs/quickstart.md)
-for real-provider setup and troubleshooting. The [verification record](docs/release-verification.md)
-separates native checks from container acceptance. The 60-second walkthrough excludes setup;
-it is not a cold-install benchmark.
+for real-provider setup and troubleshooting, and the [verification record](docs/release-verification.md)
+for release checks. The 60-second walkthrough starts once the stack is running.
 
 ## What your team gets
 
@@ -72,16 +71,16 @@ it is not a cold-install benchmark.
 ## Compared with building it yourself
 
 AgentWorkflows packages the team application around model routing and Temporal execution.
-It does not embed LiteLLM. Build your own integration when you need full control over the
-application or already maintain the surrounding product.
+Build your own integration when you want full control over the application or already
+maintain the surrounding product.
 
 | Decision | AgentWorkflows | Your own gateway + Temporal application |
 | --- | --- | --- |
-| Time to first approved run | 3 console steps after setup; `agentworkflows check` repeats the run against your own install and times each stage against a 300-second budget. | Depends on your existing application; no universal time estimate. |
+| Time to first approved run | 3 console steps after setup; `agentworkflows check` repeats the run against your own install and times each stage against a 300-second budget. | Depends on your existing application. |
 | What you must build | Workflow logic, real data/tool integrations, and deployment configuration. | Those integrations plus approval screens, identity wiring, per-run accounting, audit linkage, and operations UX. |
 | What you get | One console and API for runs, review, access, spend, templates, triggers, and evidence. | The component capabilities you choose, with full control over the application. |
 | What you operate | Gateway, workers, Temporal, Redis, storage, backups, and upgrades. | Your components and their integration. |
-| Tradeoff | A narrower, opinionated product. | More implementation and maintenance; more freedom over provider coverage and UX. |
+| Approach | An integrated, opinionated product. | More implementation and maintenance; more freedom over provider coverage and UX. |
 
 [Build-or-adopt decision guide](docs/decision-guide.md).
 
@@ -110,10 +109,9 @@ Provider credentials stay on the gateway. Team/project authorization covers runs
 settings, and exports. Browser sign-in uses HttpOnly sessions; OIDC uses PKCE. Workflow
 secrets are encrypted with an operator-managed key. Content capture has its own retention.
 
-Hash chains detect edits and internal gaps in retained receipts. Detecting tail truncation
-or replacement requires external head anchors and restart links. Unreported actions cannot
-be proven. Inputs and results also live in Temporal history; configure its retention,
-provider retention, and backups separately.
+Hash chains detect edits and internal gaps in retained receipts. External head anchors and
+restart links also detect tail truncation or replacement. Inputs and results also live in
+Temporal history; configure its retention, provider retention, and backups separately.
 
 [Security overview](docs/security-overview.md) · [Threat model](docs/threat-model.md) ·
 [Data lifecycle](docs/team-lifecycle.md) · [Audit runbook](runbooks/audit-chain.md).
@@ -126,8 +124,9 @@ Report vulnerabilities through [SECURITY.md](SECURITY.md).
 | Run a workflow | [Quickstart](docs/quickstart.md) · [Template gallery](docs/templates.md) |
 | Build your workflow | [Concepts](docs/concepts.md) · [SDK reference](docs/sdk-reference.md) |
 | Deploy for a team | [Helm install](docs/install-kubernetes.md) · [Single-tenant reference](docs/single-tenant.md) · [Production checklist](docs/kubernetes-production-checklist.md) |
+| Deploy with GitOps | Generate the Argo CD overlay pinned to this release: `make customer-overlay CUSTOMER_REPO_URL=<your-repo> CUSTOMER_REVISION=v0.9.0` ([guide](docs/getting-started.md#customer-owned-kubernetes)) |
 | Operate and recover | [Runbooks](runbooks/README.md) · [Release verification](docs/release-verification.md) |
-| Track the product | [Roadmap](ROADMAP.md) · [Product gaps](docs/PRODUCT-GAPS.md) · [Changelog](CHANGELOG.md) |
+| Track the product | [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) |
 
 [Full documentation](https://ramazankara.github.io/agentworkflows/).
 Licensed under [Apache-2.0](LICENSE); attribution in [NOTICE](NOTICE).

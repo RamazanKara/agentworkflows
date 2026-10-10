@@ -1,10 +1,10 @@
 # Runtime Threat Detection Runbook
 
 Admission control ([Kyverno](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/policies/kyverno/policies.yaml)) and default-deny
-NetworkPolicies decide *what is admitted* and *where pods may connect*. Neither observes what a pod
-*does* after it starts. The threat model centers on indirect/RAG prompt injection and a hijacked
-coding agent, post-exploitation behavior that preventive controls cannot see. This runbook covers
-the optional detective layer that closes that gap.
+NetworkPolicies decide *what is admitted* and *where pods may connect*. The optional detective layer in
+this runbook observes what a pod *does* after it starts. The threat model centers on indirect/RAG
+prompt injection and a hijacked coding agent, and runtime detection covers that post-exploitation
+behavior.
 
 ## What It Detects
 
@@ -18,7 +18,7 @@ Falco (or Tetragon) watches syscalls/eBPF events and raises alerts on behavior s
 
 ## Deploy (Opt-In)
 
-Runtime detection is **not** part of the default GitOps sync because it runs a privileged/eBPF
+Runtime detection is **opt-in** because it runs a privileged/eBPF
 DaemonSet, which the platform's own `disallow-privileged` Kyverno policy blocks in AI namespaces.
 
 1. Deploy into a namespace **excluded** from the disallow-privileged policy. The Falco chart uses

@@ -40,7 +40,7 @@ Run:
 
     make toolchain-report
 
-The command writes JSON and Markdown reports under `results/toolchain/`. Attach the Markdown report to customer handoff notes when strict validation cannot be run directly on the customer's workstation.
+The command writes JSON and Markdown reports under `results/toolchain/`. Attach the Markdown report to customer handoff notes when strict validation runs on a workstation other than the customer's.
 
 ## Full Validation
 
@@ -48,7 +48,7 @@ Run:
 
     make validate-full
 
-This first checks the `strict` tool profile, then runs `make validate` with `REQUIRE_FULL_TOOLCHAIN=1`. Missing strict tools should be fixed before customer release or production-readiness sign-off.
+This first checks the `strict` tool profile, then runs `make validate` with `REQUIRE_FULL_TOOLCHAIN=1`. Install any missing strict tools before customer release or production-readiness sign-off.
 
 ## Customer Notes
 

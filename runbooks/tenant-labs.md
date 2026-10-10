@@ -46,11 +46,11 @@ Use a custom spec and output directory when onboarding a customer team:
 
     TENANT_SPEC=tenants/onboarding/coding-agents.yaml TENANT_OUTPUT=.out/tenants make tenant-onboard
 
-Generate the regulated/offline profile when a team must run without external CIDR egress:
+Generate the regulated/offline profile when a team runs with platform-internal egress only:
 
     make tenant-onboard-regulated
 
-The regulated/offline spec is `tenants/onboarding/regulated-offline-coding-agents.yaml`. It adds compliance and data-classification labels, renders no external CIDR egress, disables default job-management RBAC, and records the compliance contract in the generated trace ConfigMap.
+The regulated/offline spec is `tenants/onboarding/regulated-offline-coding-agents.yaml`. It adds compliance and data-classification labels, renders platform-internal egress only, turns off default job-management RBAC, and records the compliance contract in the generated trace ConfigMap.
 
 Review generated egress CIDRs, RBAC group names, quotas, PVC size, and storage class before applying the artifacts to a customer cluster.
 
@@ -62,4 +62,4 @@ Review generated egress CIDRs, RBAC group names, quotas, PVC size, and storage c
 
 ## Customer Adaptation
 
-Customer clusters should keep the labels and trace contract but can tune quotas, RBAC subjects, and network allowlists to match their team and compliance boundaries. Keep default-deny egress unless the tenant has an approved dependency.
+Customer clusters keep the labels and trace contract and tune quotas, RBAC subjects, and network allowlists to match their team and compliance boundaries. Keep default-deny egress, and add allowances for approved dependencies only.

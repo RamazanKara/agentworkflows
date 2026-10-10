@@ -16,7 +16,7 @@ or:
 
     Authorization: Bearer <key>
 
-The services store and compare only SHA-256 hashes from `API_KEY_SHA256S`. Plaintext keys should come from the customer's secret manager, CI secret store, or local operator shell.
+The services store and compare only SHA-256 hashes from `API_KEY_SHA256S`. Source plaintext keys from the customer's secret manager, CI secret store, or local operator shell.
 
 The inference gateway also supports optional JWT bearer validation beside API-key hashes:
 
@@ -33,9 +33,9 @@ The gateway validates HS256 `oct`, RS256 `RSA`, and ES256 P-256 `EC` JWKS keys, 
 
 ### Per-tenant sandbox binding
 
-Set `auth.jwt.tenantClaim` to bind the sandbox id to a verified JWT claim. When set, the gateway takes the sandbox from that claim instead of trusting the client `X-Sandbox-ID` header: a request whose header contradicts the claim is rejected with `403` and reason `sandbox_identity_mismatch`, and a request missing the header adopts the bound sandbox. This also scopes the read-only `GET /v1/usage` and `GET /v1/sandbox/budget` endpoints - a bound caller can only ever read its own tenant's usage and budget, never another tenant's by setting a different header. The customer overlay ships this on as a template (`tenantClaim: sandbox_id`); the operator completes the placeholder issuer/JWKS/audience with their real IdP.
+Set `auth.jwt.tenantClaim` to bind the sandbox id to a verified JWT claim. When set, the gateway takes the sandbox from that claim instead of trusting the client `X-Sandbox-ID` header: a request whose header contradicts the claim is rejected with `403` and reason `sandbox_identity_mismatch`, and a request missing the header adopts the bound sandbox. This also scopes the read-only `GET /v1/usage` and `GET /v1/sandbox/budget` endpoints - a bound caller reads its own tenant's usage and budget, whatever header it sends. The customer overlay ships this on as a template (`tenantClaim: sandbox_id`); the operator completes the placeholder issuer/JWKS/audience with their real IdP.
 
-Without a binding (`tenantClaim` empty, the base-chart default), the gateway is header-trusted: any valid key or token may assert any sandbox via `X-Sandbox-ID`. This is the documented insecure default for the local lab and single-tenant deployments.
+With `tenantClaim` empty (the base-chart default), the gateway is header-trusted: any valid key or token may assert any sandbox via `X-Sandbox-ID`. This default is for the local lab and single-tenant deployments; set `tenantClaim` to bind tenants.
 
 ## API-Key Records (per-key scopes, expiry, sandbox binding, budget)
 
@@ -44,9 +44,9 @@ Beside the flat `API_KEY_SHA256S` allowlist, the gateway can load an optional **
 - `sandbox` - binds the key to one sandbox id, enforced exactly like the JWT `tenantClaim` (a mismatched `X-Sandbox-ID` is `403`; a missing one adopts the binding);
 - `scopes` - recorded on the audit principal for attribution;
 - `expires_at` - epoch seconds or ISO-8601; a presented-but-expired key is rejected with `401` and reason `api_key_expired`;
-- `budget` - per-key overrides of the sandbox request / prompt-char / estimated-token budgets, applied to that request (and reflected in `GET /v1/usage`). Each field follows the platform convention that **`0` means unlimited**, not "deny": to tighten a key set a small positive limit, never `0`. A key must not appear in both `apiKeyHashes` and a record - the record always wins (binding, expiry, and scopes), but list it in one place to keep the intent clear.
+- `budget` - per-key overrides of the sandbox request / prompt-char / estimated-token budgets, applied to that request (and reflected in `GET /v1/usage`). Each field follows the platform convention that **`0` means unlimited**: to tighten a key, set a small positive limit. List each key in one place, either `apiKeyHashes` or a record. When a key appears in both, the record wins (binding, expiry, and scopes).
 
-The file is matched by SHA-256 (constant-time), so it never stores plaintext keys. A **malformed records file fails the gateway closed at startup** (the pod does not start) rather than silently disabling auth. No records file configured means today's flat-hash behavior is unchanged.
+The file is matched by SHA-256 (constant-time) and holds only key hashes. The gateway validates the records file at startup and **fails closed on a malformed records file**: the pod stays down until the file is fixed, so auth stays on. When no records file is configured, the gateway uses the flat-hash allowlist.
 
 Example `key-records.json`:
 
@@ -140,24 +140,23 @@ Mount `SandboxPolicySet` to narrow per-sandbox limits:
             requestLimit: 100
 
 The gateway exposes `GET /v1/models` for approved models and `GET /readyz` for runtime-aware readiness. `/readyz` omits backend URLs and secrets.
-Each listed model's `owned_by` names its provider backend. Routes marked `simulated: true` (the Compose demo's fakes) are listed with `"simulated": true`, and the console then tells people that no provider is billed.
+Each listed model's `owned_by` names its provider backend. Routes marked `simulated: true` (the Compose demo's fakes) are listed with `"simulated": true`, and the console marks them as unbilled.
 
 ## Human SSO for Operator Dashboards
 
-Two distinct auth surfaces exist in this platform; do not conflate them:
+The platform has two distinct auth surfaces:
 
 - **Machine auth on the data plane** - the inference gateway and RAG service authenticate *workloads* (agents, apps, CI) with the API keys, API-key records, and JWTs described above. This is what gates `POST /v1/chat/completions` and friends.
-- **Human SSO on the control plane** - the *operator dashboards* (Grafana, Argo CD) authenticate *people* via your OIDC identity provider. This is unrelated to the gateway's machine auth and never grants access to tenant inference traffic.
+- **Human SSO on the control plane** - the *operator dashboards* (Grafana, Argo CD) authenticate *people* via your OIDC identity provider. This is separate from the gateway's machine auth; tenant inference traffic stays gated by the data-plane credentials.
 
-The platform does **not** run an identity provider. The snippets below are operator templates that wire Grafana and Argo CD to an IdP you already operate (Keycloak, Auth0, Okta, Microsoft Entra ID, Google Workspace, etc.). Resolve `issuer`, auth, token, and userinfo/JWKS URLs from the IdP discovery document at `https://<issuer>/.well-known/openid-configuration`, and source every client secret from your secret manager - never commit it.
+The snippets below are operator templates that wire Grafana and Argo CD to the identity provider you operate (Keycloak, Auth0, Okta, Microsoft Entra ID, Google Workspace, etc.). Resolve `issuer`, auth, token, and userinfo/JWKS URLs from the IdP discovery document at `https://<issuer>/.well-known/openid-configuration`, and source every client secret from your secret manager.
 
 ### Grafana OIDC
 
 Grafana ships as part of the `kube-prometheus-stack` Application in [deploy/observability/applications.yaml](https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml). Add OIDC under the chart's `grafana.grafana.ini` and map an IdP group to the Grafana admin role. Template - replace the placeholders:
 
     grafana:
-      # Source GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET from a Secret via grafana.envFromSecret;
-      # do not inline the client secret here.
+      # Source GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET from a Secret via grafana.envFromSecret.
       grafana.ini:
         server:
           root_url: https://grafana.example.com/
@@ -203,7 +202,7 @@ Argo CD authenticates operators through its `argocd-cm`/`argocd-rbac-cm` ConfigM
       policy.csv: |
         g, platform-admins, role:admin
 
-Human SSO for these dashboards is an operator responsibility outside AgentWorkflows' data-plane security boundary; see [Security overview](https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md) for where that boundary sits.
+The operator owns human SSO for these dashboards; see [Security overview](https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md) for where the data-plane security boundary sits.
 
 ## Troubleshooting
 

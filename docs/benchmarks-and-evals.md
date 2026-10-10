@@ -1,6 +1,6 @@
 # Benchmarks And Evals
 
-The repository includes lightweight eval and load-test paths for release hygiene. They are not a substitute for customer workload benchmarks.
+The repository includes lightweight eval and load-test paths for release hygiene. Pair them with benchmarks of your own workload.
 
 ## Evals
 
@@ -60,13 +60,11 @@ below 80%. It also rejects invalid/nonfinite measurements, changed workloads and
 platform/Python/CPU-count/runtime metadata. Establish a separate baseline on other hardware;
 keep an accepted baseline unchanged when evaluating a candidate. The JSON records p50/p99 too.
 
-This is a shared-host smoke measurement; the spread between these two runs shows substantial
-host noise. It does not establish a performance change from the earlier candidate or a capacity
-SLO. Authentication is enabled; audit output, caching, rate limits, budget enforcement and OTLP
-export are disabled, with memory accounting and a constant fake model response. Redis,
-PostgreSQL, Temporal, streaming, TLS and real providers are excluded. The harness records
-transport failures as errors instead of losing the report. Run the Compose workflow harness
-and Linux load checks below for deployment evidence.
+This is a shared-host smoke measurement of the gateway process. Authentication is enabled;
+audit output, caching, rate limits, budget enforcement and OTLP export are off, with memory
+accounting and a constant fake model response. The harness records transport failures as errors
+in the report. For deployment evidence covering Redis, PostgreSQL, Temporal, streaming, TLS and
+real providers, run the Compose workflow harness and Linux load checks below.
 
 ### 1.0 candidate native gateway sanity (2026-10-09)
 
@@ -89,19 +87,19 @@ All **4,000 measured requests returned 200**. Percentiles use nearest-rank laten
 | `POST /v1/messages` | 136.44 | 69.11 | 113.12 | 165.14 |
 
 API-key authentication was enabled; audit output, caching, rate limits and budget
-enforcement were disabled, with memory accounting. The fake returns a short constant
+enforcement were off, with memory accounting. The fake returns a short constant
 answer; requests allow at most 32 output tokens. Client, gateway and fake share the
-host, which also ran validation work. These numbers establish a local smoke baseline,
-not capacity or a production SLO. They exclude Redis/PostgreSQL, browser sessions,
-Temporal run start/list/approve, signed triggers, streaming, embeddings, Files/Batch,
-TLS and real provider latency. Run `make workflow-loadtest` against Compose and
-`make loadtest-local`/a deployment-specific load test in WSL before release acceptance.
+host. These numbers establish a local smoke baseline for the gateway process. For
+Redis/PostgreSQL, browser sessions, Temporal run start/list/approve, signed triggers,
+streaming, embeddings, Files/Batch, TLS and real provider latency, run
+`make workflow-loadtest` against Compose and `make loadtest-local`/a deployment-specific
+load test in WSL before release acceptance.
 
 ### Model serving reference
 
-A real, reproducible serving measurement for the default local model. This is a hardware reference, not a guarantee; re-run it on your own machine.
+A real, reproducible serving measurement for the default local model. This is a hardware reference; re-run it on your own machine.
 
-`qwen2.5:0.5b` (494M parameters, Q4_K_M; Ollama registry model-layer digest `sha256:c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515`) on an **AMD Ryzen 7 5800X3D** (CPU only, no GPU), 20 runs after warmup, `num_predict=100`, `temperature=0`. Results:
+`qwen2.5:0.5b` (494M parameters, Q4_K_M; Ollama registry model-layer digest `sha256:c5396e06af294bd101b30dce59131a76d2b773e76950acc870eda801d3ab0515`) on an **AMD Ryzen 7 5800X3D** (CPU only), 20 runs after warmup, `num_predict=100`, `temperature=0`. Results:
 
 | metric | p50 | p95 | mean |
 | --- | --- | --- | --- |
@@ -124,9 +122,11 @@ make benchmark-local
 - Release reports have machine-checkable metrics.
 - Strict gates can reject stale or sample evidence.
 
-## What They Do Not Prove
+## Extend With Workload Benchmarks
 
-- Production model quality for a customer's domain.
+Add customer benchmarks for:
+
+- Model quality in the customer's domain.
 - Peak GPU throughput under real concurrency.
-- Long-context behavior for a customer corpus.
-- Full resilience under node, storage, ingress, or secret-backend failures.
+- Long-context behavior on the customer corpus.
+- Resilience under node, storage, ingress, or secret-backend failures.

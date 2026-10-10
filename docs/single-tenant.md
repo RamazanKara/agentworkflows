@@ -3,20 +3,19 @@
 Give one customer one namespace, one gateway URL, dedicated database credentials,
 a Redis instance, and a persistent secret-encryption key. The customer uses the console;
 your operations team owns upgrades, backups, identity, availability and provider access.
-This is a reference deployment you operate. AgentWorkflows does not sell a hosted SLA.
+This is a reference deployment you operate.
 
 ## Choose the path
 
 | Path | Command | Result |
 | --- | --- | --- |
-| Local evaluation | `docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker` | Gateway, console, Temporal, persistent stores, worker and a simulated provider; no paid key needed. |
+| Local evaluation | `docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker` | Gateway, console, Temporal, persistent stores, worker and a simulated provider; runs without a paid key. |
 | Disposable kind trial | `python scripts/first-approved-run.py kind` | Isolated cluster, template install, approved run and audit verification; prepare source images first. |
 | Customer namespace | Helm reference below | HTTPS console, company sign-in, two gateway/worker replicas, external stores and explicit gateway egress. |
 
 Use the [quickstart](quickstart.md) for kind's image-build and dependency commands.
 The trial has a **300-second** deadline after images are prepared. The README's
-60-second walkthrough covers console interaction on a ready stack. Neither number is a
-cold image download or cluster provisioning benchmark.
+60-second walkthrough covers console interaction on a ready stack.
 
 ## Prepare a tenant
 
@@ -30,7 +29,7 @@ Use separate gateway and Temporal database users. The Temporal user needs schema
 privileges during upgrades; database creation remains an operator action.
 The reference enables verified PostgreSQL TLS for Temporal. Use a certificate whose
 name matches `serverName`; configure the provider CA through Temporal's chart mounts
-when it is not in the image trust store.
+when the image trust store lacks it.
 
 Create these Kubernetes Secrets in the tenant namespace from your secret manager:
 
@@ -48,16 +47,15 @@ Keep values files free of plaintext credentials. Generate the encryption key onc
 on your secure administration host and store it in the secret manager.
 
 Set `networkPolicy.externalEgress` to reviewed CIDRs and ports for managed Redis,
-gateway PostgreSQL, providers and your identity provider. An empty list deliberately
-blocks those connections. The CNI must enforce NetworkPolicy. Public provider IPs change;
-maintain the approved list or use a controlled network egress layer. No public
-`0.0.0.0/0` or `::/0` rule is accepted.
+gateway PostgreSQL, providers and your identity provider. Gateway egress is limited to
+the listed destinations. The CNI must enforce NetworkPolicy. Public provider IPs change;
+maintain the approved list or use a controlled network egress layer. The chart accepts
+specific CIDRs and rejects public `0.0.0.0/0` and `::/0` rules.
 
 The umbrella policy isolates the gateway and any bundled stores. Apply your platform's
-namespace isolation policy to Temporal, workers and research tools as well; their
-intra-namespace RPC is not configured for mutual TLS by this profile. Keep Temporal
-and database services private. The Research example's tools are synthetic; replace
-them before treating publication as a business integration.
+namespace isolation policy, and mutual TLS where you require it, to Temporal, workers and
+research tools as well. Keep Temporal and database services private. Replace the Research
+example's synthetic tools with your own integrations for business publication.
 
 ## Install and verify
 
@@ -80,8 +78,8 @@ the sample approval. Test company sign-in with each mapped role, then use
 `GET /v1/team/deployment` returns `checks[]` with `id`, `name`, `configured`
 and `action`, plus `verification_required[]`. It requires an unrestricted team admin.
 Python: `client.deployment()`. TypeScript: `client.deployment()`.
-It reports settings without secrets or connection strings. A configured check does
-not prove database TLS, backup recovery, egress enforcement or service availability.
+It reports settings without secrets or connection strings. Confirm database TLS, backup
+recovery, egress enforcement and service availability with their own checks.
 Check `/readyz`, then prove the install end to end before admitting users.
 
 ### Prove the install
@@ -98,18 +96,17 @@ export AGENTWORKFLOWS_API_KEY=...             # an admin key from your secret ma
 agentworkflows check --allow-paid
 ```
 
-The reference profile routes the sample to a real provider, so `--allow-paid` is required; the check
-refuses to spend without it. A policy that needs several reviewers needs one more key per reviewer, passed
-by environment variable name: `--approver-key-env SECOND_REVIEWER_KEY`. Keys are never accepted on the
-command line. Use `--json` in CI. Run it after every install, upgrade and restore. A passing check is
-evidence that approvals, workers, Temporal, storage and the audit chain work together; it does not prove
-backups, network egress rules or sign-in with company accounts.
+The reference profile routes the sample to a real provider, so `--allow-paid` is required; the flag
+authorizes the check to spend. A policy that needs several reviewers needs one more key per reviewer, passed
+by environment variable name: `--approver-key-env SECOND_REVIEWER_KEY`. Keys are read from environment
+variables only. Use `--json` in CI. Run it after every install, upgrade and restore. A passing check is
+evidence that approvals, workers, Temporal, storage and the audit chain work together. Verify backups,
+network egress rules and company sign-in with the other steps on this page.
 
 ## Back up a recoverable unit
 
 Redis holds budgets, sessions, key records and invitation tokens even when gateway
-records use PostgreSQL. The legacy multi-namespace platform's Redis-is-ephemeral
-assumption **does not apply** to this deployment.
+records use PostgreSQL. Treat Redis as **durable state** in this deployment.
 
 Back up these together:
 
@@ -134,12 +131,12 @@ Export the managed Redis snapshot in the same stopped interval. Encrypt backups 
 an access-controlled off-cluster store, record checksums and secret versions, then
 restore Temporal, gateways and workers to their recorded replica counts and reopen
 traffic. Record the interruption duration and backup timestamp. Choose and measure
-your RPO/RTO; this reference makes no unmeasured recovery guarantee.
+your RPO/RTO.
 
 Restore quarterly and before a database migration in an isolated namespace with
 outbound provider/tool access blocked. Restore PostgreSQL and Redis to the same
-checkpoint and restore the matching encryption key. Do not mix an old Temporal
-snapshot with current gateway records. Use `pg_restore --exit-on-error` into empty
+checkpoint and restore the matching encryption key. Restore Temporal and gateway
+records from the same checkpoint. Use `pg_restore --exit-on-error` into empty
 databases, restore Redis through the managed service, then start the matching
 application versions. Verify an existing run, approval receipts, budget balances,
 key revocations and decryption before a new approved run. Revoke restored sessions
@@ -157,9 +154,10 @@ Keep triggers paused until operators reconcile external side effects.
 4. Run the same `helm upgrade --install` command with reviewed new image digests.
    Watch migration jobs, rollout health and `/readyz`; exercise sign-in, then run `agentworkflows check`.
 5. Keep the old images and checkpoint until acceptance finishes. Roll back application
-   images only when their storage schema remains compatible. Otherwise restore the
+   images when their storage schema remains compatible; otherwise restore the
    coordinated checkpoint into an isolated recovery environment. A Helm rollback
-   does not reverse a database migration or an external tool action.
+   changes application resources only; database migrations and external tool actions
+   stay in place.
 
 Run the Compose recovery and upgrade drills in
 [release verification](release-verification.md) on a Docker-capable host before promotion.

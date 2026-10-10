@@ -36,8 +36,8 @@ checksum returned by the registry manifest. The approved Hugging Face models use
 every safetensors filename, byte size, and upstream LFS SHA-256 at an immutable
 commit. See [the inventory format](https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/artifacts/README.md).
 
-The legacy `source-reference` scope identifies only a source pointer. It remains
-supported for externally maintained records, but no approved bundled model uses it.
+The `source-reference` scope identifies a source pointer and serves externally
+maintained records; the approved bundled models use the scopes above.
 
 Run the optional network check to reproduce approved upstream metadata:
 
@@ -45,22 +45,22 @@ Run the optional network check to reproduce approved upstream metadata:
 make model-provenance-verify
 ```
 
-This fetches small registry/API responses. It does not download model weights or
-verify the bytes in a customer model store. During ingestion, compare each downloaded
-weight file's size and SHA-256 with the inventory. Keep that artifact verification
+This fetches small registry/API responses to check upstream metadata. Verify the
+weight bytes during ingestion: compare each downloaded weight file's size and SHA-256
+with the inventory. Keep that artifact verification
 and real-model evaluation evidence with the deployment's release evidence.
 
-Keep provenance changes reviewed with the matching `ModelPromotionRequest`. Do not
-add a model to gateway allowlists until `make model-check`,
-`make model-provenance-check`, and `make release-gate-strict` pass with current evidence.
+Keep provenance changes reviewed with the matching `ModelPromotionRequest`. Add a
+model to gateway allowlists once `make model-check`, `make model-provenance-check`,
+and `make release-gate-strict` pass with current evidence.
 
 ## Pinning the Served Revision
 
 A bare Hugging Face repo id resolves against a mutable default branch. The default
 vLLM chart and approved customer profiles therefore set `model.revision` to the
 full commit recorded in provenance. The chart passes it to vLLM as `--revision`.
-The embedding profile uses its own model's commit. If a custom overlay changes
-`model.name`, it must also change `model.revision`.
+The embedding profile uses its own model's commit. When a custom overlay changes
+`model.name`, change `model.revision` with it.
 
 To rotate a Hugging Face model revision:
 
@@ -83,5 +83,5 @@ To rotate a Hugging Face model revision:
 
 The offline gate checks manifest integrity, identity, and serving-revision parity.
 The network check additionally rebuilds the inventory from the pinned upstream
-metadata. A failed check blocks promotion; do not change a digest merely to silence
-the check without reviewing the upstream change.
+metadata. A failed check blocks promotion; review the upstream change before
+updating a digest.

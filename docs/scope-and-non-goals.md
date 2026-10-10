@@ -1,11 +1,12 @@
-# Scope and non-goals
+# Scope
 
-This page defines the current checkout's boundary. For per-feature defaults, use the [feature inventory](feature-inventory.md).
+This page describes what AgentWorkflows covers and how it fits alongside the other tools
+your team runs. For per-feature defaults, use the [feature inventory](feature-inventory.md).
 
 AgentWorkflows is cloud-first. Temporal provides durable execution and approval signals;
-the gateway governs model/tool activities and per-run budgets. Self-hosted models remain optional.
+the gateway governs model/tool activities and per-run budgets. Self-hosted models are optional.
 
-## In scope
+## What it covers
 
 The repository contains and tests:
 
@@ -18,6 +19,12 @@ The repository contains and tests:
 - validation, evidence, release, and supply-chain scripts;
 - operational runbooks and customer handoff documentation.
 
+The team console at `/console` uses the authenticated workflow API. Teams use it to start
+and approve runs, inspect receipts and costs, install templates, manage triggers, members
+and keys, edit team settings, and read the audit log. See the [console guide](workflows.md#web-console).
+
+## API surface
+
 The gateway implements these protocol families:
 
 - OpenAI-style chat completions, legacy completions, embeddings, moderations, models, Files, Batch, and Responses;
@@ -26,50 +33,43 @@ The gateway implements these protocol families:
 
 The generated [OpenAPI contract](https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json) is the route-level reference.
 
-## Protocol limits
+- Chat completions and Anthropic Messages stream. Legacy completions and Responses return synchronous responses.
+- Responses supports the synchronous request shape, function tools with multi-turn `function_call` / `function_call_output` items, and `input_image` parts. Optional stored state supports `store`, `previous_response_id`, retrieve, delete, and input-items routes.
+- The asynchronous Batch implementation accepts chat completions, completions, and embeddings. `completion_window` sets the batch expiry bound.
+- Translated Messages and Responses payloads carry the supported text and tool fields through the governed chat path.
 
-This is not a complete OpenAI or Anthropic API implementation.
+## How it fits with your platform
 
-- Chat completions and Anthropic Messages support streaming. Legacy completions and Responses do not.
-- Responses supports the synchronous request shape, function tools with multi-turn `function_call` / `function_call_output` items, and `input_image` parts. Optional stored state supports `store`, `previous_response_id`, retrieve, delete, and input-items routes. Background responses and built-in tools (web search, file search) are not implemented.
-- The asynchronous Batch implementation accepts chat completions, completions, and embeddings. `completion_window` is treated as an expiry bound, not a scheduling or pricing commitment.
-- Audio, image generation, fine-tuning, and a general training API are not implemented.
-- Translated Messages and Responses payloads preserve supported text and tool fields but do not promise byte-for-byte parity with upstream services.
+AgentWorkflows runs on the infrastructure your team already operates. Your platform supplies:
 
-## Operator-owned work
+- the Kubernetes cluster and its upgrades;
+- networks, load balancers, GPU nodes, and cloud databases;
+- the identity provider and secret manager;
+- production ingress, certificate authority, logging service, backup destination, and incident response;
+- the choice, hosting, licensing, and validation of model weights;
+- data classification and regulatory decisions for each use case;
+- sizing of replicas, GPU memory, context windows, storage, retention, and SLOs for each workload;
+- day-to-day operation of the deployment.
 
-The project does not:
+AgentWorkflows connects to these through Helm values, environment variables, and Kubernetes
+Secrets. The customer values are examples to review: replace their placeholders and size the
+GPU defaults and stateful services for your workload.
 
-- create or upgrade a Kubernetes cluster;
-- provision networks, load balancers, GPU nodes, or cloud databases;
-- run an identity provider or secret manager;
-- provide a production ingress, certificate authority, logging service, backup destination, or incident team;
-- select, host, license, or validate customer model weights;
-- classify customer data or decide whether a use case is regulated;
-- size replicas, GPU memory, context windows, storage, retention, or SLOs for a customer workload;
-- operate the resulting platform.
+Training, fine-tuning, audio, and image generation run in purpose-built systems alongside
+the gateway. Multi-node serving uses LeaderWorkerSet or Ray, and Open WebUI is available as
+an example end-user chat UI.
 
-The customer values are examples that must be reviewed. Their placeholders, large GPU defaults, and single-node stateful services are not production recommendations.
+## Security and compliance
 
-## Out of scope
+The repository includes security controls and compliance crosswalks. Use them together with
+your deployment's configuration and evidence:
 
-The project is not intended to become:
+- NetworkPolicy controls which pods can connect. Enable transport encryption where your deployment requires it.
+- Select a gVisor, Kata, or equivalent `RuntimeClass` with `sandbox.runtimeClassName` to give agent workspaces a separate kernel boundary.
+- Anchor hash-chain heads outside the process for durable, rollback-resistant audit logs.
+- Checked-in `sample-*` evidence shows report shape. Generate fresh reports for each release or deployment.
 
-- a managed Kubernetes operations service;
-- a desktop Ollama application;
-- a cloud-infrastructure provisioning framework;
-- a distributed training platform;
-- a general multi-node serving operator;
-- a full billing system;
-- a general-purpose identity provider.
-
-Hosted delivery and team administration are product goals, not current capabilities.
-The optional `/console` uses the authenticated workflow API for team runs, approvals, receipts,
-and costs. Admins inspect provider/budget configuration there; membership, provider keys,
-and policy edits remain reviewed deployment configuration. See the [console guide](workflows.md#web-console).
-
-## Security and compliance boundary
-
-The repository includes controls and crosswalks, not certifications. NetworkPolicy does not encrypt traffic. A container sandbox without a configured gVisor, Kata, or equivalent `RuntimeClass` does not provide a separate kernel boundary. Hash-chained logs are not durable or rollback-resistant until their heads are anchored outside the process. Checked-in sample evidence proves report shape, not the state of a release or deployment.
-
-Whether a deployment meets a law, standard, or internal policy depends on its use case, configuration, operations, and current evidence. See the [security overview](security-overview.md), [threat model](threat-model.md), and [production readiness matrix](production-readiness.md).
+Assess a deployment against a law, standard, or internal policy using its use case,
+configuration, operations, and current evidence. The [security overview](security-overview.md),
+[threat model](threat-model.md), and [production readiness matrix](production-readiness.md)
+support that review.

@@ -21,10 +21,9 @@ the [RAG runbook](../../runbooks/rag-service.md) for deployment and operation.
 | Authentication and request limits | [jwt_auth.py](app/jwt_auth.py), [body_limit.py](app/body_limit.py) |
 | Audit chains and tracing | [audit.py](app/audit.py), [tracing.py](app/tracing.py) |
 
-Keep retrieval changes independent of HTTP handling when possible. Tenant filtering
-must apply to both lexical and vector retrieval. Use temporary document directories
-and fake HTTP providers in tests so the suite remains independent of Qdrant and
-embedding services.
+Keep retrieval changes independent of HTTP handling when possible. Apply tenant
+filtering to both lexical and vector retrieval. Use temporary document directories
+and fake HTTP providers in tests so the suite runs self-contained.
 
 ## Test and run locally
 
@@ -37,7 +36,7 @@ make rag-eval-check
 
 The service tests prepare their own hashed development environment.
 `make rag-eval-check` checks the retrieval-evaluation metrics and golden suite
-configuration; it does not run a live retrieval benchmark.
+configuration; run `make rag-eval` against a deployment for live retrieval scores.
 
 Run a local lexical service over the repository's documentation:
 
@@ -49,7 +48,7 @@ RAG_DOCUMENT_DIR="$PWD/docs" RAG_RETRIEVAL_BACKEND=lexical \
 
 Open `http://127.0.0.1:8081/docs` for the local API. The server loads Markdown/text
 documents at startup. Restart it after changing the corpus. This loopback example
-uses environment defaults; it does not require a gateway, model, or vector store.
+uses environment defaults and runs standalone.
 
 ## Related contracts
 

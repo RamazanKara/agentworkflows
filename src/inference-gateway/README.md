@@ -12,13 +12,13 @@ the [feature inventory](../../docs/feature-inventory.md) for supported API behav
 ## Code map
 
 The checked-in [OpenAPI contract](../../platform/api-contracts/inference-gateway.openapi.json)
-is the exact HTTP reference. This candidate also serves the console/session, team/SSO,
-managed-key, settings, spend, audit, workflow-run, approval and trigger APIs; they use
-verified team/project roles, not caller-supplied membership headers. See the
+is the exact HTTP reference. The gateway also serves the console/session, team/SSO,
+managed-key, settings, spend, audit, workflow-run, approval and trigger APIs; they authorize
+with verified team/project roles. See the
 [SDK reference](../../docs/sdk-reference.md) for paging, CSV and JSON Lines exports.
 Optional Files/Batch, stored Responses and agent-action receipt endpoints are registered
-but require their feature settings. OpenAI compatibility covers the implemented subset;
-it does not include every upstream endpoint or Responses mode.
+and turn on with their feature settings. OpenAI compatibility covers the endpoints and
+Responses modes in the OpenAPI contract.
 
 | Area | Modules |
 | --- | --- |
@@ -57,8 +57,7 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434 MODEL_ID=qwen3.5:0.8b \
   --app-dir src/inference-gateway --host 127.0.0.1 --port 8080 --reload
 ```
 
-Set `MODEL_ID` to a model already installed in that Ollama instance. The command
-does not download a model. Open `http://127.0.0.1:8080/docs` for the local API.
+Set `MODEL_ID` to a model already installed in that Ollama instance. Open `http://127.0.0.1:8080/docs` for the local API.
 This loopback development server uses environment defaults; deployed authentication
 and policy come from the chart and cluster values.
 
