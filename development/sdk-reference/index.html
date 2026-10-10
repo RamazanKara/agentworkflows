@@ -2846,6 +2846,12 @@ for identity, replay, automatic decisions and upgrade boundaries.</p>
 <td><code>GET/PUT /v1/team/alert-rules</code></td>
 </tr>
 <tr>
+<td>Run insights</td>
+<td><code>workflow_insights(days=7, project=None, workflow=None)</code></td>
+<td><code>workflowInsights({ days, project, workflow })</code></td>
+<td><code>GET /v1/workflow-insights</code></td>
+</tr>
+<tr>
 <td>Register your own workflow</td>
 <td><code>team_workflows()</code>, <code>register_workflow(cls_or_name, models=[...], **options)</code>, <code>remove_workflow(cls_or_name)</code></td>
 <td><code>teamWorkflows()</code>, <code>registerWorkflow(name, models, options?, revision?)</code>, <code>removeWorkflow(name, revision?)</code></td>
