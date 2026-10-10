@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.9.1 - 2026-10-10
+
+A redesigned team console. Images, charts and SDKs are version 0.9.1; workflow templates
+stay at 0.9.0.
+
+### Modern console
+
+- A new visual system across every page: Inter typography, card panels, stat tiles, and
+  refreshed tables, badges, buttons and form fields.
+- The sidebar groups pages into Workflows, Spend and Team, with your account card at the
+  bottom. On phones a clean top bar opens the same menu.
+- Dark mode follows the operating system setting.
+- A new sign-in screen, step cards on Get started, and secondary install buttons in the
+  template gallery so the next action stands out.
+- The gateway's console policy serves the bundled font (`font-src 'self'`).
+
+### README
+
+- An animated demo of one Research run, from start through approval to its result and cost,
+  recorded from the Compose stack with `scripts/console-demo.mjs`.
+- A screenshot gallery of approvals, templates, insights, costs, dark mode and phone views,
+  captured with `scripts/console-gallery.mjs`.
+
 ## v0.9.0 - 2026-10-10
 
 The first release since v0.5.1. It ships everything built since then: a team can now go

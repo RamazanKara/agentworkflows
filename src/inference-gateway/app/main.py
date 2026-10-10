@@ -74,7 +74,7 @@ from app.tracing import configure_metrics, configure_tracing, measure_request, t
 from app.workflow_api import bind_workflow, register_workflow_routes
 from app.workflow_credentials import bind_step_credential
 
-SERVICE_VERSION = "0.9.0"
+SERVICE_VERSION = "0.9.1"
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "
@@ -401,7 +401,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             refresh_cookies(request, response)
             if request.url.path.startswith("/console"):
                 response.headers["Content-Security-Policy"] = (
-                    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+                    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
                     "img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
                 )
                 response.headers["X-Content-Type-Options"] = "nosniff"

@@ -1,7 +1,7 @@
 # CLI and Python SDK reference
 
-This reference describes the Python SDK and CLI in release v0.9.0. Install the release wheel
-(see [distribution](distribution.md)), or from a v0.9.0 checkout run
+This reference describes the Python SDK and CLI in release v0.9.1. Install the release wheel
+(see [distribution](distribution.md)), or from a v0.9.1 checkout run
 `python -m pip install ./sdk/python` in a virtual environment. Use a gateway of the same version.
 `agentworkflows --help` and each subcommand's `--help` work offline, before you set a key.
 The equivalent module entry point is `python -m agentworkflows.cli`.
@@ -103,7 +103,7 @@ during paging. For full process logs, use the operator verifier. See [audit log]
 for boundaries and verification.
 
 The [template gallery](templates.md) includes input fields, expected results and adaptation
-steps for every starter. The release wheel and a v0.9.0 checkout carry the same template set.
+steps for every starter. The release wheel and a v0.9.1 checkout carry the same template set.
 Scaffolds include `input-schema.json` and a schema declaration in `workflow.py`. Copy the
 schema to the workflow policy's `inputSchema` to enable console forms and gateway validation.
 

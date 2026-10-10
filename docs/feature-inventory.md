@@ -1,8 +1,8 @@
 # Feature inventory
 
-This is the source of truth for what release v0.9.0 implements, what is enabled by
+This is the source of truth for what release v0.9.1 implements, what is enabled by
 default, and what the operator configures. “Shipped” means code, configuration, tests, and an
-operator path exist in this repository. Package and chart versions are 0.9.0.
+operator path exist in this repository. Package and chart versions are 0.9.1.
 
 Milestones 2–3 add [durable workflows, framework agents, MCP tools, and workflow policy](workflows.md).
 

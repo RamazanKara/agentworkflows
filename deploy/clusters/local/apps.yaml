@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/workflows
     helm:
       releaseName: workflows
@@ -34,7 +34,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/vendor/agent-sandbox/v0.5.0
   destination:
     server: https://kubernetes.default.svc
@@ -57,7 +57,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: platform/model-catalog/k8s
   destination:
     server: https://kubernetes.default.svc
@@ -78,7 +78,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/sandbox/base
   destination:
     server: https://kubernetes.default.svc
@@ -159,7 +159,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/observability
     directory:
       # Recurse so the PrometheusRule (alerts/) and the Grafana dashboard ConfigMaps
@@ -187,7 +187,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/policies/kyverno
   destination:
     server: https://kubernetes.default.svc
@@ -206,7 +206,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/ollama
     helm:
       releaseName: ollama
@@ -231,7 +231,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/vllm
     helm:
       releaseName: vllm
@@ -256,7 +256,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/budget-redis
     helm:
       releaseName: budget-redis
@@ -279,7 +279,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/inference-gateway
     helm:
       releaseName: inference-gateway
@@ -304,7 +304,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/qdrant-vector-store
     helm:
       releaseName: qdrant-vector-store
@@ -329,7 +329,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/rag-service
     helm:
       releaseName: rag-service
@@ -354,7 +354,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/charts/agent-workspace
     helm:
       releaseName: agent-workspace
@@ -415,7 +415,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/backup/velero
   destination:
     server: https://kubernetes.default.svc
@@ -436,7 +436,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/backup/restore-drill
     directory:
       include: "k8s/*.yaml"

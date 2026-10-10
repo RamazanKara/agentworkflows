@@ -59,7 +59,7 @@ example's synthetic tools with your own integrations for business publication.
 
 ## Install and verify
 
-The chart defaults to the published v0.9.0 gateway and worker images. Pin their digests in
+The chart defaults to the published v0.9.1 gateway and worker images. Pin their digests in
 `tenant-values.yaml`, or build images from this checkout and make them available in your
 registry.
 

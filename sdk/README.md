@@ -4,9 +4,9 @@ First-party clients and Temporal workflow SDKs for the AgentWorkflows inference 
 
 ## Python
 
-Install the v0.9.0 client from the release wheel
-(`python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.0/agentworkflows-0.9.0-py3-none-any.whl`),
-or from a v0.9.0 checkout:
+Install the v0.9.1 client from the release wheel
+(`python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.1/agentworkflows-0.9.1-py3-none-any.whl`),
+or from a v0.9.1 checkout:
 
 ```bash
 python -m pip install ./sdk/python

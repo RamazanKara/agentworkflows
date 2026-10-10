@@ -1,7 +1,7 @@
 {
   "name": "agentworkflows-console",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.1",
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build",
@@ -11,6 +11,7 @@
     "smoke": "playwright test --config playwright.smoke.config.ts --workers=1"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

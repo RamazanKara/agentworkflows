@@ -2,8 +2,8 @@ apiVersion: v2
 name: workflows
 description: Temporal execution, dedicated PostgreSQL, and a governed Python workflow worker.
 type: application
-version: 0.9.0
-appVersion: "0.9.0"
+version: 0.9.1
+appVersion: "0.9.1"
 dependencies:
   - name: temporal
     version: "1.7.0"

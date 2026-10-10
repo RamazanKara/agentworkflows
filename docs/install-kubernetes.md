@@ -10,10 +10,10 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 - Kubernetes, `kubectl`, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.
 - Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.
-- A v0.9.0 checkout of this repository, or the published OCI charts (see [distribution](distribution.md)).
+- A v0.9.1 checkout of this repository, or the published OCI charts (see [distribution](distribution.md)).
 
-This guide describes release v0.9.0 (package/chart version 0.9.0). The chart defaults to the
-published v0.9.0 gateway and worker images. See [command verification](release-verification.md)
+This guide describes release v0.9.1 (package/chart version 0.9.1). The chart defaults to the
+published v0.9.1 gateway and worker images. See [command verification](release-verification.md)
 for the release verification commands.
 
 Prepare the local chart's dependencies once, in this order:
@@ -30,7 +30,7 @@ controller, GPU, KEDA or Prometheus CRDs.
 ## Install
 
 On a disposable kind cluster named `aw` (create it with `kind create cluster --name aw`
-if needed), install from the v0.9.0 checkout. The chart pulls the published v0.9.0 images:
+if needed), install from the v0.9.1 checkout. The chart pulls the published v0.9.1 images:
 
 ```bash
 helm install aw deploy/charts/agentworkflows -n aw --create-namespace --wait --timeout 15m

@@ -77,7 +77,7 @@ footprint for a demo is a one-line values change.
 
 ## Workflow upgrades and recovery
 
-By default the 0.9.0 gateway uses **Redis** for run indexes, step timelines and
+By default the 0.9.1 gateway uses **Redis** for run indexes, step timelines and
 team/run budgets. Optional [PostgreSQL gateway storage](postgresql-storage.md) moves
 run metadata, receipts, audit events, team settings and key metadata to a separate gateway
 database; Redis continues to hold live budgets and the other state listed there.

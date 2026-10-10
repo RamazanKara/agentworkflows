@@ -20,7 +20,7 @@ Set every Argo CD `repoURL` to the customer fork or mirror, pin the revision to 
 ```bash
 make customer-overlay \
   CUSTOMER_REPO_URL=https://github.com/<customer>/<repo>.git \
-  CUSTOMER_REVISION=v0.9.0 \
+  CUSTOMER_REVISION=v0.9.1 \
   CUSTOMER_GPU_PROFILE=nvidia
 ```
 
@@ -146,6 +146,6 @@ make release-gate-strict
 
 If you fork or mirror this repo, review these guardrails before deploying. They are intentionally strict and pin upstream identities, so update them in forks that republish artifacts.
 
-- **GitOps source is pinned and locked.** Set `CUSTOMER_REVISION` to an immutable tag (for example `v0.9.0`): `make customer-overlay-check` accepts only tags, so every sync is reproducible and revertible. The `agentworkflows` AppProject in `deploy/clusters/customer/appprojects.yaml` locks `spec.sourceRepos` to the upstream repo and the destination to the in-cluster API server, giving blast-radius control. If you fork, update its `sourceRepos` to your repo (running `make customer-overlay CUSTOMER_REPO_URL=...` rewrites it for you) so Argo CD will accept syncs from your fork.
+- **GitOps source is pinned and locked.** Set `CUSTOMER_REVISION` to an immutable tag (for example `v0.9.1`): `make customer-overlay-check` accepts only tags, so every sync is reproducible and revertible. The `agentworkflows` AppProject in `deploy/clusters/customer/appprojects.yaml` locks `spec.sourceRepos` to the upstream repo and the destination to the in-cluster API server, giving blast-radius control. If you fork, update its `sourceRepos` to your repo (running `make customer-overlay CUSTOMER_REPO_URL=...` rewrites it for you) so Argo CD will accept syncs from your fork.
 - **Kyverno image verification is Enforce.** The `ai-platform-verify-project-images` policy in `deploy/policies/kyverno/policies.yaml` is set to `Enforce` and hardcodes the upstream registry plus a keyless signing identity. Forks that republish images to their own registry update its `imageReferences` and the keyless `subject`/`issuer` to their own GitHub org/repo and registry so admission accepts their images.
 - **Egress is governed by a reviewed catalog.** `platform/network/egress-catalog.yaml` is the source of truth for approved external egress. The CI check scans the reviewed tenant spec files; at render time the agent-workspace chart requires a matching `catalogRef` for every `allowedEgressCidrs` entry; and at admission the Kyverno `ai-platform-restrict-egress-cidrs` policy denies broad CIDRs (`0.0.0.0/0` and broad RFC1918 ranges). Add new destinations to the catalog and reference them by `catalogRef` rather than widening CIDRs.

@@ -15,9 +15,28 @@ together. Give each workflow a budget, pause for human review, and follow every 
 step from request to receipt. Connect OpenAI, Anthropic, Azure OpenAI, Bedrock, or Vertex
 Gemini. Keep provider keys on the server and workflow code in Python or TypeScript.
 
+![A Research run in the console: start it, review the draft, approve it, then see the result and its cost](docs/assets/console-demo.gif)
+
+*One Research run on the local Compose stack: start it, review and approve the draft, then follow the result, the cost and the insights.*
+
+### The console
+
 ![A team reviews a workflow draft, step costs, and approval progress](docs/assets/console-1440.png)
 
-*1440 px console capture with consistent test data. [Verification record](docs/release-verification.md).*
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/console-approvals.png" alt="Approvals: drafts waiting for a decision, with quorum and deadline"><br><sub><b>Approvals.</b> Every draft waits for the reviewers your policy names.</sub></td>
+    <td width="50%"><img src="docs/assets/console-templates.png" alt="Template gallery with nine ready-made workflows"><br><sub><b>Templates.</b> Nine reviewed workflows, installed in one click.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/console-insights.png" alt="Insights: completion rate, typical run time and cost per workflow"><br><sub><b>Insights.</b> Completion rate, run time, review wait and cost per workflow.</sub></td>
+    <td><img src="docs/assets/console-costs.png" alt="Costs: monthly spend against the team budget, by provider and workflow"><br><sub><b>Costs.</b> Monthly spend against the budget, by provider and workflow.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/console-dark.png" alt="A completed run in dark mode with its step costs"><br><sub><b>Dark mode.</b> Follows your system setting.</sub></td>
+    <td align="center"><img src="docs/assets/console-phone-runs.png" alt="Workflow runs on a phone" width="45%"> <img src="docs/assets/console-phone-approvals.png" alt="Approving a draft on a phone" width="45%"><br><sub><b>On your phone.</b> Review and approve from anywhere.</sub></td>
+  </tr>
+</table>
 
 ## Built for teams shipping agents
 
@@ -26,9 +45,9 @@ Gemini. Keep provider keys on the server and workflow code in Python or TypeScri
 - **Platform engineers:** provide shared model access with scoped roles, budgets, and retained evidence.
 
 The platform is self-hosted and built for cloud providers; local models and GPUs are optional. The current
-release is **v0.9.0**. Images and Helm charts are on GHCR; the Python wheel, source
+release is **v0.9.1**. Images and Helm charts are on GHCR; the Python wheel, source
 archive and TypeScript SDK are assets of the
-[GitHub release](https://github.com/RamazanKara/agentworkflows/releases/tag/v0.9.0).
+[GitHub release](https://github.com/RamazanKara/agentworkflows/releases/tag/v0.9.1).
 
 ## 60-second console quickstart
 
@@ -40,7 +59,7 @@ cd agentworkflows
 docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 ```
 
-Compose pulls the published v0.9.0 images. The walkthrough runs on your laptop with simulated
+Compose pulls the published v0.9.1 images. The walkthrough runs on your laptop with simulated
 models, so you can start without a cloud key, GPU, or Kubernetes cluster. Once the stack is ready:
 
 1. Open [the console](http://127.0.0.1:8080/console/) and sign in with `local-development-only`.
@@ -124,7 +143,7 @@ Report vulnerabilities through [SECURITY.md](SECURITY.md).
 | Run a workflow | [Quickstart](docs/quickstart.md) · [Template gallery](docs/templates.md) |
 | Build your workflow | [Concepts](docs/concepts.md) · [SDK reference](docs/sdk-reference.md) |
 | Deploy for a team | [Helm install](docs/install-kubernetes.md) · [Single-tenant reference](docs/single-tenant.md) · [Production checklist](docs/kubernetes-production-checklist.md) |
-| Deploy with GitOps | Generate the Argo CD overlay pinned to this release: `make customer-overlay CUSTOMER_REPO_URL=<your-repo> CUSTOMER_REVISION=v0.9.0` ([guide](docs/getting-started.md#customer-owned-kubernetes)) |
+| Deploy with GitOps | Generate the Argo CD overlay pinned to this release: `make customer-overlay CUSTOMER_REPO_URL=<your-repo> CUSTOMER_REVISION=v0.9.1` ([guide](docs/getting-started.md#customer-owned-kubernetes)) |
 | Operate and recover | [Runbooks](runbooks/README.md) · [Release verification](docs/release-verification.md) |
 | Track the product | [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) |
 

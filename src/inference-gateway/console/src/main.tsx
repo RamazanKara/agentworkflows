@@ -11,6 +11,7 @@ import { Keys } from './keys';
 import { AuditLog } from './audit';
 import { TeamData, Templates, WorkflowSecrets } from './lifecycle';
 import { AcceptInvitation } from './invitations';
+import '@fontsource-variable/inter/wght.css';
 import './style.css';
 
 const navigation = [
@@ -19,6 +20,12 @@ const navigation = [
   ['audit', 'Audit log'],
   ['secrets', 'Workflow secrets'], ['data', 'Data & privacy'],
 ];
+const groups: [string, string[]][] = [
+  ['Workflows', ['start', 'templates', 'runs', 'approvals', 'triggers']],
+  ['Spend', ['providers', 'costs', 'insights']],
+  ['Team', ['keys', 'team', 'audit', 'secrets', 'data']],
+];
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join('').toUpperCase();
 
 // Reasons the gateway's OIDC callback can send a browser back with.
 const signinErrors: Record<string, string> = {
@@ -154,12 +161,15 @@ function App() {
     <a className="skip" href="#main" onClick={e => { e.preventDefault(); main.current?.focus(); }}>Skip to content</a>
     <aside className="sidebar">
       <a href="#start" className="brand"><Icon name="brand"/><span>AgentWorkflows</span></a>
-      <section className="identity" aria-label="Signed in as">{session.name && <span className="who">{session.name}</span>}<span className="team">{teamName}</span><span className="role">{label(session.team.role)}</span></section>
+      <section className="identity" aria-label="Signed in as"><span className="avatar" aria-hidden="true">{initials(session.name || teamName)}</span>{session.name && <span className="who">{session.name}</span>}<span className="team">{teamName}</span><span className="role">{label(session.team.role)}</span></section>
       <button className="menu-button" aria-expanded={menu} aria-controls="app-menu" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu(value => !value)}><Icon name={menu ? 'close' : 'menu'}/></button>
       <div id="app-menu" className="app-menu">
         <p className="menu-who">{session.name && <strong>{session.name}</strong>}<DotList items={[teamName, label(session.team.role)]}/></p>
-        <nav aria-label="Main navigation">{navigation.filter(([id]) => !['keys', 'audit', 'secrets', 'data'].includes(id) || session.team.role === 'admin').map(([id, text]) =>
-          <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}
+        <nav aria-label="Main navigation">{groups.map(([group, ids]) => {
+          const links = navigation.filter(([id]) => ids.includes(id) && (!['keys', 'audit', 'secrets', 'data'].includes(id) || session.team.role === 'admin'));
+          return links.length > 0 && <div className="nav-group" key={group}><h2>{group}</h2>{links.map(([id, text]) =>
+            <a key={id} href={`#${id}`} aria-current={active === id ? 'page' : undefined} onClick={() => setMenu(false)}><Icon name={id}/>{text}</a>)}</div>;
+        })}
         </nav>
         <div className="session-actions">
           <button onClick={() => { setMenu(false); setAdding(true); }}><Icon name="swap"/>Switch account</button>

@@ -11,11 +11,11 @@ The trial uses canned responses and synthetic prices from the Compose fakes.
 
 ## 1. Install and start the fake gateway
 
-Use a v0.9.0 checkout, then install and build the SDK and its examples. Skip clone/cd if
-you already have the repository checkout. Compose pulls the published v0.9.0 gateway image:
+Use a v0.9.1 checkout, then install and build the SDK and its examples. Skip clone/cd if
+you already have the repository checkout. Compose pulls the published v0.9.1 gateway image:
 
 ```sh
-git clone --branch v0.9.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+git clone --branch v0.9.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
 cd agentworkflows/sdk/typescript
 npm ci --no-audit --no-fund --maxsockets=2
 npm run build
@@ -113,7 +113,7 @@ Change the prompt and rebuild with `npm run build` before restarting the worker.
 
 Install the built SDK in your own Node project from your checkout. Replace the
 path below with your checkout path (a local install; the release also attaches
-`agentworkflows-sdk-0.9.0.tgz`):
+`agentworkflows-sdk-0.9.1.tgz`):
 
 ```sh
 npm install /path/to/agentworkflows/sdk/typescript
@@ -241,7 +241,7 @@ for range boundaries and what verification proves.
 ## Run history and export
 
 Use the gateway from the [Python quickstart](quickstart.md#1-install-and-start)
-and the v0.9.0 SDK built from `sdk/typescript`. `runs({ project, workflow, status, cursor, limit })`
+and the v0.9.1 SDK built from `sdk/typescript`. `runs({ project, workflow, status, cursor, limit })`
 returns a typed `RunPage`. All filters are optional. Pass `next_cursor` with the
 same project and filters until it is null, including on empty pages. `limit`
 bounds scanned records before filtering (1–100, default 20). Cursors remain stable

@@ -24,7 +24,7 @@ Temporal's [message-passing guide](https://docs.temporal.io/develop/python/workf
 explains queries, signals and updates, including approval patterns. Compare the
 [feature inventory](feature-inventory.md) against your requirements.
 
-## Is 0.9.0 a fit?
+## Is 0.9.1 a fit?
 
 | Your need | How AgentWorkflows covers it |
 | --- | --- |

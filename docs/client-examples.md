@@ -289,7 +289,7 @@ The platform ships a minimal, retry-aware first-party client (`sdk/python`, pack
 `agentworkflows`) for lightweight scripts:
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.0/agentworkflows-0.9.0-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.1/agentworkflows-0.9.1-py3-none-any.whl
 ```
 
 The wheel and checksums are attached to each [GitHub release](https://github.com/RamazanKara/agentworkflows/releases).

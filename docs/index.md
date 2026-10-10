@@ -13,18 +13,18 @@ has a receipt.
 
 ## Start with one approved result
 
-Start the local stack from a v0.9.0 checkout:
+Start the local stack from a v0.9.1 checkout:
 
 ```sh
 docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 ```
 
-After the published v0.9.0 images are pulled and services become ready, follow the
+After the published v0.9.1 images are pulled and services become ready, follow the
 [60-second console walkthrough](quickstart.md#60-second-console-walkthrough): sign in,
 start the sample, and approve its draft. The simulated trial runs locally with fixture
 models. Connect a real provider to evaluate output quality.
 
-This is release **v0.9.0**; Compose pulls the matching published images.
+This is release **v0.9.1**; Compose pulls the matching published images.
 [Release verification](release-verification.md).
 
 ## Choose your path

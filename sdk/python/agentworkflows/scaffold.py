@@ -60,7 +60,7 @@ TEMPLATES = {
 
 
 
-SDK_VERSION = "0.9.0"
+SDK_VERSION = "0.9.1"
 RELEASES = "https://github.com/RamazanKara/agentworkflows/releases/download"
 
 

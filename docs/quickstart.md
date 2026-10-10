@@ -6,8 +6,8 @@ Run research → draft → human approval → publication, then inspect its rece
 five minutes. You need **Git, Python 3.12+, and Docker with Compose** already installed;
 that is everything this path uses.
 
-These instructions use release **v0.9.0**. Compose pulls the published v0.9.0 images by
-default. Start at the repository root if you already have a v0.9.0 checkout; skip clone/cd.
+These instructions use release **v0.9.1**. Compose pulls the published v0.9.1 images by
+default. Start at the repository root if you already have a v0.9.1 checkout; skip clone/cd.
 Release checks are recorded in [release verification](release-verification.md).
 
 Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
@@ -26,7 +26,7 @@ starts once images and dependencies are in place.
 From the repository root in Linux/WSL with Python 3.12+, Docker and Compose installed:
 
 ```sh
-# Pull the published v0.9.0 images before starting the clock.
+# Pull the published v0.9.1 images before starting the clock.
 docker compose -f deploy/compose/compose.yaml pull
 python3 scripts/first-approved-run.py compose
 ```
@@ -68,7 +68,7 @@ On Windows, run the commands above inside WSL, using its own Python environment.
 === "Bash (Linux/macOS)"
 
     ```bash
-    git clone --branch v0.9.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.9.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python3 -m venv .venv
     source .venv/bin/activate
@@ -80,7 +80,7 @@ On Windows, run the commands above inside WSL, using its own Python environment.
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    git clone --branch v0.9.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.9.1 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python -m venv .venv
     $env:Path = "$PWD\.venv\Scripts;$env:Path"
@@ -89,14 +89,14 @@ On Windows, run the commands above inside WSL, using its own Python environment.
     $env:AGENTWORKFLOWS_API_KEY = 'local-development-only'
     ```
 
-Compose pulls the published v0.9.0 gateway, worker and RAG images and their dependencies.
+Compose pulls the published v0.9.1 gateway, worker and RAG images and their dependencies.
 To build the images from this checkout instead, run
 `docker compose -f deploy/compose/compose.yaml build` first; release signatures cover the
 published images. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
-Generated projects pin the SDK's package version (0.9.0).
+Generated projects pin the SDK's package version (0.9.1).
 
 v0.9.0 includes [multi-reviewer approval policies](workflows.md#approval-policies).
 The trial defaults to one reviewer and seven days. On an existing installation,

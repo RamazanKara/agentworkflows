@@ -5,7 +5,7 @@ This example uses a fake customer organization, `acme-ai`, to show the expected 
 ## Inputs
 
 - Customer Git mirror: `https://github.com/acme-ai/agentworkflows.git`
-- Target revision: `v0.9.0`
+- Target revision: `v0.9.1`
 - GPU profile: `nvidia`
 - Runtime model: `Qwen/Qwen3-Coder-Next`
 - Secret integration: customer-operated External Secrets or an equivalent mechanism. The
@@ -17,7 +17,7 @@ This example uses a fake customer organization, `acme-ai`, to show the expected 
 ```bash
 make customer-overlay \
   CUSTOMER_REPO_URL=https://github.com/acme-ai/agentworkflows.git \
-  CUSTOMER_REVISION=v0.9.0 \
+  CUSTOMER_REVISION=v0.9.1 \
   CUSTOMER_GPU_PROFILE=nvidia
 ```
 

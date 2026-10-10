@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/RamazanKara/agentworkflows.git
-    targetRevision: v0.9.0
+    targetRevision: v0.9.1
     path: deploy/clusters/local
     directory:
       include: apps.yaml
