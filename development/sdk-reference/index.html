@@ -2846,6 +2846,12 @@ for identity, replay, automatic decisions and upgrade boundaries.</p>
 <td><code>GET/PUT /v1/team/alert-rules</code></td>
 </tr>
 <tr>
+<td>Register your own workflow</td>
+<td><code>team_workflows()</code>, <code>register_workflow(cls_or_name, models=[...], **options)</code>, <code>remove_workflow(cls_or_name)</code></td>
+<td><code>teamWorkflows()</code>, <code>registerWorkflow(name, models, options?, revision?)</code>, <code>removeWorkflow(name, revision?)</code></td>
+<td><code>GET /v1/team/workflows</code>, <code>PUT/DELETE /v1/team/workflows/{name}</code></td>
+</tr>
+<tr>
 <td>Deployment settings</td>
 <td><code>deployment()</code></td>
 <td><code>deployment()</code></td>

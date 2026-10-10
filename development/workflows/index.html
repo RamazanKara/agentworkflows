@@ -1127,6 +1127,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#register-your-own-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register your own workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#workflow-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2476,6 +2487,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#register-your-own-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register your own workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#workflow-policy" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2742,7 +2764,8 @@ binding, never a caller-supplied team/project header. Existing signed JWTs can s
 and optional <code>project</code> claims with a nonempty <code>sub</code>; configure <code>JWT_TENANT_CLAIM</code> and control claim issuance.
 Legacy unbound keys cannot use the team run API. Enabling projects requires roles on the
 team's existing credentials. Team policies remain declarative; membership keys are managed
-in the console, CLI, or team key API.</p>
+in the console, CLI, or team key API, and team admins can
+<a href="#register-your-own-workflow">register their own workflow types</a> inside the policy's models, tools and limits.</p>
 <h3 id="members-and-api-keys">Members and API keys<a class="headerlink" href="#members-and-api-keys" title="Permanent link">&para;</a></h3>
 <p>Admins can list, create, update, and revoke keys for their own team. Project-bound admins
 can only manage keys in that project. The console lists name, role, project, last use,
@@ -3174,8 +3197,9 @@ or tool I/O directly in workflow code; replay must remain deterministic.</p>
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">run_worker</span><span class="p">([</span><span class="n">Briefing</span><span class="p">])</span>
 </code></pre></div>
 <p>Set <code>AGENTWORKFLOWS_TEAM=research-team</code>, its worker gateway key, and the gateway/Temporal
-addresses. Register <code>Briefing</code> in the team workflow policy, then start with
-<code>agentworkflows runs start Briefing --input '"your topic"' --project briefing</code>.
+addresses. Register <code>Briefing</code> (see <a href="#register-your-own-workflow">Register your own workflow</a>;
+for example <code>agentworkflows workflows register Briefing --model demo-openai --tool research</code>),
+then start with <code>agentworkflows runs start Briefing --input '"your topic"' --project briefing</code>.
 Use <code>ApprovalWorkflow</code> and <code>await self.approval(draft)</code> for the standard reviewed-draft
 flow. The <a href="../templates/">template guide</a> shows the complete code and how to replace a worker.
 Native Temporal workers and <code>GatewayActivities.call</code> remain available for advanced agent
@@ -3292,16 +3316,83 @@ successful, and failed calls receive run-linked tool receipts, with argument fin
 rather than raw arguments. MCP errors and <code>isError</code> results are failures, never successful
 results. Failed/ambiguous attempts retain their cost. For side effects, the server <strong>must</strong>
 persist and honor <code>Idempotency-Key</code>; MCP itself does not promise idempotent execution.</p>
+<h2 id="register-your-own-workflow">Register your own workflow<a class="headerlink" href="#register-your-own-workflow" title="Permanent link">&para;</a></h2>
+<p>A team admin can register a workflow type without editing YAML or restarting the gateway.
+Open <strong>Templates → Your workflows</strong> in the console, or use the CLI, API or either SDK.
+Registration only narrows what your operator already approved for the team:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>The Temporal workflow type your worker registers: a letter, then letters, digits or underscores (64 maximum). Names defined in operator policy and the nine built-in template names are reserved. A team can register 50 workflows.</td>
+</tr>
+<tr>
+<td>Models</td>
+<td>Canonical model IDs the team may already use. Providers default to the providers serving those models.</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>Tool names already approved for the team.</td>
+</tr>
+<tr>
+<td>Network egress</td>
+<td>Derived from the chosen models' routes and tools' URLs. It cannot be edited.</td>
+</tr>
+<tr>
+<td>Limits</td>
+<td>Tokens and dollars per run, no higher than the team's own limits. A team without limits gets ceilings of 5,000,000 tokens and $100; operator YAML can still grant more.</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>The same controls as reviewed workflows: required or not, approver role, 1-10 distinct reviewers, 60 seconds to 7 days.</td>
+</tr>
+<tr>
+<td>Input schema</td>
+<td>Optional flat JSON Schema (the subset used by the templates). It validates every run input and renders the console run form.</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>list
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>register<span class="w"> </span>TicketTriageWorkflow<span class="w">   </span>--model<span class="w"> </span>gpt-4.1-mini<span class="w"> </span>--tool<span class="w"> </span>team.search<span class="w"> </span>--cost-limit<span class="w"> </span><span class="m">2</span><span class="w"> </span>--reviewers<span class="w"> </span><span class="m">1</span><span class="w">   </span>--input-schema<span class="w"> </span>@ticket-schema.json
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>TicketTriageWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'{"ticket": "Password reset blocks sign-in."}'</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>remove<span class="w"> </span>TicketTriageWorkflow
+</code></pre></div>
+<p>From Python, pass the <code>@workflow.defn</code> class; its name and <code>@input_schema</code> are used:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">admin_key</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">gateway</span><span class="o">.</span><span class="n">register_workflow</span><span class="p">(</span><span class="n">TicketTriage</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="s2">"gpt-4.1-mini"</span><span class="p">],</span> <span class="n">allowed_tools</span><span class="o">=</span><span class="p">[</span><span class="s2">"team.search"</span><span class="p">],</span> <span class="n">cost_limit_usd</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div>
+<p>TypeScript uses <code>registerWorkflow(name, models, options?, revision?)</code>, <code>teamWorkflows()</code> and
+<code>removeWorkflow(name, revision?)</code>. The API is <code>GET /v1/team/workflows</code> (registrations, reserved
+names, the models/tools you may choose, and your limits), <code>PUT /v1/team/workflows/{name}</code> and
+<code>DELETE /v1/team/workflows/{name}</code>. Writes need the current <code>If-Match</code> revision, which is shared with
+team settings and alert rules; a stale revision returns 409 and nothing changes. Repeating an identical
+registration changes nothing. Invalid choices return 422 with the offending fields.</p>
+<p>Registered workflows appear in <code>GET /v1/workflow-policies</code> and use the same admission, budget, approval
+and receipt paths as YAML workflows, so their approval, limit and capture settings can also be tuned
+under <strong>Team settings</strong>. Every registration and removal is a chained audit receipt. Removing a workflow
+denies new calls from its existing runs and new starts; run history remains until retention expires it.
+If the operator later defines the same name in policy, the reviewed policy wins.</p>
+<p>Registration does not deploy code. Run your worker on the team's task queue as shown in the
+<a href="../templates/">template guide</a>, then register the same name. Triggers and container agents still
+come from operator policy. Operators who want every workflow type reviewed in YAML set
+<code>selfServiceWorkflows: false</code> on the team's policy entry; the console then explains that
+registration is managed by the operator, the API returns 403, and earlier registrations stop applying.</p>
 <h2 id="workflow-policy">Workflow policy<a class="headerlink" href="#workflow-policy" title="Permanent link">&para;</a></h2>
 <p>Define policy under the same team entry, keyed by the registered Temporal workflow type:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">workflows</span><span class="p">:</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">Briefing</span><span class="p">:</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">anthropic</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">approved-anthropic</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">allowedTools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team.search</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.openai.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.anthropic.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//tools.example.com</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nt">tokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">workflows</span><span class="p">:</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">Briefing</span><span class="p">:</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">allowedProviders</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nt">allowedModels</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">approved-openai</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">approved-anthropic</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nt">allowedTools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">team.search</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="nt">allowedEgress</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.openai.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//api.anthropic.com</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">https</span><span class="p p-Indicator">:</span><span class="nv">//tools.example.com</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">    </span><span class="nt">tokenLimit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">    </span><span class="nt">costLimitUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 </code></pre></div>
 <p>Use canonical gateway model IDs, provider names from the model catalog, and exact URL origins
 (scheme, hostname, and optional port; no paths or wildcards). An empty allowlist denies that
@@ -3342,11 +3433,11 @@ install it in <code>workflows</code>; the gateway accepts that namespace. Before
 in that namespace through your secret manager. The worker key must bind to the intended
 team. Configure the gateway's cloud routes and team tool policy first.</p>
 <p>To evaluate the chart directly against an existing gateway:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>workflows
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>temporal-postgres-auth<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">password</span><span class="o">=</span><span class="s2">"</span><span class="nv">$TEMPORAL_DB_PASSWORD</span><span class="s2">"</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>workflow-gateway-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span><span class="s2">"</span><span class="nv">$AGENTWORKFLOWS_API_KEY</span><span class="s2">"</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>workflows<span class="w"> </span>deploy/charts/workflows<span class="w"> </span>-n<span class="w"> </span>workflows<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>10m
 </code></pre></div>
 <p>Build <code>sdk/python/Dockerfile</code> with the repository root as context for your worker image;
 set <code>worker.image</code> to an image reachable by the cluster. Replace the example workflow with
@@ -3424,11 +3515,11 @@ namespaces/deployments for stronger trust boundaries, and restrict signals and u
 <strong>60–604800 seconds</strong> of approval time. Defaults are one reviewer and seven days.
 Use <strong>Team settings</strong> to edit Required reviewers and Approval expiry, or add these
 fields to an existing workflow policy (preserve its models, tools, egress and budgets):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">requiredApprovals</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nt">approvalTimeoutSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="nt">approvalRequired</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="nt">approvalThresholdUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="nt">approverRole</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">approver</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">requiredApprovals</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nt">approvalTimeoutSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="nt">approvalRequired</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="nt">approvalThresholdUsd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="nt">approverRole</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">approver</span>
 </code></pre></div>
 <p>In the umbrella chart these fields live under
 <code>inference-gateway.sandboxPolicy.policy.policies[].workflows.&lt;Workflow&gt;</code>; see the

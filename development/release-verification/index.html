@@ -1456,6 +1456,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#rc5-adoption-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.5 adoption pass
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rc4-adoption-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2311,6 +2322,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#rc5-adoption-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        rc.5 adoption pass
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rc4-adoption-pass" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2584,6 +2606,51 @@ the TypeScript SDK's <code>npm run build</code>, <code>npm run lint</code> and <
 Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: <code>make lint test-gateway test-scripts</code>. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.</p>
+<h2 id="rc5-adoption-pass">rc.5 adoption pass<a class="headerlink" href="#rc5-adoption-pass" title="Permanent link">&para;</a></h2>
+<p>2026-10-10, native Windows, Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6 and the
+installed Edge for Playwright. Each gap was recorded in
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md">PRODUCT-GAPS.md</a>
+before it was built. No dependency was added.</p>
+<table>
+<thead>
+<tr>
+<th>Native check</th>
+<th>Result after gap 1 (bring your own workflow)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gateway suite (excluding <code>tests/live</code>)</td>
+<td><strong>1,158 passed, 14 skipped</strong>, with Git Bash first on <code>PATH</code>.</td>
+</tr>
+<tr>
+<td>Python SDK</td>
+<td><strong>225 passed, 3 skipped</strong>.</td>
+</tr>
+<tr>
+<td>TypeScript SDK</td>
+<td>Build, lint and <strong>87 tests</strong> passed.</td>
+</tr>
+<tr>
+<td>Console</td>
+<td>Production build passed; <strong>87 Playwright tests</strong> passed through Edge (<code>channel: 'msedge'</code>, <code>--lang=en-US</code>).</td>
+</tr>
+<tr>
+<td>Contracts</td>
+<td>OpenAPI snapshot, configuration contract and chart docs passed.</td>
+</tr>
+<tr>
+<td>Ruff</td>
+<td>Every changed Python file passes.</td>
+</tr>
+</tbody>
+</table>
+<p>Console captures for this pass are written to <code>.out/console-v1.0.0-rc.5/</code> at 360, 393 and 1440 px.
+They were reviewed for horizontal overflow, mid-word wraps, clipped controls, consistent identities and
+no placeholder values. The captures are UI evidence from fixtures, not a live gateway.</p>
+<p>Caller acceptance still required: register a workflow through the console against the Compose stack,
+start a worker for it on the team's queue, and run it through approval. The gateway tests exercise
+policy, admission, budgets and audit with fakes; they do not prove a real Temporal worker.</p>
 <h2 id="rc4-adoption-pass">rc.4 adoption pass<a class="headerlink" href="#rc4-adoption-pass" title="Permanent link">&para;</a></h2>
 <p>2026-10-09, native Windows. All five plans were recorded in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md">PRODUCT-GAPS.md</a>

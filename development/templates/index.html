@@ -2657,8 +2657,9 @@ Restart your worker after changing source. Stop it with Ctrl+C, then restore Com
 <p>If you chose a different gateway port, set <code>AGENTWORKFLOWS_URL</code> in the worker terminal too.
 If you chose a different Temporal port, set <code>TEMPORAL_ADDRESS=localhost:PORT</code> there.
 For your own team, set <code>AGENTWORKFLOWS_TEAM</code> and its worker key; the queue defaults to
-<code>TEAM-workflows</code>. Register the workflow name, approved models/tools/egress, and budgets in
-the existing <a href="../workflows/#teams-projects-and-roles">team policy</a>.</p>
+<code>TEAM-workflows</code>. Register the workflow name, approved models and tools, and per-run limits
+from <strong>Templates → Your workflows</strong>, with <code>agentworkflows workflows register</code>, or in operator
+<a href="../workflows/#teams-projects-and-roles">team policy</a>. See <a href="../workflows/#register-your-own-workflow">Register your own workflow</a>.</p>
 <h2 id="a-workflow-in-about-20-lines">A workflow in about 20 lines<a class="headerlink" href="#a-workflow-in-about-20-lines" title="Permanent link">&para;</a></h2>
 <p>This is the approval pattern used by the code-review template, with typed input:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
