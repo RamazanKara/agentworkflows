@@ -36,6 +36,14 @@ def test_previous_helm_values_keep_gateway_and_worker_connections(fixture, chart
     helm = shutil.which("helm")
     if not helm:
         pytest.skip("Install Helm to test historical values against current charts")
+    chart_dir = ROOT / "deploy/charts" / chart
+    needs_subcharts = "dependencies:" in (chart_dir / "Chart.yaml").read_text(encoding="utf-8")
+    if needs_subcharts and not (chart_dir / "charts").is_dir():
+        # Subcharts are not committed; fetch them once, or skip when offline.
+        command = [helm, "dependency", "build", str(chart_dir)]
+        built = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        if built.returncode:
+            pytest.skip(f"helm dependency build {chart} failed: {built.stderr.strip()[:200]}")
     previous = json.loads(fixture.read_text(encoding="utf-8"))[field]
     values = tmp_path / "values.json"
     values.write_text(json.dumps(previous), encoding="utf-8")
