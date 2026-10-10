@@ -2596,11 +2596,14 @@ its external/HA path before a regulated or multi-tenant handoff. The full opt-in
 <a href="../scope-and-non-goals/">Scope and non-goals</a>; the bundled charts are working references and are
 never removed, so rolling back to the reference footprint for a demo is a one-line values change.</p>
 <h2 id="workflow-upgrades-and-recovery">Workflow upgrades and recovery<a class="headerlink" href="#workflow-upgrades-and-recovery" title="Permanent link">&para;</a></h2>
-<p>The 0.5.1 gateway uses <strong>Redis</strong>, not PostgreSQL, for run indexes, step timelines and
-team/run budgets. Temporal owns workflow history in <code>temporal</code> and SQL visibility in
+<p>By default the 0.9.0 gateway uses <strong>Redis</strong> for run indexes, step timelines and
+team/run budgets. Optional <a href="../postgresql-storage/">PostgreSQL gateway storage</a> moves
+run metadata, receipts, audit events, team settings and key metadata to a separate gateway
+database; Redis stays required for live budgets and the other state listed there.
+Temporal owns workflow history in <code>temporal</code> and SQL visibility in
 <code>temporal_visibility</code>, both on the existing PostgreSQL service. Back up all three stores
-together with the complete receipt export. No gateway PostgreSQL database or new service
-is introduced by this milestone.</p>
+(plus the gateway database if you enable PostgreSQL storage) together with the complete
+receipt export.</p>
 <p>Gateway startup applies numbered Lua migrations from <code>app/migrations</code> atomically with
 the schema marker in the existing budget Redis. Migration 001 adopts the unversioned
 0.2.0 keys without rewriting counters, run IDs, receipts or expiry times. Repeated and

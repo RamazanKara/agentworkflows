@@ -2125,11 +2125,10 @@
 
 
 <h1 id="feature-inventory">Feature inventory<a class="headerlink" href="#feature-inventory" title="Permanent link">&para;</a></h1>
-<p>This is the source of truth for what the current checkout implements, what is enabled by
+<p>This is the source of truth for what release v0.9.0 implements, what is enabled by
 default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
 operator path exist in this repository; it does not mean a customer-specific integration is
-configured or published. This review targets 1.0.0-rc.1; source package/chart versions
-remain 0.9.0. Use source-built images for candidate features.</p>
+configured or published. Package and chart versions are 0.9.0.</p>
 <p>Milestones 2–3 add <a href="../workflows/">durable workflows, framework agents, MCP tools, and workflow policy</a>.</p>
 <table>
 <thead>
@@ -2191,7 +2190,7 @@ remain 0.9.0. Use source-built images for candidate features.</p>
 </tr>
 <tr>
 <td>Human approvals</td>
-<td>Implemented in this candidate</td>
+<td>Shipped</td>
 <td>One reviewer, seven days</td>
 <td>1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Escalation and production Temporal authorization remain operator-owned</td>
 </tr>
@@ -2269,7 +2268,7 @@ remain 0.9.0. Use source-built images for candidate features.</p>
 </tr>
 <tr>
 <td>SSO group-to-role mapping</td>
-<td>Implemented in this candidate</td>
+<td>Shipped</td>
 <td>Off; existing OIDC role claims remain the default</td>
 <td>Exact team-scoped mappings, deny unmapped/conflicting groups, token-bounded sessions and policy-change invalidation; admin policy view in Members &amp; keys, API and both SDKs. IdP provisioning remains operator-owned</td>
 </tr>
@@ -2359,13 +2358,13 @@ remain 0.9.0. Use source-built images for candidate features.</p>
 </tr>
 <tr>
 <td>Trigger run history</td>
-<td>Implemented in this candidate</td>
+<td>Shipped</td>
 <td>On for new cron/webhook launches</td>
 <td>Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; existing run retention, no backfill</td>
 </tr>
 <tr>
 <td>Usage CSV export</td>
-<td>Implemented in this candidate</td>
+<td>Shipped</td>
 <td>Available to team roles</td>
 <td>Costs, <code>/v1/usage/export</code>, both SDKs and CLI; current UTC month, scoped totals and overlapping breakdowns; estimates include reservations</td>
 </tr>

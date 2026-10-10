@@ -2409,8 +2409,7 @@
 <h2 id="install-a-reviewed-version">Install a reviewed version<a class="headerlink" href="#install-a-reviewed-version" title="Permanent link">&para;</a></h2>
 <p>Open <strong>Workflow templates</strong> in the console. A team admin can install any bundled template
 whose worker and team policy are already configured with one click, then select <strong>Run</strong>.
-The gallery has nine templates. The original six retain version <code>0.9.0</code>; release notes,
-meeting actions, and security questionnaire start at <code>1.0.0-rc.4</code>.
+The gallery has nine templates, all at version <code>0.9.0</code>.
 Installation pins that version in the team's revisioned settings and records an audit entry;
 repeating the same installation is idempotent. New runs retain the template ID and version.
 Unknown versions return 422; an unapproved workflow returns 409.</p>
@@ -2688,7 +2687,7 @@ See <a href="../sdk-reference/">SDK reference</a> for defaults and <a href="../w
 for OpenAI, Anthropic, Agents SDK, LangGraph, MCP, and sandboxed code steps.</p>
 <h2 id="release-notes">Release notes<a class="headerlink" href="#release-notes" title="Permanent link">&para;</a></h2>
 <p><strong>For:</strong> release managers preparing a customer-facing change summary.
-Version <code>1.0.0-rc.4</code>; Python and TypeScript workers both implement <code>ReleaseNotesWorkflow</code>.</p>
+Version <code>0.9.0</code>; Python and TypeScript workers both implement <code>ReleaseNotesWorkflow</code>.</p>
 <p>In the console, choose <strong>Templates → Release notes → Install template → Run</strong>.
 Or scaffold and run from code:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-release-notes<span class="w"> </span>--template<span class="w"> </span>release-notes
@@ -2707,7 +2706,7 @@ further constrained by team policy.</p>
 The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
 <h2 id="meeting-actions">Meeting actions<a class="headerlink" href="#meeting-actions" title="Permanent link">&para;</a></h2>
 <p><strong>For:</strong> team leads turning a transcript into an actionable follow-up.
-Version <code>1.0.0-rc.4</code>; Python and TypeScript workers both implement <code>MeetingActionsWorkflow</code>.</p>
+Version <code>0.9.0</code>; Python and TypeScript workers both implement <code>MeetingActionsWorkflow</code>.</p>
 <p>In the console, choose <strong>Templates → Meeting actions → Install template → Run</strong>.
 Or scaffold and run from code:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-meeting-actions<span class="w"> </span>--template<span class="w"> </span>meeting-actions
@@ -2726,7 +2725,7 @@ further constrained by team policy.</p>
 The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
 <h2 id="security-questionnaire">Security questionnaire<a class="headerlink" href="#security-questionnaire" title="Permanent link">&para;</a></h2>
 <p><strong>For:</strong> security teams answering vendor questionnaires from retained evidence.
-Version <code>1.0.0-rc.4</code>; Python and TypeScript workers both implement <code>SecurityQuestionnaireWorkflow</code>.</p>
+Version <code>0.9.0</code>; Python and TypeScript workers both implement <code>SecurityQuestionnaireWorkflow</code>.</p>
 <p>In the console, choose <strong>Templates → Security questionnaire → Install template → Run</strong>.
 Or scaffold and run from code:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-security-questionnaire<span class="w"> </span>--template<span class="w"> </span>security-questionnaire

@@ -2192,15 +2192,15 @@ has a receipt.</p>
 <p><img alt="A workflow draft, costs, and approval progress in the team console" src="assets/console-1440.png" /></p>
 <p><em>1440 px console capture with consistent test data.</em></p>
 <h2 id="start-with-one-approved-result">Start with one approved result<a class="headerlink" href="#start-with-one-approved-result" title="Permanent link">&para;</a></h2>
-<p>Start the local stack from this checkout:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker
+<p>Start the local stack from a v0.9.0 checkout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker
 </code></pre></div>
-<p>After images build and services become ready, follow the
+<p>After the published v0.9.0 images are pulled and services become ready, follow the
 <a href="quickstart/#60-second-console-walkthrough">60-second console walkthrough</a>: sign in,
 start the sample, and approve its draft. The simulated trial needs no cloud key and makes
 no external model calls. Connect a real provider to evaluate output quality.</p>
-<p>This is <strong>1.0.0-rc.4 (unreleased)</strong> source. Package versions remain 0.9.0; build the candidate
-instead of pulling older published images. <a href="release-verification/">Verification and remaining checks</a>.</p>
+<p>This is release <strong>v0.9.0</strong>; Compose pulls the matching published images.
+<a href="release-verification/">Verification and remaining checks</a>.</p>
 <h2 id="choose-your-path">Choose your path<a class="headerlink" href="#choose-your-path" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

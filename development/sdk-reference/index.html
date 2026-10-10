@@ -1355,10 +1355,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#company-group-access-v080" class="md-nav__link">
+  <a href="#company-group-access" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Company group access (v0.8.0)
+        Company group access
       
     </span>
   </a>
@@ -1366,10 +1366,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
+  <a href="#trigger-history-and-usage-csv" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger history and usage CSV (v0.7.0 candidate)
+        Trigger history and usage CSV
       
     </span>
   </a>
@@ -1410,10 +1410,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#approval-quorum-and-expiry-v090" class="md-nav__link">
+  <a href="#approval-quorum-and-expiry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Approval quorum and expiry (v0.9.0)
+        Approval quorum and expiry
       
     </span>
   </a>
@@ -1421,10 +1421,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#team-adoption-apis-rc4-candidate" class="md-nav__link">
+  <a href="#team-adoption-apis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Team adoption APIs (rc.4 candidate)
+        Team adoption APIs
       
     </span>
   </a>
@@ -2177,10 +2177,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#company-group-access-v080" class="md-nav__link">
+  <a href="#company-group-access" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Company group access (v0.8.0)
+        Company group access
       
     </span>
   </a>
@@ -2188,10 +2188,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
+  <a href="#trigger-history-and-usage-csv" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger history and usage CSV (v0.7.0 candidate)
+        Trigger history and usage CSV
       
     </span>
   </a>
@@ -2232,10 +2232,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#approval-quorum-and-expiry-v090" class="md-nav__link">
+  <a href="#approval-quorum-and-expiry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Approval quorum and expiry (v0.9.0)
+        Approval quorum and expiry
       
     </span>
   </a>
@@ -2243,10 +2243,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#team-adoption-apis-rc4-candidate" class="md-nav__link">
+  <a href="#team-adoption-apis" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Team adoption APIs (rc.4 candidate)
+        Team adoption APIs
       
     </span>
   </a>
@@ -2279,10 +2279,9 @@
 
 
 <h1 id="cli-and-python-sdk-reference">CLI and Python SDK reference<a class="headerlink" href="#cli-and-python-sdk-reference" title="Permanent link">&para;</a></h1>
-<p>This reference describes the current source SDK (0.9.0) under review for 1.0.0-rc.2.
-Install it in a virtual environment from the repository root with
-<code>python -m pip install ./sdk/python</code>; run a gateway built from the same checkout.
-The older v0.5.1 release wheel does not implement the entire surface below.
+<p>This reference describes the Python SDK and CLI in release v0.9.0. Install the release wheel
+(see <a href="../distribution/">distribution</a>), or from a v0.9.0 checkout run
+<code>python -m pip install ./sdk/python</code> in a virtual environment. Use a gateway of the same version.
 <code>agentworkflows --help</code> and each subcommand's <code>--help</code> work without a key.
 The equivalent module entry point is <code>python -m agentworkflows.cli</code>.</p>
 <p>The <a href="../team-lifecycle/">team lifecycle reference</a> lists the Python and TypeScript methods
@@ -2422,8 +2421,7 @@ data export/erasure and telemetry status, including access rules and version hea
 <p><code>runs start</code> also accepts <code>--project</code> and <code>--request-id UUID</code>. If a start response is lost,
 reuse the request ID printed on stderr with <strong>identical input</strong> to avoid duplicate runs.
 Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport failure, <strong>2</strong> usage/input/scaffold error.</p>
-<p>Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.9.0 checkout SDK and gateway,
-not the v0.5.1 wheel or images. <code>runs list</code> and <code>runs export</code> accept <code>--project</code>,
+<p>Run cursors and JSON Lines export require gateway v0.9.0 or newer. <code>runs list</code> and <code>runs export</code> accept <code>--project</code>,
 <code>--workflow</code>, <code>--status</code>, <code>--cursor</code> and <code>--limit</code> (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have <code>next_cursor</code>.
 Continue until it is null. Cursors use creation time and run ID, so new runs and
@@ -2451,8 +2449,7 @@ save a newly created <code>key</code> securely, since list/update cannot recover
 to the authenticated admin's team and project access. You cannot revoke or demote your
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.</p>
-<p>Settings and audit SDK methods and CLI commands are available from this checkout;
-they are not in the v0.5.1 wheel. Both require an
+<p>Settings and audit SDK methods and CLI commands require an
 unrestricted team admin credential. Run <code>settings show</code> before changing settings,
 review the values, and pass its <code>revision</code> to <code>set</code> or <code>reset</code>. <code>--fields</code> is a
 non-empty JSON object of field names to values, without an outer <code>fields</code> wrapper.
@@ -2474,11 +2471,11 @@ Failed exports exit nonzero and may leave partial output. Retention continues
 during paging; these exports are not complete process logs for the operator
 verifier. See <a href="../audit-log/">audit log</a> for boundaries and verification limits.</p>
 <p>The <a href="../templates/">template gallery</a> includes input fields, expected results and adaptation
-steps for every starter. Install from this checkout to get its current template set.
+steps for every starter. The release wheel and a v0.9.0 checkout carry the same template set.
 Scaffolds include <code>input-schema.json</code> and a schema declaration in <code>workflow.py</code>. Copy the
 schema to the workflow policy's <code>inputSchema</code> to enable console forms and gateway validation.</p>
-<h2 id="company-group-access-v080">Company group access (v0.8.0)<a class="headerlink" href="#company-group-access-v080" title="Permanent link">&para;</a></h2>
-<p>Gateway v0.8.0 adds <code>GET /v1/team/sso</code> for a team admin credential without a project
+<h2 id="company-group-access">Company group access<a class="headerlink" href="#company-group-access" title="Permanent link">&para;</a></h2>
+<p>Gateway v0.9.0 provides <code>GET /v1/team/sso</code> for a team admin credential without a project
 restriction. It returns <code>TeamSSO</code>: team ID, enabled state, provider hostname,
 <code>role_source</code> (<code>groups</code> or <code>claim</code>), team/project claim names, and only the current
 team's group-to-role mappings. In group mode, <code>role_claim</code> and <code>default_role</code> are
@@ -2502,12 +2499,12 @@ This is an inspection API; an operator configures mappings through Helm or
 environment variables. See <a href="../workflows/#sso-group-to-role-mapping">group access semantics and acceptance</a>.
 Members &amp; keys displays the same policy. The API does not log users into their
 identity provider, create groups or change memberships.</p>
-<h2 id="trigger-history-and-usage-csv-v070-candidate">Trigger history and usage CSV (v0.7.0 candidate)<a class="headerlink" href="#trigger-history-and-usage-csv-v070-candidate" title="Permanent link">&para;</a></h2>
+<h2 id="trigger-history-and-usage-csv">Trigger history and usage CSV<a class="headerlink" href="#trigger-history-and-usage-csv" title="Permanent link">&para;</a></h2>
 <p><code>runs list</code> and <code>runs export</code> accept <code>--trigger NAME</code> together with <code>--workflow WORKFLOW</code>.
 The API uses <code>GET /v1/workflow-runs?workflow=WORKFLOW&amp;trigger=NAME</code>; retain both filters
 when following <code>next_cursor</code>. Missing workflow returns 422 <code>trigger_workflow_required</code>.
-Run metadata includes <code>trigger: {name, kind}</code> for cron/webhook launches recorded by
-v0.7.0. Older/manual runs and manual retries have no trigger provenance. History survives
+Run metadata includes <code>trigger: {name, kind}</code> for cron/webhook launches.
+Manual runs and manual retries have no trigger provenance. History survives
 removal of the trigger's configuration, until run retention expires. Rejected deliveries
 do not have a run; inspect their audit receipts instead.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
@@ -2780,7 +2777,7 @@ before a start intent or Temporal execution is created; defaults are not inserte
 <p>The <a href="../workflows/#authenticated-workflow-api">authenticated API table</a> documents the run
 endpoints. The full <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json">OpenAPI contract</a>
 is checked in and can be viewed at <code>/docs</code> on the running gateway when enabled.</p>
-<h2 id="approval-quorum-and-expiry-v090">Approval quorum and expiry (v0.9.0)<a class="headerlink" href="#approval-quorum-and-expiry-v090" title="Permanent link">&para;</a></h2>
+<h2 id="approval-quorum-and-expiry">Approval quorum and expiry<a class="headerlink" href="#approval-quorum-and-expiry" title="Permanent link">&para;</a></h2>
 <p>Upgrade the gateway before workers. Both SDKs' <code>ApprovalWorkflow.approval(draft)</code>
 read the run's saved policy through a versioned worker activity. No workflow-code
 change is needed for an existing approval gate. <code>review</code> accepts a vote, while
@@ -2804,7 +2801,7 @@ Python exposes the same fields in the status query and <code>GatewayClient.run()
 vote can leave the run waiting for other reviewers; inspect the run before assuming
 it completed. Repeating a vote never adds a reviewer. See <a href="../workflows/#approval-policies">approval policies</a>
 for identity, replay, automatic decisions and upgrade boundaries.</p>
-<h2 id="team-adoption-apis-rc4-candidate">Team adoption APIs (rc.4 candidate)<a class="headerlink" href="#team-adoption-apis-rc4-candidate" title="Permanent link">&para;</a></h2>
+<h2 id="team-adoption-apis">Team adoption APIs<a class="headerlink" href="#team-adoption-apis" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>

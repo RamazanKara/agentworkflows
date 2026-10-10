@@ -2890,7 +2890,7 @@ For HTTP localhost only, set <code>SESSION_COOKIE_SECURE=false</code>; Compose a
 <code>local-development-only</code> continues to work. The demo adds no identity-provider container;
 connect an existing provider using the settings above.</p>
 <h3 id="sso-group-to-role-mapping">SSO group-to-role mapping<a class="headerlink" href="#sso-group-to-role-mapping" title="Permanent link">&para;</a></h3>
-<p>With the v0.8.0 gateway, map existing company groups instead of requiring a scalar
+<p>With the v0.9.0 gateway, map existing company groups instead of requiring a scalar
 role claim. Keep the OIDC setup above, then configure:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>OIDC_GROUPS_CLAIM=groups
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>OIDC_GROUP_ROLE_MAPPINGS={"default":{"engineering-builders":"builder","engineering-reviewers":"approver","platform-admins":"admin"}}
@@ -2928,7 +2928,7 @@ view; it requires a team admin credential without a project restriction and retu
 only that team's mappings. It never returns the client secret or another team's
 group names. Configure mappings through the deployment, not the API; the public
 <code>/v1/auth/config</code> response does not expose them. Both SDKs provide the
-<a href="../sdk-reference/#company-group-access-v080">same inspection method</a>.</p>
+<a href="../sdk-reference/#company-group-access">same inspection method</a>.</p>
 <p>For the umbrella chart, merge this into your existing OIDC values:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">inference-gateway</span><span class="p">:</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">auth</span><span class="p">:</span>
@@ -3002,7 +3002,7 @@ not receive direct Temporal access or worker keys.</p>
 </tr>
 <tr>
 <td><code>GET /v1/usage/export</code></td>
-<td>Current UTC month CSV, with total and provider/workflow rows, scoped to the credential (v0.7.0)</td>
+<td>Current UTC month CSV, with total and provider/workflow rows, scoped to the credential</td>
 </tr>
 </tbody>
 </table>
@@ -3028,16 +3028,14 @@ Custom workflows expose a <code>status</code> query returning <code>stage</code>
 support approvals, a <code>review(approved, reviewer)</code> update returning whether the waiting
 decision was accepted. ApprovalWorkflow implements both for the research and code-review templates.</p>
 <h2 id="triggers-and-notifications">Triggers and notifications<a class="headerlink" href="#triggers-and-notifications" title="Permanent link">&para;</a></h2>
-<p>The v0.7.0 candidate adds <strong>Run history</strong> on each console trigger. It opens retained
+<p>Each console trigger has <strong>Run history</strong>. It opens retained
 runs with their status, approval review, costs and receipts, filtered by workflow and
 trigger name. The API/CLI/SDK filters and retention boundaries are documented in the
-<a href="../sdk-reference/#trigger-history-and-usage-csv-v070-candidate">SDK reference</a>.
+<a href="../sdk-reference/#trigger-history-and-usage-csv">SDK reference</a>.
 This uses <code>inference-gateway.workflowRecords.runRecordRetentionSeconds</code> in Helm (30
 days by default), with Redis or PostgreSQL; no new store or setting is required.</p>
 <p>For monthly reporting, <strong>Costs → Export CSV</strong> uses <code>GET /v1/usage/export</code> and the
-existing Redis accounting. Project-bound credentials can export only their project.
-Use the candidate gateway image built from source until v0.7.0 is published; the
-default chart image tags still point to v0.5.1.</p>
+existing Redis accounting. Project-bound credentials can export only their project.</p>
 <p>Open <strong>Triggers</strong> in the console to see cron expressions, upcoming times, signed webhook
 endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
 viewers and approvers can inspect them. Existing runs continue when a trigger is paused.</p>
@@ -3173,7 +3171,7 @@ The API reports the current month. Retain run metadata/timeline keys with Tempor
 and audit evidence. Expired Temporal executions return 404; retained receipts remain in
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
 Temporal; restrict access and retention for both stores.</p>
-<p>Since v0.6.0, <code>GET /v1/workflow-runs</code> returns <code>next_cursor</code>
+<p><code>GET /v1/workflow-runs</code> returns <code>next_cursor</code>
 alongside the legacy <code>next_offset</code>. Send that cursor with unchanged project,
 workflow and status filters to continue toward older runs. Empty filtered pages
 can have a continuation: <code>limit</code> bounds records scanned before filtering, keeping

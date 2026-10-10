@@ -621,10 +621,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#company-group-access-v080-candidate" class="md-nav__link">
+  <a href="#company-group-access" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Company group access (v0.8.0 candidate)
+        Company group access
       
     </span>
   </a>
@@ -632,10 +632,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
+  <a href="#trigger-history-and-usage-csv" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger history and usage CSV (v0.7.0 candidate)
+        Trigger history and usage CSV
       
     </span>
   </a>
@@ -2249,10 +2249,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#company-group-access-v080-candidate" class="md-nav__link">
+  <a href="#company-group-access" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Company group access (v0.8.0 candidate)
+        Company group access
       
     </span>
   </a>
@@ -2260,10 +2260,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#trigger-history-and-usage-csv-v070-candidate" class="md-nav__link">
+  <a href="#trigger-history-and-usage-csv" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger history and usage CSV (v0.7.0 candidate)
+        Trigger history and usage CSV
       
     </span>
   </a>
@@ -2327,9 +2327,9 @@ Node.js in PowerShell, with Docker in Ubuntu WSL. No Python installation, GPU,
 provider credentials, or cloud account is needed. The trial uses canned responses
 and synthetic prices from the existing Compose fakes.</p>
 <h2 id="1-install-and-start-the-fake-gateway">1. Install and start the fake gateway<a class="headerlink" href="#1-install-and-start-the-fake-gateway" title="Permanent link">&para;</a></h2>
-<p>Use this source candidate (package version 0.9.0), then install and build the SDK and
-its examples. Skip clone/cd if you already have the repository checkout:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
+<p>Use a v0.9.0 checkout, then install and build the SDK and its examples. Skip clone/cd if
+you already have the repository checkout. Compose pulls the published v0.9.0 gateway image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>v0.9.0<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows/sdk/typescript
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>npm<span class="w"> </span>ci<span class="w"> </span>--no-audit<span class="w"> </span>--no-fund<span class="w"> </span>--maxsockets<span class="o">=</span><span class="m">2</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>npm<span class="w"> </span>run<span class="w"> </span>build
@@ -2341,7 +2341,7 @@ Choose ports using the existing <code>AGENTWORKFLOWS_GATEWAY_PORT</code> and
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Bash (Linux/macOS)</label><label for="__tabbed_1_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>--build<span class="w"> </span>inference-gateway<span class="w"> </span>notification-fake<span class="w"> </span>temporal-ui
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>inference-gateway<span class="w"> </span>notification-fake<span class="w"> </span>temporal-ui
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>demo-worker
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>http://127.0.0.1:8080
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TEMPORAL_ADDRESS</span><span class="o">=</span>localhost:7233
@@ -2350,7 +2350,7 @@ Choose ports using the existing <code>AGENTWORKFLOWS_GATEWAY_PORT</code> and
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="p">-</span><span class="n">-build</span> <span class="n">inference-gateway</span> <span class="n">notification-fake</span> <span class="n">temporal-ui</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">up</span> <span class="n">-d</span> <span class="p">-</span><span class="n">-wait</span> <span class="n">inference-gateway</span> <span class="n">notification-fake</span> <span class="n">temporal-ui</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">$env:AGENTWORKFLOWS_API_KEY</span> <span class="p">=</span> <span class="s1">'demo-worker'</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nv">$env:AGENTWORKFLOWS_URL</span> <span class="p">=</span> <span class="s1">'http://127.0.0.1:8080'</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nv">$env:TEMPORAL_ADDRESS</span> <span class="p">=</span> <span class="s1">'localhost:7233'</span>
@@ -2407,8 +2407,9 @@ both examples is in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/sdk/typescript/src/examples/workflows.ts"><code>sdk/typescript/src/examples/workflows.ts</code></a>.
 Change the prompt and rebuild with <code>npm run build</code> before restarting the worker.</p>
 <h2 id="write-a-workflow">Write a workflow<a class="headerlink" href="#write-a-workflow" title="Permanent link">&para;</a></h2>
-<p>For the candidate, install the built source SDK in your own Node project. Replace the
-path below with your checkout path (this is a local install, not a published package):</p>
+<p>Install the built SDK in your own Node project from your checkout. Replace the
+path below with your checkout path (this is a local install, not an npm registry package;
+the release also attaches <code>agentworkflows-sdk-0.9.0.tgz</code>):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>npm<span class="w"> </span>install<span class="w"> </span>/path/to/agentworkflows/sdk/typescript
 </code></pre></div>
 <p>Import workflow code from the dedicated sandbox-safe subpath:</p>
@@ -2485,8 +2486,7 @@ Inside workflows, gateway failures arrive as Temporal <code>ActivityFailure</cod
 <code>ApplicationFailure</code> cause whose <code>type</code> is the gateway reason. See the Python
 <a href="../sdk-reference/#gateway-client-and-errors">error recovery table</a> for the shared reasons.</p>
 <h2 id="team-administration">Team administration<a class="headerlink" href="#team-administration" title="Permanent link">&para;</a></h2>
-<p>The admin methods below are available from this source candidate,
-not the older v0.5.1 release tarball. Use an admin key; settings and audit require
+<p>Use an admin key; settings and audit require
 a credential without a project restriction.</p>
 <table>
 <thead>
@@ -2579,11 +2579,9 @@ and verification results; a disabled view has <code>ok: null</code>, and export 
 partial output. Retention continues during paging; these team exports are not
 complete process logs for the operator verifier. See <a href="../audit-log/">audit log</a>
 for range boundaries and what verification proves.</p>
-<p><a id="run-history-and-export-v060-checkout"></a></p>
 <h2 id="run-history-and-export">Run history and export<a class="headerlink" href="#run-history-and-export" title="Permanent link">&para;</a></h2>
-<p>Use the source-built gateway from the <a href="../quickstart/#1-install-and-start">Python quickstart</a>
-and install/build <code>sdk/typescript</code> from this checkout; the v0.5.1 release tarball
-does not include these methods. <code>runs({ project, workflow, status, cursor, limit })</code>
+<p>Use the gateway from the <a href="../quickstart/#1-install-and-start">Python quickstart</a>
+and the v0.9.0 SDK built from <code>sdk/typescript</code>. <code>runs({ project, workflow, status, cursor, limit })</code>
 returns a typed <code>RunPage</code>. All filters are optional. Pass <code>next_cursor</code> with the
 same project and filters until it is null, including on empty pages. <code>limit</code>
 bounds scanned records before filtering (1–100, default 20). Cursors remain stable
@@ -2609,25 +2607,23 @@ transport errors propagate and can leave partial output. Retention and status
 changes continue during export; this is not a transactional snapshot or backup.
 Expired runs/content are not recovered, and the stored start input is omitted.
 Downloaded files need their own retention policy. See <a href="../sdk-reference/#cli">CLI and SDK paging</a>.</p>
-<h2 id="company-group-access-v080-candidate">Company group access (v0.8.0 candidate)<a class="headerlink" href="#company-group-access-v080-candidate" title="Permanent link">&para;</a></h2>
-<p>Build the gateway from this checkout using the Python Quickstart's
-<a href="../quickstart/">source-build path</a> and install this checkout's TypeScript SDK for
-unreleased features. With an unrestricted team-admin credential,
+<h2 id="company-group-access">Company group access<a class="headerlink" href="#company-group-access" title="Permanent link">&para;</a></h2>
+<p>With an unrestricted team-admin credential,
 <code>await client.teamSSO()</code> inspects the same sign-in policy shown in Members &amp; keys.
-See the <a href="../sdk-reference/#company-group-access-v080">typed contract and example</a>.
+See the <a href="../sdk-reference/#company-group-access">typed contract and example</a>.
 Configure your existing identity provider using the
 <a href="../workflows/#sso-group-to-role-mapping">group mapping guide</a>; the local fixture
 workflow does not require SSO.</p>
-<h2 id="trigger-history-and-usage-csv-v070-candidate">Trigger history and usage CSV (v0.7.0 candidate)<a class="headerlink" href="#trigger-history-and-usage-csv-v070-candidate" title="Permanent link">&para;</a></h2>
-<p>Use the checkout SDK and a gateway built from this checkout. Run history is available
+<h2 id="trigger-history-and-usage-csv">Trigger history and usage CSV<a class="headerlink" href="#trigger-history-and-usage-csv" title="Permanent link">&para;</a></h2>
+<p>Run history is available
 from each console trigger; <code>runs({ workflow, trigger, project, cursor })</code> and
 <code>exportRuns({ workflow, trigger })</code> use the same project-scoped filter. A trigger name
-requires a workflow. Only launches recorded by v0.7.0 have trigger provenance; existing
+requires a workflow. Manual runs have no trigger provenance; existing
 run retention applies. Manual retries are separate runs.</p>
 <p><code>await gateway.exportUsage()</code> returns UTF-8 CSV for the current UTC month. Write it
 with <code>writeFile('usage.csv', await gateway.exportUsage(), 'utf8')</code> from <code>node:fs/promises</code>,
 or use <strong>Costs → Export CSV</strong>. The total and provider/workflow rows overlap and include
-reservations. See the <a href="../sdk-reference/#trigger-history-and-usage-csv-v070-candidate">column and scope reference</a>.</p>
+reservations. See the <a href="../sdk-reference/#trigger-history-and-usage-csv">column and scope reference</a>.</p>
 <h2 id="verify-and-stop">Verify and stop<a class="headerlink" href="#verify-and-stop" title="Permanent link">&para;</a></h2>
 <p>From <code>sdk/typescript</code>, run <code>npm run build</code>, <code>npm run lint</code>, and <code>npm test</code>. Vitest
 uses at most two workers. The equivalent repository target is <code>make test-typescript</code>.
@@ -2653,9 +2649,8 @@ remove this disposable trial's containers and volumes from the repository root:<
 </div>
 </div>
 </div>
-<p><a id="multi-reviewer-approval-v090-candidate"></a></p>
 <h2 id="multi-reviewer-approval">Multi-reviewer approval<a class="headerlink" href="#multi-reviewer-approval" title="Permanent link">&para;</a></h2>
-<p>Build the gateway from this checkout and use the v0.9.0 SDK worker before enabling
+<p>Use the v0.9.0 gateway and SDK worker before enabling
 nondefault approval policies. In <strong>Team settings / Code review</strong>, set Required
 reviewers to <code>2</code> and Approval expiry (seconds) to <code>3600</code>, then start a new review.
 The first positive vote leaves it waiting; a second distinct reviewer completes the

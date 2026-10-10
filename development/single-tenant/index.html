@@ -2263,7 +2263,7 @@ This is a reference deployment you operate. AgentWorkflows does not sell a hoste
 <tbody>
 <tr>
 <td>Local evaluation</td>
-<td><code>docker compose -f deploy/compose/compose.yaml up --build -d --wait workflow-worker</code></td>
+<td><code>docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker</code></td>
 <td>Gateway, console, Temporal, persistent stores, worker and a simulated provider; no paid key needed.</td>
 </tr>
 <tr>
@@ -2349,9 +2349,9 @@ intra-namespace RPC is not configured for mutual TLS by this profile. Keep Tempo
 and database services private. The Research example's tools are synthetic; replace
 them before treating publication as a business integration.</p>
 <h2 id="install-and-verify">Install and verify<a class="headerlink" href="#install-and-verify" title="Permanent link">&para;</a></h2>
-<p>Build candidate gateway and worker images from this checkout, make them available in
-your registry, and pin their digests in <code>tenant-values.yaml</code>. The chart still has
-older release defaults; do not rely on its default image tags for rc.4.</p>
+<p>The chart defaults to the published v0.9.0 gateway and worker images. Pin their digests in
+<code>tenant-values.yaml</code>, or build images from this checkout and make them available in your
+registry.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-f<span class="w"> </span>deploy/charts/agentworkflows/values-single-tenant.yaml<span class="w"> </span>-f<span class="w"> </span>tenant-values.yaml
