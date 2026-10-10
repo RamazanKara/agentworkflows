@@ -88,8 +88,10 @@ def test_workflow_insights_summarize_outcomes_time_review_wait_and_cost(gateway)
     assert research["median_review_seconds"] == 330
     assert research["average_cost_usd"] == pytest.approx(0.03)
     assert research["total_cost_usd"] == pytest.approx(0.10)
-    assert research["slowest_step"] == {"step_id": "draft", "median_ms": 1650}
-    assert research["costliest_step"] == {"step_id": "draft", "average_cost_usd": pytest.approx(0.025)}
+    assert research["slowest_step"] == {"step_id": "draft", "name": "", "action": "model_call", "median_ms": 1650}
+    assert research["costliest_step"] == {
+        "step_id": "draft", "name": "", "action": "model_call", "average_cost_usd": pytest.approx(0.025)
+    }
     assert other["workflow"] == "OtherWorkflow" and other["outcomes"]["canceled"] == 1
     assert other["completion_rate"] == 0 and other["median_review_seconds"] is None
     month = insights(client, "?days=30").json()["workflows"][0]
@@ -129,6 +131,9 @@ def test_run_detail_explains_where_time_and_money_went(gateway):
     assert (summary["model_ms"], summary["tool_ms"]) == (3200, 300)
     assert summary["tokens"] == 4200 and summary["cost_usd"] == pytest.approx(0.06)
     assert [row["step_id"] for row in summary["by_step"]] == ["research", "analyze", "draft"]
+    named = summarize(0, [{"action": "tool_exec", "step_id": "1", "tool": "research", "model": "", "timestamp": 1,
+                           "duration_ms": 5, "tokens": 0, "cost_usd": 0}])
+    assert named["by_step"][0]["name"] == "research"
     assert summary["slowest_step"]["step_id"] == "draft" and summary["costliest_step"]["step_id"] == "draft"
     waiting = client.get(f"/v1/workflow-runs/{runs['waiting']['run_id']}", headers=auth("viewer")).json()["summary"]
     assert waiting["review_open"] is True and waiting["review_seconds"] == 590

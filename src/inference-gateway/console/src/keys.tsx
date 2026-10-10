@@ -46,6 +46,8 @@ function KeyManagement({ session }: { session: Session }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const keys = [...result.data?.keys ?? []].sort((a, b) => Number(state(a) !== 'active') - Number(state(b) !== 'active') || (b.created_at ?? 0) - (a.created_at ?? 0));
+  // A key from the gateway configuration is not in the managed list; still show who is signed in.
+  const self = Boolean(session.keyId) && !keys.some(key => key.key_id === session.keyId);
   return <><PageHeader title="Members & keys" subtitle="Who can use this team, and with which role."><Refresh onClick={() => { setCreated(undefined); setRevision(value => value + 1); }}/></PageHeader>
     <p className="intro">{config.data?.enabled
       ? 'People who sign in with their company account get their team and role from it. Create keys here for anyone without company sign-in and for automation.'
@@ -66,6 +68,20 @@ function KeyManagement({ session }: { session: Session }) {
         <div className="actions"><a href="/v1/auth/login">Test company sign-in</a><a href="https://ramazankara.github.io/agentworkflows/workflows/#sso-group-to-role-mapping">Company sign-in setup</a></div>
       </>}
     </section>}
+    <section aria-labelledby="access-title"><h2 id="access-title">Who has access</h2>
+    {!result.data && !result.error && <Loading/>}
+      {result.data && (keys.length || self ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Team API keys"><table className="stack keys-table"><thead><tr><th>Name</th><th>Role</th><th>Project</th><th>Last used</th><th>Expires</th><th>Status</th><th><span className="visually-hidden">Action</span></th></tr></thead><tbody>{self && <tr className="config-key"><th scope="row">{session.name || 'Your key'}<span className="badge you">You</span><small>From the gateway configuration</small></th><td data-label="Role">{label(session.team.role)}</td><td data-label="Project">{session.team.projects.length === 1 ? session.team.projects[0] : 'All projects'}</td><td data-label="Last used">Now</td><td data-label="Expires">Set by your operator</td><td data-label="Status"><span className="badge key-active">Active</span></td><td className="row-action"/></tr>}{keys.map(key => {
+        const current = state(key);
+        return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}{key.revoked_at != null && ` ${day(key.revoked_at)}`}</span></td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
+          if (!window.confirm(`Revoke ${key.name}? It stops working immediately.`)) return;
+          setBusy(true); setError(''); setCreated(undefined); setEditing(undefined);
+          try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); }
+          catch (value) { setError((value as Error).message); }
+          finally { setBusy(false); }
+        }}>Revoke</button>}{key.revoked_at == null && key.key_id !== session.keyId && <button className="secondary" disabled={busy} aria-label={`Edit ${key.name}`} onClick={() => { setCreated(undefined); setEditing(key); setMessage(''); }}>Edit</button>}</td></tr>;
+      })}</tbody></table></div></div> : <div className="panel"><Empty title="No keys yet"><p>Invite a teammate or create a key below. Keys from your gateway configuration keep working.</p></Empty></div>)}
+      {result.data && self && <p className="muted">Other keys from the gateway configuration are managed by your operator and are not listed.</p>}
+    </section>
     <Invitations session={session} onChanged={() => setRevision(value => value + 1)}/>
     <ErrorMessage message={error || result.error}/><p role="status" className="status">{message}</p>
     {editing && <KeyEditor key={editing.key_id} record={editing} session={session} onCancel={() => setEditing(undefined)} onSaved={name => {
@@ -99,17 +115,6 @@ function KeyManagement({ session }: { session: Session }) {
         <div className="form-actions"><button disabled={busy}>{busy ? 'Creating…' : 'Create key'}</button></div>
       </form></>}
     </section>
-    {!result.data && !result.error && <Loading/>}
-    {result.data && (keys.length ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Team API keys"><table className="stack keys-table"><thead><tr><th>Name</th><th>Role</th><th>Project</th><th>Last used</th><th>Expires</th><th>Status</th><th><span className="visually-hidden">Action</span></th></tr></thead><tbody>{keys.map(key => {
-      const current = state(key);
-      return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}{key.revoked_at != null && ` ${day(key.revoked_at)}`}</span></td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
-        if (!window.confirm(`Revoke ${key.name}? It stops working immediately.`)) return;
-        setBusy(true); setError(''); setCreated(undefined); setEditing(undefined);
-        try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); }
-        catch (value) { setError((value as Error).message); }
-        finally { setBusy(false); }
-      }}>Revoke</button>}{key.revoked_at == null && key.key_id !== session.keyId && <button className="secondary" disabled={busy} aria-label={`Edit ${key.name}`} onClick={() => { setCreated(undefined); setEditing(key); setMessage(''); }}>Edit</button>}</td></tr>;
-    })}</tbody></table></div></div> : <div className="panel"><Empty title="No keys yet"><p>Create the first key above. Keys from your gateway configuration keep working and are not listed here.</p></Empty></div>)}
   </>;
 }
 

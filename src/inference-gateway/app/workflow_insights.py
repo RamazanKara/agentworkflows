@@ -57,7 +57,7 @@ def summarize(
         row = groups.setdefault(
             (step["step_id"] or "", step["action"]),
             {
-                "step_id": step["step_id"] or "", "action": step["action"],
+                "step_id": step["step_id"] or "", "action": step["action"], "name": step_name(step),
                 "calls": 0, "duration_ms": 0.0, "tokens": 0, "cost_usd": 0.0,
             },
         )
@@ -93,11 +93,18 @@ def summarize(
     }
 
 
+def step_name(step: dict[str, Any]) -> str:
+    """What a person calls the step: the tool it ran, or the model it called."""
+    return str(step.get("tool") or step.get("model") or "")
+
+
 def normalize_event(event: dict[str, Any]) -> dict[str, Any]:
     charge = event_charge(event)
     return {
         "action": event.get("action_type") or "",
         "step_id": event.get("workflow_step_id") or "",
+        "tool": event.get("tool") or "",
+        "model": event.get("model") or "",
         "timestamp": float(event.get("ts") or 0),
         "duration_ms": float(event.get("latency_ms") or 0),
         "tokens": charge["tokens"],
@@ -125,10 +132,12 @@ def workflow_row(name: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
         if run["summary"]["review_seconds"] is not None and not run["summary"]["review_open"]
     ]
     costs = [run["summary"]["cost_usd"] for run in finished]
-    steps: dict[str, dict[str, list[float]]] = {}
+    steps: dict[str, dict[str, Any]] = {}
     for run in finished:
         for step in run["summary"]["by_step"]:
-            row = steps.setdefault(step["step_id"], {"ms": [], "cost": []})
+            row = steps.setdefault(
+                step["step_id"], {"ms": [], "cost": [], "name": step.get("name", ""), "action": step["action"]}
+            )
             row["ms"].append(step["duration_ms"] / step["calls"])
             row["cost"].append(step["cost_usd"])
     slowest = max(steps.items(), key=lambda item: median(item[1]["ms"]), default=None)
@@ -144,9 +153,15 @@ def workflow_row(name: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
         "median_review_seconds": median(reviews) if reviews else None,
         "average_cost_usd": sum(costs) / len(costs) if costs else None,
         "total_cost_usd": sum(run["summary"]["cost_usd"] for run in runs),
-        "slowest_step": {"step_id": slowest[0], "median_ms": median(slowest[1]["ms"])} if slowest else None,
+        "slowest_step": {
+            "step_id": slowest[0], "name": slowest[1]["name"], "action": slowest[1]["action"],
+            "median_ms": median(slowest[1]["ms"]),
+        }
+        if slowest
+        else None,
         "costliest_step": {
-            "step_id": costliest[0], "average_cost_usd": sum(costliest[1]["cost"]) / len(costliest[1]["cost"]),
+            "step_id": costliest[0], "name": costliest[1]["name"], "action": costliest[1]["action"],
+            "average_cost_usd": sum(costliest[1]["cost"]) / len(costliest[1]["cost"]),
         }
         if costliest and sum(costliest[1]["cost"]) > 0
         else None,

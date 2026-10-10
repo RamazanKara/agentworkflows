@@ -174,7 +174,7 @@ test('audit list expands escaped JSON and links to the run', async ({ page }) =>
   await page.getByRole('link', { name: 'Audit log', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'alice', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Model call', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: id.slice(0, 8) })).toHaveAttribute('href', `#run/${id}`);
+  await expect(page.getByRole('link', { name: id.slice(-8) })).toHaveAttribute('href', `#run/${id}`);
   await page.getByRole('button', { name: 'Show JSON' }).click();
   await expect(page.locator('pre')).toHaveText(JSON.stringify(auditEntry().event, null, 2));
   await expect(page.locator('pre script')).toHaveCount(0);
@@ -186,11 +186,12 @@ test('audit actors use current key display names and label unnamed keys without 
   await page.route('**/v1/team/keys', route => route.fulfill({ json: { keys: [{ key_id: 'worker-key-123', name: 'Research worker' }] } }));
   await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, events: [
     { ...auditEntry(1), event: { ...auditEntry().event, principal: { key_id: 'worker-key-123', name: 'Previous key name' } } },
-    { ...auditEntry(2), event: { ...auditEntry().event, principal: { key_id: 'retired-key-456' } } },
+    { ...auditEntry(2), event: { ...auditEntry().event, principal: { key_id: '5d41402abc4b2a76b9719d911017c592' } } },
+    { ...auditEntry(3), event: { ...auditEntry().event, principal: { key_id: 'demo-key' } } },
   ], next_cursor: null } }));
   await login(page, 'admin', '/console/#audit');
-  await expect(page.locator('td[data-label="Actor"]')).toHaveText(['Research workerAPI key', 'Unnamed keyAPI key']);
-  await expect(page.locator('.audit-table')).not.toContainText(/worker-key|retired-key|Previous key name/);
+  await expect(page.locator('td[data-label="Actor"]')).toHaveText(['Research workerAPI key', 'Unnamed keyAPI key', 'demo-keyAPI key']);
+  await expect(page.locator('.audit-table')).not.toContainText(/worker-key|5d41402a|Previous key name/);
 });
 
 test('audit filters and cursor pagination use the applied range', async ({ page }) => {
@@ -986,10 +987,10 @@ for (const width of [360, 393, 1440]) {
     await page.route('**/v1/team/telemetry', route => route.fulfill({ json: { traces_enabled: true, metrics_enabled: true, protocol: 'http/protobuf', service_name: 'inference-gateway' } }));
     await page.route('**/v1/team/data/export', route => route.fulfill({ json: { version: 1, team_id: 'insights', runs: [activeRun], external_follow_up: dataStatus.external_follow_up } }));
     await visit('/console/#data');
-    await expect(page.getByLabel('Run history (seconds)')).toHaveValue('2592000');
+    await expect(page.getByLabel('Run history (days)')).toHaveValue('30');
     await expect(page.getByRole('button', { name: 'Erase team data', exact: true })).toBeDisabled();
     await capture('data-privacy');
-    await page.getByLabel('Step content (seconds)').fill('86400');
+    await page.getByLabel('Step content (days)').fill('1');
     await page.getByRole('button', { name: 'Save retention', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Retention saved.');
     const teamDownload = page.waitForEvent('download');
@@ -1690,7 +1691,7 @@ test('Costs shows hard-limit and webhook alerts on a phone', async ({ page }) =>
   } }));
   await login(page, 'viewer', '/console/#costs');
   await expect(page.getByRole('heading', { name: 'Spend alerts' })).toBeVisible();
-  await expect(page.getByText('Hard limit reached. Further paid calls return 429', { exact: false })).toBeVisible();
+  await expect(page.getByText('Hard limit reached. Further paid calls are blocked', { exact: false })).toBeVisible();
   await expect(page.getByText('after five attempts', { exact: false })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -1838,7 +1839,7 @@ test('alert rules save selected events and approved destinations at the displaye
   await login(page, 'admin', '/console/#team');
   await page.getByLabel('Slow step', { exact: true }).check();
   await page.getByLabel('Budget used (%)', { exact: true }).fill('90');
-  await page.getByLabel('Slow step threshold (milliseconds)', { exact: true }).fill('1000');
+  await page.getByLabel('Slow step threshold (seconds)', { exact: true }).fill('1');
   await page.getByRole('button', { name: 'Save alert rules', exact: true }).click();
   await expect(page.getByText('Alert rules saved.', { exact: true })).toBeVisible();
 });

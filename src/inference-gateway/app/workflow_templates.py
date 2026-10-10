@@ -34,7 +34,7 @@ TEMPLATES = {
 }
 
 
-TEMPLATE_VERSIONS = {key: TEMPLATE_VERSION for key in TEMPLATES}
+TEMPLATE_VERSIONS = dict.fromkeys(TEMPLATES, TEMPLATE_VERSION)
 
 
 class TemplateInstall(BaseModel):

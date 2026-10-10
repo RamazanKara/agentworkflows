@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
 import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
 import { SettingsPanel } from './settings';
-import { FirstRunWizard } from './onboarding';
+import { ProviderKeyForm, SampleButton, useSetup } from './onboarding';
 
 const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/workflows.md';
 const routes = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1';
@@ -10,6 +10,7 @@ const routes = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/mod
 export function GetStarted({ session }: { session: Session }) {
   const models = useData<Models>(session.csrfToken, '/v1/models');
   const runs = useData<RunPage>(session.csrfToken, `/v1/workflow-runs?${new URLSearchParams({ project: session.team.projects[0] || '', limit: '1' })}`);
+  const setup = useSetup(session);
   const last = runs.data?.runs[0];
   const builder = ['admin', 'builder'].includes(session.team.role);
   const blocked = noProviderKeys(session.team);
@@ -20,22 +21,28 @@ export function GetStarted({ session }: { session: Session }) {
   const example = policies.data?.workflows.ResearchWorkflow;
   const start = example ? '#new/ResearchWorkflow' : '#new';
   const exampleMissing = blocked ? [] : (example?.allowedProviders || []).filter(provider => missing.includes(provider));
+  const sampleReady = Boolean(setup.data?.sample?.ready) && !blocked && exampleMissing.length === 0;
+  const done = [!blocked && missing.length === 0 && Boolean(models.data?.data.length), Boolean(last), last?.status === 'completed'];
+  const heading = (index: number, title: string) => <h2>{title}{done[index] && <span className="badge completed step-done">Done</span>}</h2>;
   return <><PageHeader title="Your first governed workflow" subtitle="Three steps from sign-in to an approved result."/>
     {isDemo(models.data) && <DemoNote/>}
-    <FirstRunWizard session={session}/>
     <ol className="onboarding">
-      <li><span className="onboarding-number">01</span><div><h2>{blocked ? 'Add a provider key' : 'Check your models'}</h2>
+      <li className={done[0] ? 'done' : ''}><span className="onboarding-number">01</span><div>{heading(0, blocked ? 'Add a provider key' : 'Check your models')}
         {blocked ? <p className="note-warn">No provider key yet. {providerList(missing)} {missing.length > 1 ? 'keys are' : 'key is'} missing, so runs fail until you add {missing.length > 1 ? 'them' : 'it'}.</p>
           : <p>These are the models your team can use. Provider keys stay on your server; nobody sees them here.</p>}
         <ErrorMessage message={models.error}/>
         {models.data ? models.data.data.length ? <ul className="model-list">{models.data.data.map(model => <li key={model.id}><code>{model.id}</code>{model.owned_by && <span className="muted">{providerName(model.owned_by)}</span>}{!model.simulated && keyMissing(model.owned_by) ? <span className="badge awaiting_approval">Key missing</span> : (model.simulated || session.team.provider_configuration?.[model.owned_by]?.configured) && <span className="badge recorded">Ready</span>}</li>)}</ul> : <p>No models yet. Ask your admin to connect a provider and approve a model.</p> : !models.error && <Loading/>}
+        {setup.data && missing.length > 0 && <ProviderKeyForm session={session} setup={setup.data}/>}
         {session.team.role === 'admin' ? blocked ? <a className="button" href="#providers">Connect a provider</a> : <a className="tap" href="#providers">Connect a provider or review budgets</a> : <p className="muted">Your team admin manages providers.</p>}
       </div></li>
-      <li><span className="onboarding-number">02</span><div><h2>Run the example workflow</h2><p>Research a topic, draft a briefing, review it, and publish. The example has a budget and a human approval step built in.</p>
+      <li className={done[1] ? 'done' : ''}><span className="onboarding-number">02</span><div>{heading(1, 'Run the example workflow')}<p>Research a topic, draft a briefing, review it, and publish. The example has a budget and a human approval step built in.</p>
         {exampleMissing.length > 0 && <p className="note-warn">The example uses {providerList(exampleMissing)}, which {exampleMissing.length > 1 ? 'have' : 'has'} no key yet, so those steps will fail. <a className="nowrap" href="#providers">Add the key</a> first.</p>}
-        {builder ? blocked || exampleMissing.length ? <><a className="button secondary" href={start}>Run workflow</a><p className="muted">{blocked ? 'Runs work once a provider key is added.' : 'You can start it now; steps on a provider without a key fail.'}</p></> : <a className="button" href={start}>Run workflow</a> : <p>Your role can inspect work. Ask a builder to start the example.</p>}
+        {!builder ? <p>Your role can inspect work. Ask a builder to start the example.</p>
+          : sampleReady && setup.data ? <><div className="actions"><SampleButton session={session} setup={setup.data}/><a className="button secondary" href={start}>Run workflow</a></div><p className="muted">The sample uses a ready-made topic. Run workflow lets you choose your own.</p></>
+          : blocked || exampleMissing.length ? <><a className="button secondary" href={start}>Run workflow</a><p className="muted">{blocked ? 'Runs work once a provider key is added.' : 'You can start it now; steps on a provider without a key fail.'}</p></>
+          : <a className="button" href={start}>Run workflow</a>}
       </div></li>
-      <li><span className="onboarding-number">03</span><div><h2>Approve it and check the evidence</h2><p>Approve the draft in Approvals. Then open the run to see each step’s prompt, answer, cost and receipt.</p>
+      <li className={done[2] ? 'done' : ''}><span className="onboarding-number">03</span><div>{heading(2, 'Approve it and check the evidence')}<p>Approve the draft in Approvals. Then open the run to see each step’s prompt, answer, cost and receipt.</p>
         <ErrorMessage message={runs.error}/>
         {last ? <a className="tap" href={`#run/${last.run_id}`}>Open the latest run</a> : <a className="tap" href="#runs">Explore workflow runs</a>}
       </div></li>
@@ -126,7 +133,7 @@ function SpendAlerts({ session, revision }: { session: Session; revision: number
   return <section className="panel" aria-labelledby="spend-alerts"><h2 id="spend-alerts">Spend alerts</h2>
     <ErrorMessage message={result.error}/>
     {result.data && <>
-      <p role="status">{result.data.status === 'hard_limit' ? 'Hard limit reached. Further paid calls return 429 until the limit is raised or the month resets.'
+      <p role="status">{result.data.status === 'hard_limit' ? 'Hard limit reached. Further paid calls are blocked until the limit is raised or the month resets.'
         : result.data.status === 'soft_limit' ? 'Soft limit reached. Calls continue within the hard limit.' : 'Spend is within your configured limits.'}</p>
       <p className="muted">Soft limit: {result.data.soft_limit_usd === null ? 'None' : money(result.data.soft_limit_usd)}. Hard limit: {result.data.hard_limit_usd === null ? 'None' : money(result.data.hard_limit_usd)}. Resets {new Date(result.data.window_end * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'UTC' }).replace(' at ', ', ')} UTC.</p>
       {result.data.alerts.length ? <ul>{result.data.alerts.map(alert => <li key={alert.id}>

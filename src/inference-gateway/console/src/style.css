@@ -46,17 +46,17 @@ pre, .draft, .step-content.prose { background: #f1f5f2; border: 1px solid var(--
 small { display: block; color: var(--muted); font-size: 13px; margin-top: 5px; }
 svg { flex-shrink: 0; }
 .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; background: linear-gradient(to right, var(--ink) 250px, transparent 250px); }
-.sidebar { background: var(--ink); color: #f5fffa; padding: 30px 18px 22px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-.brand { display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 650; letter-spacing: -.4px; text-decoration: none; color: inherit; margin: 0 6px 34px; }
+.sidebar { background: var(--ink); color: #f5fffa; padding: 24px 18px 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; align-items: center; gap: 12px; font-size: 19px; font-weight: 650; letter-spacing: -.4px; text-decoration: none; color: inherit; margin: 0 6px 26px; }
 .brand svg { width: 28px; height: 30px; }
 @media (hover: hover) { .sidebar .brand:hover { color: white; } }
 .sidebar label { color: #bed3cb; margin: 0 9px 6px; font-weight: 400; }
 .sidebar select { background: #073a32; color: white; border-color: #688e82; font-size: 14px; }
-.sidebar nav { display: grid; gap: 5px; margin-top: 32px; }
-.sidebar nav a, .session-actions button { display: flex; align-items: center; gap: 14px; text-decoration: none; padding: 14px 12px; border-radius: 5px; color: #eef9f4; min-height: 48px; }
+.sidebar nav { display: grid; gap: 2px; margin-top: 22px; }
+.sidebar nav a, .session-actions button { display: flex; align-items: center; gap: 14px; text-decoration: none; padding: 10px 12px; border-radius: 5px; color: #eef9f4; min-height: 42px; }
 .sidebar nav a[aria-current] { background: #1b5147; }
 @media (hover: hover) { .sidebar nav a:hover, .session-actions button:hover { background: #1b5147; } }
-.session-actions { margin-top: auto; padding-top: 22px; border-top: 1px solid #39645a; }
+.session-actions { margin-top: auto; padding-top: 12px; border-top: 1px solid #39645a; }
 .session-actions button { width: 100%; border: 0; background: transparent; font-weight: 400; text-align: left; justify-content: flex-start; font-size: 14px; }
 .shell > main { padding: 48px 36px 56px; width: 100%; max-width: 1570px; outline: none; }
 .page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
@@ -297,11 +297,11 @@ button.icon { min-height: 32px; width: 32px; padding: 0; background: transparent
   .menu-button { display: inline-flex; width: 44px; min-height: 44px; padding: 0; background: transparent; border-color: #39645a; }
   @media (hover: hover) { .menu-button:hover { background: #1b5147; } }
   .app-menu { display: none; flex-basis: 100%; }
-  .menu-open .app-menu { display: flex; padding: 8px 0 12px; max-height: calc(100vh - 56px); overflow-y: auto; }
+  .menu-open .app-menu { display: flex; padding: 8px 0 12px; height: calc(100vh - 56px); height: calc(100dvh - 56px); overflow-y: auto; overscroll-behavior: contain; }
   .sidebar nav { margin: 0; gap: 2px; }
-  .sidebar nav a { padding: 12px; min-height: 48px; }
+  .sidebar nav a { padding: 10px 12px; min-height: 44px; }
   .session-actions { margin-top: 8px; padding-top: 8px; }
-  .session-actions button { font-size: 15px; padding: 12px; min-height: 48px; }
+  .session-actions button { font-size: 15px; padding: 10px 12px; min-height: 44px; }
   .page-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 6px 12px; }
   .page-heading > div:first-child { display: contents; }
   .page-heading h1 { grid-column: 1; margin: 0; font-size: 26px; }
@@ -574,3 +574,9 @@ pre.json.hanging > span { display: block; overflow-wrap: anywhere; }
   .run-summary th:first-child { padding-left: 0; }
   .usage-bar.share { display: block; width: 100%; margin: 6px 0 0; }
 }
+
+/* Get started: one step list with progress. */
+.onboarding h2 .step-done { margin-left: 12px; vertical-align: 3px; font-weight: 500; }
+.onboarding > li.done .onboarding-number { color: var(--muted, #6b7a74); }
+.onboarding .key-form { margin: 16px 0; }
+.onboarding .key-form form { display: grid; gap: 12px; max-width: 460px; margin-top: 12px; }

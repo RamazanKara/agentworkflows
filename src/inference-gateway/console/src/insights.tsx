@@ -8,6 +8,16 @@ const outcomes: [keyof WorkflowInsight['outcomes'], string][] = [
 ];
 const windows: [number, string][] = [[1, 'Last 24 hours'], [7, 'Last 7 days'], [30, 'Last 30 days']];
 
+type StepRef = { step_id: string; action?: string; name?: string };
+const isTool = (step: StepRef) => ['tool_exec', 'tool_call'].includes(step.action || '');
+// SDK step IDs are counters ("3"); people know a step by the tool it ran or the model it called.
+export function stepLabel(step: StepRef) {
+  if (step.step_id && !/^\d+$/.test(step.step_id)) return label(step.step_id);
+  if (isTool(step)) return step.name ? label(step.name) : 'Tool call';
+  if (step.action === 'model_call' || step.name) return step.name ? `Model call (${step.name})` : 'Model call';
+  return step.step_id ? `Step ${step.step_id}` : label(step.action || 'step');
+}
+
 function OutcomeBar({ row }: { row: WorkflowInsight }) {
   const summary = outcomes.filter(([key]) => row.outcomes[key] > 0).map(([key, text]) => `${number(row.outcomes[key])} ${text}`).join(', ');
   return <><span className="outcome-bar" role="img" aria-label={summary}>{outcomes.map(([key]) => row.outcomes[key] > 0 &&
@@ -50,8 +60,8 @@ export function Insights({ session }: { session: Session }) {
           <td data-label="Outcomes"><OutcomeBar row={row}/></td>
           <td data-label="Typical run">{duration(row.median_seconds)}<small>{row.p95_seconds == null ? 'No finished runs' : `95% finish within ${duration(row.p95_seconds)}`}</small></td>
           <td data-label="Review wait">{duration(row.median_review_seconds)}<small>{row.median_review_seconds == null ? 'No decisions yet' : 'median to a decision'}</small></td>
-          <td data-label="Cost per run">{money(row.average_cost_usd)}<small>{money(row.total_cost_usd)} in total{row.costliest_step ? `, most on ${label(row.costliest_step.step_id)}` : ''}</small></td>
-          <td data-label="Slowest step">{row.slowest_step ? label(row.slowest_step.step_id) : '—'}{row.slowest_step && <small>median {milliseconds(row.slowest_step.median_ms)}</small>}</td>
+          <td data-label="Cost per run">{money(row.average_cost_usd)}<small>{money(row.total_cost_usd)} in total{row.costliest_step ? `, most on ${stepLabel(row.costliest_step)}` : ''}</small></td>
+          <td data-label="Slowest step">{row.slowest_step ? stepLabel(row.slowest_step) : '—'}{row.slowest_step && <small>median {milliseconds(row.slowest_step.median_ms)}</small>}</td>
         </tr>)}</tbody></table></div></div>
         : <div className="panel"><Empty title="No runs in this period"><p>Start a workflow, or choose a longer period. Insights use the runs and receipts your team still retains.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
       <p className="muted">Durations come from gateway receipts. Review wait is the time from the last step before a decision to that decision. Costs are estimates from configured prices, not an invoice.</p>
@@ -74,7 +84,7 @@ export function RunSummaryPanel({ summary }: { summary: RunSummary }) {
     <div className="table-scroll" tabIndex={0} role="region" aria-label="Time and cost by step"><table className="stack numeric"><thead><tr>
       <th>Step</th><th className="num">Calls</th><th className="num">Time</th><th className="num">Tokens</th><th className="num">Cost</th></tr></thead>
       <tbody>{summary.by_step.map(step => <tr key={`${step.step_id}:${step.action}`}>
-        <th scope="row">{label(step.step_id || step.action)}<small>{step.action === 'model_call' ? 'Model call' : 'Tool call'}</small></th>
+        <th scope="row">{/^\d+$/.test(step.step_id) && step.name ? isTool(step) ? label(step.name) : 'Model call' : label(step.step_id || step.action)}<small>{isTool(step) ? 'Tool call' : step.name && /^\d+$/.test(step.step_id) ? step.name : 'Model call'}</small></th>
         <td data-label="Calls">{number(step.calls)}</td>
         <td data-label="Time">{milliseconds(step.duration_ms)}{time > 0 && <Share value={step.duration_ms / time} what="of working time"/>}</td>
         <td data-label="Tokens">{number(step.tokens)}</td>

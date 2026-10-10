@@ -141,7 +141,7 @@ function RetentionForm({ session, retention, onSaved }: { session: Session; rete
     try { const { revision, ...body } = value; await api(session.csrfToken, '/v1/team/retention', { method: 'PUT', headers: { 'If-Match': String(revision) }, body: JSON.stringify(body) }); onSaved(); }
     catch (failure) { setError((failure as Error).message); } finally { setBusy(false); }
   }}><h2>Retention</h2><p>Run retention starts when a run closes. Content changes apply to new captures. Audit view changes apply when records are read or pruned. Temporal and backups use separate retention.</p>
-    {fields.map(([field, label]) => <label key={field}>{label} (seconds)<input required type="number" min={60} max={31536000} step={1} value={value[field]} onChange={event => setValue({ ...value, [field]: Number(event.target.value) })}/></label>)}
+    {fields.map(([field, label]) => <label key={field}>{label} (days)<input required type="number" min={0.001} max={365} step="any" value={Number((value[field] / 86400).toFixed(3))} onChange={event => setValue({ ...value, [field]: Math.max(60, Math.round(Number(event.target.value) * 86400)) })}/></label>)}
     <ErrorMessage message={error}/><button disabled={busy}>{busy ? 'Saving…' : 'Save retention'}</button>
   </form>;
 }

@@ -154,7 +154,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
       <fieldset className="plain" disabled={busy || conflict}>
         {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">
           <div className="setting-grid">{groups.team.map(field)}</div>
-          <p className="muted">The soft limit alerts your team. The monthly budget is a hard limit: calls that would exceed it return 429. Blank team limits are unlimited.</p>
+          <p className="muted">The soft limit alerts your team. The monthly budget is a hard limit: calls that would exceed it are blocked until the month resets. Blank team limits are unlimited.</p>
         </SettingsGroup>}
         {groups.capture.length > 0 && <SettingsGroup nested={false} title="Step content" note="Off disables capture. Redacted masks configured secrets and personal data. Full stores content after request guardrails. Changes affect future steps; existing content keeps its retention deadline. Workflow overrides take precedence.">
           <div className="setting-grid">{groups.capture.map(field)}</div>

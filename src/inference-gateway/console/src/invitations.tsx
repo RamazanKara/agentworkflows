@@ -31,7 +31,7 @@ export function Invitations({ session, onChanged }: { session: Session; onChange
       <label>Teammate name<input required maxLength={128} value={name} onChange={event => setName(event.target.value)}/></label>
       <label>Invitation role<select aria-label="Invitation role" value={role} onChange={event => setRole(event.target.value as Team['role'])}>{['viewer', 'approver', 'builder', 'admin'].map(value => <option key={value} value={value}>{label(value)}</option>)}</select></label>
       <label>Invitation project<select aria-label="Invitation project" value={project} onChange={event => setProject(event.target.value)}><option value="">All projects</option>{session.team.projects.map(value => <option key={value}>{value}</option>)}</select></label>
-      <p className="muted">Access lasts 90 days and can be edited or revoked in Members & keys.</p>
+      <p className="muted">Access lasts 90 days. You can edit or revoke it on this page.</p>
       <button disabled={busy}>{busy ? 'Creating…' : 'Create invitation'}</button>
     </form>}
     {!result.data && !result.error && <Loading/>}

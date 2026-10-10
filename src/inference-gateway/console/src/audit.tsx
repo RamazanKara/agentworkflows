@@ -7,6 +7,7 @@ type AuditEvent = {
   event: string; ts: number; actor?: string; principal?: { sub?: string; key_id?: string; name?: string };
   action_type?: string; decision?: string; provider?: string; project?: string; workflow_run_id?: string;
   before?: Record<string, SettingSnapshot>; after?: Record<string, SettingSnapshot>; key?: { name?: string };
+  tool?: string; model?: string; channel?: string; notification_event?: string; outcome?: string; paused?: boolean; trigger?: string; workflow?: string;
 };
 type Entry = { id: string; chain_id: string; sequence: number; event: AuditEvent };
 type AuditPage = { enabled: boolean; message?: string; events: Entry[]; next_cursor: string | null };
@@ -20,6 +21,17 @@ const eventNames: Record<string, string> = {
   team_key: 'API key change', team_settings_changed: 'Settings change',
 };
 const eventName = (type: string) => eventNames[type] || label(type);
+const channels: Record<string, string> = { slack: 'Slack', email: 'Email', webhook: 'Webhook' };
+// The row title says what happened: a tool call is not a model call, and a resume is not a pause.
+const eventTitle = (event: AuditEvent) => {
+  const action = event.action_type || '';
+  if (event.event === 'inference_request' && ['tool_exec', 'tool_call'].includes(action)) return 'Tool call';
+  if (event.event !== 'workflow_operation') return eventName(event.event);
+  if (action === 'notification') return `${channels[event.channel || ''] || 'Notification'} ${event.channel ? 'notification' : 'sent'}`;
+  if (action === 'trigger_pause') return event.paused === false ? 'Trigger resumed' : 'Trigger paused';
+  if (action === 'approval') return 'Approval decision';
+  return action ? label(action) : eventName(event.event);
+};
 // Plain words for the verifier's reason codes; the code itself stays visible for runbooks.
 const reasons: Record<string, string> = {
   event_metadata_mismatch: 'The stored event does not match its metadata', record_hash_mismatch: 'The event no longer matches its stored hash',
@@ -33,7 +45,9 @@ const reason = (code: string) => reasons[code] || label(code);
 const actor = (event: AuditEvent, names: Record<string, string>) => {
   const id = event.actor || event.principal?.sub || event.principal?.key_id;
   const key = event.principal?.key_id || (id && names[id] ? id : undefined);
-  return { name: (key && names[key]) || event.principal?.name || (key ? 'Unnamed key' : id) || '—', key: Boolean(key) };
+  // Managed keys have random hex IDs, so a deleted one shows as unnamed; configuration keys have readable IDs such as demo-key.
+  const managed = Boolean(key && /^[0-9a-f]{32}$/.test(key));
+  return { name: (key && names[key]) || event.principal?.name || (managed ? 'Unnamed key' : key) || id || (event.event === 'workflow_operation' ? 'Workflow worker' : '—'), key: Boolean(key) };
 };
 // "Research approval threshold: $0.00 → $0.50"
 const settingName = (field: string) => {
@@ -54,7 +68,10 @@ const details = (event: AuditEvent): ReactNode => {
       : `${fields.length} settings changed`;
   }
   if (event.event === 'team_key') return <DotList items={[event.action_type && label(event.action_type), event.key?.name]}/>;
-  return <DotList items={[event.action_type && label(event.action_type) !== eventName(event.event) && label(event.action_type), event.provider && providerName(event.provider)]}/>;
+  if (event.action_type === 'notification') return <DotList items={[event.notification_event && label(event.notification_event), event.workflow && workflowName(event.workflow), event.outcome && label(event.outcome)]}/>;
+  if (event.action_type === 'trigger_pause') return <DotList items={[event.trigger, event.workflow && workflowName(event.workflow)]}/>;
+  if (['tool_exec', 'tool_call'].includes(event.action_type || '')) return <DotList items={[event.tool && label(event.tool)]}/>;
+  return <DotList items={[event.action_type && !['model_call', 'approval'].includes(event.action_type) && label(event.action_type) !== eventName(event.event) && label(event.action_type), event.provider && providerName(event.provider), event.model]}/>;
 };
 const fields = [['from', 'From', 'datetime-local', ''], ['to', 'To', 'datetime-local', ''], ['event_type', 'Event type', 'text', ''],
   ['actor', 'Actor', 'text', 'Key ID, worker or user ID'], ['project', 'Project', 'text', 'Any project'], ['run_id', 'Run ID', 'text', 'Full run ID']] as const;
@@ -208,7 +225,7 @@ function AuditViewer({ session }: { session: Session }) {
         <thead><tr><th>Event</th><th>Time</th><th>Actor</th><th>Project</th><th>Run</th><th><span className="visually-hidden">Details</span></th></tr></thead>
         <tbody>{page.events.map(entry => { const who = actor(entry.event, keyNames); const detail = details(entry.event); const open = expanded === entry.id; return <Fragment key={entry.id}>
           <tr id={`row-${entry.id}`} className={[open && 'open', isBroken(entry) && 'broken'].filter(Boolean).join(' ') || undefined}>
-            <td><span className="event-name"><strong>{eventName(entry.event.event)}</strong>{entry.event.decision === 'denied' && <Badge value="failed" text="Denied"/>}{isBroken(entry) && <Badge value="failed" text="Chain break"/>}{brokenIndex > 0 && page.events.indexOf(entry) < brokenIndex && <Badge value="unverified" text="Not verified"/>}</span>{detail && <small>{detail}</small>}</td>
+            <td><span className="event-name"><strong>{eventTitle(entry.event)}</strong>{entry.event.decision === 'denied' && <Badge value="failed" text="Denied"/>}{isBroken(entry) && <Badge value="failed" text="Chain break"/>}{brokenIndex > 0 && page.events.indexOf(entry) < brokenIndex && <Badge value="unverified" text="Not verified"/>}</span>{detail && <small>{detail}</small>}</td>
             <td data-label="Time">{date(entry.event.ts)}</td>
             <td data-label="Actor">{who.name}{who.key && <small>API key</small>}</td>
             <td data-label="Project" className={entry.event.project ? undefined : 'empty-cell'}>{entry.event.project || '—'}</td>
