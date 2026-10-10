@@ -28,5 +28,5 @@ def test_deployment_configuration_is_admin_only_and_never_returns_secrets(team_g
     checks = {item["id"]: item for item in response.json()["checks"]}
     assert checks["records"]["configured"] and checks["encryption"]["configured"]
     assert checks["cookies"]["configured"]
-    assert response.json()["verification_required"]
+    assert any("agentworkflows check" in item for item in response.json()["verification_required"])
     assert "private-" not in response.text and "postgresql://" not in response.text

@@ -5,7 +5,7 @@ import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
   ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
-  DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, WorkflowRegistration, WorkflowInsights, InsightFilters, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
+  ModelList, DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, WorkflowRegistration, WorkflowInsights, InsightFilters, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
 } from './types';
 
 export interface ClientOptions {
@@ -103,6 +103,11 @@ export class GatewayClient {
 
   teamSpend(): Promise<TeamSpend> {
     return this.request('GET', '/v1/team/spend');
+  }
+
+  /** List the models this caller may use; simulated marks the Compose demo local fakes. */
+  models(): Promise<ModelList> {
+    return this.request('GET', '/v1/models');
   }
 
   onboarding(): Promise<Onboarding> {

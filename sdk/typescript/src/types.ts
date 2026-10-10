@@ -249,6 +249,7 @@ export interface TeamDataExport {
 export interface TeamTelemetry { traces_enabled: boolean; metrics_enabled: boolean; protocol: string; service_name: string }
 
 export interface ProviderSetup { provider: string; configured: boolean; version: number; can_save: boolean }
+export interface ModelList { data: { id: string; owned_by?: string; simulated?: boolean }[] }
 export interface Onboarding {
   providers: ProviderSetup[];
   sample: { template_id: string; version: string; workflow: string; installed: boolean; input: Record<string, unknown>; ready: boolean } | null;

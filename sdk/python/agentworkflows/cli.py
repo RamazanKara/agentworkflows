@@ -6,7 +6,7 @@ import argparse
 import json
 import os
 import sys
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -14,6 +14,7 @@ from uuid import UUID, uuid4
 import httpx
 
 from agentworkflows import GatewayClient, GatewayError, __version__
+from agentworkflows.acceptance import DEADLINE_SECONDS, AcceptanceError, first_approved_run
 from agentworkflows.scaffold import TEMPLATES, init_project
 from agentworkflows.types import TeamSettingValue
 
@@ -40,6 +41,41 @@ def settings_fields(value: str) -> dict[str, TeamSettingValue]:
     if not isinstance(parsed, dict) or not parsed:
         raise argparse.ArgumentTypeError("--fields must be a non-empty JSON object mapping setting names to values.")
     return parsed
+
+
+def run_check(args: argparse.Namespace, base_url: str, gateway: GatewayClient) -> int:
+    """Walk the sample through approval and print each stage's time; exit 1 at the first failure."""
+    machine = args.json
+    if not machine:
+        print(f"Checking {base_url} (budget {args.deadline:g} s)")
+
+    def show(row: dict[str, object]) -> None:
+        if not machine:
+            print(f"  ok  {row['stage']:<10} {row['seconds']:>6.1f} s  {row['detail']}")
+
+    with ExitStack() as stack:
+        reviewers = [
+            stack.enter_context(GatewayClient(base_url, api_key=os.environ[name])) for name in args.approver_key_env
+        ]
+        try:
+            result = first_approved_run(
+                gateway, approvers=reviewers, deadline=args.deadline, allow_paid=args.allow_paid, progress=show
+            )
+        except AcceptanceError as exc:
+            if machine:
+                failure = {"ok": False, "stage": exc.stage, "message": str(exc), "stages": exc.stages}
+                print(json.dumps(failure, indent=2))
+            else:
+                print(f"Check failed at {exc.stage}: {exc}", file=sys.stderr)
+            return 1
+    if machine:
+        print(json.dumps(result, indent=2))
+        return 0
+    for note in result["notes"]:
+        print(f"  note: {note}")
+    print(f"First approved run completed in {result['total_seconds']:g} s (budget {args.deadline:g} s).")
+    print(f"Inspect it: {base_url.rstrip('/')}/console/#run/{result['run_id']}")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,6 +112,22 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--role", choices=("admin", "builder", "approver", "viewer"))
             sub.add_argument("--project", help="Project binding; use an empty string to clear it.")
             sub.add_argument("--expires-at", help="ISO-8601 expiry with timezone; use an empty string to clear it.")
+    check = commands.add_parser(
+        "check",
+        help="Prove this install completes a governed run: sample, approval, evidence and audit verification.",
+    )
+    check.add_argument(
+        "--approver-key-env", action="append", default=[], metavar="NAME",
+        help="Name of an environment variable holding another reviewer's key; repeatable. Keys are never read "
+        "from the command line.",
+    )
+    check.add_argument(
+        "--deadline", type=float, default=DEADLINE_SECONDS, help="Seconds allowed from start to finish (default: 300)."
+    )
+    check.add_argument(
+        "--allow-paid", action="store_true", help="Allow the sample to call a real provider that bills your account."
+    )
+    check.add_argument("--json", action="store_true", help="Print the result as JSON for CI.")
     insights = commands.add_parser(
         "insights", help="Show per-workflow outcomes, duration, review wait and cost over recent runs."
     )
@@ -192,6 +244,10 @@ def main(argv: list[str] | None = None) -> int:
     if not api_key:
         parser.error("set AGENTWORKFLOWS_API_KEY to your gateway key (local-development-only for the Compose demo)")
     base_url = os.environ.get("AGENTWORKFLOWS_URL", "http://127.0.0.1:8080")
+    if args.command == "check":
+        missing = [name for name in args.approver_key_env if not os.environ.get(name)]
+        if missing:
+            parser.error(f"set {', '.join(missing)} to a reviewer's gateway key, or drop --approver-key-env")
     start_hint = ""
     if args.command == "runs" and args.operation == "start":
         args.request_id = args.request_id or uuid4()
@@ -221,6 +277,8 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     key_result = gateway.revoke_key(args.key_id)
                 print(json.dumps(key_result, indent=2))
+            elif args.command == "check":
+                return run_check(args, base_url, gateway)
             elif args.command == "insights":
                 insight_result = gateway.workflow_insights(days=args.days, project=args.project, workflow=args.workflow)
                 print(json.dumps(insight_result, indent=2))

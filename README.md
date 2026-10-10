@@ -76,7 +76,7 @@ application or already maintain the surrounding product.
 
 | Decision | AgentWorkflows | Your own gateway + Temporal application |
 | --- | --- | --- |
-| Time to first approved run | 3 console steps after setup; the scripted trial checks completion and audit verification within 300 seconds. | Depends on your existing application; no universal time estimate. |
+| Time to first approved run | 3 console steps after setup; `agentworkflows check` repeats the run against your own install and times each stage against a 300-second budget. | Depends on your existing application; no universal time estimate. |
 | What you must build | Workflow logic, real data/tool integrations, and deployment configuration. | Those integrations plus approval screens, identity wiring, per-run accounting, audit linkage, and operations UX. |
 | What you get | One console and API for runs, review, access, spend, templates, triggers, and evidence. | The component capabilities you choose, with full control over the application. |
 | What you operate | Gateway, workers, Temporal, Redis, storage, backups, and upgrades. | Your components and their integration. |

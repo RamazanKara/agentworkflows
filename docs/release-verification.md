@@ -28,11 +28,11 @@ installed Edge for Playwright. Each gap was recorded in
 [PRODUCT-GAPS.md](https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md)
 before it was built. No dependency was added.
 
-| Native check | Result after gap 2 (run insights) |
+| Native check | Result after gap 3 (install acceptance check) |
 | --- | --- |
 | Gateway suite (excluding `tests/live`) | **1,163 passed, 14 skipped**, with Git Bash first on `PATH`. |
-| Python SDK | **227 passed, 3 skipped**. |
-| TypeScript SDK | Build, lint and **88 tests** passed. |
+| Python SDK | **242 passed, 3 skipped**. |
+| TypeScript SDK | Build, lint and **93 tests** passed. |
 | Console | Production build passed; **91 Playwright tests** passed through Edge (`channel: 'msedge'`, `--lang=en-US`). |
 | Contracts | OpenAPI snapshot, configuration contract and chart docs passed. |
 | Script tests | **53 passed** with `helm` on `PATH`. |
@@ -42,7 +42,9 @@ Console captures for this pass are written to `.out/console-v1.0.0-rc.5/` at 360
 They were reviewed for horizontal overflow, mid-word wraps, clipped controls, consistent identities and
 no placeholder values. The captures are UI evidence from fixtures, not a live gateway.
 
-Caller acceptance still required: register a workflow through the console against the Compose stack,
+Caller acceptance still required: run `agentworkflows check` against a live Compose stack and a Helm install
+(the native tests drive a fake gateway, so they prove the check's logic, not a real deployment); register a
+workflow through the console against the Compose stack,
 start a worker for it on the team's queue, and run it through approval. Then open Insights and a finished
 run's summary and compare them with the Temporal UI. The gateway tests exercise policy, admission, budgets,
 audit and the summary arithmetic with fakes; they do not prove a real Temporal worker or real timings.

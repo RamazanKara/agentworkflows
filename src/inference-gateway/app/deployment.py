@@ -80,6 +80,6 @@ def register_deployment_routes(app: FastAPI) -> None:
             verification_required=[
                 "Verify HTTPS, database TLS, approved network egress and secret rotation.",
                 "Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.",
-                "Run the first-approved-run check after every install and upgrade.",
+                "Run agentworkflows check after every install and upgrade to prove a governed run completes.",
             ],
         )

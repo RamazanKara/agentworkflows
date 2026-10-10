@@ -484,7 +484,7 @@ test.beforeEach(async ({ page }) => {
     if (token === 'invalid') return route.fulfill({ status: 401, json: { detail: { message: 'Invalid credential. Ask your team admin for a valid key.' } } });
     let body: unknown;
     if (url.pathname === '/v1/team') body = { team_id: team, role, projects: ['default', 'engineering'], providers: ['openai'], cost_limit_usd: 50, ...(role === 'admin' ? { provider_configuration: { openai: { configured: true, environment_variable: 'TEAM_OPENAI_KEY' } } } : {}) };
-    else if (url.pathname === '/v1/team/deployment') body = { checks: [{ id: 'authentication', name: 'Team authentication', configured: true, action: 'Enable team-bound authentication.' }, { id: 'cookies', name: 'Secure session cookies', configured: true, action: 'Enable HTTPS.' }], verification_required: ['Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.', 'Run the first-approved-run check after every install and upgrade.'] };
+    else if (url.pathname === '/v1/team/deployment') body = { checks: [{ id: 'authentication', name: 'Team authentication', configured: true, action: 'Enable team-bound authentication.' }, { id: 'cookies', name: 'Secure session cookies', configured: true, action: 'Enable HTTPS.' }], verification_required: ['Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.', 'Run agentworkflows check after every install and upgrade to prove a governed run completes.'] };
     else if (url.pathname === '/v1/team/alert-rules') body = { revision: 0, events: ['awaiting_approval', 'failed', 'budget_threshold'], channels: ['slack', 'email', 'webhook'], available_channels: ['slack', 'email', 'webhook'], budget_threshold: 0.8, slow_step_ms: 30000 };
     else if (url.pathname === '/v1/team/workflows') body = registryFixture();
     else if (url.pathname === '/v1/team/invitations') body = [];
@@ -686,7 +686,7 @@ for (const width of [360, 393, 1440]) {
     ].map(([id, name]) => ({ id, name, configured: true, action: '' })), verification_required: [
       'Verify HTTPS, database TLS, approved network egress and secret rotation.',
       'Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.',
-      'Run the first-approved-run check after every install and upgrade.',
+      'Run agentworkflows check after every install and upgrade to prove a governed run completes.',
     ] } }));
     await page.route('**/v1/team/onboarding', route => route.fulfill({ json: {
       providers: models.map(model => ({ provider: model.owned_by, configured: model.owned_by === 'openai' ? openaiConfigured : anthropicConfigured, version: 0, can_save: true })),
@@ -1857,6 +1857,9 @@ test('deployment checklist separates configured settings from recovery verificat
   await expect(panel).toContainText('Configured');
   await expect(panel).not.toContainText('Configure a persistent encryption key.');
   await expect(panel).toContainText('Restore a backup in an isolated environment.');
+  await expect(panel.getByLabel('Check command')).toHaveText('agentworkflows check');
+  await expect(panel).toContainText('AGENTWORKFLOWS_URL to http://127.0.0.1:4175');
+  await expect(panel).toContainText('--approver-key-env NAME');
 });
 
 test('admins register, edit and remove their own workflow within the approved envelope', async ({ page }) => {

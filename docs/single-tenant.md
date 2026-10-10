@@ -82,7 +82,28 @@ and `action`, plus `verification_required[]`. It requires an unrestricted team a
 Python: `client.deployment()`. TypeScript: `client.deployment()`.
 It reports settings without secrets or connection strings. A configured check does
 not prove database TLS, backup recovery, egress enforcement or service availability.
-Check `/readyz`, perform an approved run and verify the audit range before admitting users.
+Check `/readyz`, then prove the install end to end before admitting users.
+
+### Prove the install
+
+`agentworkflows check` walks the console's first-run path against any gateway, including this one:
+it reads readiness, installs the sample if the key may, starts it, waits for the draft, approves it,
+and confirms completion, the approval receipt, the run summary and (for an admin key) audit-chain
+verification. It prints each stage's time against a 300-second budget and exits 1 at the first failure.
+
+```bash
+pip install ./sdk/python                      # or your internal package index
+export AGENTWORKFLOWS_URL=https://agents.acme.example
+export AGENTWORKFLOWS_API_KEY=...             # an admin key from your secret manager
+agentworkflows check --allow-paid
+```
+
+The reference profile routes the sample to a real provider, so `--allow-paid` is required; the check
+refuses to spend without it. A policy that needs several reviewers needs one more key per reviewer, passed
+by environment variable name: `--approver-key-env SECOND_REVIEWER_KEY`. Keys are never accepted on the
+command line. Use `--json` in CI. Run it after every install, upgrade and restore. A passing check is
+evidence that approvals, workers, Temporal, storage and the audit chain work together; it does not prove
+backups, network egress rules or sign-in with company accounts.
 
 ## Back up a recoverable unit
 
@@ -130,11 +151,11 @@ Keep triggers paused until operators reconcile external side effects.
 1. Read the changelog and [gateway migration rules](postgresql-storage.md#upgrade-and-rollback).
    Take the coordinated backup above and verify the checksums.
 2. Restore that backup into staging. Run the new image versions against it, inspect
-   a pre-upgrade run, complete a new approval and check the audit chain.
+   a pre-upgrade run, then run `agentworkflows check` to complete a new approval and verify the audit chain.
 3. Preserve database, key and policy Secrets. Supply the complete reviewed values;
    avoid inheriting obsolete settings with `--reuse-values`.
 4. Run the same `helm upgrade --install` command with reviewed new image digests.
-   Watch migration jobs, rollout health and `/readyz`; exercise sign-in and approval.
+   Watch migration jobs, rollout health and `/readyz`; exercise sign-in, then run `agentworkflows check`.
 5. Keep the old images and checkpoint until acceptance finishes. Roll back application
    images only when their storage schema remains compatible. Otherwise restore the
    coordinated checkpoint into an isolated recovery environment. A Helm rollback

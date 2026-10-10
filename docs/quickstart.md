@@ -54,6 +54,17 @@ Both scripts leave their containers/cluster/data in place for inspection. On fai
 `docker compose -f deploy/compose/compose.yaml logs workflow-worker inference-gateway` or
 `kubectl --context kind-agentworkflows-quickstart -n agentworkflows-quickstart get pods`.
 
+To check an installation you already run (Compose, Helm on your cluster, or a restored backup), use the
+SDK's `agentworkflows check` instead; it works against any gateway and reports each stage's time:
+
+```sh
+export AGENTWORKFLOWS_URL=http://127.0.0.1:8080   # your gateway
+export AGENTWORKFLOWS_API_KEY=local-development-only
+agentworkflows check
+```
+
+A real provider needs `--allow-paid`. See [Prove the install](single-tenant.md#prove-the-install).
+
 On this native Windows sandbox Docker/kind execution may be unavailable. Run the commands above
 inside WSL, using its own Python environment. A native `python scripts/first-approved-run.py --help`
 only verifies the CLI, not a successful run. See [release verification](release-verification.md).

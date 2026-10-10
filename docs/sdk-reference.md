@@ -348,6 +348,7 @@ for identity, replay, automatic decisions and upgrade boundaries.
 | Invitations | `invitations()`, `create_invitation(name, role="viewer")`, `revoke_invitation(id)` | `invitations()`, `createInvitation(name, {role: "viewer"})`, `revokeInvitation(id)` | `GET/POST /v1/team/invitations`, `DELETE /v1/team/invitations/{id}` |
 | Redeem invitation once | `accept_invitation(token)` | `acceptInvitation(token)` | `POST /v1/auth/invitations/accept` |
 | Alert rules | `alert_rules()`, `set_alert_rules(rules, revision=revision)` | `alertRules()`, `setAlertRules(rules, revision)` | `GET/PUT /v1/team/alert-rules` |
+| Prove an install | `first_approved_run(client, approvers=[...], deadline=300, allow_paid=False)` (`agentworkflows.acceptance`), CLI `agentworkflows check` | `firstApprovedRun(client, { approvers, deadlineSeconds, allowPaid })` | the console's first-run path: onboarding, template install, run, approval, audit verify |
 | Run insights | `workflow_insights(days=7, project=None, workflow=None)` | `workflowInsights({ days, project, workflow })` | `GET /v1/workflow-insights` |
 | Register your own workflow | `team_workflows()`, `register_workflow(cls_or_name, models=[...], **options)`, `remove_workflow(cls_or_name)` | `teamWorkflows()`, `registerWorkflow(name, models, options?, revision?)`, `removeWorkflow(name, revision?)` | `GET /v1/team/workflows`, `PUT/DELETE /v1/team/workflows/{name}` |
 | Deployment settings | `deployment()` | `deployment()` | `GET /v1/team/deployment` |

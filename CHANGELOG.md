@@ -10,6 +10,10 @@
 - Add run insights: a per-run summary of elapsed, working and review time with cost by step,
   and a per-workflow Insights page, API, CLI command and SDK methods for outcomes, run time,
   review wait, cost per run and the slowest and costliest steps over 1 to 30 days.
+- Add `agentworkflows check` (and `first_approved_run` / `firstApprovedRun`): a post-install
+  acceptance check that runs the console wizard's path against any gateway, times each stage,
+  refuses to spend without `--allow-paid`, and verifies the approval receipt and audit chain.
+  The deployment checklist and single-tenant guide now point to it.
 - Fix the offline audit verifier, which dropped chained key, settings, template, secret and
   provider-key events and so reported false gaps; it now accepts every chain-linked record.
 - Package and chart versions remain 0.9.0; no release artifacts are published.
