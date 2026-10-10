@@ -192,6 +192,8 @@ export interface WorkflowRun {
   error?: { code: string; message: string };
   budget: RunBudget & { tokens: number; cost_usd: number };
   timeline?: Receipt[];
+  /** Elapsed time, model/tool time, review wait and cost by step; present on a single run's detail. */
+  summary?: RunSummary;
 }
 
 export interface RunFilters {
@@ -292,6 +294,24 @@ export interface TeamWorkflows {
   limits: { token_limit: number; cost_limit_usd: number };
 }
 export interface WorkflowRegistration { revision: number; workflow: RegisteredWorkflow }
+
+export interface StepSummary { step_id: string; action: string; calls: number; duration_ms: number; tokens: number; cost_usd: number }
+export interface RunSummary {
+  elapsed_seconds: number | null; model_calls: number; tool_calls: number; model_ms: number; tool_ms: number;
+  review_seconds: number | null; review_open: boolean; tokens: number; cost_usd: number;
+  slowest_step: StepSummary | null; costliest_step: StepSummary | null; by_step: StepSummary[];
+}
+export interface WorkflowInsight {
+  workflow: string; runs: number; outcomes: Record<'completed' | 'rejected' | 'failed' | 'canceled' | 'awaiting_approval' | 'running', number>;
+  completion_rate: number | null; median_seconds: number | null; p95_seconds: number | null;
+  median_review_seconds: number | null; average_cost_usd: number | null; total_cost_usd: number;
+  slowest_step: { step_id: string; median_ms: number } | null; costliest_step: { step_id: string; average_cost_usd: number } | null;
+}
+export interface WorkflowInsights {
+  window: { days: number; start: number; end: number }; projects: string[]; scanned: number; skipped: number;
+  truncated: boolean; workflows: WorkflowInsight[];
+}
+export interface InsightFilters { days?: number; project?: string; workflow?: string }
 
 export interface DeploymentReadiness {
   checks: { id: string; name: string; configured: boolean; action: string }[];

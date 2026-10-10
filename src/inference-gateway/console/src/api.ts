@@ -47,6 +47,18 @@ export type Step = {
   content?: { input: string | null; output: string | null; truncated: { input: boolean; output: boolean }; redaction: 'redacted' | 'full' } | null;
   content_reason?: string;
 };
+export type StepSummary = { step_id: string; action: string; calls: number; duration_ms: number; tokens: number; cost_usd: number };
+export type RunSummary = {
+  elapsed_seconds: number | null; model_calls: number; tool_calls: number; model_ms: number; tool_ms: number;
+  review_seconds: number | null; review_open: boolean; tokens: number; cost_usd: number; by_step: StepSummary[];
+};
+export type WorkflowInsight = {
+  workflow: string; runs: number; outcomes: Record<'completed' | 'rejected' | 'failed' | 'canceled' | 'awaiting_approval' | 'running', number>;
+  completion_rate: number | null; median_seconds: number | null; p95_seconds: number | null; median_review_seconds: number | null;
+  average_cost_usd: number | null; total_cost_usd: number;
+  slowest_step: { step_id: string; median_ms: number } | null; costliest_step: { step_id: string; average_cost_usd: number } | null;
+};
+export type WorkflowInsights = { window: { days: number; start: number; end: number }; projects: string[]; scanned: number; skipped: number; truncated: boolean; workflows: WorkflowInsight[] };
 export type Run = {
   run_id: string; workflow: string; project: string; created_at: number; status: string;
   trigger?: { name: string; kind: 'cron' | 'webhook' };
@@ -54,6 +66,7 @@ export type Run = {
   progress?: { stage: string; draft?: string; message?: string; required_approvals?: number; approved_by?: string[]; expires_at?: string; approver_role?: string };
   budget: { tokens: number; cost_usd: number; token_limit: number; cost_limit_usd: number };
   timeline?: Step[];
+  summary?: RunSummary;
   result?: unknown;
   outcome?: string;
   error?: { code: string; message: string };
@@ -137,6 +150,17 @@ export const money = (value: number | null | undefined) => value == null ? '—'
 // ResearchWorkflow → Research, DocumentQAWorkflow → Document QA, GitHubIssueTriageWorkflow → GitHub issue triage.
 export const workflowName = (value: string) => value.replace(/Workflow$/, '').split(/(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/)
   .map((word, i) => i === 0 || /[A-Z].*[A-Z]/.test(word) ? word : word.toLowerCase()).join(' ').replace(/\bGit hub\b/i, 'GitHub') || value;
+// 45 s, 12 min, 3.5 h, 4 days. A no-break space keeps the number and unit together.
+const NB = String.fromCharCode(160);
+export const duration = (seconds: number | null | undefined) => {
+  if (seconds == null) return '—';
+  if (seconds < 1) return `<1${NB}s`;
+  if (seconds < 90) return `${Math.round(seconds)}${NB}s`;
+  if (seconds < 5400) return `${Math.round(seconds / 60)}${NB}min`;
+  if (seconds < 172800) return `${(seconds / 3600).toFixed(1).replace(/\.0$/, '')}${NB}h`;
+  return `${Math.round(seconds / 86400)}${NB}days`;
+};
+export const milliseconds = (value: number) => value < 1000 ? `${Math.round(value)}${NB}ms` : `${(value / 1000).toFixed(1).replace(/\.0$/, '')}${NB}s`;
 export const shortId = (value: string) => value.slice(0, 8);
 export const number = (value: number | undefined) => (value ?? 0).toLocaleString();
 // Oct 8, 12:26 PM; the year appears only when it differs from this year.

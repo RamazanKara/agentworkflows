@@ -76,6 +76,12 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--role", choices=("admin", "builder", "approver", "viewer"))
             sub.add_argument("--project", help="Project binding; use an empty string to clear it.")
             sub.add_argument("--expires-at", help="ISO-8601 expiry with timezone; use an empty string to clear it.")
+    insights = commands.add_parser(
+        "insights", help="Show per-workflow outcomes, duration, review wait and cost over recent runs."
+    )
+    insights.add_argument("--days", type=int, default=7, help="Window in days (1-30; default: 7).")
+    insights.add_argument("--workflow", help="Exact workflow name.")
+    insights.add_argument("--project", help="Project from agentworkflows team; default: all your credential may see.")
     workflows = commands.add_parser(
         "workflows", help="Register your own workflow types without a gateway redeploy (unrestricted admin only)."
     )
@@ -215,6 +221,9 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     key_result = gateway.revoke_key(args.key_id)
                 print(json.dumps(key_result, indent=2))
+            elif args.command == "insights":
+                insight_result = gateway.workflow_insights(days=args.days, project=args.project, workflow=args.workflow)
+                print(json.dumps(insight_result, indent=2))
             elif args.command == "workflows":
                 if args.operation == "list":
                     registry_result: object = gateway.team_workflows()
@@ -348,6 +357,8 @@ def main(argv: list[str] | None = None) -> int:
             hint = "Use only models and tools shown by 'agentworkflows workflows list', within its limits."
         elif args.command == "settings" and exc.status_code == 422:
             hint = "Correct the named fields using 'agentworkflows settings show' and 'settings set --help'."
+        elif args.command == "insights" and exc.status_code == 422:
+            hint = "Use --days between 1 and 30."
         elif args.command == "audit" and exc.status_code == 422:
             hint = "Check the time range, cursor and filters using 'agentworkflows audit --help'."
         print(

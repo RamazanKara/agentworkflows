@@ -207,3 +207,50 @@ class TeamWorkflows(TypedDict):
 class WorkflowRegistration(TypedDict):
     revision: int
     workflow: RegisteredWorkflow
+
+
+class StepSummary(TypedDict):
+    step_id: str
+    action: str
+    calls: int
+    duration_ms: float
+    tokens: int
+    cost_usd: float
+
+
+class RunSummary(TypedDict):
+    elapsed_seconds: float | None
+    model_calls: int
+    tool_calls: int
+    model_ms: float
+    tool_ms: float
+    review_seconds: float | None
+    review_open: bool
+    tokens: int
+    cost_usd: float
+    slowest_step: StepSummary | None
+    costliest_step: StepSummary | None
+    by_step: list[StepSummary]
+
+
+class WorkflowInsight(TypedDict):
+    workflow: str
+    runs: int
+    outcomes: dict[str, int]
+    completion_rate: float | None
+    median_seconds: float | None
+    p95_seconds: float | None
+    median_review_seconds: float | None
+    average_cost_usd: float | None
+    total_cost_usd: float
+    slowest_step: dict[str, Any] | None
+    costliest_step: dict[str, Any] | None
+
+
+class WorkflowInsights(TypedDict):
+    window: dict[str, float]
+    projects: list[str]
+    scanned: int
+    skipped: int
+    truncated: bool
+    workflows: list[WorkflowInsight]

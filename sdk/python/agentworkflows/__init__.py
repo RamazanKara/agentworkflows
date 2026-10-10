@@ -53,6 +53,7 @@ from agentworkflows.types import (
     TeamSpend,
     TeamSSO,
     TeamWorkflows,
+    WorkflowInsights,
     WorkflowRegistration,
     WorkflowRegistrationOptions,
 )
@@ -663,6 +664,22 @@ class GatewayClient:
             "DELETE", f"/v1/team/workflows/{quote(name, safe='')}",
             headers={"If-Match": str(revision)}, creates_state=True,
         ).json()
+
+    def workflow_insights(
+        self, *, days: int = 7, project: str | None = None, workflow: str | None = None
+    ) -> WorkflowInsights:
+        """Summarize recent retained runs per workflow: outcomes, duration, review wait and cost.
+
+        ``days`` is 1-30. Without ``project`` a team-wide credential covers every project; a project-bound
+        credential covers its own. At most 200 recent runs are scanned; ``truncated`` says when the
+        window held more. Durations come from retained receipts, so runs older than retention are absent.
+        """
+        params: dict[str, Any] = {"days": days}
+        if project is not None:
+            params["project"] = project
+        if workflow is not None:
+            params["workflow"] = workflow
+        return self._request("GET", "/v1/workflow-insights", params=params).json()
 
     def workflow_secrets(self, workflow: str) -> list[dict[str, Any]]:
         """List metadata only; requires an unrestricted team admin."""

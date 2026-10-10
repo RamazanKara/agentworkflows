@@ -610,7 +610,9 @@ for (const width of [360, 393, 1440]) {
     const providers = Object.fromEntries(timeline.map(step => [step.provider, { calls: 1, tokens: step.tokens, cost_usd: step.cost_usd }])) satisfies Record<string, CostRow>;
     const activeRun: Run = { run_id: runId, workflow: 'ResearchWorkflow', project: 'default', created_at: started, status: 'running', template: { id: 'research', version: '0.9.0' },
       progress: { stage: 'awaiting_approval', draft, required_approvals: 2, approved_by: [], expires_at: '2026-10-09T10:40:00Z', approver_role: 'approver' },
-      trigger: { kind: 'cron', name: 'morning-briefing' }, budget: { ...totals, token_limit: 10000, cost_limit_usd: 5 }, timeline };
+      trigger: { kind: 'cron', name: 'morning-briefing' }, budget: { ...totals, token_limit: 10000, cost_limit_usd: 5 }, timeline,
+      summary: { elapsed_seconds: 1200, model_calls: 2, tool_calls: 1, model_ms: 3280, tool_ms: 320, review_seconds: 1190, review_open: true, tokens: totals.tokens, cost_usd: totals.cost_usd,
+        by_step: timeline.map(step => ({ step_id: step.step_id, action: step.action, calls: 1, duration_ms: step.duration_ms, tokens: step.tokens, cost_usd: step.cost_usd })) } };
     const teamSettings = settings();
     teamSettings.routes = models.map(model => model.id);
     teamSettings.fields['model_routes.research'] = { value: models[0].id, policy_default: models[0].id, source: 'policy' };
@@ -748,7 +750,7 @@ for (const width of [360, 393, 1440]) {
     await capture('get-started-ready');
     if (width < 760) {
       await page.getByRole('button', { name: 'Open menu' }).click();
-      await expect(page.getByRole('navigation').getByRole('link')).toHaveCount(12);
+      await expect(page.getByRole('navigation').getByRole('link')).toHaveCount(13);
       await capture('navigation');
       await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible();
@@ -776,6 +778,20 @@ for (const width of [360, 393, 1440]) {
     for await (const chunk of stream!) chunks.push(chunk);
     expect(Buffer.concat(chunks).toString('utf8')).toBe(csv);
     await capture('csv-export');
+    await page.route('**/v1/workflow-insights*', route => route.fulfill({ json: {
+      window: { days: 7, start: started - 6 * 86400, end: started + 1200 }, projects: ['default'], scanned: 1, skipped: 0, truncated: false,
+      workflows: [{ workflow: 'ResearchWorkflow', runs: 1, outcomes: { completed: 0, rejected: 0, failed: 0, canceled: 0, awaiting_approval: 1, running: 0 },
+        completion_rate: null, median_seconds: null, p95_seconds: null, median_review_seconds: null, average_cost_usd: null, total_cost_usd: totals.cost_usd,
+        slowest_step: null, costliest_step: null }],
+    } }));
+    await visit('/console/#insights');
+    await expect(page.getByRole('heading', { name: 'Insights', exact: true })).toBeVisible();
+    const insightsRow = page.getByRole('row').filter({ hasText: 'Research' });
+    await expect(insightsRow).toContainText('1 awaiting review');
+    await expect(insightsRow).toContainText('No finished runs');
+    await expect(page.getByRole('group', { name: 'Insight filters' })).toBeVisible();
+    await expect(page.locator('.metrics dd').last()).toHaveText('$0.06');
+    await capture('insights');
     await visit('/console/#keys');
     await expect(page.getByRole('rowheader', { name: 'Maya Chen You' })).toBeVisible();
     const revoke = await page.getByRole('button', { name: 'Revoke Research worker', exact: true }).boundingBox();
@@ -807,12 +823,18 @@ for (const width of [360, 393, 1440]) {
     await visit(`/console/#run/${runId}`);
     await expect(page.locator('.draft h3')).toHaveText('Briefing: Agent workflow evaluation');
     await expect(page.locator('.step-preview h3')).toHaveText('Briefing: Agent workflow evaluation');
-    await expect(page.locator('.metrics dd')).toHaveText(['4,200 of 10,000', '$0.06 of $5.00', '3']);
+    await expect(page.locator('.metrics').first().locator('dd')).toHaveText(['4,200 of 10,000', '$0.06 of $5.00', '3']);
+    const summaryPanel = page.getByRole('region', { name: 'Where the time and money went' });
+    await expect(summaryPanel.locator('.metrics dd')).toHaveCount(3);
+    await expect(summaryPanel.locator('.metrics dd').nth(0)).toHaveText('20 min');
+    await expect(summaryPanel.locator('.metrics dd').nth(1)).toContainText('2 model calls, 1 tool call');
+    await expect(summaryPanel.locator('.metrics dd').nth(2)).toContainText('so far');
+    await expect(summaryPanel.getByRole('row').filter({ hasText: 'Draft' })).toContainText('$0.03');
     await expect(page.locator('.step-number')).toHaveText(['01', '02', '03']);
     expect(await page.locator('.step-number').first().evaluate(node => {
       const style = getComputedStyle(node); return [style.fontFamily, style.fontVariantNumeric, style.color, style.fontWeight];
     })).toEqual(numberStyle);
-    if (width === 1440) await page.screenshot({ path: '../../../docs/assets/console-1440.png', fullPage: false });
+    if (width === 1440) await page.screenshot({ path: '../../../docs/assets/console-1440.png', fullPage: true, clip: { x: 0, y: 0, width: 1440, height: 1280 } });
     await page.getByText('Arguments and result', { exact: true }).click();
     const json = page.locator('.step-content.json').last();
     await expect(json).toHaveCSS('white-space', 'pre');
@@ -985,6 +1007,7 @@ for (const width of [360, 393, 1440]) {
     };
     await page.route(`**/v1/workflow-runs/${runId}/cancel`, route => {
       activeRun.status = 'canceled'; activeRun.progress = undefined; addOperation('cancel');
+      activeRun.summary = { ...activeRun.summary!, review_open: false, review_seconds: null };
       return route.fulfill({ json: { run_id: runId, status: 'cancellation_requested' } });
     });
     await page.route(`**/v1/workflow-runs/${runId}/retry`, route => {
@@ -992,7 +1015,7 @@ for (const width of [360, 393, 1440]) {
       return route.fulfill({ status: 201, json: { run_id: retryId } });
     });
     await page.route(`**/v1/workflow-runs/${retryId}`, route => route.fulfill({ json: {
-      ...activeRun, run_id: retryId, status: 'running', created_at: started + 1200, trigger: undefined, timeline: [],
+      ...activeRun, run_id: retryId, status: 'running', created_at: started + 1200, trigger: undefined, timeline: [], summary: undefined,
       budget: { tokens: 0, cost_usd: 0, token_limit: 10000, cost_limit_usd: 5 },
     } }));
     await visit(`/console/#run/${runId}`);
@@ -1961,6 +1984,106 @@ for (const width of [360, 393, 1440]) {
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-workflow-registry.png`, fullPage: true });
     expect(outside).toBe(0);
+    expect(errors).toEqual([]);
+  });
+}
+
+const insightRow = (overrides: Record<string, unknown> = {}) => ({
+  workflow: 'ResearchWorkflow', runs: 12,
+  outcomes: { completed: 8, rejected: 2, failed: 1, canceled: 0, awaiting_approval: 1, running: 0 },
+  completion_rate: 8 / 11, median_seconds: 1380, p95_seconds: 5400, median_review_seconds: 960, average_cost_usd: 0.061, total_cost_usd: 0.74,
+  slowest_step: { step_id: 'draft', median_ms: 1860 }, costliest_step: { step_id: 'draft', average_cost_usd: 0.031 }, ...overrides,
+});
+const insightsBody = (workflows: unknown[], overrides: Record<string, unknown> = {}) => ({
+  window: { days: 7, start: 1790712000, end: 1791316800 }, projects: ['default', 'engineering'], scanned: 15, skipped: 0, truncated: false, workflows, ...overrides,
+});
+
+test('insights follow the chosen period and project, and explain empty or truncated windows', async ({ page }) => {
+  const queries: string[] = [];
+  let failing = true;
+  let body = insightsBody([insightRow(), insightRow({ workflow: 'CodeReviewWorkflow', runs: 3, outcomes: { completed: 0, rejected: 0, failed: 0, canceled: 0, awaiting_approval: 0, running: 3 },
+    completion_rate: null, median_seconds: null, p95_seconds: null, median_review_seconds: null, average_cost_usd: null, total_cost_usd: 0, slowest_step: null, costliest_step: null })], { truncated: true });
+  await page.route('**/v1/workflow-insights*', route => {
+    queries.push(new URL(route.request().url()).search);
+    if (failing) { failing = false; return route.fulfill({ status: 503, json: { detail: { message: 'The service is unavailable.' } } }); }
+    return route.fulfill({ json: body });
+  });
+  await login(page, 'viewer', '/console/#insights');
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Insights' })).toHaveAttribute('aria-current', 'page');
+  await expect(page).toHaveTitle('Insights · AgentWorkflows Console');
+  await expect(page.getByRole('alert')).toContainText('The service is unavailable.');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  const research = page.getByRole('row').filter({ hasText: 'Research' });
+  await expect(research).toContainText('12 runs');
+  await expect(research).toContainText('8 completed, 2 rejected, 1 failed, 1 awaiting review');
+  await expect(research).toContainText('23 min');
+  await expect(research).toContainText('95% finish within 1.5 h');
+  await expect(research).toContainText('16 min');
+  await expect(research).toContainText('$0.06');
+  await expect(research).toContainText('$0.74 in total, most on Draft');
+  await expect(research).toContainText('Draft');
+  await expect(research).toContainText('median 1.9 s');
+  const review = page.getByRole('row').filter({ hasText: 'Code review' });
+  await expect(review).toContainText('3 running');
+  await expect(review).toContainText('No finished runs');
+  await expect(page.locator('.metrics dd')).toHaveText(['15', '73%of 11 finished', '$0.74']);
+  await expect(page.getByText('more runs than the 15 most recent ones')).toBeVisible();
+  await page.getByLabel('Period', { exact: true }).selectOption('30');
+  await expect.poll(() => queries.at(-1)).toBe('?days=30');
+  await page.getByLabel('Project', { exact: true }).selectOption('engineering');
+  await expect.poll(() => queries.at(-1)).toBe('?days=30&project=engineering');
+  body = insightsBody([], { scanned: 0, truncated: false });
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByText('No runs in this period', { exact: true })).toBeVisible();
+  await expect(page.getByText('more runs than')).toHaveCount(0);
+});
+
+for (const width of [360, 393, 1440]) {
+  test(`insights and the run summary fit and read clearly at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.route('**/v1/workflow-insights*', route => route.fulfill({ json: insightsBody([
+      insightRow(),
+      insightRow({ workflow: 'DocumentQAWorkflow', runs: 5, outcomes: { completed: 4, rejected: 0, failed: 0, canceled: 1, awaiting_approval: 0, running: 0 },
+        completion_rate: 0.8, median_seconds: 42, p95_seconds: 75, median_review_seconds: null, average_cost_usd: 0.004, total_cost_usd: 0.02,
+        slowest_step: { step_id: 'answer', median_ms: 640 }, costliest_step: { step_id: 'answer', average_cost_usd: 0.004 } }),
+    ]) }));
+    await login(page, 'admin', '/console/#insights');
+    await expect(page.getByRole('row').filter({ hasText: 'Research' })).toBeVisible();
+    const check = async (name: string) => {
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const split = await page.locator('main').evaluate(node => {
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        const words: string[] = [];
+        while (walker.nextNode()) {
+          const text = walker.currentNode;
+          if (text.parentElement?.closest('code, textarea, select, option, .visually-hidden, thead')) continue;
+          for (const match of (text.textContent || '').matchAll(/[\p{L}\p{N}]{4,}/gu)) {
+            const range = document.createRange();
+            range.setStart(text, match.index); range.setEnd(text, match.index + match[0].length);
+            if (range.getClientRects().length > 1) words.push(match[0]);
+          }
+        }
+        return words;
+      });
+      expect(split, `${name}: words must wrap at spaces`).toEqual([]);
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-${name}.png`, fullPage: true });
+    };
+    await check('insights-workflows');
+    const detail = run({ summary: { elapsed_seconds: 1500, model_calls: 2, tool_calls: 1, model_ms: 3280, tool_ms: 320, review_seconds: 1190, review_open: false, tokens: 4200, cost_usd: 0.06,
+      by_step: [
+        { step_id: 'research', action: 'tool_exec', calls: 1, duration_ms: 320, tokens: 0, cost_usd: 0.01 },
+        { step_id: 'analyze', action: 'model_call', calls: 1, duration_ms: 1420, tokens: 1800, cost_usd: 0.02 },
+        { step_id: 'draft', action: 'model_call', calls: 1, duration_ms: 1860, tokens: 2400, cost_usd: 0.03 },
+      ] } });
+    await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: detail }));
+    await page.goto(`/console/#run/${id}`);
+    const panel = page.getByRole('region', { name: 'Where the time and money went' });
+    await expect(panel.getByRole('row').filter({ hasText: 'Analyze' })).toContainText('$0.02');
+    await expect(panel.locator('.metrics dd').first()).toHaveText('25 min');
+    await check('run-summary');
     expect(errors).toEqual([]);
   });
 }

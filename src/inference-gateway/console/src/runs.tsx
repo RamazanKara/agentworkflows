@@ -1,5 +1,6 @@
 import { createElement, useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, date, label, missingKeys, money, noProviderKeys, number, providerList, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { RunSummaryPanel } from './insights';
 import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, Metrics, NumberInput, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
@@ -281,6 +282,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
       {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" onClick={() => setConfirmCancel(false)}>Keep running</button></div></div>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
       <Metrics items={[[ 'Tokens', `${number(run.budget.tokens)} of ${number(run.budget.token_limit)}` ], ['Cost', `${money(run.budget.cost_usd)} of ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
+      {run.summary && <RunSummaryPanel summary={run.summary}/>}
       {run.error && <section className="callout" role="alert"><h2>Run needs attention</h2><p>{run.error.message}</p><code>{run.error.code}</code></section>}
       {run.progress?.message && <p className="callout">{run.progress.message}</p>}
       {running && <p className="muted">This page updates automatically while the run is active.</p>}

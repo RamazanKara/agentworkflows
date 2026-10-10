@@ -1033,3 +1033,35 @@ API: `GET/PUT /v1/team/alert-rules`; PUT requires the current `If-Match` revisio
 Changes conflict with concurrent team settings edits rather than overwriting them.
 Python: `alert_rules()`, `set_alert_rules(rules, revision=...)`.
 TypeScript: `alertRules()`, `setAlertRules(rules, revision)`.
+
+## Run insights
+
+Open **Insights** in the console to see how each workflow behaves over the last 24 hours, 7 days
+or 30 days, and open any run to see **Where the time and money went**.
+
+A run's summary comes from its retained receipts:
+
+| Value | Meaning |
+| --- | --- |
+| Elapsed | Run start to its last receipt; for a running run, to now. |
+| Working | Time spent in model and tool calls, with their counts. |
+| Review wait | From the last model or tool step before a reviewer's decision to that decision. For a draft still waiting, the time so far. |
+| By step | Calls, time, tokens and cost for each step, with each step's share. |
+
+The workflow table adds, for recent runs of each workflow: outcomes (completed, rejected by a
+reviewer, failed, canceled, awaiting review, running), the completion rate among finished runs, the
+median and 95th-percentile run time, the median review wait, the average cost of a finished run,
+the slowest step by median time and the step costing the most. A rejected draft is a reviewer's
+decision, not a failure, so it is counted separately. Statuses come from Temporal, so a run is
+as current as its last status refresh.
+
+Limits to keep in mind: the API reads at most the 200 most recent runs in the window and sets
+`truncated` when there were more; a run older than the team's retention is gone, so a 30-day
+window needs 30-day retention; review wait is an estimate between two receipts, not a measured
+timer; costs use configured prices, not invoices. Credentials bound to one project see only that
+project. Viewers can read insights.
+
+API: `GET /v1/workflow-insights?days=7&project=&workflow=` (`days` 1-30). A single run's
+detail (`GET /v1/workflow-runs/{run_id}`) includes `summary`; run listings do not.
+Python: `workflow_insights(days=7, project=None, workflow=None)`; CLI: `agentworkflows insights --days 30`.
+TypeScript: `workflowInsights({ days, project, workflow })`.

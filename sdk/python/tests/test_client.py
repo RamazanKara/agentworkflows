@@ -926,3 +926,19 @@ def test_team_workflows_surfaces_revision_conflicts(monkeypatch):
         assert client.team_workflows()["enabled"] is True
         with pytest.raises(GatewayError, match="team_workflows_conflict"):
             client.register_workflow("Plain", models=["primary"], revision=0)
+
+
+def test_workflow_insights_sends_only_supplied_filters(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"workflows": [], "truncated": False})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="viewer-key") as client:
+        assert client.workflow_insights() == {"workflows": [], "truncated": False}
+        client.workflow_insights(days=30, project="private", workflow="Triage Flow")
+    assert dict(requests[0].url.params) == {"days": "7"}
+    assert dict(requests[1].url.params) == {"days": "30", "project": "private", "workflow": "Triage Flow"}
+    assert requests[1].url.path == "/v1/workflow-insights"

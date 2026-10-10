@@ -64,7 +64,7 @@ it is not a cold-install benchmark.
 | Versioned templates | Choose from 9 workflows, install a reviewed version, fill in its form, and adapt the code when needed. |
 | Your own workflows | Register a workflow your team wrote from the console, CLI or SDK, within the models, tools and limits already approved. No gateway redeploy. |
 | Triggers | Start jobs on a schedule or signed webhook; trace each run to its trigger. |
-| Observability | Inspect step cost, latency, input/output, errors, and receipts together; choose Slack/email/webhook alerts and export OpenTelemetry traces and metrics. |
+| Observability | Inspect step cost, latency, input/output, errors, and receipts together; see where each run's time and money went and how each workflow performs over the past month; choose Slack/email/webhook alerts and export OpenTelemetry traces and metrics. |
 | Python and TypeScript SDKs | Use governed activities and durable approval gates from code; call the same team APIs as the console. |
 | Compose and Helm | Evaluate with one Compose command; deploy the gateway, worker, and Temporal together on Kubernetes. |
 

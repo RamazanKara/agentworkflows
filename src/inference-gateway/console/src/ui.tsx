@@ -12,6 +12,7 @@ export function Icon({ name }: { name: string }) {
     approvals: <><circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/></>,
     providers: <><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/></>,
     costs: <path d="M5 21V11m7 10V3m7 18V7"/>,
+    insights: <><path d="M3 3v18h18"/><path d="m7 15 4-5 3 3 5-7"/></>,
     triggers: <><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></>,
     keys: <><circle cx="8" cy="8" r="5"/><path d="m12 12 9 9m-4-4 3-3m-6 0 3-3"/></>,
     audit: <><path d="M5 3h14v18H5Z M8 7h8M8 12h8M8 17h5"/></>,

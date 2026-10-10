@@ -446,3 +446,13 @@ it('registers a workflow at the reviewed or current revision and removes it', as
   expect(fetchMock.mock.calls[2][1]?.headers).toMatchObject({ 'If-Match': '5' });
   expect(fetchMock).toHaveBeenCalledTimes(5);
 });
+
+it('requests workflow insights with the window and optional filters', async () => {
+  fetchMock.mockImplementation(async () => ok({ workflows: [], truncated: false, scanned: 0, skipped: 0, projects: [], window: { days: 7, start: 0, end: 1 } }));
+  await client.workflowInsights();
+  await client.workflowInsights({ days: 30, project: 'private', workflow: 'Triage Flow' });
+  expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
+    'http://gateway.test/v1/workflow-insights?days=7',
+    'http://gateway.test/v1/workflow-insights?days=30&project=private&workflow=Triage+Flow',
+  ]);
+});

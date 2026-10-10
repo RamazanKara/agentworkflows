@@ -592,3 +592,25 @@ def test_workflows_errors_are_actionable(monkeypatch, capsys, status, reason, hi
     assert main(["workflows", "remove", "Triage", "--revision", "1"]) == 1
     captured = capsys.readouterr()
     assert hint in captured.err and "workflows-request" in captured.err and "private-admin-key" not in captured.err
+
+
+def test_insights_command_sends_window_and_filters(monkeypatch, capsys):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "viewer-key")
+    seen = []
+
+    def respond(request):
+        seen.append(dict(request.url.params))
+        if request.url.params["days"] == "99":
+            return httpx.Response(422, json={"detail": {"reason": "invalid_request", "message": "days: too large"}})
+        return httpx.Response(200, json={"workflows": [], "scanned": 0})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(["insights"]) == 0
+    assert main(["insights", "--days", "30", "--workflow", "Triage", "--project", "default"]) == 0
+    assert seen == [{"days": "7"}, {"days": "30", "project": "default", "workflow": "Triage"}]
+    assert capsys.readouterr().out.count('"scanned": 0') == 2
+    assert main(["insights", "--days", "99"]) == 1
+    assert "between 1 and 30" in capsys.readouterr().err

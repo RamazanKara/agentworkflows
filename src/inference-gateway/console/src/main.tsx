@@ -4,6 +4,7 @@ import { api, label, type AuthConfig, type BrowserSession, type RunPage, type Se
 import { DotList, ErrorMessage, Icon, Loading } from './ui';
 import { Approvals, RunDetail, Runs, StartRun } from './runs';
 import { Costs, GetStarted, Providers } from './team';
+import { Insights } from './insights';
 import { TeamConfiguration } from './settings';
 import { Triggers } from './triggers';
 import { Keys } from './keys';
@@ -14,7 +15,7 @@ import './style.css';
 
 const navigation = [
   ['start', 'Get started'], ['templates', 'Templates'], ['runs', 'Workflow runs'], ['approvals', 'Approvals'],
-  ['triggers', 'Triggers'], ['keys', 'Members & keys'], ['team', 'Team settings'], ['providers', 'Providers & budgets'], ['costs', 'Costs'],
+  ['triggers', 'Triggers'], ['keys', 'Members & keys'], ['team', 'Team settings'], ['providers', 'Providers & budgets'], ['costs', 'Costs'], ['insights', 'Insights'],
   ['audit', 'Audit log'],
   ['secrets', 'Workflow secrets'], ['data', 'Data & privacy'],
 ];
@@ -179,7 +180,7 @@ function App() {
         route === 'secrets' ? <WorkflowSecrets session={session}/> :
         route === 'data' ? <TeamData session={session}/> :
         route === 'team' ? <TeamConfiguration session={session}/> :
-        route === 'triggers' ? <Triggers session={session}/> : route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> :
+        route === 'triggers' ? <Triggers session={session}/> : route === 'providers' ? <Providers session={session}/> : route === 'costs' ? <Costs session={session}/> : route === 'insights' ? <Insights session={session}/> :
         /^run\/[a-f0-9-]{36}$/.test(route) ? <RunDetail session={session} runId={route.slice(4)}/> :
         <><h1>Page not found</h1><a href="#runs">Return to workflow runs</a></>}
     </main>

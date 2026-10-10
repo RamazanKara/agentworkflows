@@ -551,3 +551,26 @@ pre.json.hanging > span { display: block; overflow-wrap: anywhere; }
   .registry-table .row-action > * + * { margin-left: 0; }
   .registry-table .row-action .button, .registry-table .row-action button { min-height: 44px; }
 }
+
+/* Insights and the run summary */
+.insight-filters { margin-bottom: 20px; }
+.insights-table th small, .insights-table td small { max-width: 220px; white-space: normal; }
+.outcome-bar { display: flex; height: 8px; min-width: 120px; background: #e3ebe6; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.outcome-bar > span { display: block; height: 100%; }
+.o-completed { background: #2f9e7d; }
+.o-rejected { background: #c98a12; }
+.o-failed { background: #b3261e; }
+.o-canceled { background: #7d8b86; }
+.o-awaiting_approval { background: #e7b84a; }
+.o-running { background: #4a86b8; }
+.run-summary { padding: 0; }
+.run-summary .section-heading { padding: 22px 28px 0; margin-bottom: 18px; }
+.run-summary .metrics { border-width: 1px 0; border-radius: 0; margin: 0; }
+.run-summary th:first-child, .run-summary td:first-child { padding-left: 28px; }
+.usage-bar.share { display: inline-block; width: 72px; margin: 0 0 0 10px; vertical-align: middle; }
+@media (max-width: 760px) {
+  .insights-table td small { max-width: none; }
+  .run-summary .section-heading { padding: 18px 18px 0; }
+  .run-summary th:first-child { padding-left: 0; }
+  .usage-bar.share { display: block; width: 100%; margin: 6px 0 0; }
+}

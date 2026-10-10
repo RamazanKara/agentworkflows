@@ -5,7 +5,7 @@ import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
   ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
-  DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, WorkflowRegistration, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
+  DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, WorkflowRegistration, WorkflowInsights, InsightFilters, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
 } from './types';
 
 export interface ClientOptions {
@@ -145,6 +145,17 @@ export class GatewayClient {
     const reviewed = revision ?? (await this.teamWorkflows()).revision;
     return this.request('DELETE', `/v1/team/workflows/${encodeURIComponent(name)}`, undefined, false,
       { 'If-Match': String(reviewed) });
+  }
+
+  /**
+   * Summarize recent retained runs per workflow: outcomes, duration, review wait and cost. `days` is 1-30.
+   * At most 200 recent runs are scanned; `truncated` says when the window held more.
+   */
+  workflowInsights(filters: InsightFilters = {}): Promise<WorkflowInsights> {
+    const query = new URLSearchParams({ days: String(filters.days ?? 7) });
+    if (filters.project !== undefined) query.set('project', filters.project);
+    if (filters.workflow !== undefined) query.set('workflow', filters.workflow);
+    return this.request('GET', `/v1/workflow-insights?${query}`);
   }
 
   workflowSecrets(workflow: string): Promise<WorkflowSecret[]> {

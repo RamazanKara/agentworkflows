@@ -27,6 +27,7 @@ from app.team_settings import effective_team_settings
 from app.teams import project_access, require_role
 from app.workflow_budget import effective_run_limits, redis_call, run_key
 from app.workflow_content import step_content
+from app.workflow_insights import event_charge, summarize
 from app.workflow_retention import TERMINAL_STATES, retain_run
 
 RPC_TIMEOUT = timedelta(seconds=10)
@@ -204,12 +205,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
         rows = await storage_call(request, "run_steps", request.state.sandbox_id, run_id)
         result["timeline"] = []
         for event in rows:
-            charge = event.get("workflow_charge") or {}
-            attempts = event.get("routing_attempts", [])
-            charges = [a.get("charged") or a.get("reserved") for a in attempts]
-            charges = [c for c in charges if c]
-            if charges:
-                charge = {"tokens": sum(c["tokens"] for c in charges), "cost_usd": sum(c["cost_usd"] for c in charges)}
+            charge = event_charge(event)
             result["timeline"].append(
                 {
                     "step_id": event.get("workflow_step_id"),
@@ -230,6 +226,12 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
                     **await step_content(request, run_id, event.get("workflow_step_id") or ""),
                 }
             )
+        result["summary"] = summarize(
+            result["created_at"],
+            result["timeline"],
+            now=time() if result["status"] == "running" else None,
+            waiting=(result.get("progress") or {}).get("stage") == "awaiting_approval",
+        )
     return result
 
 
