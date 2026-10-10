@@ -152,3 +152,58 @@ class AuditVerification(TypedDict):
     checked: int
     first_break: AuditPosition | None
     boundaries: list[AuditPosition]
+
+
+class WorkflowRegistrationOptions(TypedDict, total=False):
+    allowed_providers: list[str]
+    allowed_tools: list[str]
+    token_limit: int
+    cost_limit_usd: float
+    approval_required: bool
+    approver_role: Literal["admin", "approver"]
+    required_approvals: int
+    approval_timeout_seconds: int
+    input_schema: dict[str, Any] | None
+
+
+class RegisteredWorkflow(TypedDict):
+    name: str
+    allowed_models: list[str]
+    allowed_providers: list[str]
+    allowed_tools: list[str]
+    allowed_egress: list[str]
+    token_limit: int
+    cost_limit_usd: float
+    approval_required: bool
+    approver_role: Literal["admin", "approver"]
+    required_approvals: int
+    approval_timeout_seconds: int
+    input_schema: dict[str, Any] | None
+    registered_by: str | None
+    registered_at: float | None
+
+
+class WorkflowModelOption(TypedDict):
+    id: str
+    provider: str
+    simulated: bool
+
+
+class WorkflowOptions(TypedDict):
+    providers: list[str]
+    models: list[WorkflowModelOption]
+    tools: list[str]
+
+
+class TeamWorkflows(TypedDict):
+    revision: int
+    enabled: bool
+    workflows: list[RegisteredWorkflow]
+    reserved: list[str]
+    options: WorkflowOptions
+    limits: dict[str, float]
+
+
+class WorkflowRegistration(TypedDict):
+    revision: int
+    workflow: RegisteredWorkflow

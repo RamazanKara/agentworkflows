@@ -5,7 +5,7 @@ import { requestJson } from './http';
 import type {
   AuditFilters, AuditPage, AuditRange, AuditVerification, CaptureMode, CreatedKey, KeyList, KeyOptions, KeyUpdate,
   ManagedKey, RunFilters, RunPage, StartedRun, TeamSettings, TeamSettingValue, TeamSpend, TeamSSO, WorkflowRun,
-  DeploymentReadiness, AlertRules, TeamAlertRules, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
+  DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, WorkflowRegistration, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
 } from './types';
 
 export interface ClientOptions {
@@ -120,6 +120,31 @@ export class GatewayClient {
 
   installTemplate(templateId: string, version: string): Promise<InstalledTemplate> {
     return this.request('POST', `/v1/workflow-templates/${encodeURIComponent(templateId)}/install`, { version });
+  }
+
+  /** List registered workflows, reserved names, and the models, tools and limits a registration may use. */
+  teamWorkflows(): Promise<TeamWorkflows> {
+    return this.request('GET', '/v1/team/workflows');
+  }
+
+  /**
+   * Register or replace a workflow type (unrestricted admin only). The gateway accepts only models, providers
+   * and tools already approved for the team, derives network egress from them and keeps limits within the
+   * team's own. Omit `revision` to use the current one; pass a reviewed value to refuse a concurrent change.
+   */
+  async registerWorkflow(
+    name: string, models: string[], options: WorkflowRegistrationOptions = {}, revision?: number | string,
+  ): Promise<WorkflowRegistration> {
+    const reviewed = revision ?? (await this.teamWorkflows()).revision;
+    return this.request('PUT', `/v1/team/workflows/${encodeURIComponent(name)}`, { allowed_models: models, ...options },
+      false, { 'If-Match': String(reviewed) });
+  }
+
+  /** Remove a registered workflow type; new calls for its runs are denied. */
+  async removeWorkflow(name: string, revision?: number | string): Promise<{ revision: number; removed: string }> {
+    const reviewed = revision ?? (await this.teamWorkflows()).revision;
+    return this.request('DELETE', `/v1/team/workflows/${encodeURIComponent(name)}`, undefined, false,
+      { 'If-Match': String(reviewed) });
   }
 
   workflowSecrets(workflow: string): Promise<WorkflowSecret[]> {

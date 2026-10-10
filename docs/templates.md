@@ -274,8 +274,9 @@ docker compose -f deploy/compose/compose.yaml up -d workflow-worker
 If you chose a different gateway port, set `AGENTWORKFLOWS_URL` in the worker terminal too.
 If you chose a different Temporal port, set `TEMPORAL_ADDRESS=localhost:PORT` there.
 For your own team, set `AGENTWORKFLOWS_TEAM` and its worker key; the queue defaults to
-`TEAM-workflows`. Register the workflow name, approved models/tools/egress, and budgets in
-the existing [team policy](workflows.md#teams-projects-and-roles).
+`TEAM-workflows`. Register the workflow name, approved models and tools, and per-run limits
+from **Templates → Your workflows**, with `agentworkflows workflows register`, or in operator
+[team policy](workflows.md#teams-projects-and-roles). See [Register your own workflow](workflows.md#register-your-own-workflow).
 
 ## A workflow in about 20 lines
 

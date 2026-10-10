@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-rc.5 - Unreleased
+
+- Let a team admin register their own workflow types from the console, CLI, API and both
+  SDKs without a gateway redeploy. Registrations are revision-checked and audited, can only
+  use models, tools and limits already approved for the team, derive network egress, and are
+  read through the same effective policy as YAML workflows. Operators can opt out per team
+  with `selfServiceWorkflows: false`.
+- Fix the offline audit verifier, which dropped chained key, settings, template, secret and
+  provider-key events and so reported false gaps; it now accepts every chain-linked record.
+- Package and chart versions remain 0.9.0; no release artifacts are published.
+
 ## 1.0.0-rc.4 - Unreleased
 
 - Rewrite the product README and docs landing page around team outcomes, a console

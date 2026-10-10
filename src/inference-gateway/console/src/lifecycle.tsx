@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DeploymentChecklist } from './deployment';
 import { api, date, useData, workflowName, type Policy, type Session } from './api';
 import { Badge, Empty, ErrorMessage, Loading, PageHeader, Refresh } from './ui';
+import { WorkflowRegistry } from './workflows';
 
 type Template = { id: string; version: string; workflow: string; name: string; description: string; installable: boolean; installed_version: string | null };
 type Secret = { name: string; version: number; updated_at: number };
@@ -28,6 +29,7 @@ export function Templates({ session }: { session: Session }) {
         } catch (value) { setError((value as Error).message); } finally { setBusy(''); }
       }}>{busy === template.id ? 'Installing…' : 'Install template'}</button>}
     </article>)}</div>}
+    {session.team.role === 'admin' && <WorkflowRegistry session={session}/>}
   </>;
 }
 

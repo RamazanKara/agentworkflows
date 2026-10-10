@@ -21,6 +21,30 @@ Ruff, SDK tests and contract scripts from their installed environments. The Bash
 gates still need a Linux caller: `make lint test-gateway test-scripts`. Screenshot
 tests do not verify live providers, Redis, Temporal or PostgreSQL integration.
 
+## rc.5 adoption pass
+
+2026-10-10, native Windows, Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6 and the
+installed Edge for Playwright. Each gap was recorded in
+[PRODUCT-GAPS.md](https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md)
+before it was built. No dependency was added.
+
+| Native check | Result after gap 1 (bring your own workflow) |
+| --- | --- |
+| Gateway suite (excluding `tests/live`) | **1,158 passed, 14 skipped**, with Git Bash first on `PATH`. |
+| Python SDK | **225 passed, 3 skipped**. |
+| TypeScript SDK | Build, lint and **87 tests** passed. |
+| Console | Production build passed; **87 Playwright tests** passed through Edge (`channel: 'msedge'`, `--lang=en-US`). |
+| Contracts | OpenAPI snapshot, configuration contract and chart docs passed. |
+| Ruff | Every changed Python file passes. |
+
+Console captures for this pass are written to `.out/console-v1.0.0-rc.5/` at 360, 393 and 1440 px.
+They were reviewed for horizontal overflow, mid-word wraps, clipped controls, consistent identities and
+no placeholder values. The captures are UI evidence from fixtures, not a live gateway.
+
+Caller acceptance still required: register a workflow through the console against the Compose stack,
+start a worker for it on the team's queue, and run it through approval. The gateway tests exercise
+policy, admission, budgets and audit with fakes; they do not prove a real Temporal worker.
+
 ## rc.4 adoption pass
 
 2026-10-09, native Windows. All five plans were recorded in

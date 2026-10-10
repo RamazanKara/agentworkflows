@@ -528,3 +528,26 @@ pre.json.hanging > span { display: block; overflow-wrap: anywhere; }
   .stack.audit-table a.run-link { display: inline-flex; align-items: center; min-height: 44px; margin: -11px 0; }
   .table-footer > span.muted { display: block; margin: 0 0 10px; }
 }
+
+/* Team-registered workflows */
+.registry { margin-top: 36px; }
+.registry > p { max-width: 720px; }
+.registry-table th, .registry-table td { white-space: normal; }
+.registry-table tbody th { width: 30%; }
+.registry-table code { overflow-wrap: anywhere; }
+.registry-table .row-action { text-align: right; white-space: nowrap; width: 1%; }
+.registry-table .row-action > * + * { margin-left: 8px; }
+.registry-table td small { display: block; color: var(--muted); }
+.registry .form-panel { margin-top: 20px; }
+.registry fieldset.choices { margin-bottom: 20px; }
+.registry fieldset.choices label.check { align-items: flex-start; padding: 8px 0; }
+.registry fieldset.choices label.check input { margin-top: 2px; flex: none; }
+.registry textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.registry .form-panel > label.check { margin-bottom: 20px; }
+.registry .form-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 760px) {
+  .registry-table tbody th, .registry-table .row-action { width: auto; }
+  .registry-table .row-action { display: flex; flex-wrap: wrap; gap: 8px; text-align: left; white-space: normal; }
+  .registry-table .row-action > * + * { margin-left: 0; }
+  .registry-table .row-action .button, .registry-table .row-action button { min-height: 44px; }
+}

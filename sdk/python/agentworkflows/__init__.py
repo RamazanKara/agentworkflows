@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from importlib import metadata
 from types import TracebackType
 from typing import Any, Unpack
@@ -52,6 +52,9 @@ from agentworkflows.types import (
     TeamSettingValue,
     TeamSpend,
     TeamSSO,
+    TeamWorkflows,
+    WorkflowRegistration,
+    WorkflowRegistrationOptions,
 )
 
 with _workflow.unsafe.imports_passed_through():
@@ -92,6 +95,14 @@ def _parse_retry_after(value: str | None) -> int | None:
     except ValueError:
         return None
     return seconds if seconds >= 0 else None
+
+
+def _workflow_name(workflow: type) -> str:
+    """Return a workflow class's Temporal type name, as registered by ``@workflow.defn``."""
+    definition = _workflow._Definition.from_class(workflow)
+    if definition is None or not definition.name:
+        raise TypeError("Pass a workflow type name or a class decorated with @workflow.defn.")
+    return definition.name
 
 
 class GatewayError(httpx.HTTPStatusError):
@@ -609,6 +620,49 @@ class GatewayClient:
 
     def install_template(self, template_id: str, *, version: str) -> dict[str, Any]:
         return self._post(f"/v1/workflow-templates/{quote(template_id, safe='')}/install", {"version": version})
+
+    def team_workflows(self) -> TeamWorkflows:
+        """List registered workflows, reserved names, and the models/tools/limits a registration may use."""
+        return self._request("GET", "/v1/team/workflows").json()
+
+    def register_workflow(
+        self,
+        workflow: str | type,
+        *,
+        models: Sequence[str],
+        revision: int | str | None = None,
+        **options: Unpack[WorkflowRegistrationOptions],
+    ) -> WorkflowRegistration:
+        """Register or replace a workflow type for this team (unrestricted admin only).
+
+        ``workflow`` is the Temporal workflow type name or the ``@workflow.defn`` class. A class also
+        supplies its ``@input_schema`` for validation and the console form. The gateway accepts only
+        models, providers and tools already approved for the team and derives network egress from
+        them; limits stay within the team's own limits. ``revision`` defaults to the current one; pass
+        the value you reviewed to refuse a concurrent change.
+        """
+        name = workflow if isinstance(workflow, str) else _workflow_name(workflow)
+        body: dict[str, Any] = {"allowed_models": list(models), **options}
+        if not isinstance(workflow, str) and "input_schema" not in body:
+            schema = getattr(workflow, "input_schema", None)
+            if isinstance(schema, dict):
+                body["input_schema"] = schema
+        if revision is None:
+            revision = self.team_workflows()["revision"]
+        return self._request(
+            "PUT", f"/v1/team/workflows/{quote(name, safe='')}", json=body,
+            headers={"If-Match": str(revision)}, creates_state=True,
+        ).json()
+
+    def remove_workflow(self, workflow: str | type, *, revision: int | str | None = None) -> dict[str, Any]:
+        """Remove a team-registered workflow type; new calls for its runs are denied."""
+        name = workflow if isinstance(workflow, str) else _workflow_name(workflow)
+        if revision is None:
+            revision = self.team_workflows()["revision"]
+        return self._request(
+            "DELETE", f"/v1/team/workflows/{quote(name, safe='')}",
+            headers={"If-Match": str(revision)}, creates_state=True,
+        ).json()
 
     def workflow_secrets(self, workflow: str) -> list[dict[str, Any]]:
         """List metadata only; requires an unrestricted team admin."""

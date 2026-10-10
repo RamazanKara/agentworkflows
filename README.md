@@ -62,6 +62,7 @@ it is not a cold-install benchmark.
 | Budgets and spend limits | Cap each run's tokens and dollars; set monthly team/project limits and see spend before expanding access. |
 | Tamper-evident audit | Link model calls, tool actions, approvals, and operations to verifiable receipts. Export the retained record. |
 | Versioned templates | Choose from 9 workflows, install a reviewed version, fill in its form, and adapt the code when needed. |
+| Your own workflows | Register a workflow your team wrote from the console, CLI or SDK, within the models, tools and limits already approved. No gateway redeploy. |
 | Triggers | Start jobs on a schedule or signed webhook; trace each run to its trigger. |
 | Observability | Inspect step cost, latency, input/output, errors, and receipts together; choose Slack/email/webhook alerts and export OpenTelemetry traces and metrics. |
 | Python and TypeScript SDKs | Use governed activities and durable approval gates from code; call the same team APIs as the console. |

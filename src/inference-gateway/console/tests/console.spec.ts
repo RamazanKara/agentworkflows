@@ -13,6 +13,15 @@ const run = (overrides = {}) => ({
 const policies = { workflows: { ResearchWorkflow: { inputSchema: {"type":"object","properties":{"topic":{"type":"string","default":"How should our team evaluate AI agents?"},"model":{"type":"string","default":"demo-openai"}},"required":["topic"]}, allowedModels: ['demo-openai'], allowedProviders: ['openai', 'anthropic'], tokenLimit: 10000, costLimitUsd: 5 }, CustomWorkflow: { allowedModels: [], allowedProviders: [], tokenLimit: 500, costLimitUsd: 1 } } };
 const costs = { cost_usd: .0432, tokens: 63, calls: 2 };
 
+const registryFixture = () => ({
+  revision: 0, enabled: true, workflows: [] as Record<string, unknown>[], reserved: ['ResearchWorkflow', 'CodeReviewWorkflow'],
+  options: {
+    providers: ['openai'], models: [{ id: 'demo-openai', provider: 'openai', simulated: true }, { id: 'gpt-4.1-mini', provider: 'openai', simulated: false }],
+    tools: ['team.search'],
+  },
+  limits: { token_limit: 200000, cost_limit_usd: 50 },
+});
+
 const ssoPolicy = (): TeamSSO => ({
   team_id: 'demo', enabled: true, provider_name: 'idp.example', role_source: 'groups',
   team_claim: 'team', project_claim: 'project', role_claim: null, default_role: null,
@@ -477,6 +486,7 @@ test.beforeEach(async ({ page }) => {
     if (url.pathname === '/v1/team') body = { team_id: team, role, projects: ['default', 'engineering'], providers: ['openai'], cost_limit_usd: 50, ...(role === 'admin' ? { provider_configuration: { openai: { configured: true, environment_variable: 'TEAM_OPENAI_KEY' } } } : {}) };
     else if (url.pathname === '/v1/team/deployment') body = { checks: [{ id: 'authentication', name: 'Team authentication', configured: true, action: 'Enable team-bound authentication.' }, { id: 'cookies', name: 'Secure session cookies', configured: true, action: 'Enable HTTPS.' }], verification_required: ['Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.', 'Run the first-approved-run check after every install and upgrade.'] };
     else if (url.pathname === '/v1/team/alert-rules') body = { revision: 0, events: ['awaiting_approval', 'failed', 'budget_threshold'], channels: ['slack', 'email', 'webhook'], available_channels: ['slack', 'email', 'webhook'], budget_threshold: 0.8, slow_step_ms: 30000 };
+    else if (url.pathname === '/v1/team/workflows') body = registryFixture();
     else if (url.pathname === '/v1/team/invitations') body = [];
     else if (url.pathname === '/v1/team/onboarding') body = { providers: [], blockers: [], sample: { template_id: 'research', version: '0.9.0', workflow: 'ResearchWorkflow', installed: false, ready: true, input: { topic: 'How should our team evaluate AI agents?', model: 'demo-openai' } } };
     else if (url.pathname === '/v1/workflow-policies') body = policies;
@@ -549,7 +559,7 @@ for (const width of [360, 393, 1440]) {
         return split;
       });
       expect(splitWords, `${name}: words must wrap at spaces`).toEqual([]);
-      const path = `../../../.out/console-v1.0.0-rc.4/${width}-${name}.png`;
+      const path = `../../../.out/console-v1.0.0-rc.5/${width}-${name}.png`;
       if (target) await target.screenshot({ path });
       else await page.screenshot({ path, fullPage: true });
     };
@@ -667,7 +677,7 @@ for (const width of [360, 393, 1440]) {
       const range = document.createRange(); range.selectNodeContents(button.lastChild!);
       return range.getClientRects().length;
     })).toBe(1);
-    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.4/${width}-sso-sign-in.png`, fullPage: true });
+    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-sso-sign-in.png`, fullPage: true });
     await page.route('**/v1/team/deployment', route => route.fulfill({ json: { checks: [
       ['authentication', 'Team authentication'], ['cookies', 'Secure session cookies'], ['sso', 'Company sign-in'],
       ['encryption', 'Secret encryption'], ['accounting', 'Shared accounting'], ['records', 'PostgreSQL records'], ['audit', 'Shared audit chain'],
@@ -760,7 +770,7 @@ for (const width of [360, 393, 1440]) {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
     const exported = await download;
-    await exported.saveAs(`../../../.out/console-v1.0.0-rc.4/${width}-usage.csv`);
+    await exported.saveAs(`../../../.out/console-v1.0.0-rc.5/${width}-usage.csv`);
     const stream = await exported.createReadStream();
     const chunks = [];
     for await (const chunk of stream!) chunks.push(chunk);
@@ -873,12 +883,48 @@ for (const width of [360, 393, 1440]) {
       catalog[1].installed_version = '0.9.0';
       return route.fulfill({ json: { id: 'code-review', workflow: 'CodeReviewWorkflow', version: '0.9.0', installed_at: started + 1200 } });
     });
+    const triage = { name: 'TicketTriageWorkflow', allowed_models: [models[0].id], allowed_providers: ['openai'], allowed_tools: ['research'],
+      allowed_egress: ['https://api.openai.com', 'https://tools.insights.internal'], token_limit: 20000, cost_limit_usd: 2, approval_required: true,
+      approver_role: 'approver', required_approvals: 1, approval_timeout_seconds: 86400, input_schema: null, registered_by: 'admin', registered_at: started };
+    let registered: Record<string, unknown>[] = [triage];
+    let registryRevision = 3;
+    await page.route('**/v1/team/workflows', route => route.fulfill({ json: {
+      revision: registryRevision, enabled: true, workflows: registered, reserved: templates.map(([workflow]) => workflow),
+      options: { providers: ['openai', 'anthropic'], models: models.map(model => ({ id: model.id, provider: model.owned_by, simulated: false })), tools: ['publish', 'research'] },
+      limits: { token_limit: 200000, cost_limit_usd: 50 },
+    } }));
+    await page.route('**/v1/team/workflows/*', route => {
+      expect(route.request().headers()['if-match']).toBe(String(registryRevision));
+      const body = route.request().postDataJSON();
+      expect(route.request().method()).toBe('PUT');
+      expect(body).toMatchObject({ allowed_models: [models[1].id], allowed_tools: ['publish'], token_limit: 8000, cost_limit_usd: 1.5, approval_required: true, required_approvals: 2 });
+      const saved = { ...triage, ...body, name: 'ContractReviewWorkflow', allowed_providers: ['anthropic'], allowed_egress: ['https://api.anthropic.com'], registered_at: started + 1500 };
+      registered = [...registered, saved]; registryRevision++;
+      return route.fulfill({ json: { revision: registryRevision, workflow: saved } });
+    });
     await visit('/console/#templates');
     await expect(page.locator('.template-card')).toHaveCount(9);
+    await expect(page.getByRole('cell', { name: /Expires after 1 day/ })).toBeVisible();
     await capture('templates-gallery');
     await page.locator('.template-card').filter({ has: page.getByRole('heading', { name: 'Code review', exact: true }) }).getByRole('button', { name: 'Install template' }).click();
     await expect(page.getByRole('link', { name: 'Run code review' })).toBeVisible();
     await capture('template-installed');
+    await page.getByRole('button', { name: 'Register a workflow', exact: true }).click();
+    await page.getByLabel('Workflow name', { exact: true }).fill('ContractReviewWorkflow');
+    await page.getByRole('checkbox', { name: new RegExp(models[0].id) }).uncheck();
+    await page.getByRole('checkbox', { name: new RegExp(models[1].id) }).check();
+    await page.getByRole('checkbox', { name: 'publish', exact: true }).check();
+    await page.getByLabel('Token limit per run', { exact: true }).fill('8000');
+    await page.getByLabel('Cost limit per run (USD)', { exact: true }).fill('1.5');
+    await page.getByLabel('Reviewers required', { exact: true }).fill('2');
+    await page.getByLabel('Input schema (optional)', { exact: true }).fill('{"type":"object","properties":{"contract":{"type":"string"}},"required":["contract"]}');
+    await page.getByRole('heading', { name: 'Register a workflow', exact: true }).click();
+    await capture('workflow-registration');
+    await page.getByRole('button', { name: 'Register workflow', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'ContractReviewWorkflow registered' })).toBeVisible();
+    await expect(page.getByRole('rowheader', { name: 'ContractReviewWorkflow' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: /2 reviewers/ })).toBeVisible();
+    await capture('workflow-registered');
 
     let secrets = [{ name: 'RESEARCH_API_TOKEN', version: 2, updated_at: started - 600 }];
     await page.route('**/v1/workflows/ResearchWorkflow/secrets', route => route.fulfill({ json: secrets }));
@@ -924,7 +970,7 @@ for (const width of [360, 393, 1440]) {
     const teamDownload = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
     const teamExport = await teamDownload;
-    await teamExport.saveAs(`../../../.out/console-v1.0.0-rc.4/${width}-team-data.json`);
+    await teamExport.saveAs(`../../../.out/console-v1.0.0-rc.5/${width}-team-data.json`);
     await expect(page.getByRole('status')).toContainText('Team data exported');
     await capture('team-data-export');
 
@@ -1789,3 +1835,132 @@ test('deployment checklist separates configured settings from recovery verificat
   await expect(panel).not.toContainText('Configure a persistent encryption key.');
   await expect(panel).toContainText('Restore a backup in an isolated environment.');
 });
+
+test('admins register, edit and remove their own workflow within the approved envelope', async ({ page }) => {
+  const state = registryFixture();
+  const requests: { method: string; path: string; revision: string | undefined; body: unknown }[] = [];
+  let reject: string | undefined;
+  await page.route('**/v1/team/workflows', route => route.fulfill({ json: state }));
+  await page.route('**/v1/team/workflows/*', route => {
+    const request = route.request();
+    const name = decodeURIComponent(new URL(request.url()).pathname.split('/').pop()!);
+    requests.push({ method: request.method(), path: new URL(request.url()).pathname, revision: request.headers()['if-match'], body: request.method() === 'PUT' ? request.postDataJSON() : null });
+    if (reject) return route.fulfill({ status: 422, json: { detail: { reason: 'team_workflow_invalid', message: reject, fields: [] } } });
+    state.revision++;
+    if (request.method() === 'DELETE') {
+      state.workflows = state.workflows.filter(workflow => workflow.name !== name);
+      return route.fulfill({ json: { revision: state.revision, removed: name } });
+    }
+    const body = request.postDataJSON();
+    const saved = { name, allowed_providers: ['openai'], allowed_egress: ['https://api.openai.com'], approver_role: 'approver', registered_by: 'admin', registered_at: 1791316800, ...body };
+    state.workflows = [...state.workflows.filter(workflow => workflow.name !== name), saved];
+    return route.fulfill({ json: { revision: state.revision, workflow: saved } });
+  });
+  await login(page, 'admin', '/console/#templates');
+  const section = page.getByRole('region', { name: 'Your workflows' });
+  await expect(section.getByText('No workflows registered', { exact: true })).toBeVisible();
+  await section.getByRole('button', { name: 'Register a workflow', exact: true }).click();
+  await section.getByLabel('Workflow name', { exact: true }).fill('TicketTriageWorkflow');
+  await section.getByRole('checkbox', { name: /demo-openai/ }).check();
+  await section.getByRole('checkbox', { name: 'team.search', exact: true }).check();
+  await section.getByLabel('Token limit per run', { exact: true }).fill('9,000');
+  await section.getByLabel('Cost limit per run (USD)', { exact: true }).fill('0.75');
+  await section.getByLabel('Input schema (optional)', { exact: true }).fill('{ not json');
+  await section.getByRole('button', { name: 'Register workflow', exact: true }).click();
+  await expect(section.getByRole('alert')).toContainText('must be valid JSON');
+  expect(requests).toEqual([]);
+  await section.getByLabel('Input schema (optional)', { exact: true }).fill('{"type":"object","properties":{"ticket":{"type":"string"}},"required":["ticket"]}');
+  reject = 'allowed_tools: team.search is not a tool approved for this team.';
+  await section.getByRole('button', { name: 'Register workflow', exact: true }).click();
+  await expect(section.getByRole('alert')).toContainText('team.search is not a tool approved for this team.');
+  await expect(section.getByLabel('Workflow name', { exact: true })).toHaveValue('TicketTriageWorkflow');
+  reject = undefined;
+  await section.getByRole('button', { name: 'Register workflow', exact: true }).click();
+  await expect(section.getByRole('status')).toContainText('TicketTriageWorkflow registered');
+  expect(requests.at(-1)).toMatchObject({ method: 'PUT', path: '/v1/team/workflows/TicketTriageWorkflow', revision: '0', body: {
+    allowed_models: ['demo-openai'], allowed_tools: ['team.search'], token_limit: 9000, cost_limit_usd: 0.75, approval_required: true,
+    required_approvals: 1, approval_timeout_seconds: 604800, input_schema: { type: 'object', required: ['ticket'] },
+  } });
+  const row = section.getByRole('row').filter({ hasText: 'TicketTriageWorkflow' });
+  await expect(row).toContainText('9,000 tokens');
+  await expect(row).toContainText('$0.75');
+  await expect(row).toContainText('1 reviewer');
+  await expect(row.getByRole('link', { name: 'Run TicketTriageWorkflow' })).toHaveAttribute('href', '#new/TicketTriageWorkflow');
+  await row.getByRole('button', { name: 'Edit TicketTriageWorkflow' }).click();
+  await expect(section.getByLabel('Workflow name', { exact: true })).toHaveAttribute('readonly', '');
+  await expect(section.getByLabel('Input schema (optional)', { exact: true })).toHaveValue(/"ticket"/);
+  await section.getByLabel('Reviewers required', { exact: true }).fill('2');
+  await section.getByLabel('Review deadline', { exact: true }).selectOption('86400');
+  await section.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(section.getByRole('status')).toContainText('TicketTriageWorkflow updated');
+  expect(requests.at(-1)).toMatchObject({ revision: '1', body: { required_approvals: 2, approval_timeout_seconds: 86400 } });
+  await expect(row).toContainText('2 reviewers');
+  await expect(row).toContainText('Expires after 1 day');
+  page.once('dialog', dialog => { expect(dialog.message()).toContain('New calls from its runs are denied'); void dialog.accept(); });
+  await row.getByRole('button', { name: 'Remove TicketTriageWorkflow' }).click();
+  await expect(section.getByRole('status')).toContainText('TicketTriageWorkflow removed');
+  expect(requests.at(-1)).toMatchObject({ method: 'DELETE', revision: '2' });
+  await expect(section.getByText('No workflows registered', { exact: true })).toBeVisible();
+});
+
+test('registration is hidden from non-admins and explained when the operator keeps policy in YAML', async ({ page }) => {
+  await login(page, 'builder', '/console/#templates');
+  await expect(page.getByRole('heading', { name: 'Workflow templates' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Your workflows' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.route('**/v1/team/workflows', route => route.fulfill({ json: { ...registryFixture(), enabled: false } }));
+  await login(page, 'admin', '/console/#templates');
+  const section = page.getByRole('region', { name: 'Your workflows' });
+  await expect(section).toContainText('Your operator keeps workflow types in reviewed policy');
+  await expect(section.getByRole('button', { name: 'Register a workflow' })).toHaveCount(0);
+});
+
+for (const width of [360, 393, 1440]) {
+  test(`workflow registration fits and reads clearly at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    const state = registryFixture();
+    state.workflows = [{
+      name: 'TicketTriageWorkflow', allowed_models: ['gpt-4.1-mini'], allowed_providers: ['openai'], allowed_tools: ['team.search'],
+      allowed_egress: ['https://api.openai.com'], token_limit: 20000, cost_limit_usd: 2, approval_required: true, approver_role: 'approver',
+      required_approvals: 1, approval_timeout_seconds: 86400, input_schema: null, registered_by: 'admin', registered_at: 1791316800,
+    }, {
+      name: 'ContractClauseExtractionAndEscalationWorkflowForLongNames', allowed_models: ['gpt-4.1-mini', 'demo-openai'], allowed_providers: ['openai'],
+      allowed_tools: [], allowed_egress: [], token_limit: 5000, cost_limit_usd: 0.5, approval_required: false, approver_role: 'approver',
+      required_approvals: 1, approval_timeout_seconds: 604800, input_schema: null, registered_by: 'admin', registered_at: 1791316800,
+    }];
+    await page.route('**/v1/workflow-templates', route => route.fulfill({ json: [
+      { id: 'research', version: '0.9.0', workflow: 'ResearchWorkflow', name: 'Research', description: 'Research a topic, review a draft, then publish.', installable: true, installed_version: '0.9.0' },
+      { id: 'release-notes', version: '1.0.0-rc.4', workflow: 'ReleaseNotesWorkflow', name: 'Release notes', description: 'Turn merged changes into release notes with a reviewer decision.', installable: true, installed_version: null },
+    ] }));
+    await page.route('**/v1/team/workflows', route => route.fulfill({ json: state }));
+    await login(page, 'admin', '/console/#templates');
+    const section = page.getByRole('region', { name: 'Your workflows' });
+    await expect(section.getByRole('rowheader')).toHaveCount(2);
+    await section.getByRole('button', { name: 'Register a workflow', exact: true }).click();
+    await expect(section.getByLabel('Workflow name', { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const split = await section.evaluate(node => {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const words: string[] = [];
+      while (walker.nextNode()) {
+        const text = walker.currentNode;
+        if (text.parentElement?.closest('code, textarea, select, .visually-hidden, thead')) continue;
+        for (const match of (text.textContent || '').matchAll(/[\p{L}\p{N}]{4,}/gu)) {
+          const range = document.createRange();
+          range.setStart(text, match.index); range.setEnd(text, match.index + match[0].length);
+          if (range.getClientRects().length > 1) words.push(match[0]);
+        }
+      }
+      return words;
+    });
+    expect(split).toEqual([]);
+    const outside = await section.locator('button, a.button, input, select, textarea, label.check').evaluateAll(nodes => nodes
+      .map(node => node.getBoundingClientRect()).filter(box => box.width > 0 && (box.left < -1 || box.right > innerWidth + 1)).length);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-workflow-registry.png`, fullPage: true });
+    expect(outside).toBe(0);
+    expect(errors).toEqual([]);
+  });
+}

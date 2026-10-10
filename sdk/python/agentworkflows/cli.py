@@ -76,6 +76,26 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--role", choices=("admin", "builder", "approver", "viewer"))
             sub.add_argument("--project", help="Project binding; use an empty string to clear it.")
             sub.add_argument("--expires-at", help="ISO-8601 expiry with timezone; use an empty string to clear it.")
+    workflows = commands.add_parser(
+        "workflows", help="Register your own workflow types without a gateway redeploy (unrestricted admin only)."
+    )
+    workflow_operations = workflows.add_subparsers(dest="operation", required=True)
+    workflow_operations.add_parser("list", help="Show registered workflows, reserved names and what you may use.")
+    register = workflow_operations.add_parser(
+        "register", help="Register or replace a workflow within the models, tools and limits your team already has."
+    )
+    register.add_argument("name", help="Temporal workflow type name, e.g. CodeReviewWorkflow.")
+    register.add_argument("--model", dest="models", action="append", required=True, help="Approved model; repeatable.")
+    register.add_argument("--tool", dest="tools", action="append", help="Approved team tool; repeatable.")
+    register.add_argument("--token-limit", type=int, help="Tokens per run (default 10000).")
+    register.add_argument("--cost-limit", type=float, help="USD per run (default 5).")
+    register.add_argument("--reviewers", type=int, help="Distinct approvals required (1-10; default 1).")
+    register.add_argument("--no-approval", action="store_true", help="Skip the human approval gate.")
+    register.add_argument("--input-schema", type=workflow_input, help="Flat JSON Schema or @file for the run form.")
+    register.add_argument("--revision", type=int, help="Reviewed revision from 'workflows list' (default: current).")
+    remove = workflow_operations.add_parser("remove", help="Remove a registered workflow; new calls are denied.")
+    remove.add_argument("name")
+    remove.add_argument("--revision", type=int, help="Reviewed revision from 'workflows list' (default: current).")
     settings = commands.add_parser("settings", help="Inspect or change team settings (unrestricted admin only).")
     setting_operations = settings.add_subparsers(dest="operation", required=True)
     setting_operations.add_parser("show", help="Show effective values, policy defaults and the current revision.")
@@ -195,6 +215,28 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     key_result = gateway.revoke_key(args.key_id)
                 print(json.dumps(key_result, indent=2))
+            elif args.command == "workflows":
+                if args.operation == "list":
+                    registry_result: object = gateway.team_workflows()
+                elif args.operation == "register":
+                    registration: dict[str, Any] = {
+                        field: value
+                        for field, value in {
+                            "allowed_tools": args.tools,
+                            "token_limit": args.token_limit,
+                            "cost_limit_usd": args.cost_limit,
+                            "required_approvals": args.reviewers,
+                            "approval_required": False if args.no_approval else None,
+                            "input_schema": args.input_schema,
+                        }.items()
+                        if value is not None
+                    }
+                    registry_result = gateway.register_workflow(
+                        args.name, models=args.models, revision=args.revision, **registration
+                    )
+                else:
+                    registry_result = gateway.remove_workflow(args.name, revision=args.revision)
+                print(json.dumps(registry_result, indent=2))
             elif args.command == "settings":
                 if args.operation == "show":
                     settings_result = gateway.team_settings()
@@ -298,6 +340,12 @@ def main(argv: list[str] | None = None) -> int:
             hint = "Use 'agentworkflows runs list' with the correct team's gateway key and project."
         elif exc.reason == "team_settings_conflict":
             hint = "Run 'agentworkflows settings show', review the changes, then retry with its --revision."
+        elif exc.reason == "team_workflows_conflict":
+            hint = "Run 'agentworkflows workflows list', review the changes, then retry."
+        elif exc.reason == "team_workflows_disabled":
+            hint = "Your operator keeps workflow types in reviewed policy; ask them to add this one."
+        elif args.command == "workflows" and exc.status_code == 422:
+            hint = "Use only models and tools shown by 'agentworkflows workflows list', within its limits."
         elif args.command == "settings" and exc.status_code == 422:
             hint = "Correct the named fields using 'agentworkflows settings show' and 'settings set --help'."
         elif args.command == "audit" and exc.status_code == 422:

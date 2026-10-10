@@ -421,3 +421,28 @@ it('returns deployment checks and manual verification steps', async () => {
   await expect(client.deployment()).resolves.toEqual(body);
   expect(fetchMock.mock.calls[0][0]).toBe('http://gateway.test/v1/team/deployment');
 });
+
+it('registers a workflow at the reviewed or current revision and removes it', async () => {
+  const registered = { revision: 5, workflow: { name: 'Triage' } };
+  fetchMock.mockResolvedValueOnce(ok({ revision: 4 })).mockResolvedValueOnce(ok(registered))
+    .mockResolvedValueOnce(ok(registered)).mockResolvedValueOnce(ok({ revision: 6, removed: 'Triage' }))
+    .mockResolvedValueOnce(new Response('{}', { status: 409 }));
+  await expect(client.registerWorkflow('Triage', ['primary'], { cost_limit_usd: 0.5, input_schema: { type: 'object' } }))
+    .resolves.toEqual(registered);
+  await client.registerWorkflow('Odd Name/1', ['primary'], {}, '5');
+  await expect(client.removeWorkflow('Triage', 5)).resolves.toEqual({ revision: 6, removed: 'Triage' });
+  await expect(client.removeWorkflow('Triage', 5)).rejects.toMatchObject({ statusCode: 409 });
+  expect(fetchMock.mock.calls.map(call => [call[1]?.method, call[0]])).toEqual([
+    ['GET', 'http://gateway.test/v1/team/workflows'],
+    ['PUT', 'http://gateway.test/v1/team/workflows/Triage'],
+    ['PUT', 'http://gateway.test/v1/team/workflows/Odd%20Name%2F1'],
+    ['DELETE', 'http://gateway.test/v1/team/workflows/Triage'],
+    ['DELETE', 'http://gateway.test/v1/team/workflows/Triage'],
+  ]);
+  expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+    allowed_models: ['primary'], cost_limit_usd: 0.5, input_schema: { type: 'object' },
+  });
+  expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({ 'If-Match': '4' });
+  expect(fetchMock.mock.calls[2][1]?.headers).toMatchObject({ 'If-Match': '5' });
+  expect(fetchMock).toHaveBeenCalledTimes(5);
+});

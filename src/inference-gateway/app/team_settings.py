@@ -11,7 +11,7 @@ from fastapi import FastAPI, Header, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.audit import chain_audit_event, emit_audit_record
-from app.policy import VALID_BACKENDS, ModelRoutingPolicy, SandboxPolicy
+from app.policy import VALID_BACKENDS, ModelRoutingPolicy, SandboxPolicy, WorkflowPolicy
 from app.storage import storage_call
 from app.teams import require_role
 
@@ -71,11 +71,27 @@ async def effective_team_settings(request: Request) -> EffectiveTeamSettings:
     return layer_settings(team, routing, document)
 
 
+def registered_policies(team: SandboxPolicy | None, document: dict[str, Any]) -> dict[str, WorkflowPolicy]:
+    """Team-registered workflow policies; reviewed YAML names win and invalid rows grant nothing."""
+    if not team or not team.self_service_workflows:
+        return {}
+    policies = {}
+    for name, row in (document.get("team_workflows") or {}).items():
+        try:
+            policies[name] = WorkflowPolicy.model_validate(row["policy"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return {name: policy for name, policy in policies.items() if name not in team.workflows}
+
+
 def layer_settings(
     team: SandboxPolicy | None, routing: ModelRoutingPolicy, document: dict[str, Any]
 ) -> EffectiveTeamSettings:
     defaults: dict[str, Any] = {}
     if team:
+        registered = registered_policies(team, document)
+        if registered:
+            team = replace(team, workflows={**team.workflows, **registered})
         defaults["cost_limit_usd"] = team.cost_limit_usd
         defaults["soft_cost_limit_usd"] = team.soft_cost_limit_usd
         defaults["capture_content"] = team.capture_content

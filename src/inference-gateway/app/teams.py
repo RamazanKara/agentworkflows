@@ -87,12 +87,14 @@ def register_team_routes(app: FastAPI) -> None:
     from app.team_data import register_team_data_routes
     from app.team_settings import effective_team_settings, register_team_settings_routes
     from app.team_spend import register_spend_routes
+    from app.team_workflows import register_team_workflow_routes
 
     register_deployment_routes(app)
     register_alert_routes(app)
     register_onboarding_routes(app)
     register_audit_routes(app)
     register_team_settings_routes(app)
+    register_team_workflow_routes(app)
     register_spend_routes(app)
     register_team_data_routes(app)
 

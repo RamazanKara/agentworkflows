@@ -170,7 +170,8 @@ binding, never a caller-supplied team/project header. Existing signed JWTs can s
 and optional `project` claims with a nonempty `sub`; configure `JWT_TENANT_CLAIM` and control claim issuance.
 Legacy unbound keys cannot use the team run API. Enabling projects requires roles on the
 team's existing credentials. Team policies remain declarative; membership keys are managed
-in the console, CLI, or team key API.
+in the console, CLI, or team key API, and team admins can
+[register their own workflow types](#register-your-own-workflow) inside the policy's models, tools and limits.
 
 ### Members and API keys
 
@@ -620,8 +621,9 @@ if __name__ == "__main__":
 ```
 
 Set `AGENTWORKFLOWS_TEAM=research-team`, its worker gateway key, and the gateway/Temporal
-addresses. Register `Briefing` in the team workflow policy, then start with
-`agentworkflows runs start Briefing --input '"your topic"' --project briefing`.
+addresses. Register `Briefing` (see [Register your own workflow](#register-your-own-workflow);
+for example `agentworkflows workflows register Briefing --model demo-openai --tool research`),
+then start with `agentworkflows runs start Briefing --input '"your topic"' --project briefing`.
 Use `ApprovalWorkflow` and `await self.approval(draft)` for the standard reviewed-draft
 flow. The [template guide](templates.md) shows the complete code and how to replace a worker.
 Native Temporal workers and `GatewayActivities.call` remain available for advanced agent
@@ -762,6 +764,55 @@ successful, and failed calls receive run-linked tool receipts, with argument fin
 rather than raw arguments. MCP errors and `isError` results are failures, never successful
 results. Failed/ambiguous attempts retain their cost. For side effects, the server **must**
 persist and honor `Idempotency-Key`; MCP itself does not promise idempotent execution.
+
+## Register your own workflow
+
+A team admin can register a workflow type without editing YAML or restarting the gateway.
+Open **Templates → Your workflows** in the console, or use the CLI, API or either SDK.
+Registration only narrows what your operator already approved for the team:
+
+| Setting | Rule |
+| --- | --- |
+| Name | The Temporal workflow type your worker registers: a letter, then letters, digits or underscores (64 maximum). Names defined in operator policy and the nine built-in template names are reserved. A team can register 50 workflows. |
+| Models | Canonical model IDs the team may already use. Providers default to the providers serving those models. |
+| Tools | Tool names already approved for the team. |
+| Network egress | Derived from the chosen models' routes and tools' URLs. It cannot be edited. |
+| Limits | Tokens and dollars per run, no higher than the team's own limits. A team without limits gets ceilings of 5,000,000 tokens and $100; operator YAML can still grant more. |
+| Approval | The same controls as reviewed workflows: required or not, approver role, 1-10 distinct reviewers, 60 seconds to 7 days. |
+| Input schema | Optional flat JSON Schema (the subset used by the templates). It validates every run input and renders the console run form. |
+
+```sh
+agentworkflows workflows list
+agentworkflows workflows register TicketTriageWorkflow   --model gpt-4.1-mini --tool team.search --cost-limit 2 --reviewers 1   --input-schema @ticket-schema.json
+agentworkflows runs start TicketTriageWorkflow --input '{"ticket": "Password reset blocks sign-in."}'
+agentworkflows workflows remove TicketTriageWorkflow
+```
+
+From Python, pass the `@workflow.defn` class; its name and `@input_schema` are used:
+
+```python
+with GatewayClient(url, api_key=admin_key) as gateway:
+    gateway.register_workflow(TicketTriage, models=["gpt-4.1-mini"], allowed_tools=["team.search"], cost_limit_usd=2)
+```
+
+TypeScript uses `registerWorkflow(name, models, options?, revision?)`, `teamWorkflows()` and
+`removeWorkflow(name, revision?)`. The API is `GET /v1/team/workflows` (registrations, reserved
+names, the models/tools you may choose, and your limits), `PUT /v1/team/workflows/{name}` and
+`DELETE /v1/team/workflows/{name}`. Writes need the current `If-Match` revision, which is shared with
+team settings and alert rules; a stale revision returns 409 and nothing changes. Repeating an identical
+registration changes nothing. Invalid choices return 422 with the offending fields.
+
+Registered workflows appear in `GET /v1/workflow-policies` and use the same admission, budget, approval
+and receipt paths as YAML workflows, so their approval, limit and capture settings can also be tuned
+under **Team settings**. Every registration and removal is a chained audit receipt. Removing a workflow
+denies new calls from its existing runs and new starts; run history remains until retention expires it.
+If the operator later defines the same name in policy, the reviewed policy wins.
+
+Registration does not deploy code. Run your worker on the team's task queue as shown in the
+[template guide](templates.md), then register the same name. Triggers and container agents still
+come from operator policy. Operators who want every workflow type reviewed in YAML set
+`selfServiceWorkflows: false` on the team's policy entry; the console then explains that
+registration is managed by the operator, the API returns 403, and earlier registrations stop applying.
 
 ## Workflow policy
 

@@ -1678,6 +1678,153 @@
         "title": "ReceiptRequest",
         "type": "object"
       },
+      "RegisteredWorkflow": {
+        "properties": {
+          "allowed_egress": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Egress",
+            "type": "array"
+          },
+          "allowed_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Models",
+            "type": "array"
+          },
+          "allowed_providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Providers",
+            "type": "array"
+          },
+          "allowed_tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Tools",
+            "type": "array"
+          },
+          "approval_required": {
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "approval_timeout_seconds": {
+            "title": "Approval Timeout Seconds",
+            "type": "integer"
+          },
+          "approver_role": {
+            "title": "Approver Role",
+            "type": "string"
+          },
+          "cost_limit_usd": {
+            "title": "Cost Limit Usd",
+            "type": "number"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "registered_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered At"
+          },
+          "registered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered By"
+          },
+          "required_approvals": {
+            "title": "Required Approvals",
+            "type": "integer"
+          },
+          "token_limit": {
+            "title": "Token Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "allowed_models",
+          "allowed_providers",
+          "allowed_tools",
+          "allowed_egress",
+          "token_limit",
+          "cost_limit_usd",
+          "approval_required",
+          "approver_role",
+          "required_approvals",
+          "approval_timeout_seconds",
+          "input_schema",
+          "registered_by",
+          "registered_at"
+        ],
+        "title": "RegisteredWorkflow",
+        "type": "object"
+      },
+      "RegistrationResult": {
+        "properties": {
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "workflow": {
+            "$ref": "#/components/schemas/RegisteredWorkflow"
+          }
+        },
+        "required": [
+          "revision",
+          "workflow"
+        ],
+        "title": "RegistrationResult",
+        "type": "object"
+      },
+      "RemovalResult": {
+        "properties": {
+          "removed": {
+            "title": "Removed",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "removed"
+        ],
+        "title": "RemovalResult",
+        "type": "object"
+      },
       "ResolvedSecret": {
         "properties": {
           "name": {
@@ -2669,6 +2816,48 @@
         "title": "TeamTelemetry",
         "type": "object"
       },
+      "TeamWorkflows": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/WorkflowLimits"
+          },
+          "options": {
+            "$ref": "#/components/schemas/WorkflowOptions"
+          },
+          "reserved": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reserved",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "workflows": {
+            "items": {
+              "$ref": "#/components/schemas/RegisteredWorkflow"
+            },
+            "title": "Workflows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "revision",
+          "enabled",
+          "workflows",
+          "reserved",
+          "options",
+          "limits"
+        ],
+        "title": "TeamWorkflows",
+        "type": "object"
+      },
       "TemplateInstall": {
         "additionalProperties": false,
         "properties": {
@@ -2754,6 +2943,177 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkflowLimits": {
+        "properties": {
+          "cost_limit_usd": {
+            "title": "Cost Limit Usd",
+            "type": "number"
+          },
+          "token_limit": {
+            "title": "Token Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "token_limit",
+          "cost_limit_usd"
+        ],
+        "title": "WorkflowLimits",
+        "type": "object"
+      },
+      "WorkflowModelOption": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "simulated": {
+            "title": "Simulated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "simulated"
+        ],
+        "title": "WorkflowModelOption",
+        "type": "object"
+      },
+      "WorkflowOptions": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowModelOption"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "providers",
+          "models",
+          "tools"
+        ],
+        "title": "WorkflowOptions",
+        "type": "object"
+      },
+      "WorkflowRegistration": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_models": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Allowed Models",
+            "type": "array"
+          },
+          "allowed_providers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to the providers serving the chosen models.",
+            "title": "Allowed Providers"
+          },
+          "allowed_tools": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Allowed Tools",
+            "type": "array"
+          },
+          "approval_required": {
+            "default": true,
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "approval_timeout_seconds": {
+            "default": 604800,
+            "maximum": 604800.0,
+            "minimum": 60.0,
+            "title": "Approval Timeout Seconds",
+            "type": "integer"
+          },
+          "approver_role": {
+            "default": "approver",
+            "enum": [
+              "admin",
+              "approver"
+            ],
+            "title": "Approver Role",
+            "type": "string"
+          },
+          "cost_limit_usd": {
+            "default": 5,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Cost Limit Usd",
+            "type": "number"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional flat JSON Schema used for validation and the console run form.",
+            "title": "Input Schema"
+          },
+          "required_approvals": {
+            "default": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Required Approvals",
+            "type": "integer"
+          },
+          "token_limit": {
+            "default": 10000,
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Token Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "allowed_models"
+        ],
+        "title": "WorkflowRegistration",
         "type": "object"
       },
       "WorkflowTemplate": {
@@ -5839,6 +6199,172 @@
         "summary": "Inspect OTLP export configuration (team admin)",
         "tags": [
           "observability"
+        ]
+      }
+    },
+    "/v1/team/workflows": {
+      "get": {
+        "operationId": "get_team_workflows_v1_team_workflows_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamWorkflows"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "List team-registered workflows and what a registration may use (team admin)",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/team/workflows/{name}": {
+      "delete": {
+        "operationId": "delete_team_workflow_v1_team_workflows__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemovalResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Remove a team-registered workflow type; new calls for it are denied",
+        "tags": [
+          "workflows"
+        ]
+      },
+      "put": {
+        "operationId": "put_team_workflow_v1_team_workflows__name__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Register or replace a workflow type inside the models, tools and limits the team already has",
+        "tags": [
+          "workflows"
         ]
       }
     },

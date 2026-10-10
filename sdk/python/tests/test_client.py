@@ -10,6 +10,8 @@ import agentworkflows
 import httpx
 import pytest
 from agentworkflows import GatewayClient, GatewayError, GatewayRetryAfterError, GatewayStreamError
+from agentworkflows.workflows import input_schema
+from temporalio import workflow
 
 
 def _mock_transport(monkeypatch, handler):
@@ -872,3 +874,55 @@ def test_deployment_readiness_preserves_operator_actions(monkeypatch):
     _mock_transport(monkeypatch, handler)
     with GatewayClient("http://gateway.test", api_key="admin-key") as client:
         assert client.deployment() == body
+
+
+_TRIAGE_SCHEMA = {"type": "object", "properties": {"ticket": {"type": "string"}}, "required": ["ticket"]}
+
+
+@workflow.defn(name="TriageTickets")
+@input_schema(_TRIAGE_SCHEMA)
+class _Triage:
+    @workflow.run
+    async def run(self) -> str:
+        return "ok"
+
+
+def test_register_workflow_from_a_class_sends_name_schema_and_reviewed_revision(monkeypatch):
+    schema, Triage = _TRIAGE_SCHEMA, _Triage
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if request.method == "GET":
+            return httpx.Response(200, json={"revision": 4})
+        return httpx.Response(200, json={"revision": 5, "workflow": {"name": "TriageTickets"}})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        result = client.register_workflow(Triage, models=["primary"], cost_limit_usd=0.5)
+        client.register_workflow("Plain", models=("primary",), revision="7", input_schema=None)
+        client.remove_workflow(Triage, revision=5)
+        with pytest.raises(TypeError, match=r"workflow\.defn"):
+            client.register_workflow(type("NotAWorkflow", (), {}), models=["primary"])
+    assert result["revision"] == 5
+    assert [r.method for r in requests] == ["GET", "PUT", "PUT", "DELETE"]
+    assert requests[1].url.path == "/v1/team/workflows/TriageTickets" and requests[1].headers["If-Match"] == "4"
+    assert json.loads(requests[1].content) == {
+        "allowed_models": ["primary"], "cost_limit_usd": 0.5, "input_schema": schema,
+    }
+    assert requests[2].headers["If-Match"] == "7"
+    assert json.loads(requests[2].content) == {"allowed_models": ["primary"], "input_schema": None}
+    assert requests[3].url.path == "/v1/team/workflows/TriageTickets" and requests[3].headers["If-Match"] == "5"
+
+
+def test_team_workflows_surfaces_revision_conflicts(monkeypatch):
+    def handler(request):
+        if request.method == "GET":
+            return httpx.Response(200, json={"revision": 1, "workflows": [], "enabled": True})
+        return httpx.Response(409, json={"detail": {"reason": "team_workflows_conflict", "message": "Reload."}})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        assert client.team_workflows()["enabled"] is True
+        with pytest.raises(GatewayError, match="team_workflows_conflict"):
+            client.register_workflow("Plain", models=["primary"], revision=0)

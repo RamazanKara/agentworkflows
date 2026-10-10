@@ -269,6 +269,30 @@ export interface TeamAlertRules extends AlertRules {
   available_channels: AlertRules['channels'];
 }
 
+export interface WorkflowRegistrationOptions {
+  /** Defaults to the providers serving the chosen models. */
+  allowed_providers?: string[];
+  allowed_tools?: string[];
+  token_limit?: number;
+  cost_limit_usd?: number;
+  approval_required?: boolean;
+  approver_role?: 'admin' | 'approver';
+  required_approvals?: number;
+  approval_timeout_seconds?: number;
+  /** Flat JSON Schema used for input validation and the console run form. */
+  input_schema?: Record<string, unknown> | null;
+}
+export interface RegisteredWorkflow extends Required<Omit<WorkflowRegistrationOptions, 'input_schema'>> {
+  name: string; allowed_models: string[]; allowed_egress: string[];
+  input_schema: Record<string, unknown> | null; registered_by: string | null; registered_at: number | null;
+}
+export interface TeamWorkflows {
+  revision: number; enabled: boolean; workflows: RegisteredWorkflow[]; reserved: string[];
+  options: { providers: string[]; models: { id: string; provider: string; simulated: boolean }[]; tools: string[] };
+  limits: { token_limit: number; cost_limit_usd: number };
+}
+export interface WorkflowRegistration { revision: number; workflow: RegisteredWorkflow }
+
 export interface DeploymentReadiness {
   checks: { id: string; name: string; configured: boolean; action: string }[];
   verification_required: string[];

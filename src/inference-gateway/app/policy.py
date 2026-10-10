@@ -419,6 +419,8 @@ class SandboxPolicy:
     project_budgets: dict[str, float | None] = field(default_factory=dict)
     webhook_secret_env: str = ""
     notifications: TeamNotifications | None = None
+    # Operators set this false to keep every workflow type under reviewed policy.
+    self_service_workflows: bool = True
 
 
 @dataclass(frozen=True)
@@ -528,6 +530,9 @@ class SandboxPolicySet:
                     raise ValueError("triggered workflow names must be URL-safe identifiers")
                 if any(trigger.project not in projects for trigger in workflow.triggers.values()):
                     raise ValueError(f"workflow {name} triggers must name a team project")
+            self_service = item.get("selfServiceWorkflows", True)
+            if not isinstance(self_service, bool):
+                raise ValueError("selfServiceWorkflows must be true or false")
             webhook_secret = item.get("webhookSecretEnv", "")
             if not isinstance(webhook_secret, str) or not re.fullmatch(r"([A-Z_][A-Z0-9_]*)?", webhook_secret):
                 raise ValueError("webhookSecretEnv must name a gateway environment variable")
@@ -560,6 +565,7 @@ class SandboxPolicySet:
                 notifications=TeamNotifications.model_validate(item["notifications"])
                 if item.get("notifications")
                 else None,
+                self_service_workflows=self_service,
             )
         return cls(policies)
 

@@ -536,3 +536,59 @@ def test_admin_command_help_needs_no_credentials(monkeypatch, capsys, command):
     with pytest.raises(SystemExit) as error:
         main([*command, "--help"])
     assert error.value.code == 0 and capsys.readouterr().out
+
+
+def test_workflows_commands_register_list_and_remove(monkeypatch, capsys, tmp_path):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "admin-key")
+    schema = tmp_path / "schema.json"
+    schema.write_text(json.dumps({"type": "object", "properties": {"ticket": {"type": "string"}}}))
+    calls = []
+
+    def respond(request):
+        calls.append((request.method, request.url.path, request.headers.get("If-Match"),
+                      json.loads(request.content) if request.content else None))
+        assert request.headers["Authorization"] == "Bearer admin-key"
+        return httpx.Response(200, json={"revision": 3, "workflows": []})
+
+    original = httpx.Client
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(["workflows", "list"]) == 0
+    assert main([
+        "workflows", "register", "Triage", "--model", "primary", "--model", "backup", "--tool", "team.search",
+        "--token-limit", "500", "--cost-limit", "0.5", "--reviewers", "2", "--input-schema", f"@{schema}",
+        "--revision", "3",
+    ]) == 0
+    assert main(["workflows", "register", "Quick", "--model", "primary", "--no-approval"]) == 0
+    assert main(["workflows", "remove", "Triage", "--revision", "3"]) == 0
+    assert calls[0][:2] == ("GET", "/v1/team/workflows")
+    assert calls[1] == ("PUT", "/v1/team/workflows/Triage", "3", {
+        "allowed_models": ["primary", "backup"], "allowed_tools": ["team.search"], "token_limit": 500,
+        "cost_limit_usd": 0.5, "required_approvals": 2,
+        "input_schema": {"type": "object", "properties": {"ticket": {"type": "string"}}},
+    })
+    assert calls[2][0] == "GET" and calls[3] == (
+        "PUT", "/v1/team/workflows/Quick", "3", {"allowed_models": ["primary"], "approval_required": False},
+    )
+    assert calls[4] == ("DELETE", "/v1/team/workflows/Triage", "3", None)
+    assert capsys.readouterr().out.count('"revision": 3') == 4
+
+
+@pytest.mark.parametrize(("status", "reason", "hint"), [
+    (409, "team_workflows_conflict", "workflows list"),
+    (403, "team_workflows_disabled", "reviewed policy"),
+    (422, "team_workflow_invalid", "models and tools shown"),
+])
+def test_workflows_errors_are_actionable(monkeypatch, capsys, status, reason, hint):
+    monkeypatch.setenv("AGENTWORKFLOWS_API_KEY", "private-admin-key")
+    original = httpx.Client
+    respond = lambda request: httpx.Response(  # noqa: E731
+        status, headers={"X-Request-ID": "workflows-request"}, json={"detail": {"reason": reason, "message": "No."}}
+    )
+    monkeypatch.setattr(
+        agentworkflows.httpx, "Client", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(respond))
+    )
+    assert main(["workflows", "remove", "Triage", "--revision", "1"]) == 1
+    captured = capsys.readouterr()
+    assert hint in captured.err and "workflows-request" in captured.err and "private-admin-key" not in captured.err

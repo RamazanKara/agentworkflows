@@ -45,10 +45,6 @@ from typing import Any
 
 # h_0 = SHA-256("genesis"); must match the gateway's AUDIT_GENESIS and the paper reference.
 GENESIS = hashlib.sha256(b"genesis").hexdigest()
-AUDIT_EVENTS = {
-    "inference_request", "batch_request", "agent_action", "workflow_operation", "rag_query", "chain_start",
-    "team_settings_changed",
-}
 CHAIN_FIELDS = ("prev_hash", "record_hash")
 # Sentinel chain-id for pre-v0.20.0 records that carry no chain_id field. Kept distinct from
 # any pod-derived HOSTNAME:ts so genesis-restart grouping cannot collide with a real chain.
@@ -69,8 +65,10 @@ def extract_audit_events(lines: list[str]) -> list[dict[str, Any]]:
     """Parse gateway log lines into audit-event dicts.
 
     A gateway log line may carry a logging prefix before the JSON payload; take the text
-    from the first ``{``. Keep only objects that are audit events (``event`` in
-    ``AUDIT_EVENTS``) and carry a ``record_hash`` (chain-linked).
+    from the first ``{``. Keep only chain-linked records: an ``event`` name plus the
+    ``prev_hash`` and ``record_hash`` strings. Event names are not an allowlist, because every
+    governed operation (requests, keys, settings, templates, secrets, workflow registrations)
+    joins the same hash chain and omitting one would look like a gap.
     """
     events: list[dict[str, Any]] = []
     for line in lines:
@@ -83,7 +81,7 @@ def extract_audit_events(lines: list[str]) -> list[dict[str, Any]]:
             continue
         if not isinstance(obj, dict):
             continue
-        if obj.get("event") in AUDIT_EVENTS and "record_hash" in obj:
+        if all(isinstance(obj.get(field), str) for field in ("event", "prev_hash", "record_hash")):
             events.append(obj)
     return events
 
