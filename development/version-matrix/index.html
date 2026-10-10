@@ -2235,7 +2235,7 @@
 
 
 <h1 id="version-and-compatibility-matrix">Version and compatibility matrix<a class="headerlink" href="#version-and-compatibility-matrix" title="Permanent link">&para;</a></h1>
-<p>This page records the versions AgentWorkflows is <strong>pinned to</strong> for release <code>v0.9.0</code>. It is a compatibility reference:
+<p>This page records the versions AgentWorkflows is <strong>pinned to</strong> for release <code>v0.9.1</code>. It is a compatibility reference:
 the tables list what the platform ships and what CI exercises, so you can reproduce a known-good
 state and reason about drift.</p>
 <p>Every version below is extracted from this checkout: chart <code>Chart.yaml</code> /
@@ -2254,12 +2254,12 @@ Kubernetes distribution, ingress, storage, secrets, and GPU stack), that is call
 <tbody>
 <tr>
 <td>AgentWorkflows</td>
-<td><code>v0.9.0</code></td>
+<td><code>v0.9.1</code></td>
 <td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/README.md">README.md</a></td>
 </tr>
 <tr>
 <td>Helm chart version (all first-party charts)</td>
-<td><code>0.9.0</code></td>
+<td><code>0.9.1</code></td>
 <td><code>deploy/charts/*/Chart.yaml</code></td>
 </tr>
 <tr>
@@ -2271,7 +2271,7 @@ Kubernetes distribution, ingress, storage, secrets, and GPU stack), that is call
 </table>
 <p>A production handoff includes current strict evidence, customer identity/secrets integration,
 capacity sizing, and backup validation. See <a href="../production-readiness/">Production readiness</a>.</p>
-<p>Quickstarts and default image tags use v0.9.0. The release packager stamps the tagged
+<p>Quickstarts and default image tags use v0.9.1. The release packager stamps the tagged
 version and image digests into the published charts.</p>
 <h2 id="first-party-components">First-party components<a class="headerlink" href="#first-party-components" title="Permanent link">&para;</a></h2>
 <p>The two application services (inference gateway, RAG service) are built from source in this repo;
@@ -2291,16 +2291,16 @@ and an immutable manifest-list digest in <code>values.yaml</code>.</p>
 <tbody>
 <tr>
 <td>Inference gateway</td>
-<td><code>0.9.0</code></td>
+<td><code>0.9.1</code></td>
 <td><code>ghcr.io/ramazankara/agentworkflows/inference-gateway</code></td>
-<td><code>v0.9.0</code></td>
+<td><code>v0.9.1</code></td>
 <td>First-party; release CI pins the published digest.</td>
 </tr>
 <tr>
 <td>RAG service</td>
-<td><code>0.9.0</code></td>
+<td><code>0.9.1</code></td>
 <td><code>ghcr.io/ramazankara/agentworkflows/rag-service</code></td>
-<td><code>v0.9.0</code></td>
+<td><code>v0.9.1</code></td>
 <td>First-party; release CI pins the published digest.</td>
 </tr>
 <tr>
@@ -2333,14 +2333,14 @@ and an immutable manifest-list digest in <code>values.yaml</code>.</p>
 </tr>
 <tr>
 <td>Agent workspace</td>
-<td><code>0.9.0</code></td>
+<td><code>0.9.1</code></td>
 <td>(namespace/RBAC template)</td>
 <td>n/a</td>
 <td>Tenant namespace scaffold.</td>
 </tr>
 <tr>
 <td>Platform (umbrella)</td>
-<td><code>0.9.0</code></td>
+<td><code>0.9.1</code></td>
 <td>(aggregates the charts above)</td>
 <td>n/a</td>
 <td>Single-command dev/demo bring-up; GitOps remains recommended for multi-namespace installs.</td>

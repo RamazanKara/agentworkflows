@@ -2454,10 +2454,10 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 <li>Kubernetes, <code>kubectl</code>, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.</li>
 <li>Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.</li>
-<li>A v0.9.0 checkout of this repository, or the published OCI charts (see <a href="../distribution/">distribution</a>).</li>
+<li>A v0.9.1 checkout of this repository, or the published OCI charts (see <a href="../distribution/">distribution</a>).</li>
 </ul>
-<p>This guide describes release v0.9.0 (package/chart version 0.9.0). The chart defaults to the
-published v0.9.0 gateway and worker images. See <a href="../release-verification/">command verification</a>
+<p>This guide describes release v0.9.1 (package/chart version 0.9.1). The chart defaults to the
+published v0.9.1 gateway and worker images. See <a href="../release-verification/">command verification</a>
 for the release verification commands.</p>
 <p>Prepare the local chart's dependencies once, in this order:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
@@ -2468,7 +2468,7 @@ fixed: install one release per namespace. The base install runs without an ingre
 controller, GPU, KEDA or Prometheus CRDs.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <p>On a disposable kind cluster named <code>aw</code> (create it with <code>kind create cluster --name aw</code>
-if needed), install from the v0.9.0 checkout. The chart pulls the published v0.9.0 images:</p>
+if needed), install from the v0.9.1 checkout. The chart pulls the published v0.9.1 images:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>install<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--create-namespace<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
 <p>To run images built from your checkout instead, build and load them and override the

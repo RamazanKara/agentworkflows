@@ -2326,9 +2326,9 @@ The gateway applies team policy, per-run budgets, and correlated receipts.</p>
 Node.js in PowerShell, with Docker in Ubuntu WSL; that is everything this trial uses.
 The trial uses canned responses and synthetic prices from the Compose fakes.</p>
 <h2 id="1-install-and-start-the-fake-gateway">1. Install and start the fake gateway<a class="headerlink" href="#1-install-and-start-the-fake-gateway" title="Permanent link">&para;</a></h2>
-<p>Use a v0.9.0 checkout, then install and build the SDK and its examples. Skip clone/cd if
-you already have the repository checkout. Compose pulls the published v0.9.0 gateway image:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>v0.9.0<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
+<p>Use a v0.9.1 checkout, then install and build the SDK and its examples. Skip clone/cd if
+you already have the repository checkout. Compose pulls the published v0.9.1 gateway image:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>v0.9.1<span class="w"> </span>--depth<span class="w"> </span><span class="m">1</span><span class="w"> </span>https://github.com/RamazanKara/agentworkflows.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>agentworkflows/sdk/typescript
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>npm<span class="w"> </span>ci<span class="w"> </span>--no-audit<span class="w"> </span>--no-fund<span class="w"> </span>--maxsockets<span class="o">=</span><span class="m">2</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>npm<span class="w"> </span>run<span class="w"> </span>build
@@ -2407,7 +2407,7 @@ Change the prompt and rebuild with <code>npm run build</code> before restarting 
 <h2 id="write-a-workflow">Write a workflow<a class="headerlink" href="#write-a-workflow" title="Permanent link">&para;</a></h2>
 <p>Install the built SDK in your own Node project from your checkout. Replace the
 path below with your checkout path (a local install; the release also attaches
-<code>agentworkflows-sdk-0.9.0.tgz</code>):</p>
+<code>agentworkflows-sdk-0.9.1.tgz</code>):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>npm<span class="w"> </span>install<span class="w"> </span>/path/to/agentworkflows/sdk/typescript
 </code></pre></div>
 <p>Import workflow code from the dedicated sandbox-safe subpath:</p>
@@ -2579,7 +2579,7 @@ logs. See <a href="../audit-log/">audit log</a>
 for range boundaries and what verification proves.</p>
 <h2 id="run-history-and-export">Run history and export<a class="headerlink" href="#run-history-and-export" title="Permanent link">&para;</a></h2>
 <p>Use the gateway from the <a href="../quickstart/#1-install-and-start">Python quickstart</a>
-and the v0.9.0 SDK built from <code>sdk/typescript</code>. <code>runs({ project, workflow, status, cursor, limit })</code>
+and the v0.9.1 SDK built from <code>sdk/typescript</code>. <code>runs({ project, workflow, status, cursor, limit })</code>
 returns a typed <code>RunPage</code>. All filters are optional. Pass <code>next_cursor</code> with the
 same project and filters until it is null, including on empty pages. <code>limit</code>
 bounds scanned records before filtering (1–100, default 20). Cursors remain stable
