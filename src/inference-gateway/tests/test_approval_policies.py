@@ -64,7 +64,9 @@ def test_approval_gate_requires_worker_and_same_team_project(team_gateway):
 
 
 def test_quorum_votes_use_verified_identity_and_idempotent_temporal_updates(team_gateway, monkeypatch):
-    pytest.importorskip('agentworkflows.workflows', reason='SDK package is installed only in the SDK/worker environment')
+    pytest.importorskip(
+        'agentworkflows.workflows', reason='SDK package is installed only in the SDK/worker environment'
+    )
     from agentworkflows.workflows import ApprovalWorkflow
 
     client, app = team_gateway
