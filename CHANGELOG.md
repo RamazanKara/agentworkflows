@@ -11,7 +11,8 @@ Verified before release: gateway, RAG, SDK and console test suites; the three im
 from this commit; a Docker Compose install running the full smoke test (governed calls,
 durable approval with a worker crash, all nine templates, audit-chain tamper detection and
 the browser walkthrough); `agentworkflows check` completing a first approved run in 4 seconds
-on that install; Helm lint and rendering for the default, quickstart and single-tenant values.
+on that install; Helm lint and rendering for the default, quickstart and single-tenant values;
+a screenshot review of every console page at 393, 412 and 1440 pixels.
 Not verified: a Helm install on a live cluster and real provider calls.
 
 ### Fixed in this release
@@ -20,6 +21,13 @@ Not verified: a Helm install on a live cluster and real provider calls.
   mark text as "not blank" with a JSON Schema pattern, which the console passed to the
   browser unchanged; browsers require such a pattern to match the whole value, so every
   longer topic, ticket or diff was rejected and Start run did nothing.
+- Get started is one three-step list with progress marks instead of a wizard repeating
+  the same steps. Run IDs show their distinct last characters, run summaries and Insights
+  name steps by tool or model, retention and alert thresholds use days and seconds, Members
+  & keys lists who has access, audit rows name tool calls, notifications and trigger
+  resumes plainly, and the navigation fits on desktop and phones.
+- The RAG service's tracing module matches the gateway's again (route-named spans, error
+  status and OTLP signal paths).
 
 ### Bring your own workflow, run insights and install check
 
