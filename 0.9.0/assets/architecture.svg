@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">AgentWorkflows: governed calls and durable workflows</title>
+  <desc id="desc">The browser console and SDK clients call the gateway. The gateway authenticates and authorizes teams and projects, enforces policy and budgets, and routes model and tool calls. It starts and signals Temporal workflows. Workers poll Temporal and call the gateway for governed activities. Redis provides live accounting, sessions and coordination. Gateway records optionally use PostgreSQL, separate from Temporal databases. RAG and Kubernetes sandbox execution are optional integrations.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#347565"/></marker>
+    <style>
+      text { font-family: 'Segoe UI', Arial, sans-serif; fill: #153c33; font-size: 17px; }
+      .title { font-size: 32px; font-weight: 700; }
+      .heading { font-size: 21px; font-weight: 650; }
+      .note { font-size: 15px; fill: #53685f; }
+      .card { fill: #fff; stroke: #b8cdc3; stroke-width: 1.5; rx: 12; }
+      .line { fill: none; stroke: #347565; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1400" height="900" fill="#f4f8f5"/>
+  <text x="44" y="56" class="title">AgentWorkflows</text>
+  <text x="44" y="87">One gateway for access, policy and receipts. Temporal for durable execution.</text>
+
+  <rect x="44" y="136" width="280" height="136" class="card"/>
+  <text x="64" y="173" class="heading">Team console</text>
+  <text x="64" y="204">Runs · approvals · costs</text>
+  <text x="64" y="231">Keys · SSO · settings</text>
+  <text x="64" y="254" class="note">Same-origin session + CSRF</text>
+
+  <rect x="44" y="335" width="280" height="120" class="card"/>
+  <text x="64" y="372" class="heading">SDKs and API clients</text>
+  <text x="64" y="402">Python · TypeScript · CLI</text>
+  <text x="64" y="431" class="note">API keys or verified JWTs</text>
+
+  <rect x="429" y="136" width="462" height="348" class="card"/>
+  <rect x="429" y="136" width="462" height="65" rx="12" fill="#073a32"/>
+  <text x="454" y="178" class="heading" style="fill:#fff">Inference gateway · FastAPI</text>
+  <text x="454" y="237">Authenticate → bind team/project → authorize</text>
+  <text x="454" y="272">Admission · allowlists · rate and budget limits</text>
+  <text x="454" y="307">Provider routing · tool calls · optional guardrails</text>
+  <text x="454" y="342">Run lifecycle · review signals · trigger ingress</text>
+  <text x="454" y="377">Receipts · retained history · settings · exports</text>
+  <text x="454" y="421" class="note">Controls depend on active deployment policy.</text>
+  <text x="454" y="448" class="note">Metrics and optional traces support operations.</text>
+
+  <rect x="990" y="136" width="366" height="172" class="card"/>
+  <text x="1012" y="173" class="heading">Approved model routes</text>
+  <text x="1012" y="208">OpenAI · Anthropic · Azure OpenAI</text>
+  <text x="1012" y="239">AWS Bedrock · Vertex Gemini</text>
+  <text x="1012" y="279" class="note">Optional self-hosted Ollama / vLLM</text>
+
+  <rect x="990" y="350" width="366" height="134" class="card"/>
+  <text x="1012" y="386" class="heading">Approved tools</text>
+  <text x="1012" y="419">Fixed HTTP endpoints · registered MCP</text>
+  <text x="1012" y="454" class="note">Provider/tool secrets stay server-side.</text>
+
+  <path d="M324 206 H429" class="line"/>
+  <path d="M324 393 H429" class="line"/>
+  <path d="M891 226 H990" class="line"/>
+  <path d="M891 416 H990" class="line"/>
+
+  <rect x="44" y="588" width="280" height="150" class="card"/>
+  <text x="64" y="625" class="heading">Workflow workers</text>
+  <text x="64" y="656">Python or TypeScript</text>
+  <text x="64" y="687">Activities call the gateway</text>
+  <text x="64" y="717" class="note">Trusted execution credentials</text>
+  <path d="M182 588 V508 H378 V312 H429" class="line"/>
+  <text x="54" y="540" class="note">Governed activities</text>
+
+  <rect x="429" y="588" width="230" height="150" class="card"/>
+  <text x="449" y="625" class="heading">Temporal</text>
+  <text x="449" y="656">History · queues · timers</text>
+  <text x="449" y="687">Own PostgreSQL stores</text>
+  <text x="449" y="717" class="note">Durable waits and recovery</text>
+  <path d="M545 484 V588" class="line"/>
+  <text x="557" y="539" class="note">Start / signal / inspect</text>
+  <path d="M429 664 H324" class="line"/>
+
+  <rect x="709" y="588" width="260" height="150" class="card"/>
+  <text x="729" y="625" class="heading">Redis</text>
+  <text x="729" y="656">Live budgets · sessions</text>
+  <text x="729" y="687">Coordination · content TTL</text>
+  <text x="729" y="717" class="note">Default gateway record store</text>
+  <path d="M804 484 V588" class="line"/>
+
+  <rect x="1018" y="588" width="338" height="150" class="card"/>
+  <text x="1038" y="625" class="heading">Gateway PostgreSQL</text>
+  <text x="1038" y="656">Optional: runs · receipts · audit</text>
+  <text x="1038" y="687">Settings · key metadata</text>
+  <text x="1038" y="717" class="note">Does not replace Redis or Temporal DBs</text>
+  <path d="M864 484 V526 H1186 V588" class="line"/>
+
+  <path d="M44 783 H1356" stroke="#c1d4c9"/>
+  <text x="44" y="818">Optional integrations: RAG service → lexical corpus or Qdrant + embeddings; approved Kubernetes sandbox steps.</text>
+  <text x="44" y="848" class="note">RAG does not intercept every model call. Workspaces, ingress, identity, egress, secrets and backups remain operator-managed.</text>
+  <text x="44" y="876" class="note">Deployment: local Compose, single-namespace umbrella Helm chart, or separate-namespace GitOps profiles.</text>
+</svg>
