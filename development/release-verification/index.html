@@ -2615,7 +2615,7 @@ before it was built. No dependency was added.</p>
 <thead>
 <tr>
 <th>Native check</th>
-<th>Result after gap 2 (run insights)</th>
+<th>Result after gap 3 (install acceptance check)</th>
 </tr>
 </thead>
 <tbody>
@@ -2625,11 +2625,11 @@ before it was built. No dependency was added.</p>
 </tr>
 <tr>
 <td>Python SDK</td>
-<td><strong>227 passed, 3 skipped</strong>.</td>
+<td><strong>242 passed, 3 skipped</strong>.</td>
 </tr>
 <tr>
 <td>TypeScript SDK</td>
-<td>Build, lint and <strong>88 tests</strong> passed.</td>
+<td>Build, lint and <strong>93 tests</strong> passed.</td>
 </tr>
 <tr>
 <td>Console</td>
@@ -2652,7 +2652,9 @@ before it was built. No dependency was added.</p>
 <p>Console captures for this pass are written to <code>.out/console-v1.0.0-rc.5/</code> at 360, 393 and 1440 px.
 They were reviewed for horizontal overflow, mid-word wraps, clipped controls, consistent identities and
 no placeholder values. The captures are UI evidence from fixtures, not a live gateway.</p>
-<p>Caller acceptance still required: register a workflow through the console against the Compose stack,
+<p>Caller acceptance still required: run <code>agentworkflows check</code> against a live Compose stack and a Helm install
+(the native tests drive a fake gateway, so they prove the check's logic, not a real deployment); register a
+workflow through the console against the Compose stack,
 start a worker for it on the team's queue, and run it through approval. Then open Insights and a finished
 run's summary and compare them with the Temporal UI. The gateway tests exercise policy, admission, budgets,
 audit and the summary arithmetic with fakes; they do not prove a real Temporal worker or real timings.

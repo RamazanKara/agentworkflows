@@ -1159,6 +1159,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Install and verify">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prove-the-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prove the install
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2163,6 +2180,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Install and verify">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prove-the-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prove the install
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2332,7 +2366,23 @@ and <code>action</code>, plus <code>verification_required[]</code>. It requires 
 Python: <code>client.deployment()</code>. TypeScript: <code>client.deployment()</code>.
 It reports settings without secrets or connection strings. A configured check does
 not prove database TLS, backup recovery, egress enforcement or service availability.
-Check <code>/readyz</code>, perform an approved run and verify the audit range before admitting users.</p>
+Check <code>/readyz</code>, then prove the install end to end before admitting users.</p>
+<h3 id="prove-the-install">Prove the install<a class="headerlink" href="#prove-the-install" title="Permanent link">&para;</a></h3>
+<p><code>agentworkflows check</code> walks the console's first-run path against any gateway, including this one:
+it reads readiness, installs the sample if the key may, starts it, waits for the draft, approves it,
+and confirms completion, the approval receipt, the run summary and (for an admin key) audit-chain
+verification. It prints each stage's time against a 300-second budget and exits 1 at the first failure.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>./sdk/python<span class="w">                      </span><span class="c1"># or your internal package index</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>https://agents.acme.example
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>...<span class="w">             </span><span class="c1"># an admin key from your secret manager</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>agentworkflows<span class="w"> </span>check<span class="w"> </span>--allow-paid
+</code></pre></div>
+<p>The reference profile routes the sample to a real provider, so <code>--allow-paid</code> is required; the check
+refuses to spend without it. A policy that needs several reviewers needs one more key per reviewer, passed
+by environment variable name: <code>--approver-key-env SECOND_REVIEWER_KEY</code>. Keys are never accepted on the
+command line. Use <code>--json</code> in CI. Run it after every install, upgrade and restore. A passing check is
+evidence that approvals, workers, Temporal, storage and the audit chain work together; it does not prove
+backups, network egress rules or sign-in with company accounts.</p>
 <h2 id="back-up-a-recoverable-unit">Back up a recoverable unit<a class="headerlink" href="#back-up-a-recoverable-unit" title="Permanent link">&para;</a></h2>
 <p>Redis holds budgets, sessions, key records and invitation tokens even when gateway
 records use PostgreSQL. The legacy multi-namespace platform's Redis-is-ephemeral
@@ -2349,9 +2399,9 @@ activities, scale workers and gateways to zero, then stop Temporal writers. Reco
 the original replica counts first. Take managed-store snapshots after writes stop.
 A PostgreSQL logical backup can use libpq service definitions (which keep passwords
 out of command arguments):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-gateway<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>gateway.dump
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-temporal<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>temporal.dump
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-temporal-visibility<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>temporal-visibility.dump
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-gateway<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>gateway.dump
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-temporal<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>temporal.dump
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>pg_dump<span class="w"> </span>--dbname<span class="o">=</span><span class="nv">service</span><span class="o">=</span>aw-temporal-visibility<span class="w"> </span>--format<span class="o">=</span>custom<span class="w"> </span>--file<span class="o">=</span>temporal-visibility.dump
 </code></pre></div>
 <p>Export the managed Redis snapshot in the same stopped interval. Encrypt backups in
 an access-controlled off-cluster store, record checksums and secret versions, then
@@ -2372,11 +2422,11 @@ Keep triggers paused until operators reconcile external side effects.</p>
 <li>Read the changelog and <a href="../postgresql-storage/#upgrade-and-rollback">gateway migration rules</a>.
    Take the coordinated backup above and verify the checksums.</li>
 <li>Restore that backup into staging. Run the new image versions against it, inspect
-   a pre-upgrade run, complete a new approval and check the audit chain.</li>
+   a pre-upgrade run, then run <code>agentworkflows check</code> to complete a new approval and verify the audit chain.</li>
 <li>Preserve database, key and policy Secrets. Supply the complete reviewed values;
    avoid inheriting obsolete settings with <code>--reuse-values</code>.</li>
 <li>Run the same <code>helm upgrade --install</code> command with reviewed new image digests.
-   Watch migration jobs, rollout health and <code>/readyz</code>; exercise sign-in and approval.</li>
+   Watch migration jobs, rollout health and <code>/readyz</code>; exercise sign-in, then run <code>agentworkflows check</code>.</li>
 <li>Keep the old images and checkpoint until acceptance finishes. Roll back application
    images only when their storage schema remains compatible. Otherwise restore the
    coordinated checkpoint into an isolated recovery environment. A Helm rollback
