@@ -1,6 +1,6 @@
 # Team lifecycle APIs
 
-These rc.2 APIs require the source gateway and SDKs. OpenAPI snapshots in
+These APIs require a v0.9.0 gateway and SDKs. OpenAPI snapshots in
 `platform/api-contracts/inference-gateway.openapi.json` define request and response schemas. The console's
 Workflow templates, Workflow secrets, Data & privacy, and run detail pages use these same APIs.
 All calls are scoped to the authenticated team; a project-scoped admin cannot administer

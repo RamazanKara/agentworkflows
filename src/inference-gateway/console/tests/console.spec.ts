@@ -562,7 +562,7 @@ for (const width of [360, 393, 1440]) {
         return split;
       });
       expect(splitWords, `${name}: words must wrap at spaces`).toEqual([]);
-      const path = `../../../.out/console-v1.0.0-rc.5/${width}-${name}.png`;
+      const path = `../../../.out/console-v0.9.0/${width}-${name}.png`;
       if (target) await target.screenshot({ path });
       else await page.screenshot({ path, fullPage: true });
     };
@@ -682,7 +682,7 @@ for (const width of [360, 393, 1440]) {
       const range = document.createRange(); range.selectNodeContents(button.lastChild!);
       return range.getClientRects().length;
     })).toBe(1);
-    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-sso-sign-in.png`, fullPage: true });
+    await page.screenshot({ path: `../../../.out/console-v0.9.0/${width}-sso-sign-in.png`, fullPage: true });
     await page.route('**/v1/team/deployment', route => route.fulfill({ json: { checks: [
       ['authentication', 'Team authentication'], ['cookies', 'Secure session cookies'], ['sso', 'Company sign-in'],
       ['encryption', 'Secret encryption'], ['accounting', 'Shared accounting'], ['records', 'PostgreSQL records'], ['audit', 'Shared audit chain'],
@@ -775,7 +775,7 @@ for (const width of [360, 393, 1440]) {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
     const exported = await download;
-    await exported.saveAs(`../../../.out/console-v1.0.0-rc.5/${width}-usage.csv`);
+    await exported.saveAs(`../../../.out/console-v0.9.0/${width}-usage.csv`);
     const stream = await exported.createReadStream();
     const chunks = [];
     for await (const chunk of stream!) chunks.push(chunk);
@@ -899,7 +899,7 @@ for (const width of [360, 393, 1440]) {
       'Classify a ticket and draft a reply.', 'Combine changes, support and incidents.',
       'Build a timeline from incident logs.', 'Answer a question with source citations.', "Turn merged changes into release notes with a reviewer decision.", "Extract decisions, owners, and due dates from a meeting transcript.", "Draft evidence-backed questionnaire answers and flag unsupported claims."];
     const catalog = templates.map(([workflow, id], i) => ({
-      id, workflow, name: templateNames[i], description: descriptions[i], version: i < 6 ? '0.9.0' : '1.0.0-rc.4', installable: true,
+      id, workflow, name: templateNames[i], description: descriptions[i], version: '0.9.0', installable: true,
       installed_version: i === 0 ? '0.9.0' : null,
     }));
     await page.route('**/v1/workflow-templates', route => route.fulfill({ json: catalog }));
@@ -995,7 +995,7 @@ for (const width of [360, 393, 1440]) {
     const teamDownload = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export JSON', exact: true }).click();
     const teamExport = await teamDownload;
-    await teamExport.saveAs(`../../../.out/console-v1.0.0-rc.5/${width}-team-data.json`);
+    await teamExport.saveAs(`../../../.out/console-v0.9.0/${width}-team-data.json`);
     await expect(page.getByRole('status')).toContainText('Team data exported');
     await capture('team-data-export');
 
@@ -1961,7 +1961,7 @@ for (const width of [360, 393, 1440]) {
     }];
     await page.route('**/v1/workflow-templates', route => route.fulfill({ json: [
       { id: 'research', version: '0.9.0', workflow: 'ResearchWorkflow', name: 'Research', description: 'Research a topic, review a draft, then publish.', installable: true, installed_version: '0.9.0' },
-      { id: 'release-notes', version: '1.0.0-rc.4', workflow: 'ReleaseNotesWorkflow', name: 'Release notes', description: 'Turn merged changes into release notes with a reviewer decision.', installable: true, installed_version: null },
+      { id: 'release-notes', version: '0.9.0', workflow: 'ReleaseNotesWorkflow', name: 'Release notes', description: 'Turn merged changes into release notes with a reviewer decision.', installable: true, installed_version: null },
     ] }));
     await page.route('**/v1/team/workflows', route => route.fulfill({ json: state }));
     await login(page, 'admin', '/console/#templates');
@@ -1988,7 +1988,7 @@ for (const width of [360, 393, 1440]) {
     const outside = await section.locator('button, a.button, input, select, textarea, label.check').evaluateAll(nodes => nodes
       .map(node => node.getBoundingClientRect()).filter(box => box.width > 0 && (box.left < -1 || box.right > innerWidth + 1)).length);
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-    await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-workflow-registry.png`, fullPage: true });
+    await page.screenshot({ path: `../../../.out/console-v0.9.0/${width}-workflow-registry.png`, fullPage: true });
     expect(outside).toBe(0);
     expect(errors).toEqual([]);
   });
@@ -2075,7 +2075,7 @@ for (const width of [360, 393, 1440]) {
       });
       expect(split, `${name}: words must wrap at spaces`).toEqual([]);
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-      await page.screenshot({ path: `../../../.out/console-v1.0.0-rc.5/${width}-${name}.png`, fullPage: true });
+      await page.screenshot({ path: `../../../.out/console-v0.9.0/${width}-${name}.png`, fullPage: true });
     };
     await check('insights-workflows');
     const detail = run({ summary: { elapsed_seconds: 1500, model_calls: 2, tool_calls: 1, model_ms: 3280, tool_ms: 320, review_seconds: 1190, review_open: false, tokens: 4200, cost_usd: 0.06,

@@ -34,15 +34,12 @@ TEMPLATES = {
 }
 
 
-TEMPLATE_VERSIONS = {
-    key: "1.0.0-rc.4" if key in {"release-notes", "meeting-actions", "security-questionnaire"} else TEMPLATE_VERSION
-    for key in TEMPLATES
-}
+TEMPLATE_VERSIONS = {key: TEMPLATE_VERSION for key in TEMPLATES}
 
 
 class TemplateInstall(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    version: Literal["0.9.0", "1.0.0-rc.4"]
+    version: Literal["0.9.0"]
 
 
 class InstalledTemplate(BaseModel):

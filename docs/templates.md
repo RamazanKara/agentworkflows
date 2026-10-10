@@ -4,8 +4,7 @@
 
 Open **Workflow templates** in the console. A team admin can install any bundled template
 whose worker and team policy are already configured with one click, then select **Run**.
-The gallery has nine templates. The original six retain version `0.9.0`; release notes,
-meeting actions, and security questionnaire start at `1.0.0-rc.4`.
+The gallery has nine templates, all at version `0.9.0`.
 Installation pins that version in the team's revisioned settings and records an audit entry;
 repeating the same installation is idempotent. New runs retain the template ID and version.
 Unknown versions return 422; an unapproved workflow returns 409.
@@ -312,7 +311,7 @@ for OpenAI, Anthropic, Agents SDK, LangGraph, MCP, and sandboxed code steps.
 ## Release notes {#release-notes}
 
 **For:** release managers preparing a customer-facing change summary.
-Version `1.0.0-rc.4`; Python and TypeScript workers both implement `ReleaseNotesWorkflow`.
+Version `0.9.0`; Python and TypeScript workers both implement `ReleaseNotesWorkflow`.
 
 In the console, choose **Templates → Release notes → Install template → Run**.
 Or scaffold and run from code:
@@ -339,7 +338,7 @@ The local fake produces a labeled synthetic draft. A real model is needed to ass
 ## Meeting actions {#meeting-actions}
 
 **For:** team leads turning a transcript into an actionable follow-up.
-Version `1.0.0-rc.4`; Python and TypeScript workers both implement `MeetingActionsWorkflow`.
+Version `0.9.0`; Python and TypeScript workers both implement `MeetingActionsWorkflow`.
 
 In the console, choose **Templates → Meeting actions → Install template → Run**.
 Or scaffold and run from code:
@@ -366,7 +365,7 @@ The local fake produces a labeled synthetic draft. A real model is needed to ass
 ## Security questionnaire {#security-questionnaire}
 
 **For:** security teams answering vendor questionnaires from retained evidence.
-Version `1.0.0-rc.4`; Python and TypeScript workers both implement `SecurityQuestionnaireWorkflow`.
+Version `0.9.0`; Python and TypeScript workers both implement `SecurityQuestionnaireWorkflow`.
 
 In the console, choose **Templates → Security questionnaire → Install template → Run**.
 Or scaffold and run from code:

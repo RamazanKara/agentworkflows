@@ -7,17 +7,17 @@ five minutes. You need **Git, Python 3.12+, and Docker with Compose** already in
 Initial image/package downloads can take longer on a slow connection. No GPU, Kubernetes,
 Make, Node.js, or cloud account is needed for this path.
 
-These instructions exercise the **unreleased 1.0 candidate from source** (package version
-0.9.0). Start at the repository root if you already have this checkout; skip clone/cd.
-The command verification and remaining Docker/WSL checks are recorded in
-[release verification](release-verification.md#candidate-readiness-pass).
+These instructions use release **v0.9.0**. Compose pulls the published v0.9.0 images by
+default, so no local build is needed. Start at the repository root if you already have a
+v0.9.0 checkout; skip clone/cd. Command verification and the remaining Docker/WSL checks are
+recorded in [release verification](release-verification.md).
 
 Choose your shell tab and stay in it. On Windows, use native Git and Python in PowerShell;
 the commands below use Docker in the Ubuntu WSL distribution. Keep the checkout on Windows.
 
 ## 1. Install and start
 
-### Scripted first approved run (rc.4)
+### Scripted first approved run
 
 The script installs the Research template, starts its simulated workflow, prints and approves
 the fixture draft, checks publication and verifies the audit chain. It fails after 300 seconds
@@ -29,15 +29,14 @@ outside the timed run; the five-minute result is measured, not guaranteed on a c
 From the repository root in Linux/WSL with Python 3.12+, Docker and Compose installed:
 
 ```sh
-# Prepare candidate images and dependencies before starting the clock.
-docker compose -f deploy/compose/compose.yaml build
-docker compose -f deploy/compose/compose.yaml pull --ignore-buildable
+# Pull the published v0.9.0 images before starting the clock.
+docker compose -f deploy/compose/compose.yaml pull
 python3 scripts/first-approved-run.py compose
 ```
 
 For kind, also install `kind`, `kubectl` and Helm. Use an isolated cluster/namespace named
 `agentworkflows-quickstart`; the script always supplies that context, creates it if absent,
-loads the local images and installs the chart's source candidate. Prepare images/chart dependencies:
+loads the local images and installs the chart from this checkout. This path builds the images from source. Prepare images/chart dependencies:
 
 ```sh
 docker build -t agentworkflows-gateway:quickstart src/inference-gateway
@@ -74,40 +73,39 @@ only verifies the CLI, not a successful run. See [release verification](release-
 === "Bash (Linux/macOS)"
 
     ```bash
-    git clone --branch main --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.9.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python3 -m venv .venv
     source .venv/bin/activate
     python -m pip install ./sdk/python
-    docker compose -f deploy/compose/compose.yaml up -d --wait --build workflow-worker temporal-ui
+    docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker temporal-ui
     export AGENTWORKFLOWS_API_KEY=local-development-only
     ```
 
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    git clone --branch main --depth 1 https://github.com/RamazanKara/agentworkflows.git
+    git clone --branch v0.9.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
     cd agentworkflows
     python -m venv .venv
     $env:Path = "$PWD\.venv\Scripts;$env:Path"
     python -m pip install ./sdk/python
-    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait --build workflow-worker temporal-ui
+    wsl.exe -d Ubuntu -e docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'local-development-only'
     ```
 
-Compose builds the gateway and Python worker from this checkout and pulls their dependencies.
-Locally built images are not release-signed. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
+Compose pulls the published v0.9.0 gateway, worker and RAG images and their dependencies.
+To build the images from this checkout instead, run
+`docker compose -f deploy/compose/compose.yaml build` first; locally built images are not
+release-signed. `--wait` waits for gateway, Redis, PostgreSQL, and Temporal
 health; the included worker runs every [gallery template](templates.md). The public demo key is a local admin
 identity. [Team setup](workflows.md#teams-projects-and-roles) separates builders and approvers.
 
-For the older published v0.5.1 trial, clone that tag and use `--no-build` instead;
-it does not include the newer settings, history, SSO group or quorum features described here.
-Generated projects pin the SDK's package version. Until matching release artifacts exist,
-keep using the source SDK installed above instead of the scaffold's release-wheel URL.
+Generated projects pin the SDK's package version (0.9.0).
 
-This checkout includes [multi-reviewer approval policies](workflows.md#approval-policies).
-The trial still defaults to one reviewer and seven days. Build both gateway and worker
-from this checkout; upgrade the gateway before SDK workers on an existing installation.
+v0.9.0 includes [multi-reviewer approval policies](workflows.md#approval-policies).
+The trial still defaults to one reviewer and seven days. On an existing installation,
+upgrade the gateway before SDK workers.
 
 The default **fake** returns canned text and synthetic prices without contacting a cloud.
 For real generated text, select the [OpenAI option](#use-a-real-openai-key) now, then continue
@@ -179,12 +177,12 @@ cursor pages and includes results, receipts and retained step content. Settings 
 the audit log are available to team admins in the console. Run and audit exports
 are retained views, not backups; see [CLI paging and export](sdk-reference.md#cli).
 
-Since v0.7.0, open **Triggers → Run history** to inspect runs started by
+Open **Triggers → Run history** to inspect runs started by
 each schedule or webhook. New launches carry their trigger name through the run page
 and receipts. **Costs → Export CSV**, or `agentworkflows usage --output usage.csv`,
 downloads the current UTC month. The total and provider/workflow rows overlap; do not
 add them together. Both SDKs support the same history filter and CSV export; see the
-[reference](sdk-reference.md#trigger-history-and-usage-csv-v070-candidate).
+[reference](sdk-reference.md#trigger-history-and-usage-csv).
 
 You can also choose **Run workflow**, select any starter, and fill in its generated form.
 Forms come from the workflow policy's `inputSchema`; workflows without one use a JSON box.

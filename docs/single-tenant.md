@@ -9,7 +9,7 @@ This is a reference deployment you operate. AgentWorkflows does not sell a hoste
 
 | Path | Command | Result |
 | --- | --- | --- |
-| Local evaluation | `docker compose -f deploy/compose/compose.yaml up --build -d --wait workflow-worker` | Gateway, console, Temporal, persistent stores, worker and a simulated provider; no paid key needed. |
+| Local evaluation | `docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker` | Gateway, console, Temporal, persistent stores, worker and a simulated provider; no paid key needed. |
 | Disposable kind trial | `python scripts/first-approved-run.py kind` | Isolated cluster, template install, approved run and audit verification; prepare source images first. |
 | Customer namespace | Helm reference below | HTTPS console, company sign-in, two gateway/worker replicas, external stores and explicit gateway egress. |
 
@@ -61,9 +61,9 @@ them before treating publication as a business integration.
 
 ## Install and verify
 
-Build candidate gateway and worker images from this checkout, make them available in
-your registry, and pin their digests in `tenant-values.yaml`. The chart still has
-older release defaults; do not rely on its default image tags for rc.4.
+The chart defaults to the published v0.9.0 gateway and worker images. Pin their digests in
+`tenant-values.yaml`, or build images from this checkout and make them available in your
+registry.
 
 ```bash
 helm dependency update deploy/charts/workflows

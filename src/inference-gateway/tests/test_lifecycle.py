@@ -294,9 +294,9 @@ def test_new_gallery_versions_keep_operator_policy_authoritative(team_gateway, t
     catalog = client.get("/v1/workflow-templates", headers=auth("viewer")).json()
     assert len(catalog) == 9
     template = next(item for item in catalog if item["id"] == template_id)
-    assert template["version"] == "1.0.0-rc.4" and not template["installable"]
+    assert template["version"] == "0.9.0" and not template["installable"]
     path = f"/v1/workflow-templates/{template_id}/install"
-    assert client.post(path, headers=auth("admin"), json={"version": "0.9.0"}).status_code == 422
+    assert client.post(path, headers=auth("admin"), json={"version": "0.8.0"}).status_code == 422
     assert client.post(path, headers=auth("admin"), json={"version": template["version"]}).status_code == 409
     team = app.state.sandbox_policy_set.policies["team"]
     team.workflows[workflow] = team.workflows["ResearchWorkflow"]

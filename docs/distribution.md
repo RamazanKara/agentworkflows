@@ -1,7 +1,7 @@
 # Distribution and discovery
 
 The tag-only release workflow (`.github/workflows/release.yml`) publishes one tagged source
-revision through four channels. Commands below target v0.5.1. Images are built from the
+revision through four channels. Commands below target v0.9.0. Images are built from the
 tagged commit and signed by digest, Helm charts embed those image digests, the Python and
 TypeScript SDKs are attached to the GitHub release, and versioned documentation is retained by `mike`.
 
@@ -10,9 +10,9 @@ TypeScript SDKs are attached to the GitHub release, and versioned documentation 
 The umbrella chart is the recommended public entry point:
 
 ```bash
-helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.5.1
+helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.9.0
 helm install agentworkflows oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows \
-  --version 0.5.1 --namespace ai-platform --create-namespace
+  --version 0.9.0 --namespace ai-platform --create-namespace
 ```
 
 Release CI publishes `artifacthub-repo.yml` to the chart repository's special
@@ -24,14 +24,14 @@ release. This external registration cannot be completed from repository code.
 ## Python package
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.5.1/agentworkflows-0.5.1-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.0/agentworkflows-0.9.0-py3-none-any.whl
 ```
 
 The wheel, source archive, TypeScript SDK package (`agentworkflows-sdk-*.tgz`) and
 `sdk-checksums.txt` are attached to each GitHub release.
 Follow [release verification](release-verification.md) to verify the files before installing.
 The default release channel is GitHub downloads; PyPI publishing requires the setup below.
-Until a release is available, install from the checkout with `python -m pip install ./sdk/python`.
+To install from a checkout instead, run `python -m pip install ./sdk/python`.
 
 ### Optional PyPI publishing
 

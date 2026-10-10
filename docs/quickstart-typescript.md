@@ -12,11 +12,11 @@ and synthetic prices from the existing Compose fakes.
 
 ## 1. Install and start the fake gateway
 
-Use this source candidate (package version 0.9.0), then install and build the SDK and
-its examples. Skip clone/cd if you already have the repository checkout:
+Use a v0.9.0 checkout, then install and build the SDK and its examples. Skip clone/cd if
+you already have the repository checkout. Compose pulls the published v0.9.0 gateway image:
 
 ```sh
-git clone --branch main --depth 1 https://github.com/RamazanKara/agentworkflows.git
+git clone --branch v0.9.0 --depth 1 https://github.com/RamazanKara/agentworkflows.git
 cd agentworkflows/sdk/typescript
 npm ci --no-audit --no-fund --maxsockets=2
 npm run build
@@ -30,7 +30,7 @@ Choose ports using the existing `AGENTWORKFLOWS_GATEWAY_PORT` and
 === "Bash (Linux/macOS)"
 
     ```bash
-    docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait --build inference-gateway notification-fake temporal-ui
+    docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait inference-gateway notification-fake temporal-ui
     export AGENTWORKFLOWS_API_KEY=demo-worker
     export AGENTWORKFLOWS_URL=http://127.0.0.1:8080
     export TEMPORAL_ADDRESS=localhost:7233
@@ -41,7 +41,7 @@ Choose ports using the existing `AGENTWORKFLOWS_GATEWAY_PORT` and
 === "PowerShell (Docker in WSL)"
 
     ```powershell
-    wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait --build inference-gateway notification-fake temporal-ui
+    wsl.exe -d Ubuntu -e docker compose -p aw-typescript -f deploy/compose/compose.yaml up -d --wait inference-gateway notification-fake temporal-ui
     $env:AGENTWORKFLOWS_API_KEY = 'demo-worker'
     $env:AGENTWORKFLOWS_URL = 'http://127.0.0.1:8080'
     $env:TEMPORAL_ADDRESS = 'localhost:7233'
@@ -113,8 +113,9 @@ Change the prompt and rebuild with `npm run build` before restarting the worker.
 
 ## Write a workflow
 
-For the candidate, install the built source SDK in your own Node project. Replace the
-path below with your checkout path (this is a local install, not a published package):
+Install the built SDK in your own Node project from your checkout. Replace the
+path below with your checkout path (this is a local install, not an npm registry package;
+the release also attaches `agentworkflows-sdk-0.9.0.tgz`):
 
 ```sh
 npm install /path/to/agentworkflows/sdk/typescript
@@ -177,8 +178,7 @@ Inside workflows, gateway failures arrive as Temporal `ActivityFailure` with an
 
 ## Team administration
 
-The admin methods below are available from this source candidate,
-not the older v0.5.1 release tarball. Use an admin key; settings and audit require
+Use an admin key; settings and audit require
 a credential without a project restriction.
 
 | Method | Typed result / behavior |
@@ -240,13 +240,10 @@ partial output. Retention continues during paging; these team exports are not
 complete process logs for the operator verifier. See [audit log](audit-log.md)
 for range boundaries and what verification proves.
 
-<a id="run-history-and-export-v060-checkout"></a>
-
 ## Run history and export
 
-Use the source-built gateway from the [Python quickstart](quickstart.md#1-install-and-start)
-and install/build `sdk/typescript` from this checkout; the v0.5.1 release tarball
-does not include these methods. `runs({ project, workflow, status, cursor, limit })`
+Use the gateway from the [Python quickstart](quickstart.md#1-install-and-start)
+and the v0.9.0 SDK built from `sdk/typescript`. `runs({ project, workflow, status, cursor, limit })`
 returns a typed `RunPage`. All filters are optional. Pass `next_cursor` with the
 same project and filters until it is null, including on empty pages. `limit`
 bounds scanned records before filtering (1–100, default 20). Cursors remain stable
@@ -277,29 +274,27 @@ changes continue during export; this is not a transactional snapshot or backup.
 Expired runs/content are not recovered, and the stored start input is omitted.
 Downloaded files need their own retention policy. See [CLI and SDK paging](sdk-reference.md#cli).
 
-## Company group access (v0.8.0 candidate)
+## Company group access
 
-Build the gateway from this checkout using the Python Quickstart's
-[source-build path](quickstart.md) and install this checkout's TypeScript SDK for
-unreleased features. With an unrestricted team-admin credential,
+With an unrestricted team-admin credential,
 `await client.teamSSO()` inspects the same sign-in policy shown in Members & keys.
-See the [typed contract and example](sdk-reference.md#company-group-access-v080).
+See the [typed contract and example](sdk-reference.md#company-group-access).
 Configure your existing identity provider using the
 [group mapping guide](workflows.md#sso-group-to-role-mapping); the local fixture
 workflow does not require SSO.
 
-## Trigger history and usage CSV (v0.7.0 candidate)
+## Trigger history and usage CSV
 
-Use the checkout SDK and a gateway built from this checkout. Run history is available
+Run history is available
 from each console trigger; `runs({ workflow, trigger, project, cursor })` and
 `exportRuns({ workflow, trigger })` use the same project-scoped filter. A trigger name
-requires a workflow. Only launches recorded by v0.7.0 have trigger provenance; existing
+requires a workflow. Manual runs have no trigger provenance; existing
 run retention applies. Manual retries are separate runs.
 
 `await gateway.exportUsage()` returns UTF-8 CSV for the current UTC month. Write it
 with `writeFile('usage.csv', await gateway.exportUsage(), 'utf8')` from `node:fs/promises`,
 or use **Costs → Export CSV**. The total and provider/workflow rows overlap and include
-reservations. See the [column and scope reference](sdk-reference.md#trigger-history-and-usage-csv-v070-candidate).
+reservations. See the [column and scope reference](sdk-reference.md#trigger-history-and-usage-csv).
 
 ## Verify and stop
 
@@ -331,11 +326,9 @@ remove this disposable trial's containers and volumes from the repository root:
     ```
 
 
-<a id="multi-reviewer-approval-v090-candidate"></a>
-
 ## Multi-reviewer approval
 
-Build the gateway from this checkout and use the v0.9.0 SDK worker before enabling
+Use the v0.9.0 gateway and SDK worker before enabling
 nondefault approval policies. In **Team settings / Code review**, set Required
 reviewers to `2` and Approval expiry (seconds) to `3600`, then start a new review.
 The first positive vote leaves it waiting; a second distinct reviewer completes the

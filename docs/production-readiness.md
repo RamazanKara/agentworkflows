@@ -79,11 +79,14 @@ never removed, so rolling back to the reference footprint for a demo is a one-li
 
 ## Workflow upgrades and recovery
 
-The 0.5.1 gateway uses **Redis**, not PostgreSQL, for run indexes, step timelines and
-team/run budgets. Temporal owns workflow history in `temporal` and SQL visibility in
+By default the 0.9.0 gateway uses **Redis** for run indexes, step timelines and
+team/run budgets. Optional [PostgreSQL gateway storage](postgresql-storage.md) moves
+run metadata, receipts, audit events, team settings and key metadata to a separate gateway
+database; Redis stays required for live budgets and the other state listed there.
+Temporal owns workflow history in `temporal` and SQL visibility in
 `temporal_visibility`, both on the existing PostgreSQL service. Back up all three stores
-together with the complete receipt export. No gateway PostgreSQL database or new service
-is introduced by this milestone.
+(plus the gateway database if you enable PostgreSQL storage) together with the complete
+receipt export.
 
 Gateway startup applies numbered Lua migrations from `app/migrations` atomically with
 the schema marker in the existing budget Redis. Migration 001 adopts the unversioned

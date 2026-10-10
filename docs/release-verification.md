@@ -2,7 +2,7 @@
 
 Use this checklist before trusting a public release in a customer-owned cluster.
 
-For the source candidate (package/chart version 0.9.0), run the local gate:
+For a source checkout (package/chart version 0.9.0), run the local gate:
 
 ```bash
 make lint test-gateway test-scripts api-contract config-contract chart-docs
@@ -397,11 +397,11 @@ release evidence. No commit, push, tag, publication or `gh` command was run in t
 
 ## Published artifact verification
 
-The commands below target the older published release; change `RELEASE` only after
-the matching artifacts exist. Set the release and repository once:
+The commands below target v0.9.0; change `RELEASE` to verify another published release.
+Set the release and repository once:
 
 ```bash
-export RELEASE=v0.5.1
+export RELEASE=v0.9.0
 export REPOSITORY=RamazanKara/agentworkflows
 export IMAGE_REPO=ghcr.io/ramazankara/agentworkflows
 export RELEASE_IDENTITY="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$RELEASE"

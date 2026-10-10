@@ -31,7 +31,7 @@ helm upgrade aw deploy/charts/agentworkflows -n aw --reuse-values \
   --set inference-gateway.storage.postgres.existingSecret.key=dsn --wait --timeout 15m
 ```
 
-Use an image built from this change; older published gateway images do not read
+Use the v0.9.0 or newer gateway image; older images (such as v0.5.1) do not read
 these settings. With the component chart, omit the `inference-gateway.` prefix.
 When using the umbrella NetworkPolicy, allow the database address and port in
 `networkPolicy.externalEgress`. With the component NetworkPolicy, use its

@@ -4,14 +4,15 @@ First-party clients and Temporal workflow SDKs for the AgentWorkflows inference 
 
 ## Python
 
-Install the candidate client from this checkout (current package version 0.9.0):
+Install the v0.9.0 client from the release wheel
+(`python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.0/agentworkflows-0.9.0-py3-none-any.whl`),
+or from a v0.9.0 checkout:
 
 ```bash
 python -m pip install ./sdk/python
 ```
 
-Run the gateway and workers from the same checkout. The older v0.5.1 wheel lacks the
-settings, trigger history, CSV export, SSO group mapping and approval quorum methods.
+Run the gateway and workers at the same version.
 
 [`python/agentworkflows`](python/agentworkflows/__init__.py) provides `GatewayClient`, which
 covers the gateway's OpenAI-compatible and Anthropic endpoints, Files/Batch, Responses, and

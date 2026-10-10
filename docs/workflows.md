@@ -277,7 +277,7 @@ connect an existing provider using the settings above.
 
 ### SSO group-to-role mapping
 
-With the v0.8.0 gateway, map existing company groups instead of requiring a scalar
+With the v0.9.0 gateway, map existing company groups instead of requiring a scalar
 role claim. Keep the OIDC setup above, then configure:
 
 ```text
@@ -322,7 +322,7 @@ view; it requires a team admin credential without a project restriction and retu
 only that team's mappings. It never returns the client secret or another team's
 group names. Configure mappings through the deployment, not the API; the public
 `/v1/auth/config` response does not expose them. Both SDKs provide the
-[same inspection method](sdk-reference.md#company-group-access-v080).
+[same inspection method](sdk-reference.md#company-group-access).
 
 For the umbrella chart, merge this into your existing OIDC values:
 
@@ -370,7 +370,7 @@ The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
 | `POST /v1/workflow-runs/{run_id}/retry` | Start a fresh execution after failure/cancellation |
 | `POST /v1/workflow-runs/{run_id}/approve` | Submit `{"approved":true}` or `false` |
 | `GET /v1/usage` | Token/request window usage and monthly team/project spend by provider and workflow |
-| `GET /v1/usage/export` | Current UTC month CSV, with total and provider/workflow rows, scoped to the credential (v0.7.0) |
+| `GET /v1/usage/export` | Current UTC month CSV, with total and provider/workflow rows, scoped to the credential |
 
 ```bash
 curl -s http://127.0.0.1:8080/v1/workflow-runs \
@@ -399,17 +399,15 @@ decision was accepted. ApprovalWorkflow implements both for the research and cod
 
 ## Triggers and notifications
 
-The v0.7.0 candidate adds **Run history** on each console trigger. It opens retained
+Each console trigger has **Run history**. It opens retained
 runs with their status, approval review, costs and receipts, filtered by workflow and
 trigger name. The API/CLI/SDK filters and retention boundaries are documented in the
-[SDK reference](sdk-reference.md#trigger-history-and-usage-csv-v070-candidate).
+[SDK reference](sdk-reference.md#trigger-history-and-usage-csv).
 This uses `inference-gateway.workflowRecords.runRecordRetentionSeconds` in Helm (30
 days by default), with Redis or PostgreSQL; no new store or setting is required.
 
 For monthly reporting, **Costs → Export CSV** uses `GET /v1/usage/export` and the
 existing Redis accounting. Project-bound credentials can export only their project.
-Use the candidate gateway image built from source until v0.7.0 is published; the
-default chart image tags still point to v0.5.1.
 
 Open **Triggers** in the console to see cron expressions, upcoming times, signed webhook
 endpoints and pause state. Admins and builders can pause/resume triggers in their projects;
@@ -565,7 +563,7 @@ and audit evidence. Expired Temporal executions return 404; retained receipts re
 the audit export. Run input is stored in Redis for retry, and inputs/drafts/results are in
 Temporal; restrict access and retention for both stores.
 
-Since v0.6.0, `GET /v1/workflow-runs` returns `next_cursor`
+`GET /v1/workflow-runs` returns `next_cursor`
 alongside the legacy `next_offset`. Send that cursor with unchanged project,
 workflow and status filters to continue toward older runs. Empty filtered pages
 can have a continuation: `limit` bounds records scanned before filtering, keeping

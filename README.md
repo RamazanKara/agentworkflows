@@ -25,9 +25,10 @@ Gemini. Keep provider keys on the server and workflow code in Python or TypeScri
 - **Team leads:** review drafts before publication and see what each run costs.
 - **Platform engineers:** provide shared model access with scoped roles, budgets, and retained evidence.
 
-The platform is self-hosted and built for cloud providers; local models and GPUs are optional. This checkout targets
-**1.0.0-rc.4 (unreleased)**. Build from source to evaluate it. Package versions remain
-0.9.0; no hosted service or rc.4 release artifacts are published.
+The platform is self-hosted and built for cloud providers; local models and GPUs are optional. The current
+release is **v0.9.0**. No hosted service is offered. Images and Helm charts are on GHCR; the Python wheel, source
+archive and TypeScript SDK are assets of the
+[GitHub release](https://github.com/RamazanKara/agentworkflows/releases/tag/v0.9.0).
 
 ## 60-second console quickstart
 
@@ -36,10 +37,10 @@ Prerequisite: clone this repository and start its local stack with Docker Compos
 ```sh
 git clone https://github.com/RamazanKara/agentworkflows.git
 cd agentworkflows
-docker compose -f deploy/compose/compose.yaml up --build -d --wait workflow-worker
+docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 ```
 
-Image builds and downloads are setup time, outside the console walkthrough.
+Compose pulls the published v0.9.0 images; image downloads are setup time, outside the console walkthrough.
 No cloud key, GPU, or Kubernetes cluster is needed. Once the stack is ready:
 
 1. Open [the console](http://127.0.0.1:8080/console/) and sign in with `local-development-only`.
@@ -80,7 +81,7 @@ application or already maintain the surrounding product.
 | What you must build | Workflow logic, real data/tool integrations, and deployment configuration. | Those integrations plus approval screens, identity wiring, per-run accounting, audit linkage, and operations UX. |
 | What you get | One console and API for runs, review, access, spend, templates, triggers, and evidence. | The component capabilities you choose, with full control over the application. |
 | What you operate | Gateway, workers, Temporal, Redis, storage, backups, and upgrades. | Your components and their integration. |
-| Tradeoff | A narrower, opinionated product under release-candidate validation. | More implementation and maintenance; more freedom over provider coverage and UX. |
+| Tradeoff | A narrower, opinionated product. | More implementation and maintenance; more freedom over provider coverage and UX. |
 
 [Build-or-adopt decision guide](docs/decision-guide.md).
 

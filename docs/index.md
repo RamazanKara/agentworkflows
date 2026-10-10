@@ -13,19 +13,19 @@ has a receipt.
 
 ## Start with one approved result
 
-Start the local stack from this checkout:
+Start the local stack from a v0.9.0 checkout:
 
 ```sh
-docker compose -f deploy/compose/compose.yaml up --build -d --wait workflow-worker
+docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 ```
 
-After images build and services become ready, follow the
+After the published v0.9.0 images are pulled and services become ready, follow the
 [60-second console walkthrough](quickstart.md#60-second-console-walkthrough): sign in,
 start the sample, and approve its draft. The simulated trial needs no cloud key and makes
 no external model calls. Connect a real provider to evaluate output quality.
 
-This is **1.0.0-rc.4 (unreleased)** source. Package versions remain 0.9.0; build the candidate
-instead of pulling older published images. [Verification and remaining checks](release-verification.md).
+This is release **v0.9.0**; Compose pulls the matching published images.
+[Verification and remaining checks](release-verification.md).
 
 ## Choose your path
 

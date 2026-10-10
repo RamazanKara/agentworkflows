@@ -157,6 +157,8 @@ class Settings:
     jwt_request_timeout_seconds: float = 5.0
     jwt_required: bool = False
     otel_tracing_enabled: bool = False
+    # The shared tracing module also serves gateway metrics; the RAG service never exports them.
+    otel_metrics_enabled: bool = False
     otel_exporter_otlp_endpoint: str = ""
     otel_service_name: str = "rag-service"
 

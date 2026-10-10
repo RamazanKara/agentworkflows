@@ -1,9 +1,8 @@
 # CLI and Python SDK reference
 
-This reference describes the current source SDK (0.9.0) under review for 1.0.0-rc.2.
-Install it in a virtual environment from the repository root with
-`python -m pip install ./sdk/python`; run a gateway built from the same checkout.
-The older v0.5.1 release wheel does not implement the entire surface below.
+This reference describes the Python SDK and CLI in release v0.9.0. Install the release wheel
+(see [distribution](distribution.md)), or from a v0.9.0 checkout run
+`python -m pip install ./sdk/python` in a virtual environment. Use a gateway of the same version.
 `agentworkflows --help` and each subcommand's `--help` work without a key.
 The equivalent module entry point is `python -m agentworkflows.cli`.
 
@@ -50,8 +49,7 @@ data export/erasure and telemetry status, including access rules and version hea
 reuse the request ID printed on stderr with **identical input** to avoid duplicate runs.
 Exit codes: **0** success, **1** gateway/transport failure, **2** usage/input/scaffold error.
 
-Run cursors and JSON Lines export require gateway v0.6.0 or newer; use the v0.9.0 checkout SDK and gateway,
-not the v0.5.1 wheel or images. `runs list` and `runs export` accept `--project`,
+Run cursors and JSON Lines export require gateway v0.9.0 or newer. `runs list` and `runs export` accept `--project`,
 `--workflow`, `--status`, `--cursor` and `--limit` (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have `next_cursor`.
 Continue until it is null. Cursors use creation time and run ID, so new runs and
@@ -83,8 +81,7 @@ to the authenticated admin's team and project access. You cannot revoke or demot
 current key. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.
 
-Settings and audit SDK methods and CLI commands are available from this checkout;
-they are not in the v0.5.1 wheel. Both require an
+Settings and audit SDK methods and CLI commands require an
 unrestricted team admin credential. Run `settings show` before changing settings,
 review the values, and pass its `revision` to `set` or `reset`. `--fields` is a
 non-empty JSON object of field names to values, without an outer `fields` wrapper.
@@ -108,13 +105,13 @@ during paging; these exports are not complete process logs for the operator
 verifier. See [audit log](audit-log.md) for boundaries and verification limits.
 
 The [template gallery](templates.md) includes input fields, expected results and adaptation
-steps for every starter. Install from this checkout to get its current template set.
+steps for every starter. The release wheel and a v0.9.0 checkout carry the same template set.
 Scaffolds include `input-schema.json` and a schema declaration in `workflow.py`. Copy the
 schema to the workflow policy's `inputSchema` to enable console forms and gateway validation.
 
-## Company group access (v0.8.0)
+## Company group access
 
-Gateway v0.8.0 adds `GET /v1/team/sso` for a team admin credential without a project
+Gateway v0.9.0 provides `GET /v1/team/sso` for a team admin credential without a project
 restriction. It returns `TeamSSO`: team ID, enabled state, provider hostname,
 `role_source` (`groups` or `claim`), team/project claim names, and only the current
 team's group-to-role mappings. In group mode, `role_claim` and `default_role` are
@@ -144,13 +141,13 @@ environment variables. See [group access semantics and acceptance](workflows.md#
 Members & keys displays the same policy. The API does not log users into their
 identity provider, create groups or change memberships.
 
-## Trigger history and usage CSV (v0.7.0 candidate)
+## Trigger history and usage CSV
 
 `runs list` and `runs export` accept `--trigger NAME` together with `--workflow WORKFLOW`.
 The API uses `GET /v1/workflow-runs?workflow=WORKFLOW&trigger=NAME`; retain both filters
 when following `next_cursor`. Missing workflow returns 422 `trigger_workflow_required`.
-Run metadata includes `trigger: {name, kind}` for cron/webhook launches recorded by
-v0.7.0. Older/manual runs and manual retries have no trigger provenance. History survives
+Run metadata includes `trigger: {name, kind}` for cron/webhook launches.
+Manual runs and manual retries have no trigger provenance. History survives
 removal of the trigger's configuration, until run retention expires. Rejected deliveries
 do not have a run; inspect their audit receipts instead.
 
@@ -307,7 +304,7 @@ endpoints. The full [OpenAPI contract](https://github.com/RamazanKara/agentworkf
 is checked in and can be viewed at `/docs` on the running gateway when enabled.
 
 
-## Approval quorum and expiry (v0.9.0)
+## Approval quorum and expiry
 
 Upgrade the gateway before workers. Both SDKs' `ApprovalWorkflow.approval(draft)`
 read the run's saved policy through a versioned worker activity. No workflow-code
@@ -339,7 +336,7 @@ vote can leave the run waiting for other reviewers; inspect the run before assum
 it completed. Repeating a vote never adds a reviewer. See [approval policies](workflows.md#approval-policies)
 for identity, replay, automatic decisions and upgrade boundaries.
 
-## Team adoption APIs (rc.4 candidate)
+## Team adoption APIs
 
 | Task | Python | TypeScript | HTTP |
 | --- | --- | --- | --- |

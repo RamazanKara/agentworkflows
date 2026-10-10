@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from app.settings import Settings
@@ -23,6 +24,7 @@ class _FakeRequest:
         self.method = "POST"
         self.url = _FakeURL()
         self.headers: dict[str, str] = {}
+        self.scope = {"route": SimpleNamespace(path="/v1/rag/query")}
 
 
 class _FakeResponse:

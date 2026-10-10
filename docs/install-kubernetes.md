@@ -10,14 +10,11 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 - Kubernetes, `kubectl`, Helm 3, and a default StorageClass that can provision the
   10 GiB PostgreSQL and 1 GiB Redis claims. A disposable kind cluster is sufficient.
 - Image access to GHCR, Docker Hub and Temporal's images; HTTPS egress to your chosen provider.
-- This candidate checkout for chart validation, or a matching published release checkout for installation.
+- A v0.9.0 checkout of this repository, or the published OCI charts (see [distribution](distribution.md)).
 
-This guide describes the current source (package/chart version 0.9.0), under review for
-1.0.0-rc.4. **Candidate images are not published by this pass.** For a candidate cluster
-trial, build/load the gateway and worker from this checkout and set their image values;
-see the source-image example below. A v0.5.1 install cannot demonstrate all features here.
-See [command verification](release-verification.md#candidate-readiness-pass) for the
-native results and the cluster commands still requiring WSL and operator infrastructure.
+This guide describes release v0.9.0 (package/chart version 0.9.0). The chart defaults to the
+published v0.9.0 gateway and worker images. See [command verification](release-verification.md)
+for the native results and the cluster commands still requiring WSL and operator infrastructure.
 
 Prepare the local chart's dependencies once, in this order:
 
@@ -32,32 +29,37 @@ Prometheus CRDs are required.
 
 ## Install
 
-For this source candidate on a disposable kind cluster named `aw`, build and load
-matching images before installation. If needed, create that test cluster with
-`kind create cluster --name aw`. Use these overrides throughout the candidate trial:
+On a disposable kind cluster named `aw` (create it with `kind create cluster --name aw`
+if needed), install from the v0.9.0 checkout. The chart pulls the published v0.9.0 images:
 
 ```bash
-docker build -t agentworkflows-gateway:rc.4 src/inference-gateway
-docker build -t agentworkflows-worker:rc.4 -f sdk/python/Dockerfile .
-kind load docker-image agentworkflows-gateway:rc.4 agentworkflows-worker:rc.4 --name aw
-cat > candidate-values.yaml <<'YAML'
+helm install aw deploy/charts/agentworkflows -n aw --create-namespace --wait --timeout 15m
+```
+
+To run images built from your checkout instead, build and load them and override the
+image values. Include `source-values.yaml` in the fresh/combined installs below;
+`--reuse-values` upgrades preserve its image overrides.
+
+```bash
+docker build -t agentworkflows-gateway:local src/inference-gateway
+docker build -t agentworkflows-worker:local -f sdk/python/Dockerfile .
+kind load docker-image agentworkflows-gateway:local agentworkflows-worker:local --name aw
+cat > source-values.yaml <<'YAML'
 inference-gateway:
   image:
     repository: agentworkflows-gateway
-    tag: rc.4
+    tag: local
     digest: ""
 workflows:
   worker:
-    image: agentworkflows-worker:rc.4
+    image: agentworkflows-worker:local
 YAML
-helm install aw deploy/charts/agentworkflows -n aw --create-namespace -f candidate-values.yaml --wait --timeout 15m
+helm install aw deploy/charts/agentworkflows -n aw --create-namespace -f source-values.yaml --wait --timeout 15m
 ```
 
-For another cluster, make those source-built images available in its approved registry
-and change the image references. For a published release, use its matching checkout and
-release image values instead. The component defaults still refer to v0.5.1 images;
-chart metadata alone does not upgrade them. Include `candidate-values.yaml` when running
-the fresh/combined installs below; `--reuse-values` upgrades preserve its image overrides.
+For another cluster, make source-built images available in its approved registry and
+change the image references. Chart metadata alone does not change image references
+in an existing release.
 
 The chart generates `temporal-postgres-auth` (`password`), `workflow-gateway-key`
 (`api-key`), and `agentworkflows-admin` (`api-key`) if they are missing. Pre-create

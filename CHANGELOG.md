@@ -1,6 +1,27 @@
 # Changelog
 
-## 1.0.0-rc.5 - Unreleased
+## v0.9.0 - 2026-10-10
+
+The first release since v0.5.1. It ships everything built since then: a team can now go
+from install to its first approved run in the console, bring its own workflows without a
+gateway redeploy, see where each run's time and money went, and prove an install with one
+command. Images, charts and SDKs are all version 0.9.0.
+
+Verified before release: gateway, RAG, SDK and console test suites; the three images built
+from this commit; a Docker Compose install running the full smoke test (governed calls,
+durable approval with a worker crash, all nine templates, audit-chain tamper detection and
+the browser walkthrough); `agentworkflows check` completing a first approved run in 4 seconds
+on that install; Helm lint and rendering for the default, quickstart and single-tenant values.
+Not verified: a Helm install on a live cluster and real provider calls.
+
+### Fixed in this release
+
+- Run forms in the console accepted only one-character answers. Workflow input schemas
+  mark text as "not blank" with a JSON Schema pattern, which the console passed to the
+  browser unchanged; browsers require such a pattern to match the whole value, so every
+  longer topic, ticket or diff was rejected and Start run did nothing.
+
+### Bring your own workflow, run insights and install check
 
 - Let a team admin register their own workflow types from the console, CLI, API and both
   SDKs without a gateway redeploy. Registrations are revision-checked and audited, can only
@@ -16,9 +37,8 @@
   The deployment checklist and single-tenant guide now point to it.
 - Fix the offline audit verifier, which dropped chained key, settings, template, secret and
   provider-key events and so reported false gaps; it now accepts every chain-linked record.
-- Package and chart versions remain 0.9.0; no release artifacts are published.
 
-## 1.0.0-rc.4 - Unreleased
+### First-run wizard, nine templates, invitations, alert rules and deployment readiness
 
 - Rewrite the product README and docs landing page around team outcomes, a console
   walkthrough, an honest build-it-yourself comparison, and architecture/privacy boundaries.
@@ -34,9 +54,9 @@
   coordinated backup/restore and upgrade guidance. Reuse Compose and kind trial scripts.
 - Extend API contracts and both SDKs, test each adoption gap, and refresh console
   captures at 360, 393 and 1440 pixels. Container acceptance is recorded separately
-  from native checks; package/chart versions remain 0.9.0.
+  from native checks
 
-## 1.0.0-rc.3 - Unreleased
+### Reliability: failure tests, load baseline and backup verification
 
 - Add dependency outage, slow-response and partial-write tests for gateway and worker;
   exercise lost Temporal replies, stable retry identities, SQL rollback and Redis migrations.
@@ -51,9 +71,8 @@
 - Bound HTTP method labels, forward the gateway trace span to local/cloud runtimes, and
   redact storage-driver and worker response payloads from operational failure logs.
 - Fix runbook link mapping for the docs site; record native checks and remaining WSL drills.
-  Package and chart versions remain 0.9.0; no release artifacts are published.
 
-## 1.0.0-rc.2 - Unreleased
+### Template gallery, workflow secrets, OTLP metrics and data retention
 
 - Add a versioned console gallery for the six bundled templates, idempotent installation
   into approved team policies, and template version provenance on new runs.
@@ -66,13 +85,12 @@
   cross-team isolation and a tombstone preventing new work. Document external data owners.
 - Extend the OpenAPI contract and both SDKs; add scripted Compose/kind first-approved-run
   checks with a five-minute runtime budget after image preparation, regression coverage,
-  and console captures at 360, 393 and 1440 pixels. Package versions remain 0.9.0.
+  and console captures at 360, 393 and 1440 pixels.
 
-## 1.0.0-rc.1 - Unreleased
+### Documentation and console polish
 
 - Reconcile candidate quickstarts, installation, API/SDK and feature documentation;
-  add Why AgentWorkflows and a code-aligned architecture overview. Package and chart
-  versions remain 0.9.0 pending release preparation; this entry does not publish artifacts.
+  add Why AgentWorkflows and a code-aligned architecture overview.
 - Refresh console evidence at 360, 393 and 1440 pixels with consistent seeded identity,
   receipts and totals, including approval quorums, SSO, spend, triggers and CSV export.
   Fix spend-alert spacing and adjacent key/trigger action controls.
@@ -85,7 +103,7 @@
 - Add a native local gateway HTTP load sanity script and record measured results and
   verification limits. Document checks that still need WSL, containers or a real cluster.
 
-## v0.9.0 - Unreleased
+### Shared approval decisions
 
 - Add per-workflow approval quorums (1–10 distinct verified identities) and expiry
   (60 seconds–7 days). Snapshot approval rules at run creation; settings changes
@@ -97,10 +115,8 @@
 - Configure policies in Team settings and Helm, and show approval counts, deadlines,
   and already-reviewed drafts in the console. Keep partial approvals visible.
   Add the versioned worker gate contract, regression tests and a two-reviewer trial.
-- Advance source, SDK and chart versions to 0.9.0. Keep published Quickstart image
-  defaults on v0.5.1; verify this candidate with the documented source-build path.
 
-## v0.8.0 - Unreleased
+### Company group sign-in
 
 - Map company OIDC groups to team roles with exact, team-scoped matches. Nonempty
   mappings require one distinct mapped role; missing, malformed, unmapped or
@@ -114,10 +130,8 @@
   admin-only `GET /v1/team/sso` contract and typed Python `team_sso()` / TypeScript
   `teamSSO()` helpers. Keep identity policy operator-managed through environment
   variables or Helm values; expose only the caller's team mappings and no secrets.
-- Advance source, SDK and chart versions to 0.8.0 and document source-build and SSO
-  acceptance paths. Published Quickstart images remain on v0.5.1 until release.
 
-## v0.7.0 - Unreleased
+### Trigger run history and usage CSV export
 
 - Add retained run history for cron and webhook triggers: persist launch provenance,
   filter and cursor-page runs by workflow/trigger, and link each console trigger to
@@ -128,10 +142,8 @@
   and `agentworkflows usage --output usage.csv`. Include scope totals and provider/
   workflow breakdowns with project isolation, nanodollar precision and spreadsheet
   formula protection. Estimates include reservations; exports are not invoices.
-- Advance source, SDK and chart versions to 0.7.0; document candidate build and
-  verification commands while keeping published quickstart image defaults on v0.5.1.
 
-## v0.6.0 - Unreleased
+### Team settings, audit log, PostgreSQL storage and spend limits
 
 - Add an offline Redis-to-PostgreSQL import command with read-only dry-run,
   progress, conflict refusal, atomic run/timeline copies and resumable idempotent

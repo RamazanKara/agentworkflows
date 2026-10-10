@@ -23,7 +23,7 @@ stack if its review and governance already meet your needs. This project is inte
 for teams that want these pieces integrated and can own their operation; it is not a
 hosted service, a general chat product or a compliance certification.
 
-Try the [source quickstart](quickstart.md), browse the [templates](templates.md), and
+Try the [quickstart](quickstart.md), browse the [templates](templates.md), and
 check the [feature inventory](feature-inventory.md) and [architecture](architecture.md)
-before committing to a deployment. The 1.0 candidate remains subject to the
-[release verification checks](release-verification.md#candidate-readiness-pass).
+before committing to a deployment. See the
+[release verification checks](release-verification.md).
