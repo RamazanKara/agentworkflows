@@ -807,7 +807,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2071,17 +2071,14 @@ and account for model and tool calls from one console.</p>
 <li><strong>Inspect the evidence:</strong> runs link step receipts, estimated usage and optional
   retained content. Trigger history, CSV usage and JSON Lines exports support review.</li>
 </ul>
-<p>You still operate Temporal, workers, storage, identity configuration and integrations.
-Receipts record gateway-observed activity; they do not prove that a model’s answer is
-correct or that an external tool acted safely. Prices are configured estimates, and
-retries cannot undo side effects. Start with idempotent tools and reviewed policies.</p>
-<p>Choose a smaller gateway if you only need model routing. Keep an existing orchestration
-stack if its review and governance already meet your needs. This project is intended
-for teams that want these pieces integrated and can own their operation; it is not a
-hosted service, a general chat product or a compliance certification.</p>
+<p>Your team operates Temporal, workers, storage, identity configuration and integrations.
+Receipts record gateway-observed activity, and prices are configured estimates. Start with
+idempotent tools and reviewed policies, and use approvals for actions with side effects.</p>
+<p>AgentWorkflows fits teams that want model routing, durable orchestration, review and
+governance integrated in one place and run on their own infrastructure.</p>
 <p>Try the <a href="../quickstart/">quickstart</a>, browse the <a href="../templates/">templates</a>, and
 check the <a href="../feature-inventory/">feature inventory</a> and <a href="../architecture/">architecture</a>
-before committing to a deployment. See the
+when planning a deployment. See the
 <a href="../release-verification/">release verification checks</a>.</p>
 
 

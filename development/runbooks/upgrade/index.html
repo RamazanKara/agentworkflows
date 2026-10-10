@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2176,15 +2176,15 @@
 version, or rolling back to a previous one. Every Argo CD Application in this
 repo runs <code>syncPolicy.automated</code> with <code>prune: true</code> and <code>selfHeal: true</code>, so
 once a new revision is in Git, Argo CD applies it without a manual sync and
-reverts any out-of-band change. That makes the promotion lever simple but
-unforgiving: the thing you change in Git is the thing that ships.</p>
+reverts any out-of-band change. That makes the promotion lever simple and
+exact: the thing you change in Git is the thing that ships.</p>
 <h2 id="what-moves-when-you-upgrade">What Moves When You Upgrade<a class="headerlink" href="#what-moves-when-you-upgrade" title="Permanent link">&para;</a></h2>
 <p>The optional gateway PostgreSQL store has its own transactional schema migrations;
-Temporal's PostgreSQL is separate. Redis remains the default. See
+Temporal's PostgreSQL is separate. Redis is the default. See
 <a href="../../postgresql-storage/#upgrade-and-rollback">gateway storage upgrade and rollback</a>
-before changing backends: import existing Redis records with the offline command; all replicas must
-select the same backend, and SQL down migration 1 deletes gateway records. Include
-the optional database in backups in addition to the existing Redis/Temporal stores.</p>
+before changing backends: import existing Redis records with the offline command and select the
+same backend on all replicas. SQL down migration 1 deletes gateway records, so back up first.
+Include the optional database in backups alongside the Redis/Temporal stores.</p>
 <p>A release bumps several pinned references together. <code>make production-check</code>
 enforces that they all match the latest <code>CHANGELOG.md</code> version:</p>
 <ul>
@@ -2195,16 +2195,16 @@ enforces that they all match the latest <code>CHANGELOG.md</code> version:</p>
 <li>the <code>docs/index.md</code> Maturity admonition ("Current release <code>vX.Y.Z</code>").</li>
 </ul>
 <p>CI builds and signs the images at that tag (see the build/release controls in
-<code>docs/threat-model.md</code>). For an operator promoting a published release you do
-not rebuild images -- you point GitOps at the tag whose images already exist.</p>
+<code>docs/threat-model.md</code>). An operator promoting a published release points GitOps
+at the tag whose images already exist.</p>
 <h2 id="the-promotion-lever-customer_revision">The Promotion Lever: CUSTOMER_REVISION<a class="headerlink" href="#the-promotion-lever-customer_revision" title="Permanent link">&para;</a></h2>
-<p>The customer overlay deploys from an immutable Git tag, not a branch. The root
+<p>The customer overlay deploys from an immutable Git tag. The root
 Application <code>deploy/gitops/argocd/root-app-customer.yaml</code> is pinned to an immutable
 release tag (see the file for the current value) and every child Application in <code>deploy/clusters/customer/apps.yaml</code>
 runs under the <code>agentworkflows</code> AppProject (<code>deploy/clusters/customer/appprojects.yaml</code>),
 which locks <code>sourceRepos</code> to the approved repo. <strong>Moving <code>CUSTOMER_REVISION</code> to a
-new tag is the canonical promotion.</strong> <code>make customer-overlay-check</code> rejects
-<code>HEAD</code> or a branch, so every deployed state is reproducible and revertible.</p>
+new tag is the canonical promotion.</strong> <code>make customer-overlay-check</code> accepts
+only tags (it rejects <code>HEAD</code> or a branch), so every deployed state is reproducible and revertible.</p>
 <p>Promote by re-running the overlay configurator with the new tag and committing:</p>
 <div class="highlight"><pre><span></span><code>make customer-overlay \
   CUSTOMER_REPO_URL=https://github.com/&lt;customer&gt;/&lt;repo&gt;.git \
@@ -2218,8 +2218,8 @@ in <code>deploy/clusters/customer/apps.yaml</code> to the new tag. Commit to the
 Argo CD picks it up on the next poll. See <code>deploy/clusters/customer/README.md</code> for the
 overlay mechanics.</p>
 <h2 id="order-of-operations">Order Of Operations<a class="headerlink" href="#order-of-operations" title="Permanent link">&para;</a></h2>
-<p>Upgrade in dependency order so a half-applied release never serves traffic
-against a mismatched store:</p>
+<p>Upgrade in dependency order so each component serves traffic against a
+matching store:</p>
 <ol>
 <li><strong>Read the changelog</strong> for the target tag. Note any data-store, schema, or
    collection-version changes (Qdrant <code>collectionVersion</code>, vector dimensions).</li>
@@ -2238,7 +2238,7 @@ against a mismatched store:</p>
 </ol>
 <p>and confirm <code>make release-gate-strict</code> passes against current evidence.</p>
 <h2 id="test-a-tag-before-you-promote">Test A Tag Before You Promote<a class="headerlink" href="#test-a-tag-before-you-promote" title="Permanent link">&para;</a></h2>
-<p>Never let production be the first cluster to run a tag. Deploy the candidate tag
+<p>Run every tag in a lab or staging cluster before production. Deploy the candidate tag
 to a lab or staging cluster (or the local kind lab) and run the same gates:</p>
 <div class="highlight"><pre><span></span><code># Point a non-production overlay/cluster at the candidate tag, then:
 make eval
@@ -2248,8 +2248,8 @@ make release-gate-strict
 <p>Run the relevant chaos and restore checks for anything the release touches:
 <code>runbooks/chaos-drills.md</code> for rollout/recovery and the RAG fault-injection
 drill, and <code>runbooks/restore-drill.md</code> (especially the real Qdrant
-data-recovery drill) before any release that changes the vector store. Only
-promote a tag whose evidence passes.</p>
+data-recovery drill) before any release that changes the vector store. Promote
+a tag once its evidence passes.</p>
 <h2 id="watch-the-upgrade-land">Watch The Upgrade Land<a class="headerlink" href="#watch-the-upgrade-land" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>kubectl -n argocd get applications
 argocd app list
@@ -2280,13 +2280,13 @@ Git change yet, use Argo CD's deployment history:</p>
 <div class="highlight"><pre><span></span><code>argocd app history agentworkflows-root
 argocd app rollback agentworkflows-root &lt;history-id&gt;
 </code></pre></div>
-<p>This is a stopgap. The Git revision still points at the bad tag, so reconcile Git
-(revert <code>CUSTOMER_REVISION</code>) afterward or selfHeal/the next sync will roll forward
-again.</p>
+<p>This is a stopgap: the Git revision still points at the bad tag, so reconcile Git
+(revert <code>CUSTOMER_REVISION</code>) afterward to keep selfHeal and the next sync on the
+good tag.</p>
 <h2 id="pausing-selfheal-and-prune-for-a-manual-rollback">Pausing selfHeal And Prune For A Manual Rollback<a class="headerlink" href="#pausing-selfheal-and-prune-for-a-manual-rollback" title="Permanent link">&para;</a></h2>
-<p>A manual recovery -- restoring data, editing a live resource, draining a node --
-fights <code>selfHeal</code> and <code>prune</code>, which will revert your change or delete resources
-that are not yet in Git. Pause automation on the affected Application for the
+<p>A manual recovery (restoring data, editing a live resource, draining a node)
+competes with <code>selfHeal</code> and <code>prune</code>, which revert live changes and prune resources
+that are absent from Git. Pause automation on the affected Application for the
 duration, then re-enable it.</p>
 <p>Disable automated sync while you work:</p>
 <div class="highlight"><pre><span></span><code>argocd app set &lt;application&gt; --sync-policy none
@@ -2298,12 +2298,12 @@ Git matches the intended state:</p>
 <p>You can also pause by editing the Application's <code>spec.syncPolicy.automated</code> in
 Git, but for a time-boxed manual rollback the <code>argocd app set</code> form is faster and
 self-documenting in the audit log. Always re-enable automation before closing the
-incident -- a permanently manual Application drifts silently.</p>
+incident so the Application stays reconciled with Git.</p>
 <h2 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h2>
 <p>Record the from/to tags, the <code>argocd app history</code> entry used (if any), the
 commit that moved <code>CUSTOMER_REVISION</code>, smoke and gate results
-(<code>make eval</code>, <code>make loadtest</code>, <code>make release-gate-strict</code>), and -- if automation
-was paused -- when it was disabled and re-enabled.</p>
+(<code>make eval</code>, <code>make loadtest</code>, <code>make release-gate-strict</code>), and, if automation
+was paused, when it was disabled and re-enabled.</p>
 <h2 id="rc3-compatibility-checks">rc.3 compatibility checks<a class="headerlink" href="#rc3-compatibility-checks" title="Permanent link">&para;</a></h2>
 <p>The gateway tests contain selected reliability configuration and Helm values captured from the
 actual 0.2.0 and rc.2 commits (source hashes are in <code>tests/fixtures/upgrade</code>). With Helm on PATH
@@ -2315,10 +2315,10 @@ values, retaining store connections, task queues, timeouts and Secret references
 <code>src/inference-gateway/tests/test_postgres_integration.py</code>. The Redis checks use unique key prefixes
 and cover unversioned/0/1/2 state, TTL preservation, interrupted migration replies and future-version
 refusal. PostgreSQL checks use disposable schemas and verify timeout recovery and transactional DDL
-rollback before retry. No schema version changes in rc.3. SQL down migration 1 remains destructive.</p>
+rollback before retry. rc.3 keeps the existing schema version. SQL down migration 1 deletes gateway records.</p>
 <p>On Linux/WSL, <code>make workflow-upgrade-test</code> upgrades actual 0.2.0 Compose state and
 <code>make workflow-helm-upgrade-test</code> upgrades charts and images in disposable kind. These live checks
-prove properties that native config parsing and Helm rendering cannot establish.</p>
+prove upgrade behavior end to end on real state.</p>
 
 
 

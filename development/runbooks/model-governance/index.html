@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2133,11 +2133,11 @@ make model-provenance-report
 DeepSeek-V4.1-Flash, and the existing Qwen3.6-35B-A3B comparison candidate. Each
 entry links to an immutable upstream model card and records its review date.
 See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md">model selection</a> for licenses, context sizes,
-compatibility limits, and upgrade notes.</p>
-<p>These are discovery records, not promotion approvals. They need real-model evals,
-load tests, pinned artifact inventories, and reviewed promotion requests before
-entering gateway allowlists. In particular, Qwen3.8-Flash-Next uses Qwen Community
-1.0 terms; do not copy Apache-2.0 metadata from another Qwen model.</p>
+compatibility, and upgrade notes.</p>
+<p>These are discovery records. Each one enters gateway allowlists through the
+promotion workflow above: real-model evals, load tests, pinned artifact inventories,
+and a reviewed promotion request. Qwen3.8-Flash-Next uses Qwen Community 1.0 terms;
+record that license in its own metadata.</p>
 <p>The local CPU smoke and customer CPU profiles retain their existing models and
 reverified Ollama weight-layer digests. The approved coding and embedding profiles
 now pin the Hugging Face commits recorded in their weight inventories. The

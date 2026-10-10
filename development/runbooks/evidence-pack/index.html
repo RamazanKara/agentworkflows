@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2123,8 +2123,8 @@
 <p>After the local lab is synced, run:</p>
 <div class="highlight"><pre><span></span><code>make evidence LIVE=1
 </code></pre></div>
-<p>Live mode also verifies that key namespaces exist, gateway/RAG/budget deployments have available replicas, the coding-agent workspace PVC is bound, and (when the agent-sandbox CRDs are installed) that the agent-sandbox controller has available replicas (when they are not installed, the pack records that workspaces run on namespace isolation only and <code>C-ISOLATE</code> is not claimed).</p>
-<p>Note: on <code>WaitForFirstConsumer</code> storage classes (including the <code>kind</code> default), the workspace PVC stays <code>Pending</code> until a pod mounts it, so the PVC control fails on a workspace with no running workload. Start a workspace pod or sandbox before generating live evidence.</p>
+<p>Live mode also verifies that key namespaces exist, gateway/RAG/budget deployments have available replicas, the coding-agent workspace PVC is bound, and, when the agent-sandbox CRDs are installed, that the agent-sandbox controller has available replicas. On clusters without the CRDs, the pack records namespace isolation for workspaces and leaves <code>C-ISOLATE</code> unclaimed.</p>
+<p>Start a workspace pod or sandbox before generating live evidence. On <code>WaitForFirstConsumer</code> storage classes (including the <code>kind</code> default), the workspace PVC binds when a pod mounts it.</p>
 <h2 id="interpret-results">Interpret Results<a class="headerlink" href="#interpret-results" title="Permanent link">&para;</a></h2>
 <p>The Markdown report is the customer-facing summary. The JSON report is useful for automation and audit ingestion.</p>
 <p>A failed static control means the repo no longer contains a required platform capability or documented evidence path. Fix the missing control before handoff.</p>

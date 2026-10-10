@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2020,10 +2020,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#scope-and-non-goal" class="md-nav__link">
+  <a href="#scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scope and non-goal
+        Scope
       
     </span>
   </a>
@@ -2053,10 +2053,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-the-x-sandbox-id-problem-read-this" class="md-nav__link">
+  <a href="#2-choose-the-x-sandbox-id-mapping" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. The X-Sandbox-ID problem (read this)
+        2. Choose the X-Sandbox-ID mapping
       
     </span>
   </a>
@@ -2136,12 +2136,11 @@
 <p>Use this runbook to put a self-hosted end-user chat UI in front of the inference gateway so
 humans can type into a chat box, while every request still flows through the gateway's auth,
 model allowlist, admission, budget, and audit controls.</p>
-<h2 id="scope-and-non-goal">Scope and non-goal<a class="headerlink" href="#scope-and-non-goal" title="Permanent link">&para;</a></h2>
-<p>The platform does not bundle an end-user chat product. It does ship an opt-in read-only operator
-console at <code>/console</code>; a human-facing multi-user chat UI remains an <strong>operator-owned example, not a
-supported component</strong>, consistent with the explicit
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md">product boundary</a>.
-<a href="https://github.com/open-webui/open-webui">Open WebUI</a> is the common choice and is used here, but
+<h2 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h2>
+<p>The platform ships an opt-in read-only operator console at <code>/console</code>. A human-facing multi-user
+chat UI is an <strong>operator-owned example</strong> that runs in front of the gateway (see the
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md">product boundary</a>).
+<a href="https://github.com/open-webui/open-webui">Open WebUI</a> is the common choice and is used here;
 any OpenAI-compatible chat frontend works. The platform ships a copy-adapt manifest at
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/examples/open-webui.yaml"><code>docs/examples/open-webui.yaml</code></a>
 (Deployment + Service + NetworkPolicy + config) and this runbook; you own the image pinning,
@@ -2151,9 +2150,9 @@ storage, ingress/TLS, and identity wiring.</p>
                       (chat-ui ns)                                  (inference ns)
 </code></pre></div>
 <p>The UI is just another gateway client. It points its OpenAI-compatible base URL at the gateway's
-<code>/v1</code> and presents a gateway API key as a bearer token. Nothing bypasses the gateway: the UI
-namespace runs default-deny egress that allows only DNS and the gateway (port 8080), so a
-compromised UI cannot reach the runtimes, Redis, or the internet directly.</p>
+<code>/v1</code> and presents a gateway API key as a bearer token. All UI traffic goes through the gateway: the
+UI namespace runs default-deny egress that allows only DNS and the gateway (port 8080), which
+keeps the runtimes, Redis, and the internet out of the UI's direct reach.</p>
 <h2 id="1-machine-auth-how-the-ui-authenticates-to-the-gateway">1. Machine auth: how the UI authenticates to the gateway<a class="headerlink" href="#1-machine-auth-how-the-ui-authenticates-to-the-gateway" title="Permanent link">&para;</a></h2>
 <p>Open WebUI authenticates to the gateway with a single <strong>gateway API key</strong> sent as
 <code>Authorization: Bearer &lt;key&gt;</code> (the gateway accepts a bearer token equivalently to the <code>X-API-Key</code>
@@ -2162,14 +2161,14 @@ header; see <a href="../api-access/">API access</a>).</p>
 <li>Mint a gateway key and add its SHA-256 to the gateway's <code>auth.apiKeyHashes</code> (or issue a key
    <strong>record</strong> with scopes/expiry/sandbox binding; see <a href="../api-access/">API access</a>).</li>
 <li>Put the <strong>plaintext</strong> key in the <code>open-webui-gateway-key</code> Secret, sourced from your secret
-   manager via External Secrets. Never commit it.</li>
+   manager via External Secrets.</li>
 <li>Set <code>OPENAI_API_BASE_URL</code> to
    <code>http://inference-gateway-inference-gateway.inference.svc.cluster.local:8080/v1</code> (the bundled
    chart's in-cluster Service DNS) and <code>OPENAI_API_KEY</code> from the Secret. Both are wired in the
    example manifest.</li>
 </ol>
-<p>Only models the gateway allow-lists are usable; the UI's model picker reflects <code>GET /v1/models</code>.</p>
-<h2 id="2-the-x-sandbox-id-problem-read-this">2. The X-Sandbox-ID problem (read this)<a class="headerlink" href="#2-the-x-sandbox-id-problem-read-this" title="Permanent link">&para;</a></h2>
+<p>The UI offers the models the gateway allow-lists; its model picker reflects <code>GET /v1/models</code>.</p>
+<h2 id="2-choose-the-x-sandbox-id-mapping">2. Choose the X-Sandbox-ID mapping<a class="headerlink" href="#2-choose-the-x-sandbox-id-mapping" title="Permanent link">&para;</a></h2>
 <p>The gateway attributes budgets, rate limits, and audit records <strong>per <code>X-Sandbox-ID</code></strong>. Open
 WebUI presents <strong>one</strong> bearer token for all of its users, so by default <strong>all UI traffic lands in
 a single sandbox</strong>. Choose deliberately:</p>
@@ -2195,30 +2194,29 @@ a single sandbox</strong>. Choose deliberately:</p>
 <tr>
 <td>(c) Per-user sandboxes</td>
 <td>Each human is metered and audited separately.</td>
-<td>Front the gateway with a small header-stamping proxy that maps the authenticated Open WebUI user (from its OIDC session) to an <code>X-Sandbox-ID</code>. This is the only option giving per-user budgets/attribution.</td>
+<td>Front the gateway with a small header-stamping proxy that maps the authenticated Open WebUI user (from its OIDC session) to an <code>X-Sandbox-ID</code>. This option gives per-user budgets and attribution.</td>
 </tr>
 </tbody>
 </table>
 <p>Option (a) via a <strong>sandbox-bound key record</strong> is recommended for most deployments: it is
-fail-closed (a UI request cannot spoof another sandbox via the header, because the gateway rebinds
-it to the record's sandbox) and needs no extra proxy.</p>
+fail-closed (the gateway rebinds every UI request to the record's sandbox, whatever header it
+sends) and runs without an extra proxy.</p>
 <h2 id="3-human-auth-sso-into-the-ui">3. Human auth: SSO into the UI<a class="headerlink" href="#3-human-auth-sso-into-the-ui" title="Permanent link">&para;</a></h2>
-<p>The UI itself must sit behind HTTPS and human SSO: the gateway's API key authenticates the <em>UI
-process</em>, not the <em>person</em> using it. The platform does not run an IdP; wire Open WebUI's OIDC to the
-<strong>same IdP</strong> you already use for the platform dashboards.</p>
+<p>Put the UI behind HTTPS and human SSO: the gateway's API key authenticates the <em>UI process</em>, and
+SSO authenticates the <em>person</em> using it. Wire Open WebUI's OIDC to the <strong>same IdP</strong> you use for the
+platform dashboards.</p>
 <ul>
 <li>The Grafana and Argo CD SSO templates in <a href="../api-access/">API access</a> (OIDC via Keycloak/Auth0/
   Okta/Entra ID/Google Workspace) are the pattern to mirror: resolve the issuer/auth/token/JWKS
   URLs from the IdP discovery document, source the client secret from your secret manager, and
   map an IdP group to admin.</li>
 <li>Open WebUI reads standard OIDC settings (issuer/client-id/client-secret/scopes) from its
-  environment; set them the same way and put an Ingress with TLS in front. Human SSO for this UI
-  is an operator responsibility outside AgentWorkflows' data-plane security boundary
-  (<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md">Security overview</a>).</li>
+  environment; set them the same way and put an Ingress with TLS in front. The operator owns human
+  SSO for this UI (<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md">Security overview</a>).</li>
 </ul>
 <p>If you also enable gateway JWT auth with a tenant claim, option (c) above can forward the user's
 verified token straight through and let the gateway derive the sandbox from the JWT tenant claim,
-the strongest per-user attribution, with no header trust.</p>
+the strongest per-user attribution, based on the verified token.</p>
 <h2 id="4-apply-and-validate">4. Apply and validate<a class="headerlink" href="#4-apply-and-validate" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code># Adapt docs/examples/open-webui.yaml first (image digest, key Secret, sandbox choice, Ingress).
 kubectl apply -f docs/examples/open-webui.yaml
@@ -2233,7 +2231,7 @@ audit stream that the request is attributed to the expected sandbox and that the
 (<code>x-ratelimit-*</code>) reflect that sandbox's allowance.</p>
 <h2 id="hardening-checklist">Hardening checklist<a class="headerlink" href="#hardening-checklist" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] Image pinned to a scanned, mirrored <strong>digest</strong> (not a floating tag).</li>
+<li>[ ] Image pinned to a scanned, mirrored <strong>digest</strong>.</li>
 <li>[ ] Gateway key sourced from the secret manager; its hash allow-listed; rotated on the same
       schedule as other keys (<a href="../api-access/">API access</a>).</li>
 <li>[ ] Sandbox story chosen (a/b/c) and budgets sized for that sandbox (<a href="../budget-controls/">Budget controls</a>).</li>

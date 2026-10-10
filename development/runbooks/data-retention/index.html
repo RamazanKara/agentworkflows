@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2127,10 +2127,10 @@
 <p>The retention policy lives in <code>platform/governance/data-retention.yaml</code>.</p>
 <p>Default policy:</p>
 <ul>
-<li>Gateway and RAG audit logs keep hashes, lengths, IDs, timing, status, usage, and result IDs. They must not store raw prompts, completions, or RAG queries.</li>
+<li>Gateway and RAG audit logs keep hashes, lengths, IDs, timing, status, usage, and result IDs. Raw prompts, completions, and RAG queries stay out of the audit logs.</li>
 <li>Generated evidence is retained for release and audit review, with sample files committed and generated run files ignored.</li>
 <li>RAG knowledge and vector-store collections require review before customer use.</li>
-<li>Coding-agent workspace PVC data should be purged on tenant offboarding.</li>
+<li>Purge coding-agent workspace PVC data on tenant offboarding.</li>
 <li>Model governance evidence has longer retention because it supports model lifecycle audit.</li>
 </ul>
 <h2 id="workflow-records-and-captured-content">Workflow records and captured content<a class="headerlink" href="#workflow-records-and-captured-content" title="Permanent link">&para;</a></h2>
@@ -2173,20 +2173,21 @@ and the <code>redaction</code> mode. After content expiry the API returns <code>
 <code>content_reason: expired</code>; uncaptured steps return <code>capture_off</code>.</p>
 <p>The run monitor checks Temporal every 30 seconds and applies a fixed expiry at Temporal's
 close time plus the run retention period for completed, failed, canceled, terminated,
-timed-out, and continued-as-new runs. Inspection also applies retention. Reads and duplicate worker
-initialization do not extend deadlines. Active runs do not get a run-record TTL.
-Shorter existing TTLs, including content TTLs, are preserved. Expired run IDs are pruned
-from project indexes during listing and monitoring, without breaking pagination.</p>
+timed-out, and continued-as-new runs. Inspection also applies retention. Deadlines stay fixed
+across reads and duplicate worker initialization. Active runs keep their run records until
+they close. Shorter existing TTLs, including content TTLs, are preserved. Expired run IDs are
+pruned from project indexes during listing and monitoring, and pagination stays consistent.</p>
 <p>An idempotent online state migration runs in the monitor after gateway startup. It scans
 existing run metadata in batches and asks Temporal for each execution's state, because
-older Redis metadata did not store terminal status. It backfills terminal TTLs without
-resetting active runs, audit chains, budgets for other runs, or identity/session keys.
+older Redis metadata predates the terminal status field. It backfills terminal TTLs and leaves
+active runs, audit chains, budgets for other runs, and identity/session keys untouched.
 Already-old terminal records expire immediately. When Temporal has already purged a run,
 the migration starts its final Redis retention window at discovery. Transient failures
 leave the migration pending for retry; check gateway warnings, Redis, and Temporal health.</p>
-<p>These TTLs do not erase Temporal history, backups, exported audit logs, or workflow side
-effects. Configure Temporal namespace retention and backup expiry separately. Changing
-retention settings affects new deadlines; existing earlier deadlines are never extended.</p>
+<p>These TTLs apply to the gateway's Redis records. Temporal history, backups, exported audit
+logs, and workflow side effects follow their own retention: configure Temporal namespace
+retention and backup expiry separately. Changing retention settings applies to new deadlines;
+existing earlier deadlines stay in place.</p>
 <h2 id="validate-retention">Validate Retention<a class="headerlink" href="#validate-retention" title="Permanent link">&para;</a></h2>
 <p>Run:</p>
 <div class="highlight"><pre><span></span><code>make retention-check
@@ -2198,15 +2199,15 @@ retention settings affects new deadlines; existing earlier deadlines are never e
 <h2 id="customer-handoff">Customer Handoff<a class="headerlink" href="#customer-handoff" title="Permanent link">&para;</a></h2>
 <p>Before handoff, confirm:</p>
 <ul>
-<li>audit logs do not contain raw prompt, completion, or query text</li>
+<li>audit logs are free of raw prompt, completion, and query text</li>
 <li>generated evidence is retained according to customer policy</li>
 <li>RAG knowledge and vector-store collections have been approved for the environment</li>
 <li>agent workspace PVCs have an offboarding and purge process</li>
 <li>model governance reports are retained with model approval evidence</li>
 </ul>
 <h2 id="erasing-a-rag-source-right-to-erasure">Erasing a RAG Source (Right-to-Erasure)<a class="headerlink" href="#erasing-a-rag-source-right-to-erasure" title="Permanent link">&para;</a></h2>
-<p>Ingestion is upsert-only, so removing a source from the manifest leaves its vectors in
-Qdrant. To purge a source's vectors (right-to-erasure or source decommission), delete by
+<p>Ingestion is upsert-only, so a source's vectors stay in Qdrant until you delete them,
+including after the source leaves the manifest. To purge a source's vectors (right-to-erasure or source decommission), delete by
 <code>source_id</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Purge across all collection versions:</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--delete<span class="w"> </span>--source-id<span class="w"> </span>&lt;source-id&gt;<span class="w"> </span><span class="se">\</span>

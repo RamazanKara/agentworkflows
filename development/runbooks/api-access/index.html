@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2177,7 +2177,7 @@
 <p>or:</p>
 <div class="highlight"><pre><span></span><code>Authorization: Bearer &lt;key&gt;
 </code></pre></div>
-<p>The services store and compare only SHA-256 hashes from <code>API_KEY_SHA256S</code>. Plaintext keys should come from the customer's secret manager, CI secret store, or local operator shell.</p>
+<p>The services store and compare only SHA-256 hashes from <code>API_KEY_SHA256S</code>. Source plaintext keys from the customer's secret manager, CI secret store, or local operator shell.</p>
 <p>The inference gateway also supports optional JWT bearer validation beside API-key hashes:</p>
 <div class="highlight"><pre><span></span><code>auth:
   jwt:
@@ -2190,17 +2190,17 @@
 </code></pre></div>
 <p>The gateway validates HS256 <code>oct</code>, RS256 <code>RSA</code>, and ES256 P-256 <code>EC</code> JWKS keys, including <code>exp</code>, optional <code>nbf</code>, issuer, audience, and required scopes from <code>scope</code> or <code>scp</code> claims. Prefer RS256 or ES256 for enterprise OIDC providers and keep API-key hashes available for break-glass automation.</p>
 <h3 id="per-tenant-sandbox-binding">Per-tenant sandbox binding<a class="headerlink" href="#per-tenant-sandbox-binding" title="Permanent link">&para;</a></h3>
-<p>Set <code>auth.jwt.tenantClaim</code> to bind the sandbox id to a verified JWT claim. When set, the gateway takes the sandbox from that claim instead of trusting the client <code>X-Sandbox-ID</code> header: a request whose header contradicts the claim is rejected with <code>403</code> and reason <code>sandbox_identity_mismatch</code>, and a request missing the header adopts the bound sandbox. This also scopes the read-only <code>GET /v1/usage</code> and <code>GET /v1/sandbox/budget</code> endpoints - a bound caller can only ever read its own tenant's usage and budget, never another tenant's by setting a different header. The customer overlay ships this on as a template (<code>tenantClaim: sandbox_id</code>); the operator completes the placeholder issuer/JWKS/audience with their real IdP.</p>
-<p>Without a binding (<code>tenantClaim</code> empty, the base-chart default), the gateway is header-trusted: any valid key or token may assert any sandbox via <code>X-Sandbox-ID</code>. This is the documented insecure default for the local lab and single-tenant deployments.</p>
+<p>Set <code>auth.jwt.tenantClaim</code> to bind the sandbox id to a verified JWT claim. When set, the gateway takes the sandbox from that claim instead of trusting the client <code>X-Sandbox-ID</code> header: a request whose header contradicts the claim is rejected with <code>403</code> and reason <code>sandbox_identity_mismatch</code>, and a request missing the header adopts the bound sandbox. This also scopes the read-only <code>GET /v1/usage</code> and <code>GET /v1/sandbox/budget</code> endpoints - a bound caller reads its own tenant's usage and budget, whatever header it sends. The customer overlay ships this on as a template (<code>tenantClaim: sandbox_id</code>); the operator completes the placeholder issuer/JWKS/audience with their real IdP.</p>
+<p>With <code>tenantClaim</code> empty (the base-chart default), the gateway is header-trusted: any valid key or token may assert any sandbox via <code>X-Sandbox-ID</code>. This default is for the local lab and single-tenant deployments; set <code>tenantClaim</code> to bind tenants.</p>
 <h2 id="api-key-records-per-key-scopes-expiry-sandbox-binding-budget">API-Key Records (per-key scopes, expiry, sandbox binding, budget)<a class="headerlink" href="#api-key-records-per-key-scopes-expiry-sandbox-binding-budget" title="Permanent link">&para;</a></h2>
 <p>Beside the flat <code>API_KEY_SHA256S</code> allowlist, the gateway can load an optional <strong>API-key records</strong> file (<code>API_KEY_RECORDS_PATH</code>, a JSON or YAML document) that attaches per-key attributes. A flat hash remains an unbound, unexpiring, unscoped key; a record adds any of:</p>
 <ul>
 <li><code>sandbox</code> - binds the key to one sandbox id, enforced exactly like the JWT <code>tenantClaim</code> (a mismatched <code>X-Sandbox-ID</code> is <code>403</code>; a missing one adopts the binding);</li>
 <li><code>scopes</code> - recorded on the audit principal for attribution;</li>
 <li><code>expires_at</code> - epoch seconds or ISO-8601; a presented-but-expired key is rejected with <code>401</code> and reason <code>api_key_expired</code>;</li>
-<li><code>budget</code> - per-key overrides of the sandbox request / prompt-char / estimated-token budgets, applied to that request (and reflected in <code>GET /v1/usage</code>). Each field follows the platform convention that <strong><code>0</code> means unlimited</strong>, not "deny": to tighten a key set a small positive limit, never <code>0</code>. A key must not appear in both <code>apiKeyHashes</code> and a record - the record always wins (binding, expiry, and scopes), but list it in one place to keep the intent clear.</li>
+<li><code>budget</code> - per-key overrides of the sandbox request / prompt-char / estimated-token budgets, applied to that request (and reflected in <code>GET /v1/usage</code>). Each field follows the platform convention that <strong><code>0</code> means unlimited</strong>: to tighten a key, set a small positive limit. List each key in one place, either <code>apiKeyHashes</code> or a record. When a key appears in both, the record wins (binding, expiry, and scopes).</li>
 </ul>
-<p>The file is matched by SHA-256 (constant-time), so it never stores plaintext keys. A <strong>malformed records file fails the gateway closed at startup</strong> (the pod does not start) rather than silently disabling auth. No records file configured means today's flat-hash behavior is unchanged.</p>
+<p>The file is matched by SHA-256 (constant-time) and holds only key hashes. The gateway validates the records file at startup and <strong>fails closed on a malformed records file</strong>: the pod stays down until the file is fixed, so auth stays on. When no records file is configured, the gateway uses the flat-hash allowlist.</p>
 <p>Example <code>key-records.json</code>:</p>
 <div class="highlight"><pre><span></span><code>{
   "records": [
@@ -2278,19 +2278,18 @@ spec:
         requestLimit: 100
 </code></pre></div>
 <p>The gateway exposes <code>GET /v1/models</code> for approved models and <code>GET /readyz</code> for runtime-aware readiness. <code>/readyz</code> omits backend URLs and secrets.
-Each listed model's <code>owned_by</code> names its provider backend. Routes marked <code>simulated: true</code> (the Compose demo's fakes) are listed with <code>"simulated": true</code>, and the console then tells people that no provider is billed.</p>
+Each listed model's <code>owned_by</code> names its provider backend. Routes marked <code>simulated: true</code> (the Compose demo's fakes) are listed with <code>"simulated": true</code>, and the console marks them as unbilled.</p>
 <h2 id="human-sso-for-operator-dashboards">Human SSO for Operator Dashboards<a class="headerlink" href="#human-sso-for-operator-dashboards" title="Permanent link">&para;</a></h2>
-<p>Two distinct auth surfaces exist in this platform; do not conflate them:</p>
+<p>The platform has two distinct auth surfaces:</p>
 <ul>
 <li><strong>Machine auth on the data plane</strong> - the inference gateway and RAG service authenticate <em>workloads</em> (agents, apps, CI) with the API keys, API-key records, and JWTs described above. This is what gates <code>POST /v1/chat/completions</code> and friends.</li>
-<li><strong>Human SSO on the control plane</strong> - the <em>operator dashboards</em> (Grafana, Argo CD) authenticate <em>people</em> via your OIDC identity provider. This is unrelated to the gateway's machine auth and never grants access to tenant inference traffic.</li>
+<li><strong>Human SSO on the control plane</strong> - the <em>operator dashboards</em> (Grafana, Argo CD) authenticate <em>people</em> via your OIDC identity provider. This is separate from the gateway's machine auth; tenant inference traffic stays gated by the data-plane credentials.</li>
 </ul>
-<p>The platform does <strong>not</strong> run an identity provider. The snippets below are operator templates that wire Grafana and Argo CD to an IdP you already operate (Keycloak, Auth0, Okta, Microsoft Entra ID, Google Workspace, etc.). Resolve <code>issuer</code>, auth, token, and userinfo/JWKS URLs from the IdP discovery document at <code>https://&lt;issuer&gt;/.well-known/openid-configuration</code>, and source every client secret from your secret manager - never commit it.</p>
+<p>The snippets below are operator templates that wire Grafana and Argo CD to the identity provider you operate (Keycloak, Auth0, Okta, Microsoft Entra ID, Google Workspace, etc.). Resolve <code>issuer</code>, auth, token, and userinfo/JWKS URLs from the IdP discovery document at <code>https://&lt;issuer&gt;/.well-known/openid-configuration</code>, and source every client secret from your secret manager.</p>
 <h3 id="grafana-oidc">Grafana OIDC<a class="headerlink" href="#grafana-oidc" title="Permanent link">&para;</a></h3>
 <p>Grafana ships as part of the <code>kube-prometheus-stack</code> Application in <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/applications.yaml">deploy/observability/applications.yaml</a>. Add OIDC under the chart's <code>grafana.grafana.ini</code> and map an IdP group to the Grafana admin role. Template - replace the placeholders:</p>
 <div class="highlight"><pre><span></span><code>grafana:
-  # Source GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET from a Secret via grafana.envFromSecret;
-  # do not inline the client secret here.
+  # Source GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET from a Secret via grafana.envFromSecret.
   grafana.ini:
     server:
       root_url: https://grafana.example.com/
@@ -2334,7 +2333,7 @@ data:
   policy.csv: |
     g, platform-admins, role:admin
 </code></pre></div>
-<p>Human SSO for these dashboards is an operator responsibility outside AgentWorkflows' data-plane security boundary; see <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md">Security overview</a> for where that boundary sits.</p>
+<p>The operator owns human SSO for these dashboards; see <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/security-overview.md">Security overview</a> for where the data-plane security boundary sits.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>HTTP 401 with reason <code>invalid_or_missing_api_key</code> means the request did not include a recognized key. Verify the client header, the configured hash, and whether the deployment has reloaded the updated Secret.</p>
 <p>HTTP 401 with reason <code>api_key_expired</code> means the presented key matched an API-key record whose <code>expires_at</code> has passed. Issue a fresh key (add a new record) and roll out the client; the expired record can then be removed.</p>

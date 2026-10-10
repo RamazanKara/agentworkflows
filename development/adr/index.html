@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2208,10 +2208,10 @@ existing deployment components; local-first scope statements apply to those opti
 profiles. AgentWorkflows follows the cloud-first <a href="../scope-and-non-goals/">product scope</a>
 and <a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">roadmap</a>.</p>
 <p>This directory records the significant architecture decisions behind AgentWorkflows:
-why a particular tool, pattern, or boundary was chosen, what was rejected, and what the choice
-costs. Read an ADR when you want the reasoning behind a default in <code>deploy/</code>, <code>src/</code>, or
-<code>platform/</code>, not just the configuration itself.</p>
-<p>ADRs are not a manual. For setup follow <a href="../getting-started/">docs/getting-started.md</a>; for
+why a particular tool, pattern, or boundary was chosen, which alternatives were weighed, and what
+the choice gives the product and its operators. Read an ADR when you want the reasoning behind a
+default in <code>deploy/</code>, <code>src/</code>, or <code>platform/</code> alongside the configuration itself.</p>
+<p>ADRs record reasoning. For setup follow <a href="../getting-started/">docs/getting-started.md</a>; for
 project fit and alternatives follow <a href="../decision-guide/">docs/decision-guide.md</a>; for the
 controls inventory follow <a href="../production-readiness/">docs/production-readiness.md</a>. ADRs explain
 the choices those documents assume.</p>
@@ -2219,8 +2219,8 @@ the choices those documents assume.</p>
 <ul>
 <li><code>Accepted</code>: the decision is in force and reflected in the repo today.</li>
 <li><code>Superseded by NNNN</code>: replaced by a later ADR; kept for history.</li>
-<li><code>Proposed</code>: under discussion, not yet reflected in the default configuration.</li>
-<li><code>Deprecated</code>: no longer recommended, but not yet removed.</li>
+<li><code>Proposed</code>: under discussion before it becomes the default configuration.</li>
+<li><code>Deprecated</code>: retired from recommendations and kept in the repo until removal.</li>
 </ul>
 <p>All ADRs in this set are <code>Accepted</code> and describe the current repository.</p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
@@ -2326,7 +2326,7 @@ immutable once <code>Accepted</code>, and grounded in real files in this repo.</
 <li>Add a row to the index table above (ADR pages are reached through this index; only
    the index itself is listed in the <code>mkdocs.yml</code> nav).</li>
 <li>Open it for review like any other change (see <a href="https://github.com/RamazanKara/agentworkflows/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>). Once
-   merged and <code>Accepted</code>, do not rewrite it; if the decision changes, write a new ADR and mark the
+   merged and <code>Accepted</code>, keep it as written; if the decision changes, write a new ADR and mark the
    old one <code>Superseded by NNNN</code>.</li>
 </ol>
 <h3 id="template">Template<a class="headerlink" href="#template" title="Permanent link">&para;</a></h3>
@@ -2347,11 +2347,11 @@ immutable once <code>Accepted</code>, and grounded in real files in this repo.</
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="gu">## Consequences</span>
 <a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>What this makes easy, what it makes harder, and what the operator now owns.
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>What the decision gives the product and what the operator does.
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="gu">## Alternatives considered</span>
 <a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>Each realistic option, what it does better, and the specific reason it was not chosen here.
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>Each realistic option, its strengths, and the specific reason the chosen option fits better here.
 </code></pre></div>
 
 

@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2270,13 +2270,13 @@ record the results of your own cluster checks before serving a team.</p>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>restart<span class="w"> </span>deployment/inference-gateway-batch-processor<span class="w"> </span>-n<span class="w"> </span>aw
 </code></pre></div>
 <p>For PostgreSQL, change the database role password as well as the Secret, then restart
-  Temporal's server deployments; changing <code>POSTGRES_PASSWORD</code> alone does not update an
-  existing database. Supply the new Secret to both datastores and future schema Jobs.
+  Temporal's server deployments; the existing database keeps its role password until you
+  change it there. Supply the new Secret to both datastores and future schema Jobs.
   To rotate bootstrap/worker keys, update their Secrets, run the normal Helm upgrade to
   regenerate <code>agentworkflows-key-records</code>, and restart gateway/worker deployments. Verify
   old keys fail. Rotate Redis-managed user keys through Members &amp; keys or the CLI.
-  OIDC client-secret rotation does not revoke existing browser sessions: plan separate
-  session invalidation for an identity incident, using the sessions' Redis key prefix.</p>
+  OIDC client-secret rotation leaves existing browser sessions active: for an identity
+  incident, invalidate sessions separately using the sessions' Redis key prefix.</p>
 <h2 id="availability-and-sizing">Availability and sizing<a class="headerlink" href="#availability-and-sizing" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Enable at least two gateway replicas, the PDB (<code>minAvailable: 1</code>) and anti-affinity.
@@ -2284,7 +2284,7 @@ record the results of your own cluster checks before serving a team.</p>
   Requests/limits default to <code>100m</code>/<code>128Mi</code> and <code>500m</code>/<code>512Mi</code> per gateway; size from measured
   concurrency, latency and memory, then rehearse a pod failure and node maintenance.</li>
 <li>[ ] Choose an HA Redis and PostgreSQL service when your SLO requires it. Gateway
-  replicas alone do not remove the bundled stores or Temporal's single-replica failures.
+  replicas cover the gateway tier; the bundled stores and Temporal run as single replicas.
   Plan Temporal server and worker capacity independently. Keep shared state in Redis;
   use shared S3 and Redis if enabling Batch, and Redis for enabled Responses/cache state.</li>
 <li>[ ] Check dependency readiness, provider limits, disk space, Redis eviction and
@@ -2293,21 +2293,21 @@ record the results of your own cluster checks before serving a team.</p>
 <h2 id="backups-and-restore">Backups and restore<a class="headerlink" href="#backups-and-restore" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Define an RPO/RTO, backup schedule, encryption, off-cluster storage and access policy.
-  Back up a coordinated set after quiescing admissions/workers as needed; never assume
-  independently timed Redis and Temporal copies describe the same workflow state.</li>
+  Back up a coordinated set after quiescing admissions/workers as needed; take Redis and
+  Temporal copies at the same point so they describe the same workflow state.</li>
 <li>[ ] Back up <strong>Redis AOF and/or a verified RDB snapshot</strong> for every logical database used.
   The bundled Redis uses AOF with <code>appendfsync always</code> and disables periodic RDB saves.
   Modern multipart AOF backups need the manifest, base and incremental files together;
-  use a consistent volume snapshot or the <a href="https://redis.io/docs/latest/management/persistence/">Redis backup procedure</a>,
-  not a live copy of one AOF file. Include budgets, workflow records/content, sessions, managed keys,
+  capture them with a consistent volume snapshot or the <a href="https://redis.io/docs/latest/management/persistence/">Redis backup procedure</a>.
+  Include budgets, workflow records/content, sessions, managed keys,
   team settings, audit views and audit heads; optional cache/Batch/Responses stores also
-  use Redis. Persistence is not a backup.</li>
+  use Redis. Persistence and backups are separate controls; keep both.</li>
 <li>[ ] Back up <strong>Temporal PostgreSQL</strong>, both <code>temporal</code> and <code>temporal_visibility</code> (or your
   configured names), plus roles/grants. Use your database service's snapshot/PITR or
   verified dumps; preserve the schema/server versions needed for recovery.</li>
 <li>[ ] Save matching credential Secrets securely, your release values, image digests,
   chart versions, routing/team policies and external receipt logs/head anchors. Include
-  S3 Batch blobs or other optional stores if enabled. Do not commit exported Secrets.</li>
+  S3 Batch blobs or other optional stores if enabled. Keep exported Secrets out of version control.</li>
 <li>[ ] Restore into an isolated namespace and exercise an existing run waiting for approval,
   managed-key login, budgets, team settings and audit verification. Recover both stores
   and matching Secrets before admitting new traffic. Record the actual recovery time.
@@ -2328,8 +2328,8 @@ record the results of your own cluster checks before serving a team.</p>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-f<span class="w"> </span>production-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deployment/inference-gateway<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--timeout<span class="o">=</span>5m
 </code></pre></div>
-<p>Offline renders generate example bootstrap credentials because <code>lookup</code> cannot read
-  live Secrets. Protect the render output and never apply it over a running release.
+<p>Offline renders generate example bootstrap credentials, since <code>lookup</code> reads live
+  Secrets only during an install or upgrade against the cluster. Protect the render output and use <code>helm upgrade</code> for a running release.
   Keep namespace, release and credential Secret names stable; live upgrades reuse them.
   Verify <code>/readyz</code>, sign-in, an existing approval and a new run after upgrading.
 - [ ] Record a known-good Helm revision and test rollback before relying on it:</p>
@@ -2337,9 +2337,9 @@ record the results of your own cluster checks before serving a team.</p>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">REVISION</span><span class="o">=</span><span class="m">1</span><span class="w">  </span><span class="c1"># Replace with the reviewed, compatible revision.</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>helm<span class="w"> </span>rollback<span class="w"> </span>aw<span class="w"> </span><span class="s2">"</span><span class="nv">$REVISION</span><span class="s2">"</span><span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
-<p>Helm rollback restores Kubernetes resources, not Redis data, PostgreSQL schema or
-  upstream credentials. Do not roll Temporal back across incompatible migrations;
-  follow Temporal's version guidance and restore a compatible backup set when required.
+<p>Helm rollback restores Kubernetes resources; Redis data, PostgreSQL schema and
+  upstream credentials stay as they are. Roll Temporal back only between compatible
+  versions; follow Temporal's version guidance and restore a compatible backup set when required.
   The external-PostgreSQL example runs schema hooks before upgrade; with bundled
   PostgreSQL, inspect the rendered schema Job and verify it completed successfully.</p>
 <h2 id="retention">Retention<a class="headerlink" href="#retention" title="Permanent link">&para;</a></h2>
@@ -2393,21 +2393,20 @@ record the results of your own cluster checks before serving a team.</p>
 </table>
 <ul>
 <li>[ ] Review each workflow's <code>captureContent</code> policy (<code>none</code>, <code>redacted</code>, <code>full</code>) and
-  <code>contentMaxBytes</code>. Redis TTLs do not remove the raw inputs/results in Temporal history,
-  exported logs, backups, or third-party systems.</li>
+  <code>contentMaxBytes</code>. Redis TTLs apply to Redis; set retention for raw inputs/results in
+  Temporal history, exported logs, backups and third-party systems separately.</li>
 <li>[ ] Set Temporal namespace retention independently under
   <code>workflows.temporal.server.config.namespaces.namespace</code> (the default namespace is <code>30d</code>).
-  For an existing namespace, apply the change through Temporal administration; do not
-  assume the chart's namespace-creation Job changes existing retention:</li>
+  For an existing namespace, apply the change through Temporal administration; the
+  chart's namespace-creation Job sets retention when it creates a namespace:</li>
 </ul>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>temporal<span class="w"> </span>operator<span class="w"> </span>namespace<span class="w"> </span>update<span class="w"> </span>--namespace<span class="w"> </span>default<span class="w"> </span>--retention<span class="w"> </span>30d
 </code></pre></div>
 <p>Connect the CLI to your Temporal frontend with its required credentials; see the
   <a href="https://docs.temporal.io/cli/operator">Temporal namespace command reference</a>.
   Configure log, object-store and backup expiration separately; retain external receipt anchors
-  as required by your audit policy. Shortening a setting does not retroactively prove
-  deletion from every existing record or backup. Browser sessions have a 12-hour idle
-  timeout and a seven-day maximum; those are not Helm retention knobs.</p>
+  as required by your audit policy. Browser sessions have a 12-hour idle timeout and a
+  seven-day maximum.</p>
 <p>For the wider operational controls, see <a href="../production-readiness/">production readiness</a>
 and the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/disaster-recovery.md">disaster recovery runbook</a>.</p>
 

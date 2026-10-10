@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2191,7 +2191,7 @@
 
 
 <h1 id="customer-handoff-example">Customer handoff example<a class="headerlink" href="#customer-handoff-example" title="Permanent link">&para;</a></h1>
-<p>This example uses a fake customer organization, <code>acme-ai</code>, to show the expected handoff flow without assuming a cloud provider.</p>
+<p>This example uses a fake customer organization, <code>acme-ai</code>, to show the expected handoff flow on a provider-neutral cluster.</p>
 <h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Customer Git mirror: <code>https://github.com/acme-ai/agentworkflows.git</code></li>
@@ -2199,8 +2199,8 @@
 <li>GPU profile: <code>nvidia</code></li>
 <li>Runtime model: <code>Qwen/Qwen3-Coder-Next</code></li>
 <li>Secret integration: customer-operated External Secrets or an equivalent mechanism. The
-  checked-in <code>external-secrets.yaml</code> is an example and is not synced by the customer application
-  set.</li>
+  checked-in <code>external-secrets.yaml</code> is an example that you adapt and apply separately from the
+  customer application set.</li>
 </ul>
 <h2 id="configure-the-overlay">Configure the overlay<a class="headerlink" href="#configure-the-overlay" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>customer-overlay<span class="w"> </span><span class="se">\</span>
@@ -2223,8 +2223,8 @@ then review and commit the diff before syncing.</p>
 <li>Confirm the active kubeconfig points at the intended cluster and that Argo CD, Kyverno, and the
   required CRDs are already installed.</li>
 <li>Confirm GPU nodes expose <code>nvidia.com/gpu</code> and have <code>platform.ai/node-pool=gpu</code>.</li>
-<li>Confirm API-key hashes are sourced from the customer secret backend; do not apply the example
-  secret manifest unchanged.</li>
+<li>Confirm API-key hashes are sourced from the customer secret backend; adapt the example secret
+  manifest to that backend before applying it.</li>
 <li>Verify downloaded weights against the pinned inventory or registry digest, and record customer model-store changes in provenance.</li>
 <li>Replace sample RAG knowledge with approved customer documents and matching Qdrant dimensions.</li>
 <li>Review agent workspace egress against <code>platform/network/egress-catalog.yaml</code>.</li>

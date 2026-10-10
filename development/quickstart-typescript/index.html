@@ -949,7 +949,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2323,9 +2323,8 @@
 and tool call goes through a governed activity; credentials stay on the worker.
 The gateway applies team policy, per-run budgets, and correlated receipts.</p>
 <p>You need Git, <strong>Node.js 24/npm</strong>, and Docker Compose. Use native Windows Git and
-Node.js in PowerShell, with Docker in Ubuntu WSL. No Python installation, GPU,
-provider credentials, or cloud account is needed. The trial uses canned responses
-and synthetic prices from the existing Compose fakes.</p>
+Node.js in PowerShell, with Docker in Ubuntu WSL; that is everything this trial uses.
+The trial uses canned responses and synthetic prices from the Compose fakes.</p>
 <h2 id="1-install-and-start-the-fake-gateway">1. Install and start the fake gateway<a class="headerlink" href="#1-install-and-start-the-fake-gateway" title="Permanent link">&para;</a></h2>
 <p>Use a v0.9.0 checkout, then install and build the SDK and its examples. Skip clone/cd if
 you already have the repository checkout. Compose pulls the published v0.9.0 gateway image:</p>
@@ -2363,11 +2362,10 @@ Choose ports using the existing <code>AGENTWORKFLOWS_GATEWAY_PORT</code> and
 <p>Keep this terminal open. The worker caps concurrent activities and workflow tasks
 at two. It registers <code>CodeReviewWorkflow</code>, <code>SupportTriageWorkflow</code>, and the schedule
 delivery helper <code>AgentWorkflowsTrigger</code> on <code>demo-workflows</code> in namespace <code>default</code>.</p>
-<p>The gateway chooses the team's queue. Do not run the Python worker alongside this
-worker on that queue: workers polling the same queue must register the same workflow
-types. Start new runs for this trial; Python workflow histories are not a migration
-path to TypeScript. The two examples do not register the Python daily-report or
-webhook templates; add those workflow implementations before enabling their triggers.</p>
+<p>The gateway chooses the team's queue. Run this worker on its own on that queue:
+workers polling the same queue register the same workflow types. Start new runs for
+this trial. To enable the Python daily-report or webhook triggers here, add those
+workflow implementations to this worker first.</p>
 <h2 id="2-start-inspect-and-approve-a-review">2. Start, inspect, and approve a review<a class="headerlink" href="#2-start-inspect-and-approve-a-review" title="Permanent link">&para;</a></h2>
 <p>Open another terminal in <code>sdk/typescript</code> and start <code>node</code>. These JavaScript REPL
 commands work in both shells. Use the gateway port selected above if it differs:</p>
@@ -2385,31 +2383,31 @@ commands work in both shells. Use the gateway port selected above if it differs:
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">run</span><span class="p">(</span><span class="nx">review</span><span class="p">.</span><span class="nx">run_id</span><span class="p">));</span>
 </code></pre></div>
 <p>The completed result contains <code>approved</code>, <code>review</code>, and <code>reviewer</code>. To reject a
-new review, use <code>approveRun(runId, { approved: false })</code>. Neither path posts a PR
-comment, executes the diff, or merges code. The server supplies the authenticated
-reviewer; clients cannot set it.
+new review, use <code>approveRun(runId, { approved: false })</code>. Both decisions finish the
+run with the review as its result. The server supplies the authenticated reviewer.
 Keep direct Temporal access restricted to workers and operators; human reviewers
 use the gateway API or console.</p>
 <p>Inspect the same run in the <a href="http://127.0.0.1:8080/console/">console</a> using the demo
 keys above. The API result's <code>budget</code> shows usage and effective limits; <code>timeline</code>
 links each step to its <code>receipt_id</code> and <code>chain_id</code>. Model and tool receipts include
 <code>workflow_run_id</code> and <code>workflow_step_id</code>. Temporal activity IDs remain stable on
-retry, including the gateway's tool idempotency key. Tools must honor that key;
-activity retries alone do not guarantee exactly-once external side effects.</p>
+retry, including the gateway's tool idempotency key. Have tools honor that key so
+each external side effect applies once across retries.</p>
 <h2 id="3-run-support-triage">3. Run support triage<a class="headerlink" href="#3-run-support-triage" title="Permanent link">&para;</a></h2>
 <p>In the same Node REPL:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">triage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">startRun</span><span class="p">(</span><span class="s1">'SupportTriageWorkflow'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ticket</span><span class="o">:</span><span class="w"> </span><span class="s1">'I cannot sign in after resetting my password.'</span><span class="w"> </span><span class="p">});</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">run</span><span class="p">(</span><span class="nx">triage</span><span class="p">.</span><span class="nx">run_id</span><span class="p">));</span>
 </code></pre></div>
 <p>Repeat the inspection until <code>status</code> is <code>completed</code>. <code>result</code> is a suggested triage
-and reply, with one model-call receipt. Nothing is sent to the customer. Source for
+and reply, with one model-call receipt. The reply stays in the run result for your
+team to send. Source for
 both examples is in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/sdk/typescript/src/examples/workflows.ts"><code>sdk/typescript/src/examples/workflows.ts</code></a>.
 Change the prompt and rebuild with <code>npm run build</code> before restarting the worker.</p>
 <h2 id="write-a-workflow">Write a workflow<a class="headerlink" href="#write-a-workflow" title="Permanent link">&para;</a></h2>
 <p>Install the built SDK in your own Node project from your checkout. Replace the
-path below with your checkout path (this is a local install, not an npm registry package;
-the release also attaches <code>agentworkflows-sdk-0.9.0.tgz</code>):</p>
+path below with your checkout path (a local install; the release also attaches
+<code>agentworkflows-sdk-0.9.0.tgz</code>):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>npm<span class="w"> </span>install<span class="w"> </span>/path/to/agentworkflows/sdk/typescript
 </code></pre></div>
 <p>Import workflow code from the dedicated sandbox-safe subpath:</p>
@@ -2470,17 +2468,17 @@ argument with Temporal's <code>retry</code>, <code>startToCloseTimeout</code>, <
 without retries; transient gateway failures retry, honoring <code>Retry-After</code>.
 Approval defaults to one reviewer and seven days; a run snapshots the team's quorum
 and expiry policy when it starts.
-Worker credentials and HTTP clients must never be imported into a workflow module.</p>
+Keep worker credentials and HTTP clients out of workflow modules.</p>
 <p>The workflow client methods are <code>startRun</code>, <code>runs</code>, <code>run</code>, <code>approveRun</code>, <code>cancelRun</code>,
 <code>retryRun</code>, <code>triggers</code>, and <code>pauseTrigger</code>. Use <code>{ paused: false }</code> to resume a
 trigger and <code>{ project, cursor }</code> to page through runs. JSON response fields retain
 the API's snake_case names. This SDK covers governed model/tool workflows and the
-workflow and team administration APIs; Python's framework adapters and container runner remain Python APIs.</p>
+workflow and team administration APIs; framework adapters and the container runner are in the Python SDK.</p>
 <p><code>GatewayError</code> exposes <code>statusCode</code>, <code>reason</code>, <code>requestId</code>, and <code>detail</code>.
 <code>GatewayTransportError</code> gives a redacted connection failure.
 <code>GatewayRetryAfterError.retryAfter</code> is a delay in seconds above the client's retry
 cap (30 seconds by default). Read requests and idempotent starts retry twice;
-approval, cancel, retry-run, trigger, key and settings mutations are not automatically repeated.
+approval, cancel, retry-run, trigger, key and settings mutations run once per call.
 Keep a <code>requestId</code> and reuse it with identical input after an ambiguous start.
 Inside workflows, gateway failures arrive as Temporal <code>ActivityFailure</code> with an
 <code>ApplicationFailure</code> cause whose <code>type</code> is the gateway reason. See the Python
@@ -2510,7 +2508,7 @@ a credential without a project restriction.</p>
 </tr>
 <tr>
 <td><code>revokeKey(keyId)</code></td>
-<td>Revoked <code>ManagedKey</code>; the current key cannot revoke itself</td>
+<td>Revoked <code>ManagedKey</code>; use a different key to revoke the current one</td>
 </tr>
 <tr>
 <td><code>teamSettings()</code></td>
@@ -2546,8 +2544,8 @@ with a timezone. Response timestamps are Unix seconds.</p>
 <p>Read and review settings before writing. Pass the returned integer revision (or
 a quoted ETag string) to either mutation; the SDK sends it as <code>If-Match</code>. A stale
 write throws <code>GatewayError</code> with <code>statusCode: 409</code> and
-<code>reason: 'team_settings_conflict'</code>. Reload, review and reapply; the SDK does not
-refresh the revision or retry the change. A 422 rejects the whole patch and
+<code>reason: 'team_settings_conflict'</code>. Reload, review and reapply the change with the
+new revision. A 422 rejects the whole patch and
 retains <code>detail.fields</code> entries containing <code>field</code> and <code>message</code>. See
 <a href="../team-settings/">team settings</a> for field names and limits.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
@@ -2575,9 +2573,9 @@ retains <code>detail.fields</code> entries containing <code>field</code> and <co
 when omitted and preserves all filters across pages. Verification accepts only
 time bounds and includes events hidden by other filters. Check <code>enabled</code> on list
 and verification results; a disabled view has <code>ok: null</code>, and export throws an
-<code>Error</code> with the gateway's message. Gateway read failures propagate and can leave
-partial output. Retention continues during paging; these team exports are not
-complete process logs for the operator verifier. See <a href="../audit-log/">audit log</a>
+<code>Error</code> with the gateway's message. Gateway read failures propagate to the caller.
+Retention continues during paging; the operator verifier reads the complete process
+logs. See <a href="../audit-log/">audit log</a>
 for range boundaries and what verification proves.</p>
 <h2 id="run-history-and-export">Run history and export<a class="headerlink" href="#run-history-and-export" title="Permanent link">&para;</a></h2>
 <p>Use the gateway from the <a href="../quickstart/#1-install-and-start">Python quickstart</a>
@@ -2603,22 +2601,21 @@ still retained by policy. It follows every cursor page. The package exports
 <a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="p">}</span>
 </code></pre></div>
 <p>As in the audit example, import <code>GatewayClient</code> and <code>open</code> above. Gateway and
-transport errors propagate and can leave partial output. Retention and status
-changes continue during export; this is not a transactional snapshot or backup.
-Expired runs/content are not recovered, and the stored start input is omitted.
-Downloaded files need their own retention policy. See <a href="../sdk-reference/#cli">CLI and SDK paging</a>.</p>
+transport errors propagate to the caller. Retention and status changes continue
+during export, so the file reflects the runs retained at read time; the stored start
+input stays out of the export. Give downloaded files their own retention policy. See <a href="../sdk-reference/#cli">CLI and SDK paging</a>.</p>
 <h2 id="company-group-access">Company group access<a class="headerlink" href="#company-group-access" title="Permanent link">&para;</a></h2>
 <p>With an unrestricted team-admin credential,
 <code>await client.teamSSO()</code> inspects the same sign-in policy shown in Members &amp; keys.
 See the <a href="../sdk-reference/#company-group-access">typed contract and example</a>.
 Configure your existing identity provider using the
 <a href="../workflows/#sso-group-to-role-mapping">group mapping guide</a>; the local fixture
-workflow does not require SSO.</p>
+workflow signs in with API keys.</p>
 <h2 id="trigger-history-and-usage-csv">Trigger history and usage CSV<a class="headerlink" href="#trigger-history-and-usage-csv" title="Permanent link">&para;</a></h2>
 <p>Run history is available
 from each console trigger; <code>runs({ workflow, trigger, project, cursor })</code> and
 <code>exportRuns({ workflow, trigger })</code> use the same project-scoped filter. A trigger name
-requires a workflow. Manual runs have no trigger provenance; existing
+requires a workflow. Trigger provenance covers scheduled and webhook launches, and
 run retention applies. Manual retries are separate runs.</p>
 <p><code>await gateway.exportUsage()</code> returns UTF-8 CSV for the current UTC month. Write it
 with <code>writeFile('usage.csv', await gateway.exportUsage(), 'utf8')</code> from <code>node:fs/promises</code>,
@@ -2626,15 +2623,14 @@ or use <strong>Costs → Export CSV</strong>. The total and provider/workflow ro
 reservations. See the <a href="../sdk-reference/#trigger-history-and-usage-csv">column and scope reference</a>.</p>
 <h2 id="verify-and-stop">Verify and stop<a class="headerlink" href="#verify-and-stop" title="Permanent link">&para;</a></h2>
 <p>From <code>sdk/typescript</code>, run <code>npm run build</code>, <code>npm run lint</code>, and <code>npm test</code>. Vitest
-uses at most two workers. The equivalent repository target is <code>make test-typescript</code>.
-It stays local because installing the Temporal toolchain adds minutes to the short
-existing CI job.</p>
+uses at most two workers. The equivalent repository target is <code>make test-typescript</code>,
+which runs locally to keep the CI job short.</p>
 <p>For the integration check, stop the example worker with Ctrl+C, then run <code>npm run
 smoke</code> in that terminal. This starts and stops its own workers against the fake
 Compose stack and verifies both templates, restart/replay, approval/rejection,
 tool receipts, token/cost denials, roles, cancellation, and retry. It uses only the
 public demo keys. The existing full-stack gate remains <code>make compose-smoke</code> with
-the Python worker running; do not run the two smoke suites simultaneously.</p>
+the Python worker running; run the two smoke suites one at a time.</p>
 <p>Exit the REPL with <code>.exit</code>. Stop any remaining example worker with Ctrl+C, then
 remove this disposable trial's containers and volumes from the repository root:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Bash (Linux/macOS)</label><label for="__tabbed_2_2">PowerShell (Docker in WSL)</label></div>

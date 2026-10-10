@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2264,7 +2264,7 @@ with the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runboo
 </tr>
 </tbody>
 </table>
-<p>Unlike the <a href="../regulated-offline-tenant-example/">regulated offline profile</a>, this one renders a
+<p>Compared with the <a href="../regulated-offline-tenant-example/">regulated offline profile</a>, this one renders a
 NetworkPolicy that permits the two named external CIDRs on port 443 in addition to DNS and the
 in-cluster gateway and RAG service.</p>
 <h2 id="prerequisite-gpu-runtime">Prerequisite: GPU Runtime<a class="headerlink" href="#prerequisite-gpu-runtime" title="Permanent link">&para;</a></h2>
@@ -2293,7 +2293,7 @@ GPU requests.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>.out/tenants/
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span>tenant-smoke
 </code></pre></div>
-<p>Verify egress is allowlisted, not open:</p>
+<p>Verify egress follows the allowlist:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Approved mirror reachable (replace with a real host in the approved CIDR):</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>ai-gpu-coding-agents<span class="w"> </span>run<span class="w"> </span>ok<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--image<span class="o">=</span>curlimages/curl<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>curl<span class="w"> </span>-m<span class="w"> </span><span class="m">5</span><span class="w"> </span>-sS<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s1">'%{http_code}\n'</span><span class="w"> </span>https://&lt;host-in-203.0.113.0/24&gt;
@@ -2308,7 +2308,7 @@ GPU requests.</p>
   reviewed mirror ranges before applying; keep the <code>catalogRef</code>/<code>description</code> so each allow is
   auditable.</li>
 <li>Tune <code>quotas</code>, <code>limitRange</code>, and <code>agentWorkspace.pvcSize</code> to the GPU footprint.</li>
-<li>Set <code>allowJobManagement: false</code> if the team should not create Jobs.</li>
+<li>Set <code>allowJobManagement: false</code> to remove Job management for the team.</li>
 </ul>
 
 

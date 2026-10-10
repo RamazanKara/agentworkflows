@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2090,10 +2090,10 @@
 
 <h1 id="runtime-threat-detection-runbook">Runtime Threat Detection Runbook<a class="headerlink" href="#runtime-threat-detection-runbook" title="Permanent link">&para;</a></h1>
 <p>Admission control (<a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/policies/kyverno/policies.yaml">Kyverno</a>) and default-deny
-NetworkPolicies decide <em>what is admitted</em> and <em>where pods may connect</em>. Neither observes what a pod
-<em>does</em> after it starts. The threat model centers on indirect/RAG prompt injection and a hijacked
-coding agent, post-exploitation behavior that preventive controls cannot see. This runbook covers
-the optional detective layer that closes that gap.</p>
+NetworkPolicies decide <em>what is admitted</em> and <em>where pods may connect</em>. The optional detective layer in
+this runbook observes what a pod <em>does</em> after it starts. The threat model centers on indirect/RAG
+prompt injection and a hijacked coding agent, and runtime detection covers that post-exploitation
+behavior.</p>
 <h2 id="what-it-detects">What It Detects<a class="headerlink" href="#what-it-detects" title="Permanent link">&para;</a></h2>
 <p>Falco (or Tetragon) watches syscalls/eBPF events and raises alerts on behavior such as:</p>
 <ul>
@@ -2104,7 +2104,7 @@ the optional detective layer that closes that gap.</p>
 <li>writes to normally read-only paths.</li>
 </ul>
 <h2 id="deploy-opt-in">Deploy (Opt-In)<a class="headerlink" href="#deploy-opt-in" title="Permanent link">&para;</a></h2>
-<p>Runtime detection is <strong>not</strong> part of the default GitOps sync because it runs a privileged/eBPF
+<p>Runtime detection is <strong>opt-in</strong> because it runs a privileged/eBPF
 DaemonSet, which the platform's own <code>disallow-privileged</code> Kyverno policy blocks in AI namespaces.</p>
 <ol>
 <li>Deploy into a namespace <strong>excluded</strong> from the disallow-privileged policy. The Falco chart uses

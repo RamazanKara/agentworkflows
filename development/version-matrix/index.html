@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -1539,10 +1539,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-the-platform-does-not-pin" class="md-nav__link">
+  <a href="#operator-managed-versions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What the platform does not pin
+        Operator-managed versions
       
     </span>
   </a>
@@ -2199,10 +2199,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-the-platform-does-not-pin" class="md-nav__link">
+  <a href="#operator-managed-versions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What the platform does not pin
+        Operator-managed versions
       
     </span>
   </a>
@@ -2235,10 +2235,9 @@
 
 
 <h1 id="version-and-compatibility-matrix">Version and compatibility matrix<a class="headerlink" href="#version-and-compatibility-matrix" title="Permanent link">&para;</a></h1>
-<p>This page records the versions AgentWorkflows is <strong>pinned to</strong> for release <code>v0.9.0</code>. It is a compatibility reference,
-not a support SLA: the tables list what the platform ships
-and what CI exercises, so you can reproduce a known-good state and reason about drift. Newer or
-older versions may work but are outside what the release was validated on.</p>
+<p>This page records the versions AgentWorkflows is <strong>pinned to</strong> for release <code>v0.9.0</code>. It is a compatibility reference:
+the tables list what the platform ships and what CI exercises, so you can reproduce a known-good
+state and reason about drift.</p>
 <p>Every version below is extracted from this checkout: chart <code>Chart.yaml</code> /
 <code>values.yaml</code>, the Argo CD <code>Application</code> manifests, the CI workflow, and the validation toolchain
 descriptor. Where the platform deliberately delegates a version to the operator (the customer's
@@ -2270,9 +2269,8 @@ Kubernetes distribution, ingress, storage, secrets, and GPU stack), that is call
 </tr>
 </tbody>
 </table>
-<p>Maturity is a reference implementation and customer lab; a production handoff still requires current
-strict evidence, customer identity/secrets integration, capacity sizing, and backup validation. See
-<a href="../production-readiness/">Production readiness</a>.</p>
+<p>A production handoff includes current strict evidence, customer identity/secrets integration,
+capacity sizing, and backup validation. See <a href="../production-readiness/">Production readiness</a>.</p>
 <p>Quickstarts and default image tags use v0.9.0. The release packager stamps the tagged
 version and image digests into the published charts.</p>
 <h2 id="first-party-components">First-party components<a class="headerlink" href="#first-party-components" title="Permanent link">&para;</a></h2>
@@ -2336,9 +2334,9 @@ and an immutable manifest-list digest in <code>values.yaml</code>.</p>
 <tr>
 <td>Agent workspace</td>
 <td><code>0.9.0</code></td>
-<td>(namespace/RBAC template, no image)</td>
+<td>(namespace/RBAC template)</td>
 <td>n/a</td>
-<td>Tenant namespace scaffold; no workload image of its own.</td>
+<td>Tenant namespace scaffold.</td>
 </tr>
 <tr>
 <td>Platform (umbrella)</td>
@@ -2353,13 +2351,11 @@ and an immutable manifest-list digest in <code>values.yaml</code>.</p>
 (<code>src/inference-gateway/Dockerfile</code>, <code>src/rag-service/Dockerfile</code>), digest-pinned in the Dockerfiles.
 The current base resolves to Python 3.14.8 on Alpine 3.24.2. The final images remove
 pip after installing locked dependencies; build a new image when changing dependencies.</p>
-<p>Model revisions and evaluation status are documented in <a href="../model-selection/">Model selection</a>.
-The new GPU candidates have not been validated against the pinned serving runtimes;
-their upstream context sizes are not a runtime compatibility claim.</p>
+<p>Model revisions and evaluation status are documented in <a href="../model-selection/">Model selection</a>.</p>
 <h2 id="local-profile-add-ons">Local-profile add-ons<a class="headerlink" href="#local-profile-add-ons" title="Permanent link">&para;</a></h2>
-<p>These third-party charts are referenced by the local Argo CD application set. The customer
-application list does not install them; customer clusters must provide compatible operators and
-observability services before syncing resources that depend on them.</p>
+<p>These third-party charts are referenced by the local Argo CD application set. Customer clusters
+provide their own compatible operators and observability services before syncing resources that
+depend on them.</p>
 <table>
 <thead>
 <tr>
@@ -2439,8 +2435,8 @@ observability services before syncing resources that depend on them.</p>
 <p>Notes:</p>
 <ul>
 <li>Kyverno, KEDA, and External Secrets are grouped into the local multi-source
-  <code>platform-operators</code> Application. The customer overlay assumes the required operators already
-  exist and does not sync <code>external-secrets.yaml</code> automatically.</li>
+  <code>platform-operators</code> Application. The customer overlay uses the operators already present in
+  the cluster; apply <code>external-secrets.yaml</code> there as a separate step.</li>
 <li>OpenCost is pinned in the <strong>local</strong> overlay only (<code>cost-controls</code> Application); the customer overlay
   leaves cost tooling to the operator's chargeback stack.</li>
 <li>The kyverno <code>3.2.7</code> value is the <strong>Helm chart</strong> version. The Kyverno <strong>CLI</strong> used for
@@ -2449,8 +2445,7 @@ observability services before syncing resources that depend on them.</p>
   manifests rather than a pinned third-party chart.</li>
 <li>The agent-sandbox workspace runtime is installed from vendored, checksummed release manifests
   (<code>deploy/vendor/agent-sandbox/</code>) by the local/customer Argo CD applications or, on the direct
-  quickstart path, by <code>make agent-sandbox-install</code>. It is not installed from a Helm chart. See
-  ADR 0009 and the row below.</li>
+  quickstart path, by <code>make agent-sandbox-install</code>. See ADR 0009 and the row below.</li>
 </ul>
 <h2 id="runtime-kubernetes-and-toolchain">Runtime, Kubernetes, and toolchain<a class="headerlink" href="#runtime-kubernetes-and-toolchain" title="Permanent link">&para;</a></h2>
 <table>
@@ -2473,7 +2468,7 @@ observability services before syncing resources that depend on them.</p>
 <td>Kubernetes (local default)</td>
 <td><code>kindest/node:v1.35.1</code></td>
 <td><code>scripts/local-up.sh</code>, <code>deploy/clusters/local/kind-config.yaml</code></td>
-<td>Used on cgroup v2 unless overridden; not the CI E2E image.</td>
+<td>Used on cgroup v2 unless overridden.</td>
 </tr>
 <tr>
 <td>Kubernetes (CI and cgroup-v1 fallback)</td>
@@ -2503,7 +2498,7 @@ observability services before syncing resources that depend on them.</p>
 <td>Helm</td>
 <td><code>v4.2.0</code> bootstrap</td>
 <td><a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/tools/validation-toolchain.yaml">validation-toolchain.yaml</a>; <code>azure/setup-helm</code> in CI</td>
-<td>The Linux/WSL bootstrap pins v4.2.0. Helm 3 is not exercised by a dedicated CI matrix.</td>
+<td>The Linux/WSL bootstrap pins v4.2.0.</td>
 </tr>
 <tr>
 <td>Go</td>
@@ -2521,7 +2516,7 @@ observability services before syncing resources that depend on them.</p>
 <td>Calico (default local CNI)</td>
 <td><code>v3.29.1</code></td>
 <td><code>CALICO_VERSION</code> in <code>scripts/local-up.sh</code></td>
-<td>NetworkPolicy-enforcing local default; <code>LOCAL_CNI=kindnet</code> is an explicit non-enforcing compatibility escape hatch.</td>
+<td>NetworkPolicy-enforcing local default; <code>LOCAL_CNI=kindnet</code> selects kindnet for compatibility, without NetworkPolicy enforcement.</td>
 </tr>
 </tbody>
 </table>
@@ -2595,23 +2590,21 @@ OCI metadata, <code>mike==2.2.0</code> retains versioned documentation, and
 <code>pypa/gh-action-pypi-publish</code> is pinned to the peeled commit for its <code>v1.14.0</code> release, matching
 the tag used by its runtime container. The exact action pins live in
 <code>.github/workflows/ci.yml</code>, <code>.github/workflows/docs.yml</code>, and <code>requirements-docs.txt</code>.</p>
-<h2 id="what-the-platform-does-not-pin">What the platform does not pin<a class="headerlink" href="#what-the-platform-does-not-pin" title="Permanent link">&para;</a></h2>
-<p>Consistent with the platform boundary, the following are the operator's responsibility and are
-intentionally not pinned here:</p>
+<h2 id="operator-managed-versions">Operator-managed versions<a class="headerlink" href="#operator-managed-versions" title="Permanent link">&para;</a></h2>
+<p>The operator chooses and manages these versions:</p>
 <ul>
 <li>The customer's Kubernetes distribution and its exact minor version (any conformant cluster at or
   above the chart floor).</li>
 <li>Ingress controllers, <code>StorageClass</code> / CSI drivers, and load balancers.</li>
-<li>Secret backends and identity providers (the External Secrets <em>operator</em> is pinned; the backing
-  secret store is not).</li>
+<li>Secret backends and identity providers (the External Secrets <em>operator</em> is pinned; you choose the
+  backing secret store).</li>
 <li>GPU drivers, device plugins, and accelerator runtimes for NVIDIA / AMD nodes.</li>
 <li>Served model weights and revisions (governed via
   <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/model-provenance.yaml">model provenance</a>
-  and the model catalog, not this matrix).</li>
+  and the model catalog).</li>
 </ul>
-<p>See <a href="../scope-and-non-goals/">Scope and non-goals</a> for the full boundary and
-<a href="../release-verification/">Release verification</a> for how to verify the published artifacts against
-these pins.</p>
+<p>See <a href="../release-verification/">Release verification</a> for how to verify the published artifacts
+against these pins.</p>
 
 
 

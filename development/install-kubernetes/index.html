@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2458,14 +2458,14 @@ namespace. Ollama, vLLM, RAG and Qdrant are opt-in. The separate
 </ul>
 <p>This guide describes release v0.9.0 (package/chart version 0.9.0). The chart defaults to the
 published v0.9.0 gateway and worker images. See <a href="../release-verification/">command verification</a>
-for the native results and the cluster commands still requiring WSL and operator infrastructure.</p>
+for the release verification commands.</p>
 <p>Prepare the local chart's dependencies once, in this order:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
 </code></pre></div>
 <p>Published umbrella packages include those dependencies. Component Service names are
-fixed: install one release per namespace. No ingress controller, GPU, KEDA or
-Prometheus CRDs are required.</p>
+fixed: install one release per namespace. The base install runs without an ingress
+controller, GPU, KEDA or Prometheus CRDs.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <p>On a disposable kind cluster named <code>aw</code> (create it with <code>kind create cluster --name aw</code>
 if needed), install from the v0.9.0 checkout. The chart pulls the published v0.9.0 images:</p>
@@ -2490,14 +2490,14 @@ image values. Include <code>source-values.yaml</code> in the fresh/combined inst
 <a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>helm<span class="w"> </span>install<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--create-namespace<span class="w"> </span>-f<span class="w"> </span>source-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
 <p>For another cluster, make source-built images available in its approved registry and
-change the image references. Chart metadata alone does not change image references
-in an existing release.</p>
+change the image references. Set image references through values to update an
+existing release.</p>
 <p>The chart generates <code>temporal-postgres-auth</code> (<code>password</code>), <code>workflow-gateway-key</code>
-(<code>api-key</code>), and <code>agentworkflows-admin</code> (<code>api-key</code>) if they are missing. Pre-create
+(<code>api-key</code>), and <code>agentworkflows-admin</code> (<code>api-key</code>) if they are absent. Pre-create
 these Secrets to supply your own credentials. For different names, set
 <code>workflows.postgres.existingSecret</code> (and both Temporal SQL datastore <code>existingSecret</code>
 values), <code>workflows.worker.existingSecret</code>, or <code>bootstrapAdmin.existingSecret</code>.
-Gateway key records contain hashes; the worker has execution scope and cannot approve.</p>
+Gateway key records contain hashes; the worker key carries execution scope only.</p>
 <h2 id="sign-in">Sign in<a class="headerlink" href="#sign-in" title="Permanent link">&para;</a></h2>
 <p>Read the bootstrap admin key and keep it private:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>agentworkflows-admin<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.api-key}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
@@ -2505,13 +2505,13 @@ Gateway key records contain hashes; the worker has execution scope and cannot ap
 </code></pre></div>
 <p>Open <a href="http://127.0.0.1:8080/console/">http://127.0.0.1:8080/console/</a> and paste that key. The console uses the <code>default</code>
 team and project. In another terminal, <code>curl -fsS http://127.0.0.1:8080/readyz</code> checks
-Redis and Temporal. Missing provider credentials leave the console
-available; <strong>Providers &amp; budgets</strong> identifies the missing key and Secret setup.
-Inference still rejects requests until a provider key is configured.</p>
+Redis and Temporal. The console is available before provider credentials are set;
+<strong>Providers &amp; budgets</strong> shows which key to add and how to set up its Secret.
+Inference serves requests once a provider key is configured.</p>
 <h2 id="store-gateway-records-in-postgresql">Store gateway records in PostgreSQL<a class="headerlink" href="#store-gateway-records-in-postgresql" title="Permanent link">&para;</a></h2>
-<p>For optional durable gateway records, follow <a href="../postgresql-storage/">PostgreSQL gateway storage</a>.
+<p>For durable gateway records, follow <a href="../postgresql-storage/">PostgreSQL gateway storage</a>.
 It supports an external DSN Secret or a separate bundled PostgreSQL for development.
-Redis remains the default and is still used for live accounting and sessions.</p>
+Redis remains the default store and handles live accounting and sessions.</p>
 <h2 id="add-a-provider-key">Add a provider key<a class="headerlink" href="#add-a-provider-key" title="Permanent link">&para;</a></h2>
 <p>Create a Secret in the same namespace. This Bash example reads the key without echoing it:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'OpenAI API key: '</span><span class="w"> </span>OPENAI_API_KEY<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
@@ -2530,7 +2530,7 @@ keys, via Secret references. After rotating a provider key, run
 <code>anthropic</code> uses <a href="https://platform.claude.com/docs/en/about-claude/models/overview">Claude Haiku 4.5</a>. Review the
 routes, provider access and configured price estimates before paid calls. Set reviewed
 routes under <code>inference-gateway.routing.policy.models</code> and team/workflow permissions under
-<code>inference-gateway.sandboxPolicy.policy.policies</code>. There is no automatic cross-provider fallback.</p>
+<code>inference-gateway.sandboxPolicy.policy.policies</code>. Each route calls its configured provider.</p>
 <p>With the Python SDK installed as in the <a href="../quickstart/">quickstart</a>, run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_URL</span><span class="o">=</span>http://127.0.0.1:8080
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>agentworkflows-admin<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.api-key}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span><span class="s2">"</span>
@@ -2542,8 +2542,8 @@ routes under <code>inference-gateway.routing.policy.models</code> and team/workf
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>inspect<span class="w"> </span><span class="s2">"</span><span class="nv">$RUN_ID</span><span class="s2">"</span>
 </code></pre></div>
 <p>Repeat inspection until <code>status: completed</code> and <code>result.status: published</code>. Use
-<code>"model":"anthropic"</code> for that provider. The example's research source and publication
-are synthetic; no document is published externally. Model calls are real and paid.
+<code>"model":"anthropic"</code> for that provider. The example uses a synthetic research source and
+publication target, so publishing stays inside the example. Model calls are real and paid.
 Replace the tool URLs with your integrations when adapting the workflow. The default
 ceilings are 10,000 tokens / $5 per run and 200,000 tokens / $50 per team budget window.</p>
 <h2 id="tls-ingress">TLS ingress<a class="headerlink" href="#tls-ingress" title="Permanent link">&para;</a></h2>
@@ -2571,13 +2571,13 @@ in <code>aw</code> from your certificate and private key:</p>
 <a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>curl<span class="w"> </span>-fsS<span class="w"> </span>https://agents.example.com/readyz
 </code></pre></div>
 <p>Replace the host, class and controller-specific annotations. The <code>/</code> prefix serves both
-the API and <code>/console/</code>; the metrics port is not exposed. TLS ingress automatically sets
+the API and <code>/console/</code>; the metrics port stays internal. TLS ingress automatically sets
 <code>SESSION_COOKIE_SECURE=true</code>, overriding <code>inference-gateway.adminConsole.cookieSecure=false</code>.
 The default port-forward install keeps HTTP localhost sessions working. After enabling
-TLS, use the HTTPS console; HTTP port-forwarding no longer supports its Secure cookies.</p>
+TLS, sign in through the HTTPS console, which carries the Secure session cookie.</p>
 <p>For cert-manager, omit the <code>kubectl create secret tls</code> command and add
 <code>cert-manager.io/cluster-issuer: letsencrypt</code> to <code>ingress.annotations</code> in the file above.
-<code>secretName</code> is still required: cert-manager writes the issued certificate there. Supply
+Keep <code>secretName</code>: cert-manager writes the issued certificate there. Supply
 your own ClusterIssuer and verify issuance before signing in. The equivalent command is:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>tls-values.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--set-string<span class="w"> </span><span class="s1">'inference-gateway.ingress.annotations.cert-manager\.io/cluster-issuer=letsencrypt'</span><span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
@@ -2613,9 +2613,9 @@ for supported roles and provider examples. Use the TLS values above, then:</p>
 </code></pre></div>
 <p>An empty <code>auth.oidc.redirectUrl</code> derives the HTTPS callback from the enabled TLS ingress
 host, only when <code>issuer</code> is configured. An explicit <code>redirectUrl</code> takes precedence.
-Without chart-managed TLS ingress, supply the explicit HTTPS callback and Secure cookie
-setting yourself. Scopes must include <code>openid</code>; missing roles use <code>defaultRole</code> (viewer).
-The client secret is referenced from the existing Secret, not copied into Helm values.
+When TLS terminates outside the chart's ingress, set the explicit HTTPS callback and Secure
+cookie setting. Scopes must include <code>openid</code>; users without a role claim get <code>defaultRole</code>
+(viewer). The client secret stays in the existing Secret; Helm values only reference it.
 OIDC sessions and API-key sessions share the configured Redis store across gateway replicas.</p>
 <p><code>inference-gateway.auth.oidc.groupsClaim</code> and
 <code>groupRoleMappings</code> can derive roles from existing company groups. See the
@@ -2639,20 +2639,20 @@ Measure load and adjust <code>inference-gateway.resources</code>. Enable two rep
 <a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>inference-gateway<span class="w"> </span>-o<span class="w"> </span>wide
 <a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pdb<span class="w"> </span>inference-gateway<span class="w"> </span>-n<span class="w"> </span>aw
 </code></pre></div>
-<p>Use at least two schedulable nodes. Anti-affinity prefers different hostnames; it permits
-co-location when capacity is constrained, including the surge pod during a rolling update.
+<p>Use at least two schedulable nodes. Anti-affinity prefers different hostnames and
+co-locates pods when capacity is constrained, including the surge pod during a rolling update.
 Verify placement and leave capacity for that extra pod. The PDB covers voluntary
-disruptions; it does not protect against node failure or make Redis/PostgreSQL/Temporal
-highly available. Keep Redis-backed budgets and audit heads; if you enable response
+disruptions; run Redis, PostgreSQL and Temporal on highly available services for
+node-failure resilience. Keep Redis-backed budgets and audit heads; if you enable response
 caching, Responses state or Batch, select their Redis backends too (Batch also needs S3).</p>
 <h2 id="network-isolation">Network isolation<a class="headerlink" href="#network-isolation" title="Permanent link">&para;</a></h2>
 <p>Use a CNI that enforces Kubernetes NetworkPolicy. The umbrella policy selects gateway
 pods, admits HTTP from the named ingress controller namespace and the workflow worker
 (also the Batch worker when enabled), and allows egress to CoreDNS, bundled Redis,
 Temporal frontend, Research tools and enabled Ollama/vLLM pods. Bundled Redis accepts
-only gateway/Batch-worker traffic and has no outbound connections. Other stack pods
-retain their existing networking; this is not a namespace-wide isolation policy.</p>
-<p>External egress is closed until you list destination CIDRs and TCP ports. Include your
+traffic from the gateway and Batch worker only, with egress closed. The policy covers the
+gateway and bundled Redis; other stack pods keep their existing networking.</p>
+<p>External egress opens for the destination CIDRs and TCP ports you list. Include your
 providers, the OIDC discovery/token/JWKS endpoints, and external Redis if used. These are
 documentation addresses; replace them with your approved destinations before applying:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>network-values.yaml<span class="w"> </span><span class="s">&lt;&lt;'YAML'</span>
@@ -2667,19 +2667,18 @@ documentation addresses; replace them with your approved destinations before app
 <a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>network-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 <a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>networkpolicy<span class="w"> </span>-n<span class="w"> </span>aw
 </code></pre></div>
-<p>Standard NetworkPolicy cannot allow DNS names; maintain provider IP ranges or deploy
-your CNI's FQDN policy separately. There is no blanket HTTPS allow rule. Verify your CNI's
+<p>Standard NetworkPolicy matches IP ranges: maintain provider IP ranges, or deploy your
+CNI's FQDN policy separately for DNS names. List each external destination explicitly. Verify your CNI's
 Service/NAT behavior and adapt DNS rules for NodeLocal DNS. Policies are additive, so
 review other policies selecting these pods; keep the component <code>networkPolicy.enabled</code>
 values false. See <a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/">Kubernetes NetworkPolicy</a>.
 Metrics scraping, custom tools, notifications, OTLP collectors, RAG and other integrations
-need separately reviewed rules. The default <code>helm test</code> gateway probe is not an allowed
-client with this policy; test through the ingress controller as shown below.</p>
+need separately reviewed rules. With this policy enabled, run gateway probes from the
+ingress controller namespace as shown below.</p>
 <h2 id="external-redis">External Redis<a class="headerlink" href="#external-redis" title="Permanent link">&para;</a></h2>
 <p>Use a persistent Redis service supporting the gateway's Redis commands and Lua scripts;
 keep eviction disabled for durable state. Before changing an existing installation,
-back up and migrate Redis data: disabling <code>budget-redis</code> removes its chart-managed PVC.
-This setting does not copy data or turn the bundled Redis into a cluster.</p>
+back up and migrate Redis data: disabling <code>budget-redis</code> removes its chart-managed PVC.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'Redis URL (rediss://user:password@host:6379/0): '</span><span class="w"> </span>REDIS_URL<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$REDIS_URL</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>agents-redis<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span><span class="nv">url</span><span class="o">=</span>/dev/stdin
 <a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">unset</span><span class="w"> </span>REDIS_URL
@@ -2699,12 +2698,12 @@ a certificate trusted by the gateway image. It replaces all five Redis URL envir
 budgets/sessions/workflow records, audit heads, response cache, Batch and Responses state.
 The Batch processor uses the same reference. Distinct key prefixes keep stores separate
 in one logical database; preserve those prefixes and migrate all previously used databases.
-The Secret is never generated or owned by this chart. The <code>redis.existingSecret</code> setting
+You create and own this Secret. The <code>redis.existingSecret</code> setting
 also works with authenticated bundled Redis without disabling <code>budget-redis</code>.</p>
 <h2 id="external-postgresql-for-temporal">External PostgreSQL for Temporal<a class="headerlink" href="#external-postgresql-for-temporal" title="Permanent link">&para;</a></h2>
 <p>Provision <code>temporal</code> and <code>temporal_visibility</code> databases and a user that can manage their
-schemas. Back up and restore both databases before switching an existing installation;
-Helm does not migrate them. The old bundled PostgreSQL claim remains when it is disabled.</p>
+schemas. Back up both databases and restore them into the external server before switching
+an existing installation. The bundled PostgreSQL claim is retained after you disable it.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">read</span><span class="w"> </span>-rs<span class="w"> </span>-p<span class="w"> </span><span class="s1">'PostgreSQL password: '</span><span class="w"> </span>POSTGRES_PASSWORD<span class="p">;</span><span class="w"> </span><span class="nb">echo</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s'</span><span class="w"> </span><span class="s2">"</span><span class="nv">$POSTGRES_PASSWORD</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>agents-postgres<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--from-file<span class="o">=</span><span class="nv">password</span><span class="o">=</span>/dev/stdin
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nb">unset</span><span class="w"> </span>POSTGRES_PASSWORD
@@ -2740,7 +2739,7 @@ Helm does not migrate them. The old bundled PostgreSQL claim remains when it is 
 <a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>--reuse-values<span class="w"> </span>-f<span class="w"> </span>postgres-values.yaml<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
 <p>The connection and existing Secret are supplied to both Temporal datastores and the schema
-Job; no bundled PostgreSQL Service, StatefulSet or generated password Secret is rendered.
+Job; the bundled PostgreSQL Service, StatefulSet and generated password Secret are omitted.
 Use a trusted CA (mount private CAs into both Temporal server and schema-job containers
 and set each SQL <code>tls.caFile</code> when needed). If your DBA manages schemas, set <code>manageSchema</code>
 false for both stores after applying the matching Temporal migrations separately.
@@ -2750,8 +2749,8 @@ so a fresh installation can create PostgreSQL first.</p>
 <p>Back up PostgreSQL, Redis and the bootstrap Secrets together. Preserve the namespace,
 release name and credential Secret names. <code>lookup</code> reuses existing credentials on
 <code>helm upgrade</code>; Helm needs permission to read those Secrets. User-owned Secrets are
-read without being adopted. Offline <code>helm template</code> cannot look up live Secrets and
-generates new example credentials on each render; do not apply those over a running release.</p>
+read without being adopted. Offline <code>helm template</code> generates new example credentials on
+each render; use <code>helm upgrade</code> for a running release so its existing credentials are reused.</p>
 <p>Keep your overrides in a values file and review new chart defaults before upgrading:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/workflows
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>helm<span class="w"> </span>dependency<span class="w"> </span>update<span class="w"> </span>deploy/charts/agentworkflows
@@ -2764,8 +2763,7 @@ the <a href="../kubernetes-production-checklist/">Kubernetes production checklis
 identity and ingress. The umbrella disables the component NetworkPolicies whose rules
 describe the separate GitOps namespaces.</p>
 <h2 id="verify-the-optional-settings-on-kind">Verify the optional settings on kind<a class="headerlink" href="#verify-the-optional-settings-on-kind" title="Permanent link">&para;</a></h2>
-<p>These are caller-run checks; no cluster install is part of chart render validation.
-Prepare dependencies as above. Render defaults and each file from the preceding sections:</p>
+<p>Run these checks against your own kind cluster. Prepare dependencies as above. Render defaults and each file from the preceding sections:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>--strict
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>helm<span class="w"> </span>template<span class="w"> </span>aw<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>-n<span class="w"> </span>aw<span class="w"> </span>&gt;<span class="w"> </span>/tmp/aw-default.yaml
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">for</span><span class="w"> </span>file<span class="w"> </span><span class="k">in</span><span class="w"> </span>tls-values.yaml<span class="w"> </span>ha-values.yaml<span class="w"> </span>network-values.yaml<span class="w"> </span>redis-values.yaml<span class="w"> </span>postgres-values.yaml<span class="p">;</span><span class="w"> </span><span class="k">do</span>
@@ -2784,8 +2782,8 @@ Check the browser's <code>aw_session</code> cookie is Secure, sign in, refresh, 
 the mapped team and role. With HA, check two ready gateway pods and <code>ALLOWED DISRUPTIONS=1</code>;
 delete one gateway pod, wait for recovery and verify the existing session/run still works.
 Use a multi-node kind cluster to check anti-affinity placement.</p>
-<p>Network enforcement needs a NetworkPolicy-capable CNI; kind's default networking alone
-does not establish this. With the policy enabled, run these probes (the two denied probes
+<p>Network enforcement needs a NetworkPolicy-capable CNI installed in the kind cluster.
+With the policy enabled, run these probes (the two denied probes
 must time out/fail; the first must succeed):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>aw-allowed<span class="w"> </span>-n<span class="w"> </span>ingress-nginx<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--image<span class="o">=</span>busybox:1.37.0<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>wget<span class="w"> </span>-T<span class="w"> </span><span class="m">5</span><span class="w"> </span>-qO-<span class="w"> </span>http://inference-gateway.aw:8080/readyz
@@ -2798,8 +2796,9 @@ must time out/fail; the first must succeed):</p>
 exercise OIDC under the policy, and confirm an unlisted destination fails from a gateway
 pod. Test external Redis and PostgreSQL in a <strong>fresh namespace with restored/test data</strong>
 and the same Secret names, using their values files; confirm <code>/readyz</code>, sign-in, a complete
-run, and persistence after restarting gateway/Temporal pods. No bundled Redis resources
-or PostgreSQL Service/StatefulSet should exist there. Finally render and install the
+run, and persistence after restarting gateway/Temporal pods. Confirm the namespace runs
+with the external stores only, without bundled Redis resources or a PostgreSQL
+Service/StatefulSet. Finally render and install the
 combined configuration with all six <code>-f</code> files, using reachable endpoints and reviewed
 CIDRs. Create the referenced Secrets in <code>aw-production-smoke</code> first, then run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>helm<span class="w"> </span>lint<span class="w"> </span>deploy/charts/agentworkflows<span class="w"> </span>--strict<span class="w"> </span><span class="se">\</span>
@@ -2823,8 +2822,8 @@ disposable namespace, remove all remaining data and stop its port-forward:</p>
 <a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="c1"># If you created a dedicated test cluster:</span>
 <a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>kind<span class="w"> </span>delete<span class="w"> </span>cluster<span class="w"> </span>--name<span class="w"> </span>aw
 </code></pre></div>
-<p>Do not reuse an old PostgreSQL claim with a newly generated password: restore its matching
-<code>temporal-postgres-auth</code> Secret or delete the old claim before a fresh evaluation install.</p>
+<p>To reuse an old PostgreSQL claim, restore its matching <code>temporal-postgres-auth</code> Secret;
+otherwise delete the old claim before a fresh evaluation install.</p>
 <h3 id="approval-policies">Approval policies<a class="headerlink" href="#approval-policies" title="Permanent link">&para;</a></h3>
 <p>Build and roll out the current gateway before upgrading the worker image/SDK. Under the
 existing workflow policy in <code>inference-gateway.sandboxPolicy.policy.policies</code>, use

@@ -738,10 +738,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#agentworkflows-or-litellm-plus-temporal" class="md-nav__link">
+  <a href="#agentworkflows-or-your-own-gateway-plus-temporal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        AgentWorkflows or LiteLLM plus Temporal?
+        AgentWorkflows or your own gateway plus Temporal?
       
     </span>
   </a>
@@ -877,7 +877,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2111,10 +2111,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#agentworkflows-or-litellm-plus-temporal" class="md-nav__link">
+  <a href="#agentworkflows-or-your-own-gateway-plus-temporal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        AgentWorkflows or LiteLLM plus Temporal?
+        AgentWorkflows or your own gateway plus Temporal?
       
     </span>
   </a>
@@ -2172,27 +2172,27 @@
 <p>AgentWorkflows is for teams that want cloud model access governed by one gateway, with
 team budgets and receipts they can verify. Self-hosted models and Kubernetes agent
 workspaces are optional. Start with the <a href="../quickstart/">five-minute quickstart</a>.</p>
-<h2 id="agentworkflows-or-litellm-plus-temporal">AgentWorkflows or LiteLLM plus Temporal?<a class="headerlink" href="#agentworkflows-or-litellm-plus-temporal" title="Permanent link">&para;</a></h2>
+<h2 id="agentworkflows-or-your-own-gateway-plus-temporal">AgentWorkflows or your own gateway plus Temporal?<a class="headerlink" href="#agentworkflows-or-your-own-gateway-plus-temporal" title="Permanent link">&para;</a></h2>
 <p>Both can support a team workflow. AgentWorkflows <strong>uses Temporal</strong>, and its value is the
-bundled application and governance integration. A team that already operates LiteLLM and
-Temporal may gain more by keeping that stack and adding its own application.</p>
+bundled application and governance integration. A team that already operates a model
+gateway and Temporal can keep that stack and add its own application.</p>
 <table>
 <thead>
 <tr>
 <th>Decision</th>
 <th>AgentWorkflows</th>
-<th>Assemble LiteLLM + Temporal yourself</th>
+<th>Assemble a gateway + Temporal yourself</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Model gateway</td>
-<td>Five cloud-provider families and optional Ollama/vLLM; supported endpoints vary</td>
-<td>LiteLLM offers a broader provider surface, routing, spend tracking and budgets</td>
+<td>Five cloud-provider families and optional Ollama/vLLM routes behind one governed gateway</td>
+<td>Choose a gateway for the provider surface, routing, spend tracking and budgets you want</td>
 </tr>
 <tr>
 <td>Durable jobs and review</td>
-<td>Temporal with packaged Python activities and one waiting approval per run</td>
+<td>Temporal with packaged Python and TypeScript activities and durable approval gates for 1–10 reviewers</td>
 <td>Temporal provides the execution and messaging primitives; implement your review rules</td>
 </tr>
 <tr>
@@ -2212,27 +2212,25 @@ Temporal may gain more by keeping that stack and adding its own application.</p>
 </tr>
 <tr>
 <td>Getting started</td>
-<td>Five editable templates, fake tools and a Compose walkthrough</td>
+<td>Nine versioned templates, fake tools and a Compose walkthrough</td>
 <td>More assembly work, with control over every integration and user flow</td>
 </tr>
 <tr>
-<td>Operations and limits</td>
-<td>Young self-managed project; narrower APIs; production hardening remains your responsibility</td>
-<td>You maintain the integration and upgrades across components; existing expertise may make this easier</td>
+<td>Operations</td>
+<td>Self-managed gateway, workers, Temporal and storage, with Helm charts and runbooks</td>
+<td>You maintain the integration and upgrades across components; existing expertise helps</td>
 </tr>
 </tbody>
 </table>
-<p>The LiteLLM column is based on its <a href="https://docs.litellm.ai/docs/simple_proxy">gateway documentation</a>;
-Temporal's <a href="https://docs.temporal.io/develop/python/workflows/message-passing">message-passing guide</a>
-explains queries, signals and updates, including approval patterns. The integration effort
-comparison is a design judgment, not a benchmark or a claim that these components lack
-governance. Compare <a href="../feature-inventory/">implemented features</a> against your actual requirements.</p>
+<p>Temporal's <a href="https://docs.temporal.io/develop/python/workflows/message-passing">message-passing guide</a>
+explains queries, signals and updates, including approval patterns. Compare the
+<a href="../feature-inventory/">feature inventory</a> against your requirements.</p>
 <h2 id="is-090-a-fit">Is 0.9.0 a fit?<a class="headerlink" href="#is-090-a-fit" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Your need</th>
-<th>Current support</th>
+<th>How AgentWorkflows covers it</th>
 </tr>
 </thead>
 <tbody>
@@ -2256,27 +2254,23 @@ governance. Compare <a href="../feature-inventory/">implemented features</a> aga
 <td>Use private local models</td>
 <td>Optional Ollama and vLLM backends</td>
 </tr>
-<tr>
-<td>Buy a managed service with billing and support</td>
-<td>This repository does not yet provide one</td>
-</tr>
 </tbody>
 </table>
-<p>Neither path makes arbitrary external side effects exactly-once: integrations must honor
-idempotency keys and handle ambiguous failures. AgentWorkflows' trial uses synthetic tools
-and model replies; a successful run does not prove answer quality or real-provider acceptance.
-Use the <a href="../feature-inventory/">feature inventory</a> for implemented behavior and the
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">roadmap</a> for planned work.</p>
+<p>With either path, integrations honor idempotency keys and handle ambiguous failures for
+external side effects. The AgentWorkflows trial uses synthetic tools and model replies;
+connect a real provider to evaluate answer quality. Use the
+<a href="../feature-inventory/">feature inventory</a> for implemented behavior and the
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">roadmap</a> for upcoming work.</p>
 <h2 id="before-serving-a-team">Before serving a team<a class="headerlink" href="#before-serving-a-team" title="Permanent link">&para;</a></h2>
 <p>Choose approved provider models, regions, credentials, and prices. Bind each team's
 gateway key to its budget and classification policy. Decide which tools emit receipts
-and where logs and anchors are retained. Confirm actual provider access and gather
-fresh evidence; the local protocol fixtures and sample reports do not establish it.</p>
+and where logs and anchors are retained. Confirm provider access and gather fresh
+evidence for your deployment.</p>
 <p>Kubernetes deployments additionally need an owner for identity, secrets, ingress, storage,
 observability, backups, and on-call work. The <a href="../production-readiness/">production readiness matrix</a>
 and <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md">customer guide</a>
-describe those responsibilities. Bundled stateful services are evaluation footprints,
-not a promise of production availability.</p>
+describe those responsibilities. Bundled stateful services are sized for evaluation;
+connect external Redis and PostgreSQL for production.</p>
 
 
 

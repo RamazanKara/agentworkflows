@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2191,7 +2191,7 @@
 
 
 <h1 id="evidence-and-validation">Evidence and validation<a class="headerlink" href="#evidence-and-validation" title="Permanent link">&para;</a></h1>
-<p>This page separates repository checks and sample report shapes from evidence that must be regenerated
+<p>This page lists the repository checks, the sample report shapes, and the evidence you generate
 for a release or customer handoff.</p>
 <h2 id="current-checks">Current checks<a class="headerlink" href="#current-checks" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2215,10 +2215,10 @@ for a release or customer handoff.</p>
 <p>The source of truth is <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/tools/validation-toolchain.yaml">platform/tools/validation-toolchain.yaml</a>. Run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>toolchain-report<span class="w"> </span><span class="nv">TOOLCHAIN_PROFILE</span><span class="o">=</span>strict
 </code></pre></div>
-<p>The generated JSON and Markdown reports show which tools were present, missing, and used for the
-validation run.</p>
+<p>The generated JSON and Markdown reports show the status of each tool and which tools were used for
+the validation run.</p>
 <h2 id="what-sample-evidence-means">What sample evidence means<a class="headerlink" href="#what-sample-evidence-means" title="Permanent link">&para;</a></h2>
-<p>Checked-in files named <code>sample-*</code> prove report shape and gate behavior. They do not prove the current release. Strict gates must use freshly generated non-sample artifacts.</p>
+<p>Checked-in files named <code>sample-*</code> show report shape and gate behavior. Strict gates use freshly generated non-sample artifacts as evidence for the current release.</p>
 
 
 

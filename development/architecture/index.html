@@ -921,7 +921,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2257,8 +2257,8 @@
 
 
 <h1 id="architecture-and-deployment-profiles">Architecture and deployment profiles<a class="headerlink" href="#architecture-and-deployment-profiles" title="Permanent link">&para;</a></h1>
-<p>The cloud gateway is the product entry point; self-hosted deployment profiles are optional.
-The repository has a local profile, a customer-cluster profile, and tenant onboarding examples. They share the first-party services and Helm charts, but they do not install the same Argo CD application set and they do not provide the same security or availability guarantees.</p>
+<p>The cloud gateway is the product entry point. Self-hosted deployment profiles are available when you want to run the platform yourself.
+The repository has a local profile, a customer-cluster profile, and tenant onboarding examples. They share the first-party services and Helm charts. Each profile installs its own Argo CD application set and carries its own security and availability posture.</p>
 <p>Use the <a href="../feature-inventory/">feature inventory</a> for endpoint and default status, and the <a href="../threat-model/">threat model</a> for trust boundaries.</p>
 <h2 id="core-request-path">Core request path<a class="headerlink" href="#core-request-path" title="Permanent link">&para;</a></h2>
 <p><img alt="Platform architecture" src="../assets/architecture.svg" /></p>
@@ -2272,19 +2272,19 @@ The repository has a local profile, a customer-cluster profile, and tenant onboa
 <li>the optional output guardrail;</li>
 <li>metrics and a redacted audit event.</li>
 </ol>
-<p>The exact HTTP surface is generated into <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json"><code>platform/api-contracts/inference-gateway.openapi.json</code></a>. Not every route performs model inference, and optional controls only apply when enabled in the active values.</p>
-<p>RAG is a separate service. It returns retrieved passages and grounded message objects; it does not automatically intercept gateway calls. The local profile uses the checked-in lexical corpus. The customer values select Qdrant and an embedding endpoint.</p>
+<p>The exact HTTP surface is generated into <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json"><code>platform/api-contracts/inference-gateway.openapi.json</code></a>. Optional controls apply when they are enabled in the active values.</p>
+<p>RAG is a separate service. It returns retrieved passages and grounded message objects, and clients call it directly alongside the gateway. The local profile uses the checked-in lexical corpus. The customer values select Qdrant and an embedding endpoint.</p>
 <p>The bundled React console calls same-origin <code>/v1</code> APIs. API credentials are exchanged
 for opaque Redis-backed sessions; browser writes require a CSRF header and cookie.
 OIDC uses authorization code, PKCE, state and nonce checks. Team/project roles are
 checked by the gateway, including reads of runs, SSO policy, spend and exports.</p>
 <p>Run start, cancellation and review operations coordinate with Temporal. Workers poll
-Temporal task queues and send governed activities back through the gateway; Temporal
-does not replace gateway authorization. Redis retains live accounting, sessions,
+Temporal task queues and send governed activities back through the gateway, so the gateway
+remains the authorization point. Redis retains live accounting, sessions,
 coordination and captured content. Gateway history, receipts, audit, managed-key metadata
-and settings may use Redis (default) or PostgreSQL. Temporal has its own PostgreSQL
+and settings use Redis (default) or PostgreSQL. Temporal has its own PostgreSQL
 databases, separate from optional gateway storage. Worker and Temporal access are trusted
-operator surfaces; protect them from direct tenant access.</p>
+operator surfaces; keep them on the operator side of the tenant boundary.</p>
 <p>Framework agents execute inside Temporal activities and point their clients at this gateway.
 Workflow policies and MCP registrations extend the existing <code>SandboxPolicySet</code>; run accounting
 and expiring container credentials use its existing Redis backend. MCP calls share input/output
@@ -2365,7 +2365,7 @@ its enabled components together in the release namespace; Compose uses container
 </tr>
 </tbody>
 </table>
-<p>The data plane uses plaintext HTTP by default. NetworkPolicy restricts reachability but does not encrypt traffic. The customer must supply transport encryption where it is required.</p>
+<p>The data plane uses plaintext HTTP by default, and NetworkPolicy restricts reachability. Add transport encryption at the cluster or mesh layer where your environment requires it.</p>
 <h2 id="local-profile">Local profile<a class="headerlink" href="#local-profile" title="Permanent link">&para;</a></h2>
 <p><img alt="Local profile" src="../assets/architecture-local.svg" /></p>
 <p><code>make quickstart</code> creates a single-node <code>kind</code> cluster with Calico, builds the gateway and RAG images locally, installs the vendored agent-sandbox controller, and deploys the local application set.</p>
@@ -2377,40 +2377,40 @@ its enabled components together in the release namespace; Compose uses container
 <li>a bundled Redis and Qdrant footprint;</li>
 <li>local-path storage and single-node availability.</li>
 </ul>
-<p>The default Argo CD path includes platform operators, observability, policies, cost controls, and backup examples. <code>QUICKSTART_DIRECT_APPLY=1</code> is intentionally smaller: it applies the core runtime charts directly and omits those add-ons.</p>
-<p>The local path needs network access for downloads and image/model pulls. It keeps inference requests on the local cluster after those components are installed, but it is not an air-gapped installation procedure.</p>
+<p>The default Argo CD path includes platform operators, observability, policies, cost controls, and backup examples. <code>QUICKSTART_DIRECT_APPLY=1</code> is intentionally smaller: it applies the core runtime charts directly and leaves out those add-ons.</p>
+<p>The local path downloads images and models over the network during setup. Once those components are installed, inference requests stay on the local cluster. For an offline installation, follow the restricted-egress guidance in the <a href="#regulated-offline-tenant-example"><code>regulated-offline</code> tenant example</a>.</p>
 <h2 id="customer-profile">Customer profile<a class="headerlink" href="#customer-profile" title="Permanent link">&para;</a></h2>
 <p><img alt="Customer profile" src="../assets/architecture-customer.svg" /></p>
-<p>The customer profile assumes that the cluster, Argo CD, ingress, secret integration, observability, and backup systems already exist. Its Argo CD application list is deliberately smaller than the local list and does not install the local observability, cost-control, platform-operator, or Velero applications.</p>
-<p>The checked-in customer values deploy both Ollama and vLLM routes. They also add a separate vLLM embedding service and configure RAG to use Qdrant. The NVIDIA example requests four GPUs per vLLM replica and keeps at least two replicas when KEDA is enabled. Those values describe a large reference configuration, not a minimum or recommendation.</p>
-<p>Before deployment, the operator must at least:</p>
+<p>The customer profile runs on a cluster that already has Argo CD, ingress, secret integration, observability, and backup systems. Its Argo CD application list is deliberately smaller than the local list: it installs the platform services and relies on the cluster's own observability, cost-control, platform-operator, and backup tooling.</p>
+<p>The checked-in customer values deploy both Ollama and vLLM routes. They also add a separate vLLM embedding service and configure RAG to use Qdrant. The NVIDIA example requests four GPUs per vLLM replica and keeps at least two replicas when KEDA is enabled. Those values describe a large reference configuration; size your own deployment from your workload.</p>
+<p>Before deployment, the operator:</p>
 <ul>
-<li>configure a reachable, immutable Git revision;</li>
-<li>install and configure the required operators, including External Secrets if those manifests are used;</li>
-<li>replace identity and secret placeholders;</li>
-<li>select storage classes and backup targets;</li>
-<li>choose model artifacts and verify their provenance;</li>
-<li>size GPU count, context length, replicas, and persistent volumes;</li>
-<li>connect metrics, logs, alerts, ingress, and transport encryption.</li>
+<li>configures a reachable, immutable Git revision;</li>
+<li>installs and configures the required operators, including External Secrets if those manifests are used;</li>
+<li>replaces identity and secret placeholders;</li>
+<li>selects storage classes and backup targets;</li>
+<li>chooses model artifacts and verifies their provenance;</li>
+<li>sizes GPU count, context length, replicas, and persistent volumes;</li>
+<li>connects metrics, logs, alerts, ingress, and transport encryption.</li>
 </ul>
 <p>See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer/README.md">the customer deployment guide</a>.</p>
 <h2 id="regulated-offline-tenant-example"><code>regulated-offline</code> tenant example<a class="headerlink" href="#regulated-offline-tenant-example" title="Permanent link">&para;</a></h2>
 <p><img alt="Restricted-egress tenant" src="../assets/architecture-regulated-offline.svg" /></p>
-<p><code>tenants/onboarding/regulated-offline-coding-agents.yaml</code> is a tenant policy example. It renders a namespace with no external CIDR egress and allows only DNS plus the in-cluster gateway and RAG service.</p>
-<p>The profile name does not make the cluster air-gapped. It does not control image pulls, model downloads, Argo CD, the gateway namespace, the identity provider, or other cluster services. An offline deployment also needs private registries and mirrors, preloaded model weights, internal Git and identity endpoints, and cluster-wide egress controls.</p>
+<p><code>tenants/onboarding/regulated-offline-coding-agents.yaml</code> is a tenant policy example. It renders a namespace with external CIDR egress closed and allows only DNS plus the in-cluster gateway and RAG service.</p>
+<p>The tenant policy governs the tenant namespace. A fully offline deployment adds private registries and mirrors, preloaded model weights, internal Git and identity endpoints, and cluster-wide egress controls for image pulls, model downloads, Argo CD, the gateway namespace, the identity provider, and other cluster services.</p>
 <p>Use the <a href="../regulated-offline-tenant-example/">restricted-egress tenant walkthrough</a> to render and inspect the manifests.</p>
 <h2 id="stateful-and-failure-boundaries">Stateful and failure boundaries<a class="headerlink" href="#stateful-and-failure-boundaries" title="Permanent link">&para;</a></h2>
-<p>The bundled Redis, PostgreSQL, Qdrant, and Loki configurations are development/reference footprints. Redis uses AOF and a PVC for run budgets; Temporal has dedicated PostgreSQL storage. Both are single instances. Qdrant is a single instance, and the local observability stack is not an HA logging service. The <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> describes the handoff path.</p>
-<p>Workflow state lives in Temporal, not in the gateway. The SDK schedules model/tool activities
+<p>The bundled Redis, PostgreSQL, Qdrant, and Loki configurations are development/reference footprints. Redis uses AOF and a PVC for run budgets; Temporal has dedicated PostgreSQL storage. Both are single instances. Qdrant is a single instance, and the local observability stack is a single-node logging setup. For production availability, move these to managed stores using the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a>.</p>
+<p>Workflow state lives in Temporal. The SDK schedules model/tool activities
 on the existing governed gateway path; Redis holds accounting only. See <a href="../workflows/">workflows</a>
-for replay, ambiguous in-flight calls, idempotent tools, and approval trust boundaries.</p>
-<p>The gateway audit chain is per process/replica. Export records and store chain-head anchors outside the gateway if the log is intended as tamper or rollback evidence.</p>
+for replay, in-flight calls, idempotent tools, and approval trust boundaries.</p>
+<p>The gateway audit chain is per process/replica. To use the log as tamper or rollback evidence, export records and store chain-head anchors outside the gateway.</p>
 <h2 id="team-operations">Team operations<a class="headerlink" href="#team-operations" title="Permanent link">&para;</a></h2>
 <p>Teams extend sandbox identity with projects and verified roles. The gateway API controls
 Temporal executions on each team's task queue; workers retain team-bound execution keys.
 Run metadata/timeline indices and atomic cross-provider spend reservations share the existing
 budget Redis. Provider secrets stay on the gateway and are selected by verified team identity.
-Temporal history remains the execution authority. The receipt index does not replace retained
+Temporal history remains the execution authority, and the receipt index works alongside retained
 audit chains and external anchors. See <a href="../workflows/#operate-the-service">team operations</a>.</p>
 
 

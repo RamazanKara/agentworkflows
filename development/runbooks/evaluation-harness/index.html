@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2101,7 +2101,7 @@
 
 <h1 id="evaluation-harness-runbook">Evaluation Harness Runbook<a class="headerlink" href="#evaluation-harness-runbook" title="Permanent link">&para;</a></h1>
 <p>Use this runbook when running repeatable prompt checks against the local lab or a customer-owned gateway.</p>
-<p>For benchmark and eval interpretation, including what the included suites do and do not prove, see <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/benchmarks-and-evals.md">Benchmarks and evals</a>.</p>
+<p>For benchmark and eval interpretation, including what the included suites prove, see <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/benchmarks-and-evals.md">Benchmarks and evals</a>.</p>
 <h2 id="what-the-harness-checks">What The Harness Checks<a class="headerlink" href="#what-the-harness-checks" title="Permanent link">&para;</a></h2>
 <p>The evaluation harness reads an <code>EvalSuite</code>, sends each case to <code>POST /v1/chat/completions</code>, and records:</p>
 <ul>
@@ -2112,7 +2112,7 @@
 <li>forbidden-text checks for secret-leak regression cases</li>
 <li>per-case pass or fail status</li>
 </ul>
-<p>The default smoke suite is intentionally small. The coding-agent suite adds checks for change planning, secret handling, prompt-injection boundaries, and incident triage. These suites are regression tools, not benchmarks or substitutes for domain-specific human review.</p>
+<p>The default smoke suite is intentionally small. The coding-agent suite adds checks for change planning, secret handling, prompt-injection boundaries, and incident triage. These suites are regression tools; pair them with domain-specific human review.</p>
 <h2 id="validate-suite-syntax">Validate Suite Syntax<a class="headerlink" href="#validate-suite-syntax" title="Permanent link">&para;</a></h2>
 <p>Run this without a live cluster:</p>
 <div class="highlight"><pre><span></span><code>src/inference-gateway/.venv/bin/python scripts/eval-suite.py --suite platform/evals/smoke-suite.yaml --check-config

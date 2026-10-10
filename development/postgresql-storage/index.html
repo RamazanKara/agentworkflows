@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2250,12 +2250,11 @@
 <p>The gateway can use PostgreSQL for run metadata, start intents, step receipts,
 terminal results and budget summaries, audit events and chain heads, team settings,
 and managed API-key metadata. <code>STORAGE_BACKEND=redis</code> remains the default, including
-the existing YAML-only behavior when budget Redis is not enabled.</p>
-<p>Redis is still required for live budgets, sessions, memberships, captured step
+the existing YAML-only behavior when budget Redis is disabled.</p>
+<p>Redis continues to hold live budgets, sessions, memberships, captured step
 content, notifications, trigger coordination and expiring worker credentials.
-Temporal retains its own execution database. Use a separate gateway database;
-do not run these migrations against Temporal's schema. PostgreSQL 16 is the
-development chart target.</p>
+Temporal retains its own execution database. Use a separate gateway database and
+run these migrations only against it. PostgreSQL 16 is the development chart target.</p>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <p>Provision a database and a role that owns its schema. The gateway creates and
 migrates its <code>aw_*</code> tables at startup. Give each deployment its own database or
@@ -2271,8 +2270,7 @@ with the appropriate CA available in the gateway container.</p>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.postgres.existingSecret.name<span class="o">=</span>gateway-postgres<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--set<span class="w"> </span>inference-gateway.storage.postgres.existingSecret.key<span class="o">=</span>dsn<span class="w"> </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
 </code></pre></div>
-<p>Use the v0.9.0 or newer gateway image; older images (such as v0.5.1) do not read
-these settings. With the component chart, omit the <code>inference-gateway.</code> prefix.
+<p>Use the v0.9.0 or newer gateway image, which reads these settings. With the component chart, omit the <code>inference-gateway.</code> prefix.
 When using the umbrella NetworkPolicy, allow the database address and port in
 <code>networkPolicy.externalEgress</code>. With the component NetworkPolicy, use its
 <code>networkPolicy.runtimeEgress</code> namespace/port rules.</p>
@@ -2285,8 +2283,8 @@ single-replica PostgreSQL StatefulSet, Secret and 10 GiB PVC:</p>
 </code></pre></div>
 <p>The bundled server is for development; configure external PostgreSQL for managed
 backups, failover and production TLS. Its generated password is reused on upgrades.
-Keep its Secret with its PVC: deleting only the Secret generates a different
-password that the existing database will not accept.</p>
+Keep its Secret with its PVC: the existing database accepts the password stored
+in that Secret.</p>
 <h2 id="configuration-reference">Configuration reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2338,37 +2336,37 @@ timeout. See <a href="https://www.psycopg.org/psycopg3/docs/advanced/pool.html">
 <p><code>/readyz</code> reports <code>dependencies.gateway_store</code> and returns 503 when PostgreSQL is
 unavailable. <code>/healthz</code> remains a process liveness check. SQL startup failures stop
 startup. Reads, settings writes and key authentication fail closed on storage
-errors; there is no fallback to Redis that could expose stale settings or keys.</p>
+errors and stay on PostgreSQL, so settings and keys always come from the current store.</p>
 <h2 id="retention-and-audit-verification">Retention and audit verification<a class="headerlink" href="#retention-and-audit-verification" title="Permanent link">&para;</a></h2>
 <p>Each gateway runs a sweep every 60 seconds. A transaction-scoped advisory lock
 allows one sweep per storage scope at a time. Terminal run deadlines are fixed
-from Temporal's close time, and are never extended by subsequent reads. Expiring
+from Temporal's close time and stay fixed across subsequent reads. Expiring
 a run removes its metadata, snapshot and step receipts, and its start intent.
-Reads hide expired rows even before the sweep. Existing Redis content retention
-still applies. Settings and key records, including revocations, are not expired.</p>
+Reads hide expired rows even before the sweep. Redis content retention continues
+to apply. Settings and key records, including revocations, are retained without expiry.</p>
 <p>The existing workflow refresh observes terminal executions and stores their
 result and final budget summary. Once saved, these remain readable even when
-Temporal history expires. Live runs and operations still need Temporal and Redis.
-Keep Temporal retention long enough for the gateway to observe completion; if
-history disappears before observation, the gateway cannot reconstruct a result
-and starts the final run-retention window when it observes that absence.</p>
+Temporal history expires. Live runs and operations use Temporal and Redis.
+Keep Temporal retention long enough for the gateway to observe completion and save
+the result. When history expires first, the gateway starts the final run-retention
+window at that point.</p>
 <p>Audit rows expire by storage time using <code>AUDIT_VIEW_RETENTION_SECONDS</code>. PostgreSQL
-uses the time bound, without Redis's 100,000-event cap. Retained audit JSON preserves
+applies the time bound only; Redis also caps audit at 100,000 events. Retained audit JSON preserves
 the original receipt hashes, per-process sequences and per-team projection hashes.
 Events and their persisted head are written in one transaction. Startup receipts
 link to a persisted predecessor. Concurrent replicas retain separate process chains.
 The console, both SDKs, cursors and verification response shapes are unchanged.</p>
-<p>Audit appends retain the existing best-effort behavior: if storage fails, the
-operator log still receives the receipt. Advancing the in-memory projection before
-the write makes an interior lost append detectable on subsequent verification.
-Retained prefixes are reported as boundaries; missing tails and a complete rewrite
-still require independently anchored operator logs. Use <code>scripts/audit-verify.py</code>
-with complete logs, not a team-only export.</p>
+<p>Every audit receipt is written to the operator log, including when a storage write
+fails. Advancing the in-memory projection before the write makes an interior lost
+append detectable on subsequent verification. Retained prefixes are reported as
+boundaries. Verify tails and full-chain integrity against independently anchored
+operator logs with <code>scripts/audit-verify.py</code>, using complete logs rather than a
+team-only export.</p>
 <h2 id="upgrade-and-rollback">Upgrade and rollback<a class="headerlink" href="#upgrade-and-rollback" title="Permanent link">&para;</a></h2>
-<p>An ordinary upgrade leaves Redis selected and does not copy or delete records.
+<p>An ordinary upgrade keeps Redis selected and leaves its records in place.
 Selecting PostgreSQL starts a separate record store. Use the offline import below
-before cutover; backend selection alone does not import anything. Do not mix
-backend selections across replicas. There is no live import or dual-write mode.</p>
+before cutover to bring existing records across. Select the same backend on every
+replica. Import runs offline, with writers stopped.</p>
 <h3 id="import-existing-redis-records">Import existing Redis records<a class="headerlink" href="#import-existing-redis-records" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Drain active workflows. Stop <strong>all</strong> gateway replicas, workers and other writers,
@@ -2378,7 +2376,7 @@ backend selections across replicas. There is no live import or dual-write mode.<
    attempt. Set <code>SANDBOX_BUDGET_REDIS_URL</code>, <code>SANDBOX_BUDGET_KEY_PREFIX</code> and
    <code>STORAGE_POSTGRES_DSN</code> in the operator environment. Keep the existing
    <code>AUDIT_CHAIN_STORE_*</code> settings: the importer reads that persisted head too,
-   including when it resides in a separate Redis or a file. DSNs are not CLI arguments.</li>
+   including when it resides in a separate Redis or a file. DSNs are read from the environment.</li>
 <li>From <code>src/inference-gateway</code>, initialize SQL tables without starting a gateway,
    then run preflight:</li>
 </ol>
@@ -2397,8 +2395,8 @@ backend selections across replicas. There is no live import or dual-write mode.<
    Switch <strong>every</strong> gateway to <code>STORAGE_BACKEND=postgres</code>, then restart gateways and
    workers. Keep the source backup and operator audit logs for their retention period.</li>
 </ol>
-<p>The command emits JSON progress and counts, never credentials or run inputs. Dry-run
-performs no Redis or SQL record writes and does not run migrations. It checks the
+<p>The command emits JSON progress and counts; credentials and run inputs stay out of its
+output. Dry-run is read-only: it skips record writes and migrations. It checks the
 entire retained source, receipt hashes, team projection links, available consecutive
 process links, persisted heads and destination conflicts before import. The source
 is checked again before and after copying; a changing source fails the command.
@@ -2407,38 +2405,36 @@ stopped, or rehearse against a consistent backup first. Plan operator memory for
 retained dataset, which is read into memory for preflight.</p>
 <p>Each record is committed independently; a run and its ordered timeline commit in
 one transaction. If interrupted, rerun the same command. Identical existing records
-are skipped, and conflicting records stop import without overwriting them. A SQL
-advisory lock serializes importers for the same scope. Do not start destination
-gateways until verification finishes; the import lock does not stop application
-writers. Original absolute run deadlines and audit storage timestamps are preserved,
-so import does not renew retention. Managed keys retain their digests, roles, project,
+are skipped, and a conflicting record stops import and is left in place. A SQL
+advisory lock serializes importers for the same scope. Start destination gateways
+after verification finishes; the import lock serializes importers only. Original
+absolute run deadlines and audit storage timestamps are preserved, so retention
+continues from the original timestamps. Managed keys retain their digests, roles, project,
 expiry, revocation and last-used metadata. Settings keep their original revision.</p>
 <p>Audit receipt JSON and projection hashes are preserved, then read back and verified
-in PostgreSQL. Redis retains team projections, not a complete process-wide log:
-trimmed prefixes and interleaved events missing from those projections remain
-verification boundaries. Import cannot recover those events, prove missing tails,
-or recreate expired history. Independently verify complete operator logs with
-<code>scripts/audit-verify.py</code>. Redis has no terminal-result snapshots to import; these
-are populated by the gateway from Temporal after cutover while history is available.</p>
+in PostgreSQL. Redis retains team projections, so trimmed prefixes and interleaved
+events outside those projections are reported as verification boundaries. Verify
+complete operator logs independently with <code>scripts/audit-verify.py</code>. Terminal-result
+snapshots are populated by the gateway from Temporal after cutover while history is
+available.</p>
 <p>Migrations in <code>app/sql/NNN.up.sql</code> and <code>.down.sql</code> are versioned in
 <code>aw_schema_version</code>. A database-wide advisory lock serializes startup migrations;
-DDL and version updates commit together. Repeated up/down calls do nothing at the
+DDL and version updates commit together. Repeated up/down calls are idempotent at the
 target version. A newer or noncontiguous schema version is rejected.</p>
 <p>Back up the gateway database alongside Redis and Temporal with writers quiesced.
-Restore all three consistently before restarting gateways and workers. The existing
-Redis/Temporal backup scripts do not yet include the optional gateway database;
-include it explicitly with your PostgreSQL backup tooling and rehearse a restore.</p>
-<p>Do not downgrade SQL as part of a normal image rollback. Schema version 1 down is
-destructive: it drops all gateway record tables. Only in a disposable database,
-with all gateway processes stopped and the DSN in the environment, run from
-<code>src/inference-gateway</code>:</p>
+Restore all three consistently before restarting gateways and workers. Back up the
+gateway database with your PostgreSQL backup tooling alongside the Redis/Temporal
+backup scripts, and rehearse a restore.</p>
+<p>Keep the SQL schema in place during a normal image rollback. Schema version 1 down
+drops all gateway record tables, so run it in a disposable database only, with all
+gateway processes stopped and the DSN in the environment, from <code>src/inference-gateway</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">'import os; from psycopg_pool import ConnectionPool; from app.storage_migrations import migrate; p = ConnectionPool(os.environ["STORAGE_POSTGRES_DSN"], open=True); migrate(p, target=0); p.close()'</span>
 </code></pre></div>
 <p>Switching back to Redis exposes its old records, including old settings and key
-state. Quiesce traffic and restore/reconcile the chosen store before enabling it;
-never use a backend switch as an automatic outage fallback.</p>
+state. Quiesce traffic and restore/reconcile the chosen store before enabling it.
+Treat a backend switch as a planned change, separate from outage handling.</p>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
-<p>The normal gateway suite uses fakes and requires no database or testcontainers.
+<p>The normal gateway suite uses fakes and runs without a database or testcontainers.
 For real SQL, use a disposable PostgreSQL database whose role can create schemas:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TEST_POSTGRES_DSN</span><span class="o">=</span><span class="s1">'postgresql://test:test@127.0.0.1:5432/gateway_test'</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>src/inference-gateway/tests/test_postgres_integration.py
@@ -2448,10 +2444,10 @@ tests exercise up/down/up migrations, schema version rejection, concurrent setti
 updates, key revocation, scoped paging, retention cascades, audit hash round trips,
 and dry-run, interrupted import, resume, repeat import and destination conflicts.
 <code>tests/test_redis_import.py</code> covers source verification and import orchestration with
-fakes; it does not substitute for the real SQL test.
-On Windows use <code>$env:TEST_POSTGRES_DSN</code> and your Windows Python environment. The
-Linux/WSL repository gates remain <code>make lint</code>, <code>make test-gateway</code>, and
-<code>make test-scripts</code>; WSL is not required by the fake or SQL tests themselves.</p>
+fakes; run the real SQL test alongside it.
+On Windows use <code>$env:TEST_POSTGRES_DSN</code> and your Windows Python environment; the fake
+and SQL tests run there directly. The Linux/WSL repository gates remain <code>make lint</code>,
+<code>make test-gateway</code>, and <code>make test-scripts</code>.</p>
 
 
 

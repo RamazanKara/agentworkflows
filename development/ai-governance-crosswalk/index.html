@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -1924,10 +1924,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-this-is-and-is-not" class="md-nav__link">
+  <a href="#how-to-read-the-crosswalk" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What this is and is not
+        How to read the crosswalk
       
     </span>
   </a>
@@ -2205,10 +2205,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-this-is-and-is-not" class="md-nav__link">
+  <a href="#how-to-read-the-crosswalk" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What this is and is not
+        How to read the crosswalk
       
     </span>
   </a>
@@ -2362,48 +2362,43 @@
 the <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj">EU AI Act</a> (Regulation (EU) 2024/1689), and
 <a href="https://www.iso.org/standard/81230.html">ISO/IEC 42001:2023</a>. It also defines the <code>riskTier</code>
 semantics used across the model catalog and provenance records.</p>
-<p>The NIST mapping is explicitly versioned to AI RMF 1.0. It should be reviewed rather than carried
-forward unchanged when NIST publishes a later revision.</p>
+<p>The NIST mapping is versioned to AI RMF 1.0. Review it when NIST publishes a later revision.</p>
 <p>The machine-readable companion is
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/control-framework-map.yaml"><code>platform/governance/control-framework-map.yaml</code></a>.
 That file carries the per-control framework citations and the risk-tier-to-control mapping; this
 document is the human-readable explanation.</p>
-<h2 id="what-this-is-and-is-not">What this is and is not<a class="headerlink" href="#what-this-is-and-is-not" title="Permanent link">&para;</a></h2>
-<p>The platform ships mechanisms, not certifications. Each row below points at a control that exists in the
-repo and the framework obligation it contributes evidence toward. A framework citation means "this
-control helps you meet that obligation," not "this deployment is conformant." Conformity is a
-property of your deployment, your use case, and your evidence, not of the platform alone. In particular,
-whether your deployment is an EU AI Act high-risk system depends on your use case (Annex III), which
-the platform cannot determine for you. See <a href="../threat-model/">docs/threat-model.md</a> for the residual risks
-that none of these controls remove and <a href="../production-readiness/">docs/production-readiness.md</a> for the
-control matrix and validation commands.</p>
-<p>The platform also delegates several obligations to the operator. Where a framework expects something the
-platform does not implement (fundamental-rights impact assessment, conformity assessment, registration,
-post-market incident reporting to authorities), that work is yours. Those gaps are called out in the
-<a href="#operator-responsibilities">Operator responsibilities</a> section.</p>
+<h2 id="how-to-read-the-crosswalk">How to read the crosswalk<a class="headerlink" href="#how-to-read-the-crosswalk" title="Permanent link">&para;</a></h2>
+<p>Each row below points at a control that exists in the repo and the framework obligation it
+contributes evidence toward. A framework citation means "this control helps you meet that
+obligation." Conformity is established for your deployment, your use case, and your evidence. Your
+use case (Annex III) determines whether your deployment is an EU AI Act high-risk system. See
+<a href="../threat-model/">docs/threat-model.md</a> for the threats these controls address and
+<a href="../production-readiness/">docs/production-readiness.md</a> for the control matrix and validation commands.</p>
+<p>Some framework obligations are organizational and sit with the operator: fundamental-rights impact
+assessment, conformity assessment, registration, and post-market incident reporting to authorities.
+The <a href="#operator-responsibilities">Operator responsibilities</a> section lists them.</p>
 <h2 id="risk-tier-semantics">Risk-tier semantics<a class="headerlink" href="#risk-tier-semantics" title="Permanent link">&para;</a></h2>
 <p><code>riskTier</code> is an existing field on every model in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/models.yaml"><code>platform/model-catalog/models.yaml</code></a> and every artifact in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/governance/model-provenance.yaml"><code>platform/governance/model-provenance.yaml</code></a>. The enum
 <code>low | medium | high</code> is validated by <code>VALID_RISK_TIERS</code> in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py"><code>scripts/model-catalog.py</code></a> and re-checked in
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-provenance.py"><code>scripts/model-provenance.py</code></a>. Until now the field was validated but
-not defined. This section gives it meaning: what each tier represents and which controls it mandates.</p>
+<a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-provenance.py"><code>scripts/model-provenance.py</code></a>. This section defines what each tier
+represents and which controls it mandates.</p>
 <p><code>riskTier</code> is the model artifact's inherent risk: its capability, autonomy, and blast radius if it
-misbehaves. It is distinct from two neighbouring concepts:</p>
+misbehaves. It sits alongside two neighbouring concepts:</p>
 <ul>
 <li><code>dataClassification</code> (<code>public | internal | confidential | restricted</code>) is the sensitivity of the
-  data the model is pointed at, not the model's own risk. A low-tier model can still handle
-  confidential data; the two fields are set independently.</li>
-<li>An EU AI Act "high-risk system" is a property of the deployment use case, not the model artifact.
-  A <code>riskTier: high</code> model is the one most likely to make a deployment high-risk, but the operator
-  makes that determination.</li>
+  data the model is pointed at. A low-tier model can handle confidential data; the two fields are
+  set independently.</li>
+<li>An EU AI Act "high-risk system" is a property of the deployment use case. A <code>riskTier: high</code>
+  model is the one most likely to make a deployment high-risk, and the operator makes that
+  determination.</li>
 </ul>
 <p>Higher tiers inherit every control of the tiers below them.</p>
 <h3 id="low">low<a class="headerlink" href="#low" title="Permanent link">&para;</a></h3>
 <p>Small, bounded, non-autonomous models with low blast radius: laptop smoke models, single-purpose
-embedding models, CPU demo models. A failure degrades a demo or a retrieval result, not a customer
-decision or an autonomous action. The shipped catalog rates <code>qwen2.5:0.5b</code>, <code>qwen3.5:0.8b</code>, and
+embedding models, CPU demo models. A failure affects a demo or a retrieval result. The shipped catalog rates <code>qwen2.5:0.5b</code>, <code>qwen3.5:0.8b</code>, and
 <code>BAAI/bge-small-en-v1.5</code> as low.</p>
 <p>Mandated controls: governed provenance (<code>C-PROV</code>), promotion request with separation of duties
 (<code>C-PROMO</code>), gateway approved-only allowlist (<code>C-ALLOW</code>), admission limits and sandbox budgets
@@ -2423,16 +2418,15 @@ pinned inventory or registry digest before production, and the coding-agent eval
 <code>forbiddenAny</code> secret-leak checks.</p>
 <h3 id="high">high<a class="headerlink" href="#high" title="Permanent link">&para;</a></h3>
 <p>Models the operator designates as decision-supporting, customer-facing, or otherwise consequential,
-where an error, bias, or injection can affect a person or a regulated decision. No model in the
-shipped catalog is rated high; this tier is reserved for the operator to apply when a deployment's use
-case warrants it. It is the tier most likely to make the deployment EU AI Act high-risk.</p>
+where an error, bias, or injection can affect a person or a regulated decision. The operator applies
+this tier when a deployment's use case warrants it; the shipped catalog rates its models low or medium. It is the tier most likely to make the deployment EU AI Act high-risk.</p>
 <p>Mandated controls: everything in medium, plus explicit SLO and burn-rate alert coverage (<code>C-SLO</code>),
 documented retention and data-classification review (<code>C-RETAIN</code>), and reviewed RBAC with a named
 human-oversight owner (<code>C-RBAC</code>). The hardened agent-sandbox workspace runtime (<code>C-ISOLATE</code>) is
 the standard at every tier (ADR 0010). High-tier promotion expects:</p>
 <ul>
-<li>Two named approvers on the promotion request. Separation of duties (requester is not an approver)
-  is already enforced by <a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py"><code>scripts/model-catalog.py</code></a>; high tier adds a
+<li>Two named approvers on the promotion request. Separation of duties (requester and approver are
+  different people) is enforced by <a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/model-catalog.py"><code>scripts/model-catalog.py</code></a>; high tier adds a
   documented human-oversight owner.</li>
 <li><code>dataClassification</code> reviewed and recorded; <code>restricted</code> data requires explicit sign-off in the
   customer handoff.</li>
@@ -2576,8 +2570,8 @@ obligations it contributes evidence toward. Control IDs match
 <li><strong>Measure.</strong> Evaluation and monitoring: eval evidence on promotion (<code>C-EVAL</code>), audit logging
   (<code>C-AUDIT</code>), admission/budget measurement (<code>C-ADMIT</code>), and SLOs (<code>C-SLO</code>).</li>
 <li><strong>Manage.</strong> Containment and response: approved-only serving (<code>C-ALLOW</code>), egress governance
-  (<code>C-EGRESS</code>), prompt secret detection (<code>C-SECRET</code>), budgets (<code>C-ADMIT</code>), kernel-isolated agent
-  hardened agent workspaces (<code>C-ISOLATE</code>), and signed-image admission (<code>C-SUPPLY</code>).</li>
+  (<code>C-EGRESS</code>), prompt secret detection (<code>C-SECRET</code>), budgets (<code>C-ADMIT</code>), hardened agent
+  workspaces (<code>C-ISOLATE</code>), and signed-image admission (<code>C-SUPPLY</code>).</li>
 </ul>
 <h2 id="eu-ai-act-technical-obligation-coverage">EU AI Act technical-obligation coverage<a class="headerlink" href="#eu-ai-act-technical-obligation-coverage" title="Permanent link">&para;</a></h2>
 <p>For deployments the operator determines are high-risk, the platform contributes mechanisms toward the
@@ -2599,10 +2593,10 @@ Chapter III, Section 2 technical obligations:</p>
   budgets (<code>C-ADMIT</code>), SLOs (<code>C-SLO</code>), egress containment (<code>C-EGRESS</code>), isolation of code-executing
   agent workspaces (<code>C-ISOLATE</code>), and signed-image admission (<code>C-SUPPLY</code>).</li>
 <li><strong>Article 72 (post-market monitoring).</strong> SLO burn-rate alerting and the audit/metrics surface
-  (<code>C-SLO</code>, <code>C-AUDIT</code>) feed operational monitoring; reporting to authorities remains the operator's.</li>
+  (<code>C-SLO</code>, <code>C-AUDIT</code>) feed operational monitoring; the operator handles reporting to authorities.</li>
 </ul>
 <h2 id="isoiec-42001-clause-coverage">ISO/IEC 42001 clause coverage<a class="headerlink" href="#isoiec-42001-clause-coverage" title="Permanent link">&para;</a></h2>
-<p>The platform supports an AI management system rather than being one. It maps onto the standard at the
+<p>The platform supports an AI management system. It maps onto the standard at the
 operational-control and lifecycle clauses:</p>
 <ul>
 <li><strong>Clause 5.3 / 6.1 (roles, risk treatment).</strong> Named owners and quota plans (<code>C-RBAC</code>), promotion
@@ -2616,8 +2610,7 @@ operational-control and lifecycle clauses:</p>
 <li><strong>Clause 10.1 (continual improvement).</strong> Release gates and SLO burn-rate review (<code>C-SLO</code>).</li>
 </ul>
 <h2 id="operator-responsibilities">Operator responsibilities<a class="headerlink" href="#operator-responsibilities" title="Permanent link">&para;</a></h2>
-<p>The platform does not implement, and cannot substitute for, the following. These are the operator's
-obligations under one or more of the frameworks:</p>
+<p>The operator owns the following obligations under one or more of the frameworks:</p>
 <ul>
 <li>Determining whether a deployment is an EU AI Act high-risk system (Annex III) or a prohibited
   practice (Article 5).</li>
@@ -2631,7 +2624,7 @@ obligations under one or more of the frameworks:</p>
 <li>Setting <code>riskTier</code> and <code>dataClassification</code> to reflect the actual use case, and applying the
   high-tier requirements above when a deployment warrants them.</li>
 <li>Organizational AI policy, training, supplier agreements, and the management-review cadence that an
-  ISO/IEC 42001 AIMS requires beyond the technical controls.</li>
+  ISO/IEC 42001 AIMS requires alongside the technical controls.</li>
 </ul>
 <h2 id="maintaining-the-crosswalk">Maintaining the crosswalk<a class="headerlink" href="#maintaining-the-crosswalk" title="Permanent link">&para;</a></h2>
 <p>When you add or change a control, update both this document and

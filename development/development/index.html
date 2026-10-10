@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2265,11 +2265,11 @@ belongs. To deploy the platform, follow the <a href="../quickstart/">local quick
 Make, and Python 3.12 or newer with <code>venv</code> support. CI and runtime images use Python
 3.14; use that version when reproducing a CI-only failure. The separately distributed
 Python SDK supports Python 3.11 and newer.</p>
-<p>Service tests use fake runtimes and temporary data. They do not need Docker,
-Kubernetes, a GPU, or downloaded model weights. Initial environment setup installs
+<p>Service tests use fake runtimes and temporary data, so they run on a plain workstation
+with Python alone. Initial environment setup installs
 hash-pinned packages and needs access to the package index, or a populated local
 package cache.</p>
-<p>The web console uses Node.js 24/npm, React, TypeScript, and Vite without a component library.
+<p>The web console uses Node.js 24/npm, React, TypeScript, and Vite with its own components.
 Its source is <code>src/inference-gateway/console</code>; <code>make console-build</code> installs the lockfile
 and emits ignored static assets into the gateway's <code>app/console/</code>. Docker builds the same
 assets in a Node build stage; the runtime remains Python-only. Gateway tests build these
@@ -2279,7 +2279,7 @@ a gateway on port 8080; Vite proxies <code>/v1</code> to it.</p>
 with at most two workers. <code>make test</code> and <code>make validate</code> include them. On Linux, install
 browser libraries once with <code>cd src/inference-gateway/console &amp;&amp; npm ci &amp;&amp; npx playwright install --with-deps chromium</code>.
 <code>make compose-smoke</code> additionally tests the real gateway, Temporal worker, and local provider
-fakes from the browser. No cloud credentials are needed. Keep the API contract snapshot
+fakes from the browser, entirely on local fakes. Keep the API contract snapshot
 current with <code>make api-contract-update</code> when changing filters or other endpoint parameters.</p>
 <h2 id="first-development-check">First development check<a class="headerlink" href="#first-development-check" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span><span class="nb">test</span>
@@ -2290,7 +2290,7 @@ RAG tests. The service test scripts create their own environments under
 <code>src/inference-gateway/.venv</code> and <code>src/rag-service/.venv</code>.</p>
 <p><code>make quality</code> installs Ruff and mypy into <code>.venv-quality</code>. It lints the repository's
 Python code, checks formatting under <code>src/</code>, and type-checks each service separately.
-You do not need to activate any of these environments.</p>
+The targets use these environments directly, so there is nothing to activate.</p>
 <p>For a documentation-only change:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>docs-install
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>repo-hygiene
@@ -2335,7 +2335,7 @@ You do not need to activate any of these environments.</p>
 <tr>
 <td>Documentation or runbooks</td>
 <td><code>make repo-hygiene</code>, <code>make docs-build</code></td>
-<td>No generated site files are committed</td>
+<td>Site output stays local (generated, uncommitted)</td>
 </tr>
 <tr>
 <td>Runtime dependencies or Dockerfiles</td>
@@ -2362,9 +2362,8 @@ build workflow.</p>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>sdk/python<span class="w"> </span>src/inference-gateway/.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>sdk/python/tests
 </code></pre></div>
-<p>The two services both expose a package named <code>app</code>. Keep their tests in separate
-Python processes; collecting both service directories in one pytest invocation can
-import the wrong package. <code>make test</code> handles this separation.</p>
+<p>The two services both expose a package named <code>app</code>. Run each service's tests in its own
+Python process so each imports its own package. <code>make test</code> handles this separation.</p>
 <p>Repository tooling tests need only Python and Git:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>test-scripts
 </code></pre></div>
@@ -2383,7 +2382,7 @@ values first, regenerate the relevant output, then review the diff:</p>
 </code></pre></div>
 <p>Run only the generators relevant to the change. Their check targets are
 <code>make api-contract</code>, <code>make config-contract</code>, <code>make chart-docs</code>, and
-<code>make dashboard-check</code>. Do not fix a failed check by hand-editing the snapshot.</p>
+<code>make dashboard-check</code>. Fix a failed check by regenerating the snapshot from its source.</p>
 <p>Keep runtime requirements separate from test requirements and regenerate hashed
 locks when changing pins. The runtime images install <code>requirements.lock</code>; service
 tests install <code>requirements-dev.lock</code>. The root tooling requirements have their
@@ -2403,8 +2402,8 @@ them into <code>docs/runbooks/</code> for a build and removes the mirror afterwa
 The MkDocs hook keeps each mirrored page's edit link pointed at its source.</p>
 <p><code>make repo-hygiene</code> checks tracked and new, unignored Markdown files, including
 service READMEs. It checks inline local links and images for file existence and
-recognizes Make target references in code. It does not validate remote URLs,
-reference-style Markdown links, or heading anchors; preview the affected pages too.</p>
+recognizes Make target references in code. Preview the affected pages to check remote URLs,
+reference-style Markdown links, and heading anchors.</p>
 <h2 id="common-development-problems">Common development problems<a class="headerlink" href="#common-development-problems" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

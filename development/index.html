@@ -532,10 +532,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#know-where-the-evidence-ends" class="md-nav__link">
+  <a href="#security-and-evidence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Know where the evidence ends
+        Security and evidence
       
     </span>
   </a>
@@ -881,7 +881,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2148,10 +2148,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#know-where-the-evidence-ends" class="md-nav__link">
+  <a href="#security-and-evidence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Know where the evidence ends
+        Security and evidence
       
     </span>
   </a>
@@ -2197,10 +2197,10 @@ has a receipt.</p>
 </code></pre></div>
 <p>After the published v0.9.0 images are pulled and services become ready, follow the
 <a href="quickstart/#60-second-console-walkthrough">60-second console walkthrough</a>: sign in,
-start the sample, and approve its draft. The simulated trial needs no cloud key and makes
-no external model calls. Connect a real provider to evaluate output quality.</p>
+start the sample, and approve its draft. The simulated trial runs locally with fixture
+models. Connect a real provider to evaluate output quality.</p>
 <p>This is release <strong>v0.9.0</strong>; Compose pulls the matching published images.
-<a href="release-verification/">Verification and remaining checks</a>.</p>
+<a href="release-verification/">Release verification</a>.</p>
 <h2 id="choose-your-path">Choose your path<a class="headerlink" href="#choose-your-path" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2238,16 +2238,15 @@ Ollama and vLLM routes keep local models available. Temporal provides durable ex
 AgentWorkflows supplies the team application around it. You supply business workflows and
 real tool integrations and operate the deployment.</p>
 <p><a href="decision-guide/">Build-or-adopt decision guide</a> · <a href="architecture/">Architecture</a>.
-There is no hosted service in this repository.</p>
-<h2 id="know-where-the-evidence-ends">Know where the evidence ends<a class="headerlink" href="#know-where-the-evidence-ends" title="Permanent link">&para;</a></h2>
-<p>Provider keys stay on the server; roles and projects restrict access. Receipt hash chains
+You deploy and run it on your own infrastructure.</p>
+<h2 id="security-and-evidence">Security and evidence<a class="headerlink" href="#security-and-evidence" title="Permanent link">&para;</a></h2>
+<p>Provider keys stay on the server; roles and projects scope access. Receipt hash chains
 expose edits and internal gaps. External head anchors detect truncation or replacement.
 Inputs and results also remain in Temporal history with separate retention. Configure
 content capture, provider retention, and backups for your team.</p>
 <p><a href="security-overview/">Security overview</a> · <a href="threat-model/">Threat model</a> ·
 <a href="team-lifecycle/">Data lifecycle</a> · <a href="proof/">Verification</a></p>
 <p><a href="https://github.com/RamazanKara/agentworkflows/blob/main/ROADMAP.md">Roadmap</a> ·
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md">Adoption gaps</a> ·
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/LICENSE">Apache-2.0 license</a>.</p>
 
 

@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2390,8 +2390,8 @@ agent workspaces are available through the Kubernetes lab below.</p>
 <p>Stop the stack and remove its volumes:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>compose-down
 </code></pre></div>
-<p>Compose does not install Kubernetes network policies, hardened workspaces, GitOps, or
-production availability controls. The local lab below evaluates Kubernetes deployment.</p>
+<p>For Kubernetes network policies, hardened workspaces, GitOps, and production availability
+controls, use the local Kubernetes lab below.</p>
 <h2 id="local-kubernetes-lab">Local Kubernetes lab<a class="headerlink" href="#local-kubernetes-lab" title="Permanent link">&para;</a></h2>
 <p>The lab creates a single-node <code>kind</code> cluster, builds the two first-party images, deploys the
 platform through Argo CD, and runs gateway and RAG smoke tests against <code>qwen2.5:0.5b</code> on Ollama.
@@ -2411,7 +2411,7 @@ CD manifests, third-party charts and images, Python packages, and the Ollama mod
 Docker state, writes a <code>kind</code> context to your kubeconfig, and reserves host port <code>8080</code> for the
 cluster unless overridden. Stop the Compose stack first (<code>make compose-down</code>) if it is running.</p>
 <p>On macOS or a managed workstation, install <code>kind</code>, <code>kubectl</code>, and Helm separately and run
-<code>make quickstart</code>; the repository's tool installer is Linux-only.</p>
+<code>make quickstart</code>; the repository's tool installer targets Linux.</p>
 <h3 id="run-it">Run it<a class="headerlink" href="#run-it" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>bootstrap
 </code></pre></div>
@@ -2432,9 +2432,9 @@ cluster unless overridden. Stop the Compose stack first (<code>make compose-down
 reduced workstation check that applies the core charts directly, use:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">QUICKSTART_DIRECT_APPLY</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart
 </code></pre></div>
-<p>Direct apply skips the Argo CD application set, including the full observability, policy,
-cost, and backup add-ons. It is useful for the gateway and RAG smoke path, not as a GitOps or
-production-readiness test.</p>
+<p>Direct apply covers the gateway and RAG smoke path and leaves out the Argo CD application set,
+including the full observability, policy, cost, and backup add-ons. Use the default Argo CD
+path for GitOps and production-readiness checks.</p>
 <p>Other switches:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">QUICKSTART_INSTALL_TOOLS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">  </span><span class="c1"># install the pinned CLI set first</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">QUICKSTART_SKIP_VALIDATE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>make<span class="w"> </span>quickstart<span class="w">  </span><span class="c1"># skip static validation</span>
@@ -2447,8 +2447,8 @@ production-readiness test.</p>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>[agentworkflows] quickstart completed
 </code></pre></div>
 <p>These lines confirm that the gateway reached Ollama and that the RAG service returned results.
-They do not validate a customer identity provider, GPU runtime, production storage, backup, or
-external observability system.</p>
+Validate your identity provider, GPU runtime, production storage, backup, and external
+observability system in your target environment.</p>
 <p>The lab gateway is a ClusterIP service behind a default-deny network policy. Reach it from
 your workstation with a port-forward:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>inference<span class="w"> </span>port-forward<span class="w"> </span>svc/inference-gateway-inference-gateway<span class="w"> </span><span class="m">18080</span>:8080
@@ -2482,9 +2482,9 @@ smoke command if its default port is occupied.</p>
 <h3 id="remove-the-lab">Remove the lab<a class="headerlink" href="#remove-the-lab" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>make<span class="w"> </span>local-down
 </code></pre></div>
-<p>This deletes the <code>kind</code> cluster. It does not remove downloaded tools, Docker images, or caches.
-<code>make clean-all</code> removes repository-local tool environments and generated files; Docker cleanup
-remains a Docker operation.</p>
+<p>This deletes the <code>kind</code> cluster and keeps downloaded tools, Docker images, and caches for the next run.
+<code>make clean-all</code> removes repository-local tool environments and generated files; use Docker's
+own commands to clean up images.</p>
 <p>Continue with <a href="../getting-started/">Getting started</a> for focused validation and
 customer-deployment commands.</p>
 

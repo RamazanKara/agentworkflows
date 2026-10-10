@@ -1,20 +1,16 @@
-# Self-hosted chat UI in front of the gateway (DOCUMENTED EXAMPLE, not rendered by validate).
+# Self-hosted chat UI in front of the gateway (documented example, kept out of validate rendering).
 #
-# The platform is API-only. This example puts a self-hosted end-user chat UI (Open WebUI, the common
-# choice) in front of the inference gateway so a human can actually type into a chat box, while
-# every request still flows through the gateway's auth, model allowlist, admission, budget, and
-# audit controls. Open WebUI points its OpenAI-compatible base URL at the gateway; it is NOT a
-# shipped or supported component.
+# This example puts a self-hosted end-user chat UI (Open WebUI) in front of the inference gateway
+# so people can chat through the gateway, while every request flows through the gateway's auth,
+# model allowlist, admission, budget, and audit controls. Open WebUI points its OpenAI-compatible
+# base URL at the gateway, and your team operates the UI alongside the platform.
 #
-# WHY THIS IS AN EXAMPLE, NOT A SHIPPED/RENDERED MANIFEST:
-#   - A human-facing chat UI is a separate product surface. AgentWorkflows' non-goal list is explicit:
-#     "No bundled end-user chat UI": this UI is operator-owned; AgentWorkflows' team workflow console
-#     non-goal (see docs/scope-and-non-goals.md). Shipping and supporting a UI would cross the
-#     platform's "manifests, charts, service code, validation tooling, runbooks" boundary.
-#   - The image tag, storage, ingress/TLS, and human SSO wiring are all environment-specific.
-#   Rendering one "correct" manifest through kubeconform/helm would bake in choices wrong for
-#   most clusters. So this ships under docs/examples/ (which scripts/validate.sh does not
-#   kubeconform-scan) as a copy-adapt starting point. See runbooks/chat-ui.md for the procedure.
+# WHY THIS LIVES UNDER docs/examples/:
+#   - The chat UI is operator-owned, next to the AgentWorkflows team console (see
+#     docs/scope-and-non-goals.md).
+#   - The image tag, storage, ingress/TLS, and human SSO wiring are environment-specific, so this
+#     file is a copy-adapt starting point that scripts/validate.sh leaves out of its kubeconform
+#     scan. See runbooks/chat-ui.md for the procedure.
 #
 # ADAPT BEFORE APPLYING:
 #   - Pin `image:` to a digest you have scanned and mirrored (do not float `:main`).

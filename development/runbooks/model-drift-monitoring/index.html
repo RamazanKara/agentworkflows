@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2088,12 +2088,12 @@ model artifact swap.</p>
 <li><strong>Live proxy metrics (Prometheus).</strong> The <code>governance.rules</code> group in
    <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/observability/alerts/ai-platform-alerts.yaml"><code>ai-platform-alerts.yaml</code></a> alerts on:</li>
 <li><code>ModelOutputGuardrailSpike</code>: a sustained rise in output-guardrail redactions/blocks
-     (<code>inference_gateway_output_guardrail_total</code>), which can mean the model started leaking
-     credentials/PII it previously did not.</li>
+     (<code>inference_gateway_output_guardrail_total</code>), which can signal that the model has started
+     emitting credentials/PII.</li>
 <li>
 <p><code>InferenceAdmissionRejectionSpike</code>: elevated admission rejections, often a prompt/template
      or policy regression.
-   These are <em>proxies</em>, not quality scores: they catch some regressions early but do not measure
+   These are <em>proxies</em> that catch regressions early; the scheduled evaluation below measures
    answer quality.</p>
 </li>
 <li>

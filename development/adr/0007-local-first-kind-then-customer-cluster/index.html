@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2097,10 +2097,10 @@
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>The platform targets two audiences with one repository: a contributor or evaluator who needs to run
 the whole stack on a laptop in minutes, and a customer who runs it on their own production Kubernetes.
-If those were two different deployment models, the local lab would not be evidence for the customer
-path. The decision is how to structure environments so the local experience is genuinely the same
+One deployment model for both makes the local lab evidence for the customer path. The decision is
+how to structure environments so the local experience is genuinely the same
 operating model as the customer one (same charts, GitOps layout, policies, runbooks, and evidence)
-without depending on a cloud provider.</p>
+on any provider.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Make <code>kind</code> the local-first environment and the customer cluster a parallel overlay of the same
 repository, differing only in cluster directory, pinned revision, and the platform services the
@@ -2115,7 +2115,7 @@ customer already operates.</p>
   each root app points at (<a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local"><code>deploy/clusters/local</code></a> versus
   <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/customer"><code>deploy/clusters/customer</code></a>) and a pinned <code>targetRevision</code> on the
   customer root.</li>
-<li>The customer overlay assumes Kubernetes already exists and adds what a tenant cluster needs:
+<li>The customer overlay runs on an existing Kubernetes cluster and adds what a tenant cluster needs:
   <code>appprojects.yaml</code> for project tenancy, <code>external-secrets.yaml</code>, <code>gpu-scheduling.yaml</code>, and GPU
   value profiles. It is generated/wired through <code>make customer-overlay</code> with the customer repo URL,
   revision, and GPU profile (per the README).</li>
@@ -2130,29 +2130,25 @@ customer already operates.</p>
   local validation is meaningful as handoff evidence.</li>
 <li>Differences are isolated to a cluster directory and a few overlay manifests, which keeps the diff
   between "works on my laptop" and "works on the customer cluster" small and reviewable.</li>
-<li>The platform deliberately does not provision the customer's cluster or replace its platform services;
-  ingress, storage classes, secrets, logging, observability, and GPU pools are the operator's to
-  bring. Maturity is explicitly a "controlled handoff," not a turnkey production install.</li>
-<li>Maintaining two cluster directories that must stay in lockstep is an ongoing cost; the shared
-  charts and policies limit it, but drift between local and customer values is a real failure mode to
-  watch.</li>
+<li>The platform runs on the customer's cluster and integrates with its platform services; the operator
+  brings ingress, storage classes, secrets, logging, observability, and GPU pools. Delivery is a
+  "controlled handoff" into that environment.</li>
+<li>Maintainers keep the two cluster directories in lockstep; the shared charts and policies keep that
+  work small, and reviewers compare local and customer values when either changes.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>A managed local cluster (minikube, k3d, Docker Desktop Kubernetes).</strong> Any could host the local
   lab. <code>kind</code> was chosen for its CI-friendliness (it is the conformance test harness's own cluster),
-  reproducible pinned node image, and minimal host footprint. The choice is not a claim the others
-  cannot run the stack.</li>
-<li><strong>Cloud dev cluster as the primary local environment.</strong> Rejected because it ties the entry
-  experience to a provider and a billing relationship, contradicting the provider-neutral,
-  runs-on-a-laptop premise and slowing the first run.</li>
-<li><strong>Cloud-specific Terraform / provider modules as the deployment unit.</strong> Rejected as the default
-  per the decision-guide's stated position: provider-neutral GitOps and Helm surfaces instead of
-  cloud-specific Terraform. A customer is free to wrap the cluster provisioning in their own IaC; the
-  platform's deliverable starts at "Kubernetes already exists."</li>
-<li><strong>One environment only (local-only, or customer-only).</strong> Rejected because it defeats the goal: a
-  local-only platform would not be production evidence, and a customer-only platform would have no fast,
-  GPU-free path for contributors and evaluators.</li>
+  reproducible pinned node image, and minimal host footprint.</li>
+<li><strong>Cloud dev cluster as the primary local environment.</strong> <code>kind</code> was preferred because it keeps the
+  entry experience provider-neutral, runs on a laptop, and makes the first run fast.</li>
+<li><strong>Cloud-specific Terraform / provider modules as the deployment unit.</strong> The default follows the
+  decision-guide's stated position: provider-neutral GitOps and Helm surfaces. A customer can wrap
+  the cluster provisioning in their own IaC; the platform's deliverable starts at "Kubernetes already
+  exists."</li>
+<li><strong>One environment only (local-only, or customer-only).</strong> Two environments were chosen because
+  together they give production evidence and a fast, GPU-free path for contributors and evaluators.</li>
 </ul>
 
 

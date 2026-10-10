@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2098,8 +2098,8 @@
 <p>The platform needs a model-serving runtime behind the gateway that satisfies two profiles with one
 operating model: a fast laptop/CI lab that runs on CPU without a GPU, and a customer GPU cluster
 serving coding-agent workloads on NVIDIA or AMD hardware. The gateway speaks the OpenAI HTTP API, so
-whatever serves models must expose an OpenAI-compatible endpoint. The choice should not lock the platform
-to a single accelerator vendor.</p>
+whatever serves models must expose an OpenAI-compatible endpoint. The choice should keep the platform
+open to multiple accelerator vendors.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Ship two runtimes selected per environment, both OpenAI-compatible, with the gateway routing to one
 via <code>RUNTIME_BACKEND</code>.</p>
@@ -2121,35 +2121,31 @@ via <code>RUNTIME_BACKEND</code>.</p>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A contributor reproduces the full request path on a laptop with no GPU (Ollama), and a customer
+<li>A contributor reproduces the full request path on a CPU-only laptop (Ollama), and a customer
   serves the same OpenAI API on GPUs (vLLM), with the gateway, policies, governance, and evidence
   unchanged between them.</li>
 <li>GPU vendor neutrality is explicit: NVIDIA clusters expose <code>nvidia.com/gpu</code>, AMD clusters expose
   <code>amd.com/gpu</code>, GPU nodes are labelled <code>platform.ai/node-pool=gpu</code> and
   <code>platform.ai/gpu-vendor=&lt;nvidia|amd&gt;</code>, and there are committed value profiles for each.</li>
-<li>Two runtimes mean two charts, two pinned <code>appVersion</code>s, and two sets of capacity assumptions to
-  track. Replica count, context length, tensor parallelism, and GPU requests are explicitly left for
-  the operator to tune before production use.</li>
+<li>Each runtime has its own chart, pinned <code>appVersion</code>, and capacity profile. The operator tunes
+  replica count, context length, tensor parallelism, and GPU requests before production use.</li>
 <li>The gateway abstracts the choice for callers; it can also fail over and shadow/canary across
-  resolved routes (see <a href="../0005-openai-compatible-gateway/">0005</a>), but the per-environment default
-  backend is a single value, not a blend.</li>
+  resolved routes (see <a href="../0005-openai-compatible-gateway/">0005</a>), and the per-environment default
+  backend is a single value.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Hugging Face TGI.</strong> A strong OpenAI-compatible GPU server. vLLM was chosen for the GPU profile
   for its throughput-oriented batching and broad model coverage, and the platform already documents vLLM
-  GPU/ROCm references; TGI would be a viable substitute but adds no capability AgentWorkflows lacks.</li>
-<li><strong>TensorRT-LLM.</strong> Excellent NVIDIA-specific performance. Rejected as the default because it is
-  NVIDIA-only and conflicts with the explicit AMD/NVIDIA neutrality goal; a customer who wants it can
-  point a value profile at a TensorRT-LLM-backed OpenAI endpoint.</li>
-<li><strong>llama.cpp (server).</strong> Lightweight and great for single-machine CPU/Metal use. Rejected for the
-  local default in favor of Ollama, which provides simpler model pull/management and a clean
-  OpenAI-compatible surface inside a chart; the decision-guide already names "a single-machine
-  personal Ollama setup" as a poor fit for the platform itself, which is a different point from the
-  runtime choice here.</li>
-<li><strong>One runtime for both profiles.</strong> Rejected: no single runtime is simultaneously the lightest CPU
-  laptop experience and the highest-throughput multi-vendor GPU server. Splitting by profile keeps
-  each path optimal while the gateway hides the difference from callers.</li>
+  GPU/ROCm references. TGI is a viable substitute.</li>
+<li><strong>TensorRT-LLM.</strong> Excellent NVIDIA-specific performance. vLLM was preferred as the default because
+  it serves both AMD and NVIDIA, matching the vendor-neutrality goal; a customer who wants
+  TensorRT-LLM can point a value profile at a TensorRT-LLM-backed OpenAI endpoint.</li>
+<li><strong>llama.cpp (server).</strong> Lightweight and great for single-machine CPU/Metal use. Ollama was
+  preferred for the local default because it provides simpler model pull/management and a clean
+  OpenAI-compatible surface inside a chart.</li>
+<li><strong>One runtime for both profiles.</strong> Splitting by profile pairs the lightest CPU laptop experience
+  with the highest-throughput multi-vendor GPU server, and the gateway presents one API to callers.</li>
 </ul>
 
 

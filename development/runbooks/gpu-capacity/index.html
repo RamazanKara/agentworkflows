@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2125,7 +2125,7 @@ kubectl get nodes -o custom-columns=NAME:.metadata.name,NVIDIA:.status.capacity.
 <h2 id="likely-causes">Likely Causes<a class="headerlink" href="#likely-causes" title="Permanent link">&para;</a></h2>
 <p>The customer-owned cluster does not expose GPU resources, the NVIDIA or AMD device plugin is missing or unhealthy, GPU nodes do not have the expected <code>platform.ai/node-pool=gpu</code> and <code>platform.ai/gpu-vendor=&lt;nvidia|amd&gt;</code> labels, the vLLM tolerations do not match the customer's GPU node taints, or the selected model requests more GPUs than the cluster can schedule.</p>
 <h2 id="mitigation">Mitigation<a class="headerlink" href="#mitigation" title="Permanent link">&para;</a></h2>
-<p>Install or repair the NVIDIA or AMD device plugin according to the customer's Kubernetes platform standard. NVIDIA profiles request <code>nvidia.com/gpu</code>; AMD profiles request <code>amd.com/gpu</code>. The default Qwen3 Coder Next profile requests four GPUs per replica; reduce <code>accelerator.count</code>, <code>--tensor-parallel-size</code>, <code>model.maxModelLen</code>, or the model itself when targeting smaller clusters. Label GPU nodes with <code>platform.ai/node-pool=gpu</code> and <code>platform.ai/gpu-vendor=nvidia</code> or <code>platform.ai/gpu-vendor=amd</code>, or change the vLLM values to match the customer's existing labels. If GPU nodes are tainted, add matching tolerations to the vLLM chart values. For local <code>kind</code>, keep vLLM replicas at <code>0</code> unless the workstation has a supported GPU setup exposed to Kubernetes.</p>
+<p>Install or repair the NVIDIA or AMD device plugin according to the customer's Kubernetes platform standard. NVIDIA profiles request <code>nvidia.com/gpu</code>; AMD profiles request <code>amd.com/gpu</code>. The default Qwen3 Coder Next profile requests four GPUs per replica; reduce <code>accelerator.count</code>, <code>--tensor-parallel-size</code>, <code>model.maxModelLen</code>, or the model itself when targeting smaller clusters. Label GPU nodes with <code>platform.ai/node-pool=gpu</code> and <code>platform.ai/gpu-vendor=nvidia</code> or <code>platform.ai/gpu-vendor=amd</code>, or change the vLLM values to match the customer's existing labels. If GPU nodes are tainted, add matching tolerations to the vLLM chart values. For local <code>kind</code>, keep vLLM replicas at <code>0</code>, and raise them when the workstation exposes a supported GPU setup to Kubernetes.</p>
 <p>Use these profiles as starting points:</p>
 <div class="highlight"><pre><span></span><code>deploy/clusters/customer/values/vllm-nvidia.yaml
 deploy/clusters/customer/values/vllm-amd.yaml
@@ -2133,23 +2133,22 @@ deploy/clusters/customer/values/vllm-amd.yaml
 <p>For AMD ROCm vLLM, use an ROCm-compatible vLLM image and verify that the worker nodes have ROCm-capable AMD GPUs, drivers, and the AMD Kubernetes device plugin.</p>
 <h2 id="capacity-changes">Capacity changes<a class="headerlink" href="#capacity-changes" title="Permanent link">&para;</a></h2>
 <p>The checked-in NVIDIA profile requests four GPUs per vLLM replica, sets tensor parallelism to four,
-and allows a 262,144-token context. Those values are a render-tested reference profile, not a
-hardware recommendation.</p>
+and allows a 262,144-token context. Those values are a render-tested reference profile; size them for
+your hardware as described below.</p>
 <p>Size the actual model artifact on the target GPU. Account for weights, KV cache, activations,
 runtime overhead, prompt/completion length, and concurrent requests. Change
 <code>accelerator.count</code>, tensor parallelism, context length, replica count, and KEDA bounds together.</p>
-<p><code>make loadtest-local</code> uses a mock runtime and cannot size a GPU deployment. Point <code>make loadtest</code>
+<p><code>make loadtest-local</code> uses a mock runtime for gateway checks. For GPU sizing, point <code>make loadtest</code>
 at the deployed gateway and collect vLLM queue, latency, token-throughput, and GPU-memory metrics
 at the same time. Run the relevant eval suite again after changing the model, precision, or
 quantization.</p>
-<p>The chart creates a Kubernetes <code>Deployment</code>. Its tensor-parallel configuration assumes that all
-requested GPUs are available to one pod on one node. The repository does not install or test a
-multi-node vLLM operator. A model that cannot fit on one node needs a separately designed and tested
-LeaderWorkerSet, Ray, or equivalent deployment.</p>
-<p>The FP8 and AWQ files under <code>deploy/clusters/customer/values/</code> are configuration examples. The
-operator must supply a compatible GPU, runtime image, and model artifact. MIG and time-slicing are
-also cluster/device-plugin settings; the chart can request the resulting resource name but does not
-configure GPU partitioning.</p>
+<p>The chart creates a Kubernetes <code>Deployment</code> whose tensor-parallel configuration places all
+requested GPUs in one pod on one node. For a model larger than one node, design a LeaderWorkerSet,
+Ray, or equivalent multi-node deployment.</p>
+<p>The FP8 and AWQ files under <code>deploy/clusters/customer/values/</code> are configuration examples; the
+operator supplies a compatible GPU, runtime image, and model artifact. MIG and time-slicing are
+cluster/device-plugin settings: configure GPU partitioning there, and the chart requests the
+resulting resource name.</p>
 <p>See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/capacity-sizing.md">Capacity and sizing</a>
 for the measurement loop.</p>
 <h2 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h2>

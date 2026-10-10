@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2097,28 +2097,26 @@
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>ADR 0009 adopted kubernetes-sigs/agent-sandbox as an <em>optional, profile-gated</em>
 workspace runtime behind a <code>sandbox.runtime</code> toggle, defaulting to the older
-namespace-only path. That caution is inconsistent with the rest of the platform,
-which is deliberately opinionated: Kyverno policies ship in <code>Enforce</code>,
+namespace-only path. The rest of the platform is deliberately opinionated: Kyverno policies ship in <code>Enforce</code>,
 namespaces are PSA-<code>restricted</code>, egress is default-deny, and images must be
-signed. The one workload that executes model-generated code, the very reason
-this platform has a threat model, defaulted to the weakest isolation offered,
-and every optional path doubled the test matrix, the documentation, and the
-adopter's decision burden.</p>
-<p>The portability argument for the toggle proved weak in practice: the
-controller installs from vendored, checksummed manifests in seconds on any
-conformant cluster (verified on cgroup-v1 <code>kind</code>); only the kernel-isolation
-<em>runtime class</em> (gVisor/Kata) is environment-dependent, and that remains a
-separate, optional knob. The platform currently has no external users, so the cost
-of removing the fallback is zero and the cost of keeping it is permanent.</p>
+signed. The workload that executes model-generated code, the very reason this
+platform has a threat model, belongs on the strongest default isolation, and a
+single path keeps the test matrix, the documentation, and the adopter's
+decisions simple.</p>
+<p>The controller installs from vendored, checksummed manifests in seconds on any
+conformant cluster (confirmed on cgroup-v1 <code>kind</code>); only the kernel-isolation
+<em>runtime class</em> (gVisor/Kata) is environment-dependent, and that stays a
+separate, optional knob. Making the change early puts every adopter on one
+path from the start.</p>
 <p>Two adjacent duplications had accumulated around the same feature:</p>
 <ul>
 <li><code>make agent-lab-up</code> installed the workspace with a manual Helm release,
-  which now collides with the Argo CD-managed <code>agent-workspace</code> Application
-  over resource ownership on any GitOps-managed cluster.</li>
+  overlapping the Argo CD-managed <code>agent-workspace</code> Application on resource
+  ownership on GitOps-managed clusters.</li>
 <li><code>make sandbox-smoke</code> (the request-tracing check for the <code>ai-sandbox</code>
   namespace) shared a name with the new agent-sandbox runtime smoke while
-  testing something unrelated; the Argo Application for that construct is
-  already called <code>traceable-sandbox</code>.</li>
+  testing request tracing; the Argo Application for that construct is
+  called <code>traceable-sandbox</code>.</li>
 </ul>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ol>
@@ -2129,47 +2127,43 @@ of removing the fallback is zero and the cost of keeping it is permanent.</p>
    of ADR 0009; everything else in ADR 0009 stands.</li>
 <li><strong>The short-lived projected workspace credential is on by default</strong>
    (<code>workspace.credentials.projectedToken.enabled: true</code>), consistent with
-   AgentWorkflows' no-long-lived-secrets stance; it costs nothing where unused.</li>
+   AgentWorkflows' short-lived-credentials stance.</li>
 <li><strong>The controller is a platform prerequisite</strong>, installed as an
    <code>agent-sandbox-controller</code> Argo CD Application (server-side apply, early
    sync wave) in both cluster overlays, and by <code>make agent-sandbox-install</code>
    in the quickstart path.</li>
 <li><strong><code>make agent-lab-up</code> is removed.</strong> GitOps owns the workspace instance;
    bare-cluster and demo installs use a documented one-line <code>helm upgrade
-   --install</code>. <code>make agent-smoke</code> validates the deployed instance instead of
-   installing a parallel one, and <code>make agent-sandbox-smoke</code> becomes
-   validation-only for the same reason.</li>
+   --install</code>. <code>make agent-smoke</code> validates the deployed instance, and
+   <code>make agent-sandbox-smoke</code> is validation-only for the same reason.</li>
 <li><strong><code>make sandbox-smoke</code> is renamed <code>make trace-smoke</code></strong> (script included)
    so "sandbox" unambiguously means the workspace runtime, matching the
    <code>traceable-sandbox</code> Application name.</li>
 </ol>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>One runtime path: half the chart test matrix, no decision-guide fork, and
-  the default posture equals the documented posture.</li>
-<li>Every conformant cluster must run the vendored controller; a cluster that
-  cannot is no longer a supported workspace target (accepted: no such
-  cluster is known, and the tracing/tenant features remain unaffected).</li>
-<li><code>C-ISOLATE</code> stops being tier-conditional and is mandated at every risk
-  tier; evidence packs fail when the controller is absent instead of
-  recording an unclaimed control.</li>
-<li>Existing local labs need one Argo sync (the controller Application) or
+<li>One runtime path: half the chart test matrix, a single decision-guide path,
+  and a default posture that equals the documented posture.</li>
+<li>Workspace clusters run the vendored controller, which installs on any
+  conformant cluster; the tracing and tenant features run independently of it.</li>
+<li><code>C-ISOLATE</code> is mandated at every risk tier, and evidence packs require the
+  controller to be present.</li>
+<li>Existing local labs run one Argo sync (the controller Application) or
   <code>make agent-sandbox-install</code> before the workspace Application converges.</li>
-<li>The RWO workspace PVC is now held by the long-lived sandbox pod; the
-  <code>agent-smoke</code> Job shares it on the same node (fine on single-node labs;
-  multi-node clusters should schedule them together or use RWX storage).</li>
+<li>The long-lived sandbox pod holds the RWO workspace PVC, and the
+  <code>agent-smoke</code> Job shares it on the same node. On multi-node clusters,
+  schedule them together or use RWX storage.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Deprecation window (flip default, keep fallback one release).</strong> The
-  operationally mature choice for a project with users; rejected here as
-  process theater: there are no users, and the fallback would still cost a
-  doubled test matrix for a release cycle.</li>
-<li><strong>Keep the toggle indefinitely.</strong> Rejected: permanent two-path tax and a
-  default that contradicts AgentWorkflows' security posture.</li>
-<li><strong>Also collapse the <code>platform</code> umbrella chart into GitOps-only.</strong> Deferred:
-  OCI chart distribution is a deliberate, separately recorded decision
-  (ADR 0008) about how the platform is consumed, not an accident of caution.</li>
+<li><strong>Deprecation window (flip default, keep fallback one release).</strong> Switching
+  directly was chosen because, at this stage, it keeps a single test matrix
+  from the first release.</li>
+<li><strong>Keep the toggle indefinitely.</strong> A single path was chosen so the default
+  matches AgentWorkflows' security posture.</li>
+<li><strong>Also collapse the <code>platform</code> umbrella chart into GitOps-only.</strong> OCI chart
+  distribution stays, as a deliberate, separately recorded decision
+  (ADR 0008) about how the platform is consumed.</li>
 </ul>
 
 

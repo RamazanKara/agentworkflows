@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2173,25 +2173,23 @@
 selections in <strong>Team settings</strong> in the console. <strong>Providers &amp; budgets</strong> and <strong>Costs</strong>
 include the budget editor. Other roles see effective values without editing
 controls. Provider API keys stay in Kubernetes Secrets or gateway environment
-variables; this API does not accept credentials, connection URLs or new routes.</p>
+variables; credentials, connection URLs and routes are managed in deployment configuration.</p>
 <p>Model choices use the same route IDs and provider names shown in <strong>Get started</strong>.
 For admins, <strong>Ready</strong> means the provider key is configured (or the route is
-simulated), and <strong>Key missing</strong> means it still needs a key. This is a configuration
-check, not a live provider test. Costs and Providers name the configured token
+simulated), and <strong>Key missing</strong> means it still needs a key. Costs and Providers name the configured token
 window separately from the UTC calendar-month spending budget.</p>
 <h2 id="defaults-and-overrides">Defaults and overrides<a class="headerlink" href="#defaults-and-overrides" title="Permanent link">&para;</a></h2>
 <p><code>SandboxPolicySet</code> remains the bootstrap and policy default. Overrides live in one
 JSON document per team in the existing budget Redis, at
 <code>&lt;SANDBOX_BUDGET_KEY_PREFIX&gt;:team-settings:&lt;team-id&gt;</code>. The document contains
 <code>revision</code>, <code>updated_by</code>, <code>updated_at</code> and <code>overrides</code>. Enable Redis persistence and
-include these documents in backups. No new environment variables or Helm values
-are required.</p>
+include these documents in backups. Team settings use the existing environment
+variables and Helm values.</p>
 <p>With <code>STORAGE_BACKEND=postgres</code>, the same documents and revision checks use
 <a href="../postgresql-storage/">PostgreSQL gateway storage</a>. Include that database in backups.</p>
-<p>Every request reads effective settings from the selected store over the loaded YAML defaults;
-there is no process cache. Changes are visible across gateway replicas without
-restarting. Storage outages fail closed with 503. YAML changes still require the
-normal configuration rollout, and do not erase overrides. <strong>Reset to policy
+<p>Every request reads effective settings directly from the selected store over the loaded YAML defaults.
+Changes are visible across gateway replicas immediately. Storage outages fail closed with 503.
+YAML changes use the normal configuration rollout and keep existing overrides. <strong>Reset to policy
 default</strong> removes one override and uses the current loaded YAML default.</p>
 <table>
 <thead>
@@ -2210,7 +2208,7 @@ default</strong> removes one override and uses the current loaded YAML default.<
 <tr>
 <td><code>soft_cost_limit_usd</code></td>
 <td><code>budgets.softCostLimitUsd</code> (unset)</td>
-<td>Advisory monthly threshold; never blocks calls</td>
+<td>Advisory monthly threshold; calls continue past it</td>
 </tr>
 <tr>
 <td><code>capture_content</code></td>
@@ -2275,14 +2273,12 @@ default</strong> removes one override and uses the current loaded YAML default.<
 </tbody>
 </table>
 <p>Dollar overrides must be finite numbers between 0 and 1,000,000; token overrides
-must be integers between 0 and 1,000,000,000. Zero is a spending/token ceiling,
-not unlimited. An absent team/project YAML limit means unlimited; reset to restore
+must be integers between 0 and 1,000,000,000. Zero is a spending/token ceiling of zero.
+An absent team/project YAML limit means unlimited; reset to restore
 that default. <code>null</code> explicitly disables either team soft or hard limit; the soft
-limit cannot exceed a configured hard limit. Booleans and strings are not accepted
-as numbers.</p>
-<p>Capture changes affect future steps only. Existing captured text retains its TTL;
-changing to <code>none</code> does not delete it, and enabling capture cannot recover earlier
-content. An explicit workflow setting (including <code>none</code>) overrides the team value.
+limit must be at or below a configured hard limit. Numeric fields take JSON numbers.</p>
+<p>Capture changes affect future steps. Existing captured text keeps its TTL through
+any mode change, and enabling capture starts with the next step. An explicit workflow setting (including <code>none</code>) overrides the team value.
 Resetting a workflow override restores its YAML value, or the current team default
 when YAML has no workflow value. Redaction, byte limits, access checks and retention
 continue to apply; see <a href="../workflows/#workflow-forms-and-step-content">step content</a>.</p>
@@ -2293,33 +2289,33 @@ Soft limits allow work to continue. A reservation that would exceed the hard tea
 or project budget returns <strong>429</strong>, with <code>detail.reason</code> equal to
 <code>team_cost_budget_exceeded</code> or <code>project_cost_budget_exceeded</code>, before calling the
 provider. <code>Retry-After</code> is the number of seconds to the next UTC calendar month.
-An admin can raise the limit sooner; editing a limit never resets spend. Actual
-reported usage can exceed an estimate and block subsequent calls; these are
-configured-price controls, not provider invoice guarantees.</p>
+An admin can raise the limit sooner; editing a limit keeps the month's spend. Actual
+reported usage that exceeds an estimate is charged and blocks subsequent calls. Limits
+use configured prices.</p>
 <p><code>GET /v1/team/spend</code> returns <code>team_id</code>, <code>window_start</code>, <code>window_end</code>,
 <code>soft_limit_usd</code>, <code>hard_limit_usd</code>, <code>reserved_and_spent_usd</code>, <code>status</code>
 (<code>ok</code>, <code>soft_limit</code>, <code>hard_limit</code>), and <code>alerts</code>. All unrestricted team roles can
-read it; project-bound credentials receive 403 and should use <code>/v1/usage</code>.
+read it; project-bound credentials use <code>/v1/usage</code> (this endpoint returns 403 for them).
 Settings writes retain the admin and revision requirements below.</p>
 <p>An alert is retained once per level per UTC month. Each has <code>id</code>, <code>level</code>,
 <code>limit_usd</code>, <code>reserved_and_spent_usd</code>, <code>requested_usd</code>, <code>created_at</code>,
 <code>webhook_status</code> (<code>disabled</code>, <code>pending</code>, <code>delivered</code>, <code>failed</code>) and <code>attempts</code>.
-Reservations can trigger alerts even when settlement later reduces the charge.
+Reservations trigger alerts when they cross a limit, and the alert stays recorded after settlement.
 Hard-limit refusal records the rejected reservation separately as <code>requested_usd</code>.
-The <strong>Costs → Spend alerts</strong> panel remains available without email or a webhook;
+The <strong>Costs → Spend alerts</strong> panel shows alerts in the console for every team;
 Refresh loads current status. Historical alerts for the month remain visible after
 limits change, alongside current status. New months use new counters and alerts.</p>
 <p>For outgoing delivery, reuse the team's reviewed <code>notifications.webhookEnv</code> and
 <code>notifications.consoleUrl</code> configuration. The gateway checks every 30 seconds,
-independently of Temporal, including after a limit is lowered. No email is sent for
-spend alerts. Webhooks receive <code>event: team_spend_soft_limit</code> or
+independently of Temporal, including after a limit is lowered. Spend alerts are
+delivered by webhook. Webhooks receive <code>event: team_spend_soft_limit</code> or
 <code>team_spend_hard_limit</code>, team identity, the alert fields and a console link.
-The <code>Idempotency-Key</code> header equals the alert ID. Delivery is at least once:
-receivers must deduplicate it. Redis stores attempts and retry times across replicas
+The <code>Idempotency-Key</code> header equals the alert ID. Delivery is at least once,
+so have receivers deduplicate by that key. Redis stores attempts and retry times across replicas
 and restarts; up to five attempts use exponential backoff starting at 30 seconds.
 Retries cover the current month. After five failures the console reports failure;
-operators should inspect destination configuration. Webhook failures never disable
-budget enforcement. Preserve Redis persistence and backups during PostgreSQL cutover.</p>
+operators then inspect the destination configuration. Budget enforcement runs
+independently of webhook delivery. Preserve Redis persistence and backups during PostgreSQL cutover.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">team_settings</span><span class="p">()</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">settings</span> <span class="o">=</span> <span class="n">gateway</span><span class="o">.</span><span class="n">set_spend_limits</span><span class="p">(</span><span class="n">soft_limit_usd</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">hard_limit_usd</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">settings</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">])</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">team_spend</span><span class="p">()[</span><span class="s2">"alerts"</span><span class="p">])</span>
@@ -2333,30 +2329,30 @@ budget enforcement. Preserve Redis persistence and backups during PostgreSQL cut
 <p>Use <code>update_team_settings</code> / <code>updateTeamSettings</code> to combine other fields in the
 same atomic change; <code>reset_team_setting</code> / <code>resetTeamSetting</code> restores policy.</p>
 <p>Team and project reservations are checked atomically against the same monthly
-counter across providers and tools. Editing a limit does not clear spend. Token
+counter across providers and tools. Editing a limit keeps the month's spend. Token
 and request counters retain their configured <code>SANDBOX_BUDGET_WINDOW_SECONDS</code>.
 The effective run ceiling is the lower of the worker's immutable requested budget
-and the current workflow setting. Lowering a setting can stop an active run's next
-call; raising it cannot exceed the worker's requested budget. Runs initialized by
+and the current workflow setting. Lowering a setting applies to an active run's next
+call; raising it applies up to the worker's requested budget. Runs initialized by
 older gateways retain any lower cap already stored for that run.</p>
 <p>Approval settings govern the existing SDK <code>ApprovalWorkflow</code> review gate. A run
 below the threshold, or with approval disabled, receives an audited automatic
 decision there. Spend includes conservative reservations for unreported calls.
-These settings do not insert a review step into workflow code that has no gate.
+These settings apply to workflows that use the approval gate.
 Since v0.9.0, all approval fields are saved with the run at launch; changing them
-only affects new runs. A retried start keeps its saved policy, while retrying a failed
+affects new runs. A retried start keeps its saved policy, while retrying a failed
 run creates a new run using current settings. Existing gates from older releases retain
 their one-reviewer/seven-day behavior. See <a href="../workflows/#approval-policies">approval policies</a>
 for upgrade order, reviewer identity and deadline semantics.</p>
-<p>Routes, prices, credentials, model allowlists and egress stay in YAML. Selecting an
-alias target cannot bypass those controls; select a route the workflow already
+<p>Routes, prices, credentials, model allowlists and egress stay in YAML, and alias
+selections apply within those controls; select a route the workflow already
 permits. Fallback, canary and shadow routes retain their normal admission checks.
 If an operator removes an overridden target from YAML, that alias fails closed
 until an admin selects a valid target or resets it.</p>
 <h2 id="api-and-conflicts">API and conflicts<a class="headerlink" href="#api-and-conflicts" title="Permanent link">&para;</a></h2>
 <p>These three endpoints require a team-bound, unrestricted <strong>admin</strong> credential.
-Other roles receive 403 with <code>detail.reason: team_role_required</code>. Project-bound
-admins cannot edit team-wide settings. Read-only consumers use <code>GET /v1/team</code> and
+Other roles, and project-bound admins, receive 403 with <code>detail.reason: team_role_required</code>.
+Read-only consumers use <code>GET /v1/team</code> and
 <code>GET /v1/workflow-policies</code>.</p>
 <p><code>GET /v1/team/settings</code> returns the revision, update metadata, available route IDs
 and a <code>fields</code> map. Each entry has <code>value</code>, <code>source</code> (<code>policy</code> or <code>override</code>) and
@@ -2371,20 +2367,20 @@ and a <code>fields</code> map. Each entry has <code>value</code>, <code>source</
 </code></pre></div>
 <p>The names above are examples; use the field names and route IDs returned by your
 gateway. Validation is atomic: 422 includes <code>detail.fields</code> entries with <code>field</code>
-and <code>message</code>, and no part of the patch is saved. Malformed request bodies and
-missing headers use the usual FastAPI validation locations. Unknown fields,
-providers, projects, workflows, aliases and routes are rejected.</p>
+and <code>message</code>, and the patch is saved atomically. Malformed request bodies and
+missing headers use the usual FastAPI validation locations. Fields, providers,
+projects, workflows, aliases and routes must be ones the gateway returns.</p>
 <p><code>DELETE /v1/team/settings/cost_limit_usd</code> with <code>If-Match: 1</code> resets just that field.
 URL-encode the field name in reset requests. GET and successful writes also return
 a quoted revision in <code>ETag</code>, which can be used as <code>If-Match</code>.</p>
 <p>A stale revision returns 409 with <code>detail.reason: team_settings_conflict</code> for
 PATCH and DELETE. Reload, review the current values, then reapply the intended
-change. The console retains the unsaved draft until you choose <strong>Reload settings</strong>;
-it never silently retries a stale write. Cookie-authenticated writes also require
+change. The console retains the unsaved draft until you choose <strong>Reload settings</strong>,
+so you decide when to reapply a stale write. Cookie-authenticated writes also require
 the normal CSRF token.</p>
 <p>Every successful save/reset emits a hash-chained <code>team_settings_changed</code> audit
 event with actor, revision and each touched field's before/after value and source.
-Rejected changes do not emit change events. Verify them with the existing
+Change events cover saved changes. Verify them with the existing
 <a href="../runbooks/audit-chain/">audit-chain runbook</a>.</p>
 
 

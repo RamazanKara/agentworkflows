@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2263,7 +2263,7 @@ its contracts and validation commands.</p>
 </table>
 <p>The directory inventory is declared in <code>scripts/paths.py</code>. <code>make paths</code> prints it
 and <code>make paths-check</code> checks for missing or undeclared top-level directories.
-Directory moves still require updating paths in scripts, manifests, CI, and docs.</p>
+When you move a directory, update its paths in scripts, manifests, CI, and docs.</p>
 <h2 id="runtime-boundaries">Runtime boundaries<a class="headerlink" href="#runtime-boundaries" title="Permanent link">&para;</a></h2>
 <p>The gateway and RAG service are separate deployable applications with separate
 Docker build contexts, dependency locks, tests, and Helm charts. Each contains a
@@ -2279,9 +2279,9 @@ It returns documents, context, and grounded messages; clients submit generation
 requests to the gateway separately.</p>
 <p>Read the service code maps for module-level entry points and the
 <a href="../architecture/">architecture guide</a> for deployed request flows.
-Do not import one service's <code>app</code> package from the other service or the SDK.
-Similar service utilities are currently packaged separately; a shared library would
-also need explicit Docker packaging, dependency, and test changes.</p>
+Keep each service's <code>app</code> package self-contained: the other service and the SDK import
+only their own code. Shared modules are copied into each service and kept byte-identical
+(<a href="../adr/0015-shared-service-modules/">ADR 0015</a>).</p>
 <h2 id="sources-and-generated-files">Sources and generated files<a class="headerlink" href="#sources-and-generated-files" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2338,8 +2338,8 @@ also need explicit Docker packaging, dependency, and test changes.</p>
 extend them through <code>requirements-dev.txt</code>. Root quality, docs, coverage, SDK build,
 and SDK test environments have separate requirement files. Keep the lock associated
 with each environment aligned with its input.</p>
-<p>Files named <code>sample-*</code> under <code>results/</code> describe report formats. They are not current
-validation evidence. AgentWorkflows releases require freshly generated reports.</p>
+<p>Files named <code>sample-*</code> under <code>results/</code> describe report formats. AgentWorkflows releases
+use freshly generated reports as validation evidence.</p>
 <h2 id="where-to-put-a-change">Where to put a change<a class="headerlink" href="#where-to-put-a-change" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Add API behavior to the relevant route module, with service tests and regenerated

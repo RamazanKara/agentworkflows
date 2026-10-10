@@ -721,10 +721,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#durability-and-limits" class="md-nav__link">
+  <a href="#durability-and-accounting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Durability and limits
+        Durability and accounting
       
     </span>
   </a>
@@ -866,7 +866,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2111,10 +2111,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#durability-and-limits" class="md-nav__link">
+  <a href="#durability-and-accounting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Durability and limits
+        Durability and accounting
       
     </span>
   </a>
@@ -2200,21 +2200,22 @@ for its cost, and writes a receipt. The console, CLI, and SDK share that same ga
 <li>Inspect the run's <strong>result</strong>, <strong>budget</strong>, and <strong>timeline</strong>. Export and verify the retained
    audit log when you need evidence beyond receipt IDs in the UI.</li>
 </ol>
-<p>The local trial's admin key can perform all human roles for convenience. Separate member
-and worker credentials before team use; <a href="../workflows/#teams-projects-and-roles">team setup</a>
-describes the existing policy files. Do not give end users direct Temporal or worker access.</p>
-<h2 id="durability-and-limits">Durability and limits<a class="headerlink" href="#durability-and-limits" title="Permanent link">&para;</a></h2>
-<p>Temporal saves completed activity results. A worker restart resumes waiting approval and
-completed steps without repeating those results. An activity interrupted during an external
-action may run again: approved tools must honor the supplied idempotency key. Container
-steps do not automatically retry. Cancellation cannot undo a tool action already sent.</p>
+<p>The local trial's admin key performs all human roles for convenience. Give members and
+workers separate credentials for team use; <a href="../workflows/#teams-projects-and-roles">team setup</a>
+describes the policy files. Keep Temporal and worker access with operators; end users work
+through the gateway.</p>
+<h2 id="durability-and-accounting">Durability and accounting<a class="headerlink" href="#durability-and-accounting" title="Permanent link">&para;</a></h2>
+<p>Temporal saves completed activity results. A worker restart resumes waiting approvals and
+completed steps from history. An activity interrupted during an external action runs again,
+so approved tools honor the supplied idempotency key. Container steps run once.
+Cancellation applies to steps that have not yet run.</p>
 <p>The tighter of the workflow's requested budget and the team's workflow policy applies.
 All runs also consume the shared team budget. Accounting uses configured token prices and
-conservative reservations, not provider invoices. Failed attempts can still cost money.</p>
-<p>Receipts detect changes and internal gaps in retained chains. They do not prove an
-unreported action, and external anchors are needed to detect complete rewrites or truncation.
-The fake produces synthetic answers, tool results, and prices. It proves the governed path,
-not research quality or live provider access.</p>
+conservative reservations; reconcile it against provider billing.</p>
+<p>Receipts cover activity that passes through the gateway. They detect changes and internal
+gaps in retained chains, and external anchors detect complete rewrites or truncation.
+The fake produces synthetic answers, tool results, and prices to demonstrate the governed
+path; connect a real provider to evaluate research quality.</p>
 <p>Continue with <a href="../templates/">templates</a>, <a href="../architecture/">architecture</a>,
 <a href="../security-overview/">security boundaries</a>, and the <a href="../workflows/">workflow guide</a>.</p>
 

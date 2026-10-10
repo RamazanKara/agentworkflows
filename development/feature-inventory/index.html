@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2126,9 +2126,8 @@
 
 <h1 id="feature-inventory">Feature inventory<a class="headerlink" href="#feature-inventory" title="Permanent link">&para;</a></h1>
 <p>This is the source of truth for what release v0.9.0 implements, what is enabled by
-default, and what remains operator-owned. “Shipped” means code, configuration, tests, and an
-operator path exist in this repository; it does not mean a customer-specific integration is
-configured or published. Package and chart versions are 0.9.0.</p>
+default, and what the operator configures. “Shipped” means code, configuration, tests, and an
+operator path exist in this repository. Package and chart versions are 0.9.0.</p>
 <p>Milestones 2–3 add <a href="../workflows/">durable workflows, framework agents, MCP tools, and workflow policy</a>.</p>
 <table>
 <thead>
@@ -2136,7 +2135,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <th>Capability</th>
 <th>Status</th>
 <th>Default</th>
-<th>Verification / boundary</th>
+<th>Details</th>
 </tr>
 </thead>
 <tbody>
@@ -2150,12 +2149,12 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Gateway durable storage</td>
 <td>Shipped</td>
 <td>Redis; PostgreSQL opt-in</td>
-<td><a href="../postgresql-storage/">PostgreSQL store</a> for runs, receipts, terminal snapshots, audit, settings and managed-key metadata; live budgets, sessions and captured content still require Redis</td>
+<td><a href="../postgresql-storage/">PostgreSQL store</a> for runs, receipts, terminal snapshots, audit, settings and managed-key metadata; Redis holds live budgets, sessions and captured content</td>
 </tr>
 <tr>
 <td>Governed tool execution</td>
 <td>Shipped</td>
-<td>Deny unless configured in team policy</td>
+<td>Enabled per tool in team policy</td>
 <td>Fixed URLs, DLP, budget reservations, idempotency keys, run/step receipts</td>
 </tr>
 <tr>
@@ -2192,7 +2191,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Human approvals</td>
 <td>Shipped</td>
 <td>One reviewer, seven days</td>
-<td>1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Escalation and production Temporal authorization remain operator-owned</td>
+<td>1–10 distinct identities, launch-time policy snapshot, duplicate/late-vote refusal, any rejection ends review; console/API and both SDKs. Operators configure Temporal authorization for production</td>
 </tr>
 <tr>
 <td>OpenAI chat completions</td>
@@ -2204,7 +2203,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Legacy completions</td>
 <td>Shipped</td>
 <td>On, non-streaming</td>
-<td>Gateway tests; streaming rejected explicitly</td>
+<td>Gateway tests; synchronous responses</td>
 </tr>
 <tr>
 <td>Embeddings</td>
@@ -2216,7 +2215,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Moderations</td>
 <td>Shipped</td>
 <td>On</td>
-<td>Governance taxonomy, not OpenAI harm categories</td>
+<td>Uses the gateway governance taxonomy</td>
 </tr>
 <tr>
 <td>Anthropic Messages</td>
@@ -2228,7 +2227,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>OpenAI Responses</td>
 <td>Shipped</td>
 <td>On, synchronous</td>
-<td>Function tools with multi-turn tool calls and image inputs; optional state is off by default; background, streaming, and built-in tools remain out of scope</td>
+<td>Function tools with multi-turn tool calls and image inputs; optional state is off by default</td>
 </tr>
 <tr>
 <td>Responses server-side state</td>
@@ -2306,13 +2305,13 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Dedicated gateway metrics port</td>
 <td>Shipped</td>
 <td>Chart 9090; Compose uses the API port</td>
-<td><code>metrics.port</code>; the API port then answers <code>/metrics</code> with 404, and only <code>networkPolicy.metricsIngressNamespaces</code> reach the listener</td>
+<td><code>metrics.port</code>; metrics are then served on that port only, reachable from <code>networkPolicy.metricsIngressNamespaces</code></td>
 </tr>
 <tr>
 <td>Remote image URLs</td>
 <td>Shipped</td>
 <td>Off (<code>data:</code> only)</td>
-<td><code>admission.imageUrlAllowedHosts</code> admits named hosts; other schemes are always refused</td>
+<td><code>admission.imageUrlAllowedHosts</code> admits named hosts</td>
 </tr>
 <tr>
 <td>Request/body limits</td>
@@ -2336,7 +2335,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Agent-action receipts</td>
 <td>Shipped</td>
 <td>Off</td>
-<td><code>POST /v1/receipts</code>; closed action vocabulary, tenant-bound, records claims and enforces nothing (ADR 0014)</td>
+<td><code>POST /v1/receipts</code>; closed action vocabulary, tenant-bound, records agent-reported claims (ADR 0014)</td>
 </tr>
 <tr>
 <td>RAG retrieval receipts</td>
@@ -2347,7 +2346,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <tr>
 <td>Audit chain head persistence</td>
 <td>Shipped</td>
-<td>Memory (no continuity)</td>
+<td>Memory (per process)</td>
 <td><code>file</code> or <code>redis</code> head backend, or the opt-in PostgreSQL gateway store, preserves cross-restart linkage; storage is operator-provided</td>
 </tr>
 <tr>
@@ -2360,7 +2359,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Trigger run history</td>
 <td>Shipped</td>
 <td>On for new cron/webhook launches</td>
-<td>Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; existing run retention, no backfill</td>
+<td>Console history links; project-scoped API/SDK/CLI trigger filtering and cursor paging; follows run retention, starting with launches recorded by v0.9.0</td>
 </tr>
 <tr>
 <td>Usage CSV export</td>
@@ -2372,7 +2371,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Docker Compose evaluation stack</td>
 <td>Shipped</td>
 <td><code>make compose-up</code></td>
-<td>Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; caller-run headless browser smoke; no Kubernetes network policy or agent workspaces</td>
+<td>Gateway/console, cloud fakes, Temporal, Redis, worker and RAG on 127.0.0.1; optional Ollama/Open WebUI; caller-run headless browser smoke</td>
 </tr>
 <tr>
 <td>Ollama runtime</td>
@@ -2414,7 +2413,7 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Network-policy enforcement</td>
 <td>Shipped</td>
 <td>Calico local default</td>
-<td>Reachable-target deny smoke; customer CNI remains operator-owned</td>
+<td>Reachable-target deny smoke; customer CNI is operator-provided</td>
 </tr>
 <tr>
 <td>GitOps delivery</td>
@@ -2444,27 +2443,21 @@ configured or published. Package and chart versions are 0.9.0.</p>
 <td>Multi-node model serving</td>
 <td>Example/integration</td>
 <td>Off</td>
-<td>LeaderWorkerSet/Ray installation and topology are operator-owned</td>
+<td>LeaderWorkerSet/Ray installation and topology are operator-configured</td>
 </tr>
 <tr>
 <td>End-user multi-user chat UI</td>
-<td>Example only</td>
+<td>Example</td>
 <td>Off</td>
-<td>Open WebUI manifest/runbook; identity and storage are operator-owned</td>
-</tr>
-<tr>
-<td>Training, fine-tuning, audio, images</td>
-<td>Out of scope</td>
-<td>n/a</td>
-<td>Use purpose-built systems; see <a href="../scope-and-non-goals/">Scope and non-goals</a></td>
+<td>Open WebUI manifest/runbook; identity and storage are operator-configured</td>
 </tr>
 </tbody>
 </table>
 <p>Milestone 1 (0.2.0): OpenAI, Anthropic, Azure OpenAI, Bedrock, and Vertex Gemini
 adapters share model policy, budgets, DLP, settlement, and provider/cost receipts. Cloud
-routes are opt-in; confidential/restricted tenants and requests remain local. Provider
-protocols and the extended Compose walkthrough are tested with local fakes. See
-<a href="../model-selection/#cloud-routes-milestone-1">model selection</a> for configuration and limits.</p>
+routes are opt-in; confidential/restricted tenants and requests remain local. The extended
+Compose walkthrough exercises provider protocols with local fakes. See
+<a href="../model-selection/#cloud-routes-milestone-1">model selection</a> for configuration.</p>
 <p>For operational acceptance criteria, use the <a href="../production-readiness/">Production readiness matrix</a>.
 For exact supported versions, use the <a href="../version-matrix/">Version matrix</a>.</p>
 <h2 id="team-operations-since-020">Team operations (since 0.2.0)<a class="headerlink" href="#team-operations-since-020" title="Permanent link">&para;</a></h2>
@@ -2472,7 +2465,7 @@ For exact supported versions, use the <a href="../version-matrix/">Version matri
 The authenticated API/CLI starts, lists, inspects, cancels, retries, and approves runs;
 timelines include provider, model, tokens, estimated cost, duration, and receipt IDs.
 Team provider-key mappings, shared token/USD budgets, reports, and Grafana dashboards/alerts
-are included. Onboarding is declarative; Temporal and workers remain trusted operator
+are included. Onboarding is declarative; Temporal and workers are operator
 surfaces. Follow the <a href="../workflows/">team walkthrough</a>.</p>
 
 

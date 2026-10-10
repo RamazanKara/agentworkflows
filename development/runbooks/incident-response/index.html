@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2053,15 +2053,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#gap-sections" class="md-nav__link">
+  <a href="#first-response-procedures" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Gap Sections
+        First-Response Procedures
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Gap Sections">
+    <nav class="md-nav" aria-label="First-Response Procedures">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2170,7 +2170,7 @@ linked runbook, and capture evidence as you go.</p>
 <td><strong>SEV3</strong></td>
 <td>Minor or contained issue, slow-burn, or single-tenant impact. Workarounds exist.</td>
 <td>One sandbox over budget; elevated p95 latency; a single Kyverno-blocked deploy; backup stale but last backup good.</td>
-<td>Handle in business hours. Track to closure; no paging unless it escalates.</td>
+<td>Handle in business hours. Track to closure; page only if it escalates.</td>
 </tr>
 </tbody>
 </table>
@@ -2233,14 +2233,13 @@ backend-absent and restore alerts also name the runbook in their summary.</p>
 </tr>
 </tbody>
 </table>
-<h2 id="gap-sections">Gap Sections<a class="headerlink" href="#gap-sections" title="Permanent link">&para;</a></h2>
-<p>The following failures did not have a dedicated runbook. Each section is the
-first-response procedure; escalate per the tiers above.</p>
+<h2 id="first-response-procedures">First-Response Procedures<a class="headerlink" href="#first-response-procedures" title="Permanent link">&para;</a></h2>
+<p>Each section below is the first-response procedure for its failure; escalate per
+the tiers above.</p>
 <h3 id="budget-redis-outage">Budget Redis Outage<a class="headerlink" href="#budget-redis-outage" title="Permanent link">&para;</a></h3>
 <p><strong>Severity.</strong> Usually SEV2: the shared budget backend (<code>deploy/charts/budget-redis</code>,
-<code>budget</code> namespace) is down, so the gateway cannot read or write per-sandbox
-usage. Inference availability itself may be unaffected, but budget enforcement is
-degraded.</p>
+<code>budget</code> namespace) is down and the gateway's per-sandbox usage reads and writes
+fail, which degrades budget enforcement.</p>
 <p><strong>What to check.</strong></p>
 <div class="highlight"><pre><span></span><code>kubectl -n budget get deploy,svc,networkpolicy,pods
 kubectl -n budget exec deploy/budget-redis -- redis-cli ping   # expect PONG
@@ -2248,7 +2247,7 @@ kubectl -n inference logs deploy/inference-gateway-inference-gateway --tail=100 
 </code></pre></div>
 <p>Confirm <code>SANDBOX_BUDGET_BACKEND=redis</code> and that <code>SANDBOX_BUDGET_REDIS_URL</code>
 resolves the <code>budget</code> namespace service. Check the gateway's
-<code>SANDBOX_BUDGET_REDIS_TIMEOUT_SECONDS</code> -- a slow Redis can manifest as timeouts.</p>
+<code>SANDBOX_BUDGET_REDIS_TIMEOUT_SECONDS</code>: a slow Redis shows up as timeouts.</p>
 <p><strong>How to recover.</strong></p>
 <ol>
 <li>Restart the backend and confirm it returns: <code>DRILL=budget-redis-rollout make chaos-drill</code>
@@ -2258,7 +2257,7 @@ resolves the <code>budget</code> namespace service. Check the gateway's
    broken NetworkPolicy can also sever the gateway-to-Redis path.</li>
 <li>While Redis is down, decide budget posture deliberately: a managed/enterprise
    Redis can be swapped in by pointing <code>budget.redisUrl</code> at it (see
-   <code>runbooks/budget-controls.md</code>). Do not silently disable budgets in production.</li>
+   <code>runbooks/budget-controls.md</code>). Keep budgets enabled in production.</li>
 <li>Validate with the budget endpoint once recovered:
    <code>curl -H 'X-Sandbox-ID: &lt;id&gt;' http://127.0.0.1:18082/v1/sandbox/budget</code>.</li>
 </ol>
@@ -2285,9 +2284,8 @@ unreachable pod) and check the RAG service health for <code>retrieval_backend=qd
    assert point count) is in <code>runbooks/restore-drill.md</code> under "Real
    Data-Recovery Drill (Qdrant)"; the production restore follows the same
    snapshot-restore path against the real collection. Backups are a customer
-   prerequisite -- a metadata-only Velero backup restores an empty store, so the
-   PVC/snapshot contents must have been captured (see
-   <code>deploy/clusters/customer/README.md</code> handoff checklist).</li>
+   prerequisite: capture the PVC/snapshot contents along with the Velero metadata
+   (see <code>deploy/clusters/customer/README.md</code> handoff checklist).</li>
 <li>After restore, re-run RAG smoke and confirm recovered point counts match
    expectations before declaring recovery.</li>
 <li>If no good backup exists, this is a SEV1 data-loss event: engage the customer
@@ -2310,14 +2308,14 @@ that fails signature verification (<code>ai-platform-verify-project-images</code
 <code>Enforce</code> with a keyless subject/issuer restricted to the approved CI identity).</p>
 <p><strong>How to recover.</strong></p>
 <ol>
-<li>For a policy/manifest mismatch, fix the manifest -- see
-   <code>runbooks/policy-blocked-deploy.md</code>. Do not bypass policy; exceptions must be
+<li>For a policy/manifest mismatch, fix the manifest: see
+   <code>runbooks/policy-blocked-deploy.md</code>. Keep policy enforced, and make any exception
    time-boxed, documented, and reviewed.</li>
 <li>For an image-verification block on a fork, the keyless <code>subject</code>/<code>issuer</code> in
    <code>deploy/policies/kyverno/policies.yaml</code> and the image registry must point at your own
    identity (see <code>docs/threat-model.md</code> and <code>deploy/clusters/customer/README.md</code>). A
    rejected image signed by an unexpected identity is the policy working as
-   intended -- treat an unexplained verification failure as a potential
+   intended; treat an unexplained verification failure as a potential
    supply-chain event and escalate to the security lead.</li>
 <li>For a broad-egress block, add the destination to
    <code>platform/network/egress-catalog.yaml</code> and reference it by <code>catalogRef</code> rather than
@@ -2326,8 +2324,8 @@ that fails signature verification (<code>ai-platform-verify-project-images</code
 <h2 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h2>
 <p>For every incident, record: the firing alert and severity, timeline, the runbook
 followed, mitigation steps (including any paused Argo CD automation per
-<code>runbooks/upgrade.md</code>), affected deploy/sandbox/request IDs, and -- for data-loss or
-security events -- the deploy/backup/restore artifacts and the security-lead handoff.</p>
+<code>runbooks/upgrade.md</code>), affected deploy/sandbox/request IDs, and, for data-loss or
+security events, the deploy/backup/restore artifacts and the security-lead handoff.</p>
 
 
 

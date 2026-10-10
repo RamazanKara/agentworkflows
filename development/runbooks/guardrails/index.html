@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2123,7 +2123,7 @@
 <li><code>generic_api_key_assignment</code></li>
 </ul>
 <p>Three PII detectors are also built in but <strong>opt-in</strong> (emails appear in many legitimate
-prompts, so they are not enabled by default):</p>
+prompts, so you turn them on per deployment):</p>
 <ul>
 <li><code>email</code></li>
 <li><code>us_ssn</code></li>
@@ -2150,13 +2150,11 @@ passes this as <code>BLOCKED_CONTENT_TERMS</code>.</p>
 <h2 id="moderations-endpoint">Moderations Endpoint<a class="headerlink" href="#moderations-endpoint" title="Permanent link">&para;</a></h2>
 <p><code>POST /v1/moderations</code> returns an OpenAI-compatible moderation result that classifies
 each input against the built-in <code>credential</code>, <code>pii</code>, and <code>blocked_terms</code> categories
-without forwarding it to a runtime. It is a deterministic content-policy surface; a
-semantic toxicity/jailbreak classifier can be layered behind the same endpoint without
-changing callers.</p>
+inside the gateway. It is a deterministic content-policy surface.</p>
 <h2 id="output-guardrail-response-path">Output Guardrail (Response Path)<a class="headerlink" href="#output-guardrail-response-path" title="Permanent link">&para;</a></h2>
-<p>Input moderation cannot catch a credential or PII value that the <em>model</em> emits: a successful
-prompt injection or a hallucinated secret leaves the gateway in the completion. The output
-guardrail inspects the model response before it is returned or cached, contributing controls for
+<p>The output guardrail covers credentials and PII that the <em>model</em> emits, such as a secret
+surfaced by prompt injection or hallucination. It inspects the model response before it is
+returned or cached, contributing controls for
 OWASP LLM02:2025 (sensitive information disclosure) and LLM05:2025 (improper output handling).</p>
 <p>Configure it in Helm values:</p>
 <div class="highlight"><pre><span></span><code>guardrails:
@@ -2180,22 +2178,21 @@ OWASP LLM02:2025 (sensitive information disclosure) and LLM05:2025 (improper out
 <li><code>flag</code>: record the finding only (metric + <code>X-Output-Guardrail: flagged</code> header); content
   is returned unchanged. Use to measure exposure before enforcing.</li>
 <li><code>redact</code>: replace each matched span with <code>[REDACTED:&lt;pattern&gt;]</code> (default). The redacted
-  body is what gets returned, cached, and audited, so a leaked secret is never persisted.</li>
+  body is what gets returned, cached, and audited, so stored copies hold the redacted text.</li>
 <li><code>block</code>: withhold the content (<code>[response withheld by output policy]</code>) and set the choice
   <code>finish_reason</code> to <code>content_filter</code>.</li>
 </ul>
 <p>Each action increments <code>inference_gateway_output_guardrail_total{action,route}</code> and sets the
 <code>X-Output-Guardrail</code> response header.</p>
-<p>Streaming responses are <strong>detected and flagged</strong> only (<code>flagged_stream</code>): the bytes are already
-on the wire, so the guardrail cannot redact or block them mid-stream. For hard redact/block
-enforcement, run callers non-streaming (the default <code>admission.allowStreaming: false</code>).</p>
-<p>Treat model output as untrusted: a coding agent must never pass a completion to a shell, <code>eval</code>,
-or file write without its own validation, regardless of the gateway guardrail.</p>
+<p>Streaming responses are <strong>detected and flagged</strong> (<code>flagged_stream</code>) as the bytes go out. For
+redact/block enforcement, run callers non-streaming (the default <code>admission.allowStreaming: false</code>).</p>
+<p>Treat model output as untrusted: have a coding agent validate a completion itself before passing
+it to a shell, <code>eval</code>, or a file write, in addition to the gateway guardrail.</p>
 <h2 id="rejection-behavior">Rejection Behavior<a class="headerlink" href="#rejection-behavior" title="Permanent link">&para;</a></h2>
 <p>When a prompt matches a configured secret/PII pattern the gateway returns HTTP 400 with
 reason <code>prompt_secret_detected</code>; a blocked-term match returns <code>content_blocked</code>. Either
-increments <code>inference_gateway_admission_rejections_total</code> and does not forward the request.</p>
-<p>The rejection message names the matched pattern but does not echo the matched text. Audit logs continue to record prompt length and hash only.</p>
+increments <code>inference_gateway_admission_rejections_total</code>, and the request stays at the gateway.</p>
+<p>The rejection message names the matched pattern and omits the matched text. Audit logs continue to record prompt length and hash only.</p>
 <h2 id="operational-guidance">Operational Guidance<a class="headerlink" href="#operational-guidance" title="Permanent link">&para;</a></h2>
 <p>Keep this enabled for coding-agent and tenant workspaces. Disable it only for controlled tests that intentionally validate secret-handling behavior, and keep those tests in a private sandbox.</p>
 <p>If a legitimate prompt is blocked, inspect the matched pattern name, remove the credential material from the prompt, or narrow the configured pattern list for that sandbox after review.</p>

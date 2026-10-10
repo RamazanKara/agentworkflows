@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2136,10 +2136,10 @@
 <p>Use a custom spec and output directory when onboarding a customer team:</p>
 <div class="highlight"><pre><span></span><code>TENANT_SPEC=tenants/onboarding/coding-agents.yaml TENANT_OUTPUT=.out/tenants make tenant-onboard
 </code></pre></div>
-<p>Generate the regulated/offline profile when a team must run without external CIDR egress:</p>
+<p>Generate the regulated/offline profile when a team runs with platform-internal egress only:</p>
 <div class="highlight"><pre><span></span><code>make tenant-onboard-regulated
 </code></pre></div>
-<p>The regulated/offline spec is <code>tenants/onboarding/regulated-offline-coding-agents.yaml</code>. It adds compliance and data-classification labels, renders no external CIDR egress, disables default job-management RBAC, and records the compliance contract in the generated trace ConfigMap.</p>
+<p>The regulated/offline spec is <code>tenants/onboarding/regulated-offline-coding-agents.yaml</code>. It adds compliance and data-classification labels, renders platform-internal egress only, turns off default job-management RBAC, and records the compliance contract in the generated trace ConfigMap.</p>
 <p>Review generated egress CIDRs, RBAC group names, quotas, PVC size, and storage class before applying the artifacts to a customer cluster.</p>
 <h2 id="inspect-controls">Inspect Controls<a class="headerlink" href="#inspect-controls" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>kubectl get namespace ai-team-b-lab --show-labels
@@ -2147,7 +2147,7 @@ kubectl -n ai-team-b-lab get resourcequota,limitrange,networkpolicy,configmap
 kubectl -n ai-team-b-lab logs job/tenant-trace-smoke
 </code></pre></div>
 <h2 id="customer-adaptation">Customer Adaptation<a class="headerlink" href="#customer-adaptation" title="Permanent link">&para;</a></h2>
-<p>Customer clusters should keep the labels and trace contract but can tune quotas, RBAC subjects, and network allowlists to match their team and compliance boundaries. Keep default-deny egress unless the tenant has an approved dependency.</p>
+<p>Customer clusters keep the labels and trace contract and tune quotas, RBAC subjects, and network allowlists to match their team and compliance boundaries. Keep default-deny egress, and add allowances for approved dependencies only.</p>
 
 
 

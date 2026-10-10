@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2053,10 +2053,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#expiry-in-the-cluster-not-just-in-ci" class="md-nav__link">
+  <a href="#expiry-in-the-cluster" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Expiry in the cluster, not just in CI
+        Expiry in the cluster
       
     </span>
   </a>
@@ -2131,14 +2131,11 @@
 <li>Use TLS ports unless a reviewed exception exists.</li>
 <li>Use one catalog entry per trust boundary.</li>
 <li>Keep <code>expiresOn</code> current and review entries before renewal.</li>
-<li>Do not add <code>0.0.0.0/0</code> or broad private ranges to coding-agent workspaces.</li>
+<li>Use specific destination CIDRs for coding-agent workspaces in place of <code>0.0.0.0/0</code> or broad private ranges.</li>
 </ul>
-<h2 id="expiry-in-the-cluster-not-just-in-ci">Expiry in the cluster, not just in CI<a class="headerlink" href="#expiry-in-the-cluster-not-just-in-ci" title="Permanent link">&para;</a></h2>
-<p><code>make egress-check</code> validates <code>expiresOn</code> at review time. On its own that meant an exception
-expired in the repository and not on the wire: GitOps converges the cluster to the repository,
-and the repository still held the old NetworkPolicy until somebody edited it, so CI went red
-while the traffic kept flowing.</p>
-<p>The expiry now travels with the policy. Each <code>allowedEgressCidrs</code> entry must carry
+<h2 id="expiry-in-the-cluster">Expiry in the cluster<a class="headerlink" href="#expiry-in-the-cluster" title="Permanent link">&para;</a></h2>
+<p><code>make egress-check</code> validates <code>expiresOn</code> at review time, and the expiry also travels with the
+policy into the cluster, where Kyverno and a CronJob act on it. Each <code>allowedEgressCidrs</code> entry must carry
 <code>expiresOn</code> (required at render time, and cross-checked against its catalog entry), and the
 chart stamps it onto the rendered NetworkPolicy:</p>
 <div class="highlight"><pre><span></span><code>metadata:
@@ -2150,20 +2147,18 @@ chart stamps it onto the rendered NetworkPolicy:</p>
 </code></pre></div>
 <p>Two controls read it:</p>
 <ul>
-<li><strong>Kyverno</strong> (<code>ai-platform-restrict-egress-cidrs</code>) rejects a governed exception with no
-  expiry annotation, and denies one whose date has passed. The rule runs in background scan
-  too, so an exception that lapses while applied is reported without waiting for the next
-  admission.</li>
+<li><strong>Kyverno</strong> (<code>ai-platform-restrict-egress-cidrs</code>) requires the expiry annotation on every
+  governed exception and denies one whose date has passed. The rule also runs in background
+  scan, so an exception that lapses while applied is reported ahead of the next admission.</li>
 <li><strong>A CronJob</strong> in the workspace namespace (<code>networkPolicy.expiryEnforcement</code>) checks the
   annotation daily. It is <strong>report-only by default</strong>: it fails the job and logs that traffic
-  is still allowed. Set <code>removeExpired: true</code> to have it delete the approved-egress policy,
-  which leaves default-deny in force so the workspace fails closed to platform-internal
-  traffic rather than losing all governance.</li>
+  is still allowed. Set <code>removeExpired: true</code> to have it delete the approved-egress policy;
+  default-deny then stays in force, so the workspace keeps platform-internal traffic and
+  fails closed for everything else.</li>
 </ul>
-<p>Report-only is the default because deleting the policy is a real availability event for
-whatever depended on that egress. Turn enforcement on once you are alerting on the job's
-failure. The <code>delete</code> permission is only granted when <code>removeExpired</code> is true, so the
-capability does not sit in the cluster waiting for the day it might be used.</p>
+<p>Report-only is the default because deleting the policy cuts that egress for whatever depended
+on it. Turn enforcement on once you are alerting on the job's failure. The CronJob receives the
+<code>delete</code> permission only when <code>removeExpired</code> is true.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p>If <code>make egress-check</code> fails, compare the requested <code>cidr</code>, <code>ports</code>, and environment against the catalog entry. The validator requires an approved, non-expired catalog entry whose destination exactly matches the requested network and ports, and it requires the reference's own <code>expiresOn</code> to match the catalog's.</p>
 

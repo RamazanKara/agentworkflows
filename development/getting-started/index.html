@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2294,7 +2294,7 @@ This page is the command reference for validation, operations, and customer hand
 <p>Run the default gate:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>validate
 </code></pre></div>
-<p>It runs service tests, parser fuzz checks, Ruff, mypy, chart lint/render checks, API and configuration contract checks, governance checks, and production-readiness checks. Optional external tools are reported and skipped. <code>make validate-full</code> fails when the strict tool set is incomplete.</p>
+<p>It runs service tests, parser fuzz checks, Ruff, mypy, chart lint/render checks, API and configuration contract checks, governance checks, and production-readiness checks. Optional external tools are reported when absent. <code>make validate-full</code> requires the complete strict tool set.</p>
 <p>Focused targets are faster while editing:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>make<span class="w"> </span>test-gateway
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>make<span class="w"> </span>test-rag
@@ -2323,7 +2323,7 @@ This page is the command reference for validation, operations, and customer hand
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>make<span class="w"> </span>smoke<span class="w"> </span><span class="nv">RUNTIME_BACKEND</span><span class="o">=</span>ollama
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>make<span class="w"> </span>rag-smoke
 </code></pre></div>
-<p>The direct path only covers the core runtime charts. Use the Argo CD path when testing GitOps, policy, observability, or backup applications.</p>
+<p>The direct path covers the core runtime charts. Use the Argo CD path when testing GitOps, policy, observability, or backup applications.</p>
 <h2 id="tenant-and-workspace-checks">Tenant and workspace checks<a class="headerlink" href="#tenant-and-workspace-checks" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>trace-smoke
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>make<span class="w"> </span>tenant-smoke
@@ -2337,7 +2337,7 @@ This page is the command reference for validation, operations, and customer hand
 </code></pre></div>
 <p>Generated files go under <code>.out/tenants</code>. Review them before applying them to any cluster.</p>
 <h2 id="evals-load-tests-and-evidence">Evals, load tests, and evidence<a class="headerlink" href="#evals-load-tests-and-evidence" title="Permanent link">&para;</a></h2>
-<p><code>make eval-local</code> and <code>make loadtest-local</code> use an ephemeral mock runtime. They exercise the gateway and report pipeline; they do not measure Ollama or vLLM throughput.</p>
+<p><code>make eval-local</code> and <code>make loadtest-local</code> use an ephemeral mock runtime. They exercise the gateway and report pipeline. Use <code>make eval</code> and <code>make loadtest</code> against a running gateway to measure Ollama or vLLM throughput.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>eval-local
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>make<span class="w"> </span>loadtest-local
 </code></pre></div>
@@ -2349,7 +2349,7 @@ This page is the command reference for validation, operations, and customer hand
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>make<span class="w"> </span>evidence
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>make<span class="w"> </span>evidence<span class="w"> </span><span class="nv">LIVE</span><span class="o">=</span><span class="m">1</span>
 </code></pre></div>
-<p>The non-strict release gate may use checked-in <code>sample-*</code> reports to test the gate configuration. It is not release evidence. Before a release or customer handoff, generate current reports and run:</p>
+<p>The non-strict release gate can use checked-in <code>sample-*</code> reports to test the gate configuration. Before a release or customer handoff, generate current reports and run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>make<span class="w"> </span>validate-full
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>make<span class="w"> </span>release-gate-strict
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>make<span class="w"> </span>release-report-strict

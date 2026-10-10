@@ -993,7 +993,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2413,15 +2413,14 @@ The gallery has nine templates, all at version <code>0.9.0</code>.
 Installation pins that version in the team's revisioned settings and records an audit entry;
 repeating the same installation is idempotent. New runs retain the template ID and version.
 Unknown versions return 422; an unapproved workflow returns 409.</p>
-<p>This installs the catalog selection, not remote executable code. The Compose worker already
+<p>Installation selects a catalog entry; your worker supplies the code. The Compose worker
 registers all nine implementations. For Kubernetes, register the implementation in your worker
 and approve <code>inference-gateway.sandboxPolicy.policy.policies[].workflows</code> in Helm first;
-the gallery never expands model, tool or egress permissions. Operator policy remains authoritative.
-Source changes still require a worker deployment. The existing scaffold command below is
-the way to edit a template. See <a href="../team-lifecycle/">lifecycle API and SDK methods</a>.</p>
+the gallery works within the model, tool and egress permissions set in operator policy.
+Deploy the worker to ship source changes. Use the scaffold command below to edit a template. See <a href="../team-lifecycle/">lifecycle API and SDK methods</a>.</p>
 <p>Pick one team task, run its fixture, then adapt its inputs and tools. Each walkthrough takes
-about five minutes after the <a href="../quickstart/">quickstart</a>. All nine run in the same Compose
-trial without credentials for any external service, a GPU, or framework extras.</p>
+about five minutes after the <a href="../quickstart/">quickstart</a>. All nine run in the same
+credential-free Compose trial on CPU with the base SDK.</p>
 <table>
 <thead>
 <tr>
@@ -2479,14 +2478,14 @@ the checkout root. Keep <code>AGENTWORKFLOWS_API_KEY=local-development-only</cod
 Every command below works in Bash and PowerShell. Replace <code>RUN_ID</code> with the UUID returned
 by <code>runs start</code>; repeat <code>inspect</code> while a run is still working. The console at
 <a href="http://127.0.0.1:8080/console/">http://127.0.0.1:8080/console/</a> offers the same workflows and sample inputs under <strong>Run workflow</strong>.</p>
-<p><code>init</code> works offline and refuses to overwrite a nonempty directory. It writes <code>workflow.py</code>,
+<p><code>init</code> works offline and writes into a new or empty directory. It writes <code>workflow.py</code>,
 <code>worker.py</code>, <code>input.json</code>, a pinned SDK requirement, <code>.gitignore</code>, and local instructions.
 The built-in worker already runs these unchanged examples. Input edits apply to the next
 run immediately; source edits require <a href="#run-your-edits">your own worker</a>.</p>
-<p>The fake returns <strong>canned answers and synthetic data</strong>, even if you change the input. It
-proves the workflow, policy, approval and receipt paths; it does not evaluate model quality
-or connect to your GitHub, ticketing, logging, or document system. The <code>example.test</code> source
-links identify fixtures and are not live pages. All examples request the existing default
+<p>The fake returns <strong>canned answers and synthetic data</strong> for any input. It demonstrates the
+workflow, policy, approval and receipt paths; connect a real model and your own GitHub,
+ticketing, logging, or document system to evaluate quality. The <code>example.test</code> source links
+identify fixtures. All examples request the existing default
 budget of 10,000 tokens / $5, further limited by team policy; fixture prices are synthetic.</p>
 <h2 id="code-review">PR review with human approval<a class="headerlink" href="#code-review" title="Permanent link">&para;</a></h2>
 <p>For a developer who wants a reviewable security/correctness draft before acting on a PR:</p>
@@ -2502,14 +2501,13 @@ restoring the admin check, and asks for admin/non-admin tests. Then submit your 
 </code></pre></div>
 <p>Expect <code>status: completed</code>, <code>result.approved: true</code>, the review and reviewer, and model and
 approval receipts. Start another run and use <code>runs approve RUN_ID --reject</code> to see
-<code>result.approved: false</code>. Both decisions finish the run; neither posts, executes or merges
-code. Approval expires after seven days. The trial's Slack/webhook/email alerts go to the
+<code>result.approved: false</code>. Both decisions finish the run with the review as its result.
+Approval expires after seven days. The trial's Slack/webhook/email alerts go to the
 <a href="#notifications-and-next-steps">local notification inbox</a>.</p>
 <p><strong>Adapt it:</strong> put a sanitized unified diff in <code>my-review/input.json</code>. Include file names and
 hunk line numbers so findings can be checked. Use separate builder and approver identities
 from <a href="../workflows/#teams-projects-and-roles">team setup</a>. A PR webhook needs an adapter that
-fetches the diff and submits <code>{"diff":"..."}</code>; this template does not accept a raw GitHub
-event. If you add a comment-posting tool, call it only after a true approval and make the
+fetches the diff and submits <code>{"diff":"..."}</code>. If you add a comment-posting tool, call it only after a true approval and make the
 endpoint honor the gateway's idempotency key. Check findings against the actual diff.</p>
 <h2 id="support-triage">Support ticket triage<a class="headerlink" href="#support-triage" title="Permanent link">&para;</a></h2>
 <p>For a support lead who needs routing and a reply draft while keeping customer communication
@@ -2521,8 +2519,8 @@ under the team's control:</p>
 <p>The input's <code>ticket</code> describes three teammates unable to sign in after password resets.
 Expect <code>status: completed</code> and a text <code>result</code> with category <code>access</code>, priority <code>high</code>, owner
 <code>identity-support</code>, and a draft asking for the error and time without requesting secrets.
-There is one model receipt and no customer message is sent. No approval is required to
-create this internal draft.</p>
+There is one model receipt, and the draft stays in the run for your team. This internal
+draft runs without an approval step.</p>
 <p><strong>Adapt it:</strong> replace <code>ticket</code> with a sanitized ticket body. Edit the prompt to use your
 actual queues, severity definitions and escalation criteria. Connect a ticket-system
 adapter through the <a href="../workflows/#triggers-and-notifications">signed webhook contract</a>,
@@ -2543,8 +2541,8 @@ and one model receipt. The report stays in the run result.</p>
 <p><strong>Adapt it:</strong> implement the existing <code>report_source</code> POST contract, accepting <code>source</code> and
 <code>period</code> and returning <code>{id, url, period, text}</code>. Point its team tool URL at an authenticated
 adapter for your repositories, helpdesk and incident tracker. Bound date ranges and response
-sizes, and use stable source links. A failed source call fails the run after retries; this
-template does not silently turn missing data into a successful report.</p>
+sizes, and use stable source links. A failed source call fails the run after retries, so
+every successful report covers all three sources.</p>
 <p>For a Monday 09:00 <strong>UTC</strong> run, merge this into the existing <code>WeeklyReportWorkflow</code> policy
 in <code>deploy/compose/sandbox-policy.yaml</code>, preserving its models, tools, egress and budgets:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">triggers</span><span class="p">:</span>
@@ -2562,8 +2560,8 @@ the same synthetic snapshots. Inspect and pause the schedule after trying it:</p
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>agentworkflows<span class="w"> </span>triggers<span class="w"> </span>pause<span class="w"> </span>WeeklyReportWorkflow<span class="w"> </span>weekly
 </code></pre></div>
 <p>Use <code>triggers resume WeeklyReportWorkflow weekly</code> when ready. The manual run above exercises
-the same report immediately, so there is no need to wait until Monday. See
-<a href="../workflows/#triggers-and-notifications">schedule semantics</a> for overlap and catch-up limits.</p>
+the same report immediately, so you can try it right away. See
+<a href="../workflows/#triggers-and-notifications">schedule semantics</a> for overlap and catch-up behavior.</p>
 <h2 id="incident-summary">Incident summary from logs<a class="headerlink" href="#incident-summary" title="Permanent link">&para;</a></h2>
 <p>For an incident lead turning a bounded log export into a draft handoff:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-incident<span class="w"> </span>--template<span class="w"> </span>incident-summary
@@ -2575,12 +2573,12 @@ log lines. Expect <code>status: completed</code>, <code>result.logs</code> retai
 <code>result.summary</code> citing <code>[L1]</code> through <code>[L4]</code>: deployment at 09:00 UTC, errors at 09:05,
 rollback at 09:12, and a return to baseline at 09:20. The fixture labels the deployment
 as an unconfirmed cause and asks for the affected-user count. There is one tool and one
-model receipt. It performs no remediation and declares no incident closed.</p>
+model receipt. The summary is a draft handoff; remediation and closure stay with the incident team.</p>
 <p><strong>Adapt it:</strong> replace the <code>incident_logs</code> endpoint with a read-only log adapter accepting
 <code>{incident_id}</code> and returning <code>{incident_id, source, lines}</code>. Enforce the team's access,
 redaction, time window and size limits there. Keep UTC timestamps and stable log IDs.
 The incident commander should verify the draft against logs and metrics before sharing it.
-Raw logs and results enter Temporal history; receipt redaction alone does not remove that data.</p>
+Raw logs and results enter Temporal history; apply redaction in the adapter and set Temporal retention for that data.</p>
 <h2 id="document-qa">Document Q&amp;A with citations<a class="headerlink" href="#document-qa" title="Permanent link">&para;</a></h2>
 <p>For an internal helpdesk answering questions from a small, approved document collection:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>agentworkflows<span class="w"> </span>init<span class="w"> </span>my-docs<span class="w"> </span>--template<span class="w"> </span>document-qa
@@ -2594,16 +2592,16 @@ Raw logs and results enter Temporal history; receipt redaction alone does not re
 retrieval tool receipt and one model receipt.</p>
 <p>Change the question in <code>my-docs/input.json</code> to <code>What is the weather on Mars?</code> and start a new
 run. The fixture retrieves nothing: expect <code>I don't know from the supplied documents.</code>,
-empty citations, and no model call. Fixture retrieval recognizes approval and receipt
-questions only; it is independent of the optional RAG service in Compose.</p>
+empty citations, and no model call. Fixture retrieval answers approval and receipt
+questions and runs separately from the optional RAG service in Compose.</p>
 <p><strong>Adapt it:</strong> connect <code>search_documents</code> to your approved search/RAG backend. It accepts
 <code>{query}</code> and returns a list of <code>{id, title, url, text}</code> excerpts, each with a unique stable
 ID and source link. Enforce document access in that adapter and limit excerpt sizes.
 The workflow requires JSON model output and checks that inline citation IDs match the
 returned IDs and retrieved excerpts. Malformed JSON or fabricated/mismatched IDs fail the
 run with a non-retryable error; an empty citation list yields the same abstention.
-Review the error and source before starting a corrected run. Valid IDs do <strong>not</strong> prove
-the cited text supports every claim; evaluate answer quality and abstention on your corpus.</p>
+Review the error and source before starting a corrected run. Evaluate answer quality and
+abstention on your corpus.</p>
 <h2 id="research">Research starter<a class="headerlink" href="#research" title="Permanent link">&para;</a></h2>
 <p>The original default remains available: <code>agentworkflows init my-research</code>. Follow the
 <a href="../quickstart/">quickstart</a> to run <code>ResearchWorkflow</code> with a <code>topic</code>, inspect its two model
@@ -2616,13 +2614,12 @@ starts the run. <code>agentworkflows usage</code> shows estimated spend across r
 timeline for receipt IDs; use the quickstart's <a href="../quickstart/#3-approve-and-inspect-the-receipts">receipt export</a>
 to verify the retained chain.</p>
 <p>Compose sends approval-waiting, failure, and budget-threshold notifications to a local
-fake inbox at <a href="http://127.0.0.1:8025/">http://127.0.0.1:8025/</a> (JSON). Nothing goes to a real Slack workspace or
-mailbox. Completed reports are run results, not automatic outbound report deliveries.
+fake inbox at <a href="http://127.0.0.1:8025/">http://127.0.0.1:8025/</a> (JSON). Completed reports are delivered as run results.
 <a href="../workflows/#triggers-and-notifications">Triggers and notifications</a> explains setup for
 your team's authorized destinations.</p>
 <p>Before real use, configure approved tools/models, separate team credentials and budgets,
 and evaluate model output. Sanitize input before submitting it: workflow inputs, activity
-results and drafts are retained in Temporal even though gateway receipts fingerprint prompts.
+results and drafts are retained in Temporal, while gateway receipts fingerprint prompts.
 See <a href="../production-readiness/">production readiness</a>. When finished with the trial, follow
 <a href="../quickstart/#stop-the-trial">Stop the trial</a> to remove its containers and volumes.</p>
 <h2 id="run-your-edits">Run your edits<a class="headerlink" href="#run-your-edits" title="Permanent link">&para;</a></h2>
@@ -2648,8 +2645,8 @@ and start the worker:</p>
 </div>
 </div>
 <p>Wait for <code>Worker ready on demo-workflows</code>. Start and inspect runs from the original
-terminal using its human credential. Your worker registers only this project's workflow;
-do not start other templates on that queue until restoring the built-in worker.
+terminal using its human credential. Your worker registers this project's workflow;
+start other templates after restoring the built-in worker.
 Restart your worker after changing source. Stop it with Ctrl+C, then restore Compose:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>workflow-worker
 </code></pre></div>
@@ -2697,13 +2694,13 @@ Or scaffold and run from code:</p>
 </code></pre></div>
 <p>Input field: <code>changes</code> (required text); <code>model</code> defaults to <code>demo-openai</code>.
 Example: REL-42: Added CSV usage export. Fixed approval expiry. Removed the legacy /draft endpoint.</p>
-<p>The draft turn merged changes into release notes with a reviewer decision.
+<p>The workflow turns merged changes into release notes with a reviewer decision.
 It waits for human approval and returns <code>approved</code>, <code>release_notes</code>, and <code>reviewer</code>.
-Rejection returns <code>approved: false</code>; it sends no external message or publication.
+Rejection returns <code>approved: false</code>; both outcomes keep the result in the run.
 Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
 further constrained by team policy.</p>
 <p><strong>Adapt it:</strong> supply sanitized merged changes with stable issue/PR IDs; have the reviewer check breaking changes and migration instructions against the diff before publishing.
-The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
+The local fake produces a labeled synthetic draft; connect a real model to assess quality.</p>
 <h2 id="meeting-actions">Meeting actions<a class="headerlink" href="#meeting-actions" title="Permanent link">&para;</a></h2>
 <p><strong>For:</strong> team leads turning a transcript into an actionable follow-up.
 Version <code>0.9.0</code>; Python and TypeScript workers both implement <code>MeetingActionsWorkflow</code>.</p>
@@ -2716,13 +2713,13 @@ Or scaffold and run from code:</p>
 </code></pre></div>
 <p>Input field: <code>transcript</code> (required text); <code>model</code> defaults to <code>demo-openai</code>.
 Example: 09:00 Maya: We will pilot the review workflow. 09:02 Leo: I own the rollout checklist, due Friday. 09:04 Maya: Budget approval is still open.</p>
-<p>The draft extract decisions, owners, and due dates from a meeting transcript.
+<p>The workflow extracts decisions, owners, and due dates from a meeting transcript.
 It waits for human approval and returns <code>approved</code>, <code>action_plan</code>, and <code>reviewer</code>.
-Rejection returns <code>approved: false</code>; it sends no external message or publication.
+Rejection returns <code>approved: false</code>; both outcomes keep the result in the run.
 Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
 further constrained by team policy.</p>
 <p><strong>Adapt it:</strong> supply a transcript with timestamps and consent to process it; verify every proposed owner and deadline before transferring actions to your task tracker.
-The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
+The local fake produces a labeled synthetic draft; connect a real model to assess quality.</p>
 <h2 id="security-questionnaire">Security questionnaire<a class="headerlink" href="#security-questionnaire" title="Permanent link">&para;</a></h2>
 <p><strong>For:</strong> security teams answering vendor questionnaires from retained evidence.
 Version <code>0.9.0</code>; Python and TypeScript workers both implement <code>SecurityQuestionnaireWorkflow</code>.</p>
@@ -2735,13 +2732,13 @@ Or scaffold and run from code:</p>
 </code></pre></div>
 <p>Input field: <code>evidence</code> (required text); <code>model</code> defaults to <code>demo-openai</code>.
 Example: Q1: Are approvals required? E1: The team policy requires two reviewers before publication. Q2: Is SOC 2 certification current? No certification evidence supplied.</p>
-<p>The draft draft evidence-backed questionnaire answers and flag unsupported claims.
+<p>The workflow drafts evidence-backed questionnaire answers and flags unsupported claims.
 It waits for human approval and returns <code>approved</code>, <code>answers</code>, and <code>reviewer</code>.
-Rejection returns <code>approved: false</code>; it sends no external message or publication.
+Rejection returns <code>approved: false</code>; both outcomes keep the result in the run.
 Inspect the model-call and approval receipts. Default per-run budget: 10,000 tokens / $5,
 further constrained by team policy.</p>
-<p><strong>Adapt it:</strong> supply numbered questions and authoritative evidence excerpts with IDs; require a security reviewer to check each cited statement. Missing evidence must remain an explicit gap, especially certification claims.
-The local fake produces a labeled synthetic draft. A real model is needed to assess quality.</p>
+<p><strong>Adapt it:</strong> supply numbered questions and authoritative evidence excerpts with IDs; require a security reviewer to check each cited statement. Mark questions without evidence as unanswered, especially certification claims.
+The local fake produces a labeled synthetic draft; connect a real model to assess quality.</p>
 
 
 

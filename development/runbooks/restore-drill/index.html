@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2020,10 +2020,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-the-restore-drills-prove-read-this-first" class="md-nav__link">
+  <a href="#what-the-restore-drills-prove" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What The Restore Drills Prove (read this first)
+        What The Restore Drills Prove
       
     </span>
   </a>
@@ -2122,22 +2122,21 @@
 
 
 <h1 id="incident-runbook-restore-drill-failure">Incident Runbook: Restore Drill Failure<a class="headerlink" href="#incident-runbook-restore-drill-failure" title="Permanent link">&para;</a></h1>
-<h2 id="what-the-restore-drills-prove-read-this-first">What The Restore Drills Prove (read this first)<a class="headerlink" href="#what-the-restore-drills-prove-read-this-first" title="Permanent link">&para;</a></h2>
-<p>There are two distinct drills, and they prove different things. Do not conflate
-them when reviewing evidence:</p>
+<h2 id="what-the-restore-drills-prove">What The Restore Drills Prove<a class="headerlink" href="#what-the-restore-drills-prove" title="Permanent link">&para;</a></h2>
+<p>There are two distinct drills, and each proves something specific:</p>
 <ul>
 <li><strong>Restore-tooling smoke (Redis AOF fixture).</strong> The default <code>make restore-drill</code>
   replays a <em>synthetic 2-key Redis AOF fixture</em> into a disposable container and
-  runs data checks. This proves the restore <em>pipeline/tooling</em> works -- it can
-  stand up a target, replay a backup, and validate it. It does <strong>not</strong> prove
-  that any production data store is recoverable. Treat a green
-  <code>restore-pass-rate</code> from this path as "the restore tooling runs," nothing more.</li>
+  runs data checks. This proves the restore <em>pipeline/tooling</em> works: it
+  stands up a target, replays a backup, and validates it. A green
+  <code>restore-pass-rate</code> from this path means the restore tooling runs; the Qdrant
+  drill below covers stored data.</li>
 <li><strong>Real data-recovery drill (Qdrant).</strong> <code>RUNTIME=local RESTORE_DRILL_QDRANT_DATA=1
   make restore-drill</code> runs an end-to-end recovery of real vectors: it seeds a
   known set of points into a throwaway probe collection, exports a Qdrant
   snapshot, deletes the collection, restores it from the snapshot, and asserts
-  the recovered point count matches. This is the drill that actually proves
-  stored vector data is recoverable. The spec lives at
+  the recovered point count matches. This drill proves stored vector data is
+  recoverable. The spec lives at
   <code>chaos/drills/qdrant-data-restore.yaml</code>.</li>
 </ul>
 <h2 id="symptoms">Symptoms<a class="headerlink" href="#symptoms" title="Permanent link">&para;</a></h2>
@@ -2153,8 +2152,8 @@ kubectl get pods -n restore-drill -l restore-drill/ephemeral=true
 <h2 id="real-data-recovery-drill-qdrant">Real Data-Recovery Drill (Qdrant)<a class="headerlink" href="#real-data-recovery-drill-qdrant" title="Permanent link">&para;</a></h2>
 <p>Run against a live local cluster with a reachable Qdrant (port-forward or
 in-cluster). It is guarded behind <code>RUNTIME=local</code> and <code>RESTORE_DRILL_QDRANT_DATA=1</code>
-so it never runs by accident, and it only touches its own ephemeral probe
-collection (never the production <code>customer-platform-knowledge</code> collection).</p>
+so it runs only on request, and it works on its own ephemeral probe collection,
+leaving the production <code>customer-platform-knowledge</code> collection untouched.</p>
 <div class="highlight"><pre><span></span><code># Make Qdrant reachable (example: port-forward the vector service)
 kubectl -n vector port-forward svc/qdrant-vector-store 6333:6333 &amp;
 
@@ -2172,12 +2171,12 @@ RUNTIME=local RESTORE_DRILL_QDRANT_DATA=1 make restore-drill
 <code>RESTORE_DRILL_QDRANT_COLLECTION</code>, <code>RESTORE_DRILL_QDRANT_DIMENSIONS</code>,
 <code>RESTORE_DRILL_QDRANT_POINTS</code>. The report is written to
 <code>results/restore-drill/qdrant-data-restore-&lt;stamp&gt;.json</code>. A failed assertion or
-an unreachable Qdrant produces a <code>validation_passed: false</code> record -- results
-are never faked.</p>
+an unreachable Qdrant produces a <code>validation_passed: false</code> record, so every
+result reflects the real run.</p>
 <h2 id="likely-causes">Likely Causes<a class="headerlink" href="#likely-causes" title="Permanent link">&para;</a></h2>
 <p>The backup artifact is missing, object-storage credentials are wrong, the restore image lacks Redis/PostgreSQL/MySQL tools, or a validation check no longer matches the restored data. For the Qdrant drill: Qdrant is unreachable, snapshots are disabled, or the snapshot volume is not writable.</p>
 <h2 id="mitigation">Mitigation<a class="headerlink" href="#mitigation" title="Permanent link">&para;</a></h2>
-<p>Rerun with <code>--no-cleanup</code>, inspect the retained target pod or container, fix credentials or backup source paths, and only then update checks if the data contract intentionally changed.</p>
+<p>Rerun with <code>--no-cleanup</code>, inspect the retained target pod or container, fix credentials or backup source paths, and update checks only when the data contract intentionally changed.</p>
 <h2 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h2>
 <p>Save the run JSON, compliance report, retained pod name, relevant logs, and backup artifact timestamp. For the Qdrant drill, save the <code>qdrant-data-restore-&lt;stamp&gt;.json</code> report showing seeded vs recovered point counts.</p>
 

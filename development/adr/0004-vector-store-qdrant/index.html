@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2121,33 +2121,30 @@ or without it.</p>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The default lab needs no vector database: the lexical retriever keeps the quickstart light, and the
+<li>The default lab runs on the lexical retriever, which keeps the quickstart light, and the
   Qdrant profile is opt-in for customers who need dense retrieval.</li>
 <li>Qdrant runs as a first-class platform workload: it is subject to the same Kyverno policies, carries
   the <code>platform.ai/encryption-at-rest</code> PVC attestation
   (see <a href="../0002-policy-engine-kyverno/">0002</a>), and reconciles through Argo CD like everything else.</li>
-<li>The hybrid score is a deliberate design choice, not just a wrapper over Qdrant's search: lexical
-  overlap materially improves ranking under the default hashed-vector embedding, which keeps the
-  profile usable before a customer wires a real embedding model.</li>
-<li>Running a vector database is now an operational responsibility (storage, backup, version
-  migration). The migration runbook exists precisely because collection schema/version changes are
-  not free.</li>
+<li>The hybrid score is a deliberate design choice on top of Qdrant's search: lexical overlap
+  materially improves ranking under the default hashed-vector embedding, which makes the profile
+  useful from the first run, before a customer wires a production embedding model.</li>
+<li>The operator runs the vector database (storage, backup, version migration) and follows the
+  migration runbook for collection schema/version changes.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>pgvector (Postgres extension).</strong> Attractive when a team already operates Postgres and wants
-  vectors next to relational data. Rejected as the default because it would add a Postgres dependency
-  the platform does not otherwise need, and the RAG service wants a purpose-built vector query API with
-  native filtering rather than SQL-over-vectors.</li>
-<li><strong>Milvus.</strong> High-scale, feature-rich vector database. Rejected as the default for being heavier to
-  operate than AgentWorkflows' "optional profile" goal warrants; a single maintainer can keep one Qdrant
-  chart current more cheaply than a multi-component Milvus deployment.</li>
+  vectors next to relational data. Qdrant was preferred as the default because it gives the RAG
+  service a purpose-built vector query API with native filtering as a single dedicated workload.</li>
+<li><strong>Milvus.</strong> High-scale, feature-rich vector database. Qdrant was preferred as the default because
+  one Qdrant chart is lighter to operate and keep current, which fits the "optional profile" goal.</li>
 <li><strong>Weaviate.</strong> Capable vector database with a built-in module ecosystem. A reasonable alternative;
   Qdrant was chosen for a simple single-binary deployment that fits one chart and one PVC, and a
-  query API the retriever maps onto cleanly. The choice is not a claim that Weaviate is unsuitable.</li>
-<li><strong>A managed/SaaS vector store.</strong> Rejected because it moves tenant knowledge-base data and the
-  retrieval control point outside the customer-owned boundary, which contradicts the local-first,
-  provider-neutral premise of the platform.</li>
+  query API the retriever maps onto cleanly.</li>
+<li><strong>A managed/SaaS vector store.</strong> A self-hosted store was preferred because it keeps tenant
+  knowledge-base data and the retrieval control point inside the customer-owned boundary, matching
+  the provider-neutral premise of the self-hosted profiles.</li>
 </ul>
 
 

@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2103,26 +2103,22 @@ least-privilege RBAC, and PVC-backed storage. The platform-level sandbox is a
 logical construct: a validated <code>X-Sandbox-ID</code> that the inference gateway binds
 to budgets, metrics, and tamper-evident audit events
 (<code>src/inference-gateway/app/main.py</code>).</p>
-<p>This gives strong <em>tenant</em> isolation but no <em>kernel</em> isolation. An agent that
-executes untrusted or model-generated code shares the node kernel with other
-workloads; the only barriers are the container runtime and the restricted pod
-security profile. No ADR records this trade-off; it was an implicit choice made
-before a credible upstream alternative existed.</p>
-<p>That alternative now exists. <code>kubernetes-sigs/agent-sandbox</code> (SIG Apps) reached
+<p>This gives strong <em>tenant</em> isolation. An agent that executes model-generated
+code shares the node kernel with other workloads, behind the container runtime
+and the restricted pod security profile. <em>Kernel</em> isolation is the next layer.</p>
+<p>An upstream primitive for it is available. <code>kubernetes-sigs/agent-sandbox</code> (SIG Apps) reached
 v0.5.0 in June 2026 and graduated its core API to <code>agents.x-k8s.io/v1beta1</code>
 (<code>Sandbox</code>), with <code>SandboxTemplate</code>, <code>SandboxClaim</code>, and <code>SandboxWarmPool</code>
 under <code>extensions.agents.x-k8s.io/v1beta1</code>. It provides secure-by-default
 networking on the template path (cluster-internal IPs and metadata endpoints
-blocked since v0.2.1; a directly created <code>Sandbox</code> gets no upstream
-NetworkPolicy, verified on <code>kind</code>, 2026-07-01), lifetime bounds
+blocked since v0.2.1; a directly created <code>Sandbox</code> relies on the cluster's own
+NetworkPolicies, confirmed on <code>kind</code>, 2026-07-01), lifetime bounds
 (<code>shutdownTime</code>/<code>shutdownPolicy</code> on sandboxes, <code>ttlSecondsAfterFinished</code> on
 pooled claims), suspend/resume, warm pools for ~1 s allocation, and Python/Go
 SDKs. It supports stronger runtimes (gVisor, Kata Containers) via the pod
-runtime class. It is installed from versioned release manifests; there is no
-upstream Helm chart. Managed offerings (GKE Agent Sandbox) and production
-users exist.</p>
-<p>Maintaining a bespoke isolation layer in parallel would duplicate an upstream
-primitive AgentWorkflows does not differentiate on. AgentWorkflows' differentiation is the
+runtime class. It is installed from versioned release manifests. Managed
+offerings and production users exist.</p>
+<p>Adopting the upstream primitive lets AgentWorkflows focus on its differentiation, the
 governance envelope around agent execution: approved-egress catalog, per-sandbox
 budgets, the audit chain and evidence packs, and the control-framework map
 (<code>platform/governance/control-framework-map.yaml</code>).</p>
@@ -2133,17 +2129,14 @@ runtime</strong> underneath the existing governance envelope:</p>
 <li><code>deploy/charts/agent-workspace</code> gains a <code>sandbox.runtime</code> value:
    <code>namespace</code> (current behaviour, default, works on any conformant cluster)
    or <code>agent-sandbox</code> (renders a hardened <code>Sandbox</code> with an inline pod
-   template and expects the agent-sandbox controller to be installed;
-   <code>SandboxTemplate</code> and warm pools are reserved for a later pooled phase,
-   since <code>v1beta1</code> claims allocate exclusively from pools).</li>
+   template on the installed agent-sandbox controller).</li>
 <li>The hardened profile sets <code>runtimeClassName</code> (gVisor or Kata where the
    cluster provides it, mirroring the optional <code>accelerator.runtimeClassName</code>
    pattern in the vLLM chart), disables service-account token automount,
    and stays compatible with the <code>restricted</code> Pod Security level.</li>
 <li>AgentWorkflows' NetworkPolicies and <code>ApprovedEgressCatalog</code> remain the
-   <strong>authoritative egress control</strong>: on the direct-<code>Sandbox</code> path they are
-   the <em>only</em> network control, since upstream creates no policy there. The
-   catalog stays the only allow-path, <code>make egress-check</code> extends to
+   <strong>authoritative egress control</strong> and govern the direct-<code>Sandbox</code> path. The
+   catalog is the single allow-path, <code>make egress-check</code> extends to
    sandbox-managed pods, and policy-as-code enforces that sandbox pods are
    selected by the default-deny policy.</li>
 <li>The gateway's logical sandbox binds 1:1 to the runtime sandbox: the
@@ -2155,56 +2148,48 @@ runtime</strong> underneath the existing governance envelope:</p>
    control-framework map gains an isolation control (working id <code>C-ISOLATE</code>):
    recommended at the <code>medium</code> risk tier, mandated at <code>high</code>.</li>
 <li>Profiles: the local <code>kind</code> lab keeps <code>sandbox.runtime: namespace</code> as the
-   default (no gVisor assumption on laptops); customer GPU and
+   default (laptops run without gVisor); customer GPU and
    regulated-offline profiles document and default to <code>agent-sandbox</code>.</li>
 </ol>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
-<p>Positive:</p>
 <ul>
-<li>Kernel-level isolation becomes available for untrusted agent code and is
-  tied to governance risk tiers instead of being uniformly absent.</li>
-<li>The isolation primitive is maintained by SIG Apps and its ecosystem
-  (SDKs, warm pools, managed equivalents), not by AgentWorkflows.</li>
-<li>AgentWorkflows' story sharpens: governance, egress, budgets, and evidence over a
-  standard primitive: the layer above agent-sandbox, not a competitor to it.</li>
-<li>Warm pools give a path to low-latency workspace allocation without bespoke
-  pooling code.</li>
-</ul>
-<p>Negative / accepted costs:</p>
-<ul>
-<li>New dependency on a <code>v1beta1</code> API that may still change before GA. Release
-  manifests must be vendored and pinned in <code>docs/version-matrix.md</code>; upgrades
-  go through the normal release-verification path.</li>
-<li>No upstream Helm chart: installation is by vendored versioned manifests,
-  which is a second deployment mechanism next to Helm/Argo CD.</li>
-<li>gVisor/Kata become documented cluster prerequisites for the hardened
-  profile (decision guide + version matrix); the local lab intentionally does
-  not exercise them, so hardened-profile CI needs a capable environment.</li>
-<li>Two runtime paths (namespace, agent-sandbox) must be rendered and tested in
-  <code>make validate</code>, increasing the chart test matrix.</li>
-<li>When the pooled path (SandboxTemplate/warm pools) is adopted, upstream's
-  template-scoped NetworkPolicy model must be reconciled with AgentWorkflows'
-  default-deny policies so the egress catalog remains the single source of
-  truth; this reconciliation is a design obligation, not an option.</li>
+<li>Kernel-level isolation is available for agent code and tied to governance
+  risk tiers.</li>
+<li>SIG Apps and its ecosystem (SDKs, warm pools, managed equivalents) maintain
+  the isolation primitive.</li>
+<li>AgentWorkflows provides governance, egress, budgets, and evidence as the
+  layer above the standard agent-sandbox primitive.</li>
+<li>The upstream warm-pool model supports low-latency workspace allocation
+  without bespoke pooling code.</li>
+<li>The platform builds on the <code>v1beta1</code> API. Release manifests are vendored
+  and pinned in <code>docs/version-matrix.md</code>, and upgrades go through the normal
+  release-verification path.</li>
+<li>The controller installs from vendored versioned manifests alongside the
+  Helm/Argo CD deployment.</li>
+<li>gVisor/Kata are documented cluster prerequisites for the hardened profile
+  (decision guide + version matrix). Hardened-profile CI runs in an
+  environment that provides them; the local lab uses the default runtime.</li>
+<li><code>make validate</code> renders and tests both runtime paths (namespace,
+  agent-sandbox).</li>
+<li>The egress catalog stays the single source of truth for every sandbox path,
+  with AgentWorkflows' default-deny policies governing upstream's
+  template-scoped NetworkPolicy model.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Keep namespace-only isolation (status quo).</strong> Rejected as the terminal
-  state: it offers no syscall-level barrier for model-generated code, which is
-  unacceptable at the <code>high</code> risk tier. Retained as the default and local-lab
-  profile, since the envelope must keep working on any conformant cluster.</li>
-<li><strong>Build a project-owned sandbox CRD and controller.</strong> Rejected: duplicates a
-  SIG Apps project with production adoption, adds permanent controller
-  maintenance to a solo-maintained project, and weakens the "governance layer over
+<li><strong>Namespace-only isolation.</strong> Kept as the default and local-lab profile at
+  this stage so the envelope runs on any conformant cluster. agent-sandbox adds
+  the syscall-level barrier the <code>high</code> risk tier calls for.</li>
+<li><strong>A project-owned sandbox CRD and controller.</strong> The SIG Apps project already
+  has production adoption, and building on it keeps the "governance layer over
   standard primitives" positioning.</li>
-<li><strong>Set <code>runtimeClassName</code> on plain workspace pods without agent-sandbox.</strong>
-  Considered as a minimal dependency-free hardening step. Loses lifecycle
+<li><strong><code>runtimeClassName</code> on plain workspace pods.</strong> A minimal dependency-free
+  hardening step. agent-sandbox was preferred because it adds lifecycle
   semantics (TTL, suspend/resume, claims, warm pools) and ecosystem
-  compatibility. Kept as the documented fallback if upstream API churn ahead
-  of GA proves too costly.</li>
-<li><strong>Hosted sandbox services (E2B, Daytona, Modal and similar).</strong> Rejected:
-  external SaaS execution of agent workloads contradicts AgentWorkflows'
-  local-first, sovereign scope (<code>docs/scope-and-non-goals.md</code>).</li>
+  compatibility.</li>
+<li><strong>Hosted sandbox services.</strong> In-cluster execution was preferred because it
+  keeps agent workloads inside the customer's own boundary, matching the
+  self-hosted scope (<code>docs/scope-and-non-goals.md</code>).</li>
 </ul>
 
 

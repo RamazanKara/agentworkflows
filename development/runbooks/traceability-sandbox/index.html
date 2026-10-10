@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2089,7 +2089,7 @@
 
 
 <h1 id="traceability-and-sandbox-runbook">Traceability And Sandbox Runbook<a class="headerlink" href="#traceability-and-sandbox-runbook" title="Permanent link">&para;</a></h1>
-<p>Use this runbook when proving that a local lab request can be traced without leaking prompt text, or when debugging a customer sandbox.</p>
+<p>Use this runbook when proving that a local lab request can be traced while prompt text stays private, or when debugging a customer sandbox.</p>
 <h2 id="request-contract">Request Contract<a class="headerlink" href="#request-contract" title="Permanent link">&para;</a></h2>
 <p>Every caller should send:</p>
 <ul>
@@ -2129,7 +2129,7 @@ prompt_sha256
 usage
 error
 </code></pre></div>
-<p>The audit event intentionally excludes raw prompt and completion text. Use <code>prompt_sha256</code> only for correlation between controlled test inputs and audit records.</p>
+<p>Raw prompt and completion text stay out of the audit event by design. Use <code>prompt_sha256</code> only for correlation between controlled test inputs and audit records.</p>
 <h2 id="kubernetes-checks">Kubernetes Checks<a class="headerlink" href="#kubernetes-checks" title="Permanent link">&para;</a></h2>
 <p>Inspect the sandbox controls:</p>
 <div class="highlight"><pre><span></span><code>kubectl get namespace ai-sandbox --show-labels

@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2235,7 +2235,7 @@
 
 
 <h1 id="capacity-and-sizing">Capacity and sizing<a class="headerlink" href="#capacity-and-sizing" title="Permanent link">&para;</a></h1>
-<p>The chart values are examples, not sizing recommendations. Measure the selected model and workload before setting production requests, limits, or autoscaling bounds.</p>
+<p>The chart values are starting examples. Measure the selected model and workload before setting production requests, limits, or autoscaling bounds.</p>
 <h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h2>
 <p>Collect these first:</p>
 <ul>
@@ -2248,7 +2248,7 @@
 <li>retention and backup requirements;</li>
 <li>allowed cold-start time and maximum replica cost.</li>
 </ul>
-<p><code>make loadtest-local</code> does not measure model capacity. It starts a mock OpenAI-compatible runtime. Use it for gateway-path regression tests, then run <code>make loadtest</code> against the real deployment.</p>
+<p><code>make loadtest-local</code> starts a mock OpenAI-compatible runtime for gateway-path regression tests. Run <code>make loadtest</code> against the real deployment to measure model capacity.</p>
 <h2 id="gateway">Gateway<a class="headerlink" href="#gateway" title="Permanent link">&para;</a></h2>
 <p>The gateway chart can scale with KEDA on four Prometheus signals:</p>
 <ul>
@@ -2257,8 +2257,8 @@
 <li>load-shed rate;</li>
 <li>p95 request latency.</li>
 </ul>
-<p>The current customer values set a floor of 2 and a ceiling of 20 replicas. Treat the thresholds as initial configuration. Verify that the Prometheus queries return data in the target cluster before relying on them.</p>
-<p><code>concurrency.maxConcurrentRequests</code> is a per-process load-shed limit. <code>0</code> disables that limit. A higher value does not add model capacity; it only lets more work reach the runtime. Size the gateway and runtime together and watch 503 responses, queue depth, and tail latency.</p>
+<p>The current customer values set a floor of 2 and a ceiling of 20 replicas. Treat the thresholds as initial configuration. Verify that the Prometheus queries return data in the target cluster.</p>
+<p><code>concurrency.maxConcurrentRequests</code> is a per-process load-shed limit. <code>0</code> disables that limit. A higher value lets more work reach the runtime; model capacity comes from the runtime itself. Size the gateway and runtime together and watch 503 responses, queue depth, and tail latency.</p>
 <h2 id="vllm">vLLM<a class="headerlink" href="#vllm" title="Permanent link">&para;</a></h2>
 <p>The NVIDIA customer example currently sets:</p>
 <table>
@@ -2301,13 +2301,13 @@
 </ul>
 <p>KEDA uses <code>vllm:num_requests_waiting</code> in the provided values. Confirm the metric name against the deployed vLLM version and keep enough floor capacity for the accepted cold-start time.</p>
 <h2 id="qdrant-and-rag">Qdrant and RAG<a class="headerlink" href="#qdrant-and-rag" title="Permanent link">&para;</a></h2>
-<p>The bundled Qdrant chart supports one replica and a single PVC. It is a reference footprint, not an HA topology. Estimate raw vector storage as:</p>
+<p>The bundled Qdrant chart runs one replica on a single PVC as a reference footprint; use an external Qdrant cluster for HA. Estimate raw vector storage as:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>vectors * dimensions * 4 bytes
 </code></pre></div>
-<p>Then add payload, HNSW index, segment, compaction, snapshot, and growth headroom. Measure memory and query latency after loading representative data. The customer values currently request a 100 GiB PVC; that number alone says nothing about supported document count.</p>
-<p>Embedding dimensions in the RAG values must match the selected embedding model and collection. Changing them is a collection migration, not an in-place tuning change.</p>
+<p>Then add payload, HNSW index, segment, compaction, snapshot, and growth headroom. Measure memory and query latency after loading representative data. The customer values request a 100 GiB PVC; size it from your own document count with the formula above.</p>
+<p>Embedding dimensions in the RAG values must match the selected embedding model and collection. Changing them is a collection migration.</p>
 <h2 id="redis-object-storage-and-logs">Redis, object storage, and logs<a class="headerlink" href="#redis-object-storage-and-logs" title="Permanent link">&para;</a></h2>
-<p>The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. Disk loss or deleting the PVC can still lose counters and optional state. Use the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a> before relying on it for a multi-replica customer deployment.</p>
+<p>The bundled budget Redis is a single-instance development store with AOF and a PVC. It is also used by optional gateway state. For a multi-replica customer deployment, move it to an external store with the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/external-managed-stores.md">external stores runbook</a>.</p>
 <p>Files and asynchronous batches require an object store when enabled. Include upload limits, object retention, failed-batch output, and cleanup in the storage estimate.</p>
 <p>Prometheus, logs, and audit exports grow with traffic and retention. The customer profile expects the operator to supply those systems.</p>
 <h2 id="validation-loop">Validation loop<a class="headerlink" href="#validation-loop" title="Permanent link">&para;</a></h2>

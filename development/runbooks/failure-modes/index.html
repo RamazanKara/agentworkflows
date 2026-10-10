@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2103,14 +2103,14 @@
 <p>A consolidated, code-grounded view of how the platform behaves when a dependency degrades or fails.
 Each row states the failure symptom, the gateway/RAG behavior that ships today (with the exact code
 path or probe), the blast radius, the first operator action, and the runbook to open next.</p>
-<p>This is a triage map, not a substitute for the per-incident runbooks. During an active incident start
+<p>This is a triage map that complements the per-incident runbooks. During an active incident start
 from the <a href="../incident-response/">incident-response index</a>, then return here to confirm whether the
 observed behavior matches the designed degradation for the failing dependency.</p>
 <h2 id="how-to-read-this-matrix">How to read this matrix<a class="headerlink" href="#how-to-read-this-matrix" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Behavior today</strong> is what the running code does, cited to the source file and line range so it can
-  be verified, not assumed. Where the platform delegates resilience to the operator (HA replicas, managed
-  backing services, alert routing), the row says so explicitly.</li>
+<li><strong>Behavior today</strong> is what the running code does, cited to the source file and line range for
+  verification. Where the operator owns resilience (HA replicas, managed backing services, alert
+  routing), the row says so.</li>
 <li><strong>Status codes</strong> are the gateway/RAG HTTP responses a caller sees. The gateway maps upstream runtime
   failures to <code>502</code>, capacity/availability conditions to <code>503</code>, and budget/admission rejections to
   <code>400</code>/<code>429</code>. The RAG service maps a vector-store outage to <code>503</code>.</li>
@@ -2123,13 +2123,13 @@ observed behavior matches the designed degradation for the failing dependency.</
 <ul>
 <li><strong>Gateway <code>/readyz</code></strong> (<code>src/inference-gateway/app/main.py:848-876</code>) loops over the backends named in
   the model-routing policy and calls <code>RuntimeClient.health</code> for each. It returns <code>503</code> /
-  <code>status: not_ready</code> only when a configured runtime backend is unreachable. It does <strong>not</strong> probe the
-  budget Redis or the JWKS issuer, so neither of those dependencies removes the gateway pod from
-  rotation. <code>/healthz</code> (<code>main.py:834-846</code>) is a static liveness check and never inspects dependencies.</li>
+  <code>status: not_ready</code> when a configured runtime backend is unreachable. Readiness covers runtime
+  backends, so the gateway pod stays in rotation through budget Redis or JWKS issuer issues.
+  <code>/healthz</code> (<code>main.py:834-846</code>) is a static liveness check.</li>
 <li><strong>RAG <code>/readyz</code></strong> (<code>src/rag-service/app/main.py:325-349</code>) pings Qdrant (<code>QdrantRetriever.ping</code>,
   <code>retriever.py:279-287</code>) only when <code>RETRIEVAL_BACKEND=qdrant</code>; it returns <code>503</code> when the collection
-  endpoint is unreachable. With the default lexical backend <code>/readyz</code> is always <code>ready</code> because there
-  is no external store to reach.</li>
+  endpoint is unreachable. With the default lexical backend <code>/readyz</code> is always <code>ready</code> because
+  retrieval is in-process.</li>
 </ul>
 <p>Both <code>/healthz</code> and <code>/readyz</code> stay unauthenticated by design (<code>_auth_required</code>,
 <code>main.py:318-323</code> gateway / <code>main.py:100-102</code> RAG) so the kubelet probe works even when API-key or JWT
@@ -2150,8 +2150,8 @@ auth is enabled.</p>
 <tr>
 <td>vLLM / Ollama runtime (primary)</td>
 <td><code>POST /v1/chat/completions</code> returns <code>502</code>; <code>/healthz</code> still <code>200</code> but <code>/readyz</code> flips to <code>503</code> for that backend</td>
-<td>Non-streaming path tries each route in the resolved chain and fails over to the next on a connection error, retryable <code>5xx</code>/<code>429</code>, or an open circuit (<code>main.py:1052-1075</code>, <code>_is_failover_worthy</code> <code>main.py:156-165</code>); <code>RuntimeClient</code> adds bounded retries with backoff+jitter and a per-backend circuit breaker (<code>runtime_client.py:94-183</code>); <code>/readyz</code> marks the backend <code>unavailable</code> (<code>main.py:860-876</code>). A client <code>4xx</code> (e.g. <code>400</code>/<code>404</code>) is never failed over.</td>
-<td>All chat/embeddings traffic routed to that backend; sandboxes are unaffected if a healthy fallback route exists in the policy chain</td>
+<td>Non-streaming path tries each route in the resolved chain and fails over to the next on a connection error, retryable <code>5xx</code>/<code>429</code>, or an open circuit (<code>main.py:1052-1075</code>, <code>_is_failover_worthy</code> <code>main.py:156-165</code>); <code>RuntimeClient</code> adds bounded retries with backoff+jitter and a per-backend circuit breaker (<code>runtime_client.py:94-183</code>); <code>/readyz</code> marks the backend <code>unavailable</code> (<code>main.py:860-876</code>). A client <code>4xx</code> (e.g. <code>400</code>/<code>404</code>) is returned to the caller directly.</td>
+<td>All chat/embeddings traffic routed to that backend; sandboxes keep serving when a healthy fallback route exists in the policy chain</td>
 <td>Confirm which backend is down, switch <code>RUNTIME_BACKEND</code> / fix the failing route, sync Argo CD</td>
 <td><a href="../incident-inference-runtime/">Inference runtime incident</a>, <a href="../upgrade/">Upgrade &amp; rollback</a></td>
 </tr>
@@ -2159,14 +2159,14 @@ auth is enabled.</p>
 <td>vLLM / Ollama runtime (streaming)</td>
 <td>Stream fails before first byte, or mid-stream</td>
 <td>Pre-first-byte failure fails over to the next route (<code>_open_stream_with_fallback</code>, <code>main.py:168-201</code>). Once a byte is sent the response is committed; a later upstream error emits a terminal SSE error event and records the call as <code>502</code> (<code>stream_body</code>, <code>main.py:1006-1047</code>).</td>
-<td>Single in-flight streamed request; the SSE error event lets the caller fail fast rather than hang</td>
+<td>Single in-flight streamed request; the SSE error event lets the caller fail fast</td>
 <td>Inspect gateway logs for the <code>request_id</code>; the audit event records <code>status_code</code> and <code>error</code></td>
 <td><a href="../incident-inference-runtime/">Inference runtime incident</a></td>
 </tr>
 <tr>
 <td>vLLM GPU node pool</td>
 <td>vLLM pod <code>Pending</code> / waiting for GPU; <code>/readyz</code> reports the vLLM backend <code>unavailable</code></td>
-<td>Same runtime-failover and circuit behavior as above; the gateway cannot schedule a missing GPU, so this is a capacity, not a code, condition</td>
+<td>Same runtime-failover and circuit behavior as above; this is a capacity condition, resolved by GPU capacity</td>
 <td>All vLLM-routed traffic until GPU capacity returns or traffic is shifted to a CPU/Ollama route</td>
 <td>Run the GPU capacity preflight, check node labels and allocatable GPU</td>
 <td><a href="../gpu-capacity/">GPU capacity</a>, <a href="../incident-inference-runtime/">Inference runtime incident</a></td>
@@ -2174,55 +2174,55 @@ auth is enabled.</p>
 <tr>
 <td>Qdrant vector store (RAG <code>qdrant</code> profile)</td>
 <td><code>POST /v1/rag/query</code> returns <code>503</code> <code>vector_store_unavailable</code>; RAG <code>/readyz</code> returns <code>503</code></td>
-<td>A query that cannot reach Qdrant raises <code>VectorStoreError</code> (<code>retriever.py:319-342</code>), mapped to <code>503</code> with reason <code>vector_store_unavailable</code> (<code>main.py:488-500</code>). Startup bootstrap is best-effort: a failure is recorded and surfaced via <code>/readyz</code>/<code>last_sync_status</code> rather than crashing the pod (<code>_lifespan</code>, <code>main.py:214-230</code>). The <code>rag-degradation-fault</code> chaos drill proves the RAG Deployment stays <code>Available</code> while Qdrant is at 0 replicas.</td>
-<td>RAG retrieval for the <code>qdrant</code> profile only; chat completions that do not call RAG are unaffected</td>
+<td>A query that cannot reach Qdrant raises <code>VectorStoreError</code> (<code>retriever.py:319-342</code>), mapped to <code>503</code> with reason <code>vector_store_unavailable</code> (<code>main.py:488-500</code>). A startup bootstrap failure is recorded and surfaced via <code>/readyz</code>/<code>last_sync_status</code> while the pod keeps running (<code>_lifespan</code>, <code>main.py:214-230</code>). The <code>rag-degradation-fault</code> chaos drill proves the RAG Deployment stays <code>Available</code> while Qdrant is at 0 replicas.</td>
+<td>RAG retrieval for the <code>qdrant</code> profile only; chat completions that skip RAG keep working</td>
 <td>Check Qdrant pods and the RAG <code>/readyz</code> / <code>last_sync_status</code>; restore Qdrant, then re-run RAG smoke</td>
 <td><a href="../vector-rag/">Vector RAG</a>, <a href="../qdrant-migration/">Qdrant migration</a>, <a href="../chaos-drills/">Chaos drills</a></td>
 </tr>
 <tr>
 <td>RAG service (lexical profile)</td>
 <td><code>/v1/rag/query</code> errors or pod down</td>
-<td>With <code>RETRIEVAL_BACKEND=lexical</code> retrieval is in-process over documents loaded at startup (<code>LexicalRetriever</code>, <code>retriever.py:91-128</code>); there is no external store, so <code>/readyz</code> is always <code>ready</code>. Availability depends on Deployment replicas / PDB, not an external dependency.</td>
-<td>Callers that depend on grounded context; chat completions still work without RAG</td>
+<td>With <code>RETRIEVAL_BACKEND=lexical</code> retrieval is in-process over documents loaded at startup (<code>LexicalRetriever</code>, <code>retriever.py:91-128</code>); so <code>/readyz</code> is always <code>ready</code>. Availability follows Deployment replicas / PDB.</td>
+<td>Callers that depend on grounded context; chat completions keep working</td>
 <td>Restart/scale the RAG Deployment; confirm documents loaded via <code>/healthz</code> <code>documents</code> count</td>
 <td><a href="../rag-service/">RAG service</a></td>
 </tr>
 <tr>
 <td>RAG service (whole service down)</td>
 <td>Gateway/agent calls to the RAG service time out or connection-refuse</td>
-<td>The RAG service is a separate Deployment; the gateway does not call it inline on the chat path, so a RAG outage does not fail chat completions. Callers that orchestrate RAG-then-chat must handle the RAG error themselves.</td>
+<td>The RAG service is a separate Deployment and the gateway's chat path runs independently of it, so chat completions keep working during a RAG outage. Callers that orchestrate RAG-then-chat handle the RAG error themselves.</td>
 <td>Any workflow that injects retrieved context before a completion</td>
 <td>Scale/restart RAG; verify with RAG smoke</td>
 <td><a href="../rag-service/">RAG service</a></td>
 </tr>
 <tr>
 <td>Budget Redis (shared, <code>redis</code> backend)</td>
-<td>Chat/embeddings requests fail with an unhandled <code>500</code> when Redis is unreachable or the <code>0.5s</code> socket timeout fires</td>
-<td><code>RedisSandboxBudgetTracker.reserve</code> runs the atomic Lua reservation via <code>client.eval</code> (<code>budget.py:257-303</code>). A <code>redis</code> connection/timeout error is <strong>not</strong> in the chat handler's caught set (only <code>AdmissionPolicyError</code>, <code>httpx.*</code>, <code>ValueError</code> are caught, <code>main.py:1083-1142</code>), so it propagates as a FastAPI <code>500</code>. Budget is fail-closed: requests are rejected, not silently un-metered. <code>/readyz</code> does not probe Redis, so the gateway pod stays Ready. Default timeout <code>0.5s</code> (<code>settings.py:186</code>).</td>
-<td>All sandboxes when <code>budget.backend=redis</code> and budgets are enabled; switch to <code>memory</code> backend removes the dependency (per-pod, non-shared)</td>
+<td>Chat/embeddings requests return <code>503</code> <code>budget_backend_unavailable</code> with <code>Retry-After: 5</code> when Redis is unreachable or the <code>0.5s</code> socket timeout fires</td>
+<td><code>RedisSandboxBudgetTracker.reserve</code> runs the atomic Lua reservation via <code>client.eval</code> (<code>budget.py:257-303</code>). A budget backend error (<code>BudgetBackendError</code>) maps to <code>503</code> with reason <code>budget_backend_unavailable</code> (<code>governance.py</code>). Budget is fail-closed: every admitted request is metered. <code>/readyz</code> covers runtime backends, so the gateway pod stays Ready. Default timeout <code>0.5s</code> (<code>settings.py:186</code>).</td>
+<td>All sandboxes when <code>budget.backend=redis</code> and budgets are enabled; the <code>memory</code> backend runs in-process (per-pod, non-shared)</td>
 <td>Confirm Redis reachability (<code>redis-cli ping</code>), check the budget namespace NetworkPolicy/Service</td>
 <td><a href="../budget-controls/">Budget controls</a>, <a href="../chaos-drills/">Chaos drills</a></td>
 </tr>
 <tr>
 <td>Budget Redis (<code>memory</code> backend)</td>
-<td>n/a (no external dependency)</td>
-<td><code>InMemorySandboxBudgetTracker</code> keeps usage in-process with a lock and sliding window (<code>budget.py:83-161</code>). Usage is per-pod and resets on restart; it does not enforce across replicas.</td>
+<td>n/a (in-process)</td>
+<td><code>InMemorySandboxBudgetTracker</code> keeps usage in-process with a lock and sliding window (<code>budget.py:83-161</code>). Usage is per-pod, resets on restart, and is enforced per replica.</td>
 <td>Cross-replica budget accuracy only</td>
-<td>None for availability; choose <code>redis</code> when running multiple gateway replicas</td>
+<td>Choose <code>redis</code> when running multiple gateway replicas</td>
 <td><a href="../budget-controls/">Budget controls</a></td>
 </tr>
 <tr>
 <td>Gateway (single replica down)</td>
 <td>Requests to that pod fail until rescheduled</td>
 <td>The gateway is stateless except for the per-process audit hash chain and in-memory caches/budgets. The audit chain is <strong>per replica</strong> (<code>main.py:37-40</code>, <code>_chain_audit_event</code> <code>main.py:556-570</code>), so each pod produces its own verifiable chain. Run multiple replicas with HPA, PDB, and topology spread (see README "What You Get").</td>
-<td>One pod's in-flight requests; the audit chain continuity for that pod resets at restart</td>
+<td>One pod's in-flight requests; that pod starts a fresh audit chain at restart</td>
 <td>Let the Deployment/HPA reschedule; verify replica count and PDB</td>
 <td><a href="../upgrade/">Upgrade &amp; rollback</a>, <a href="../slo-error-budget/">SLO &amp; error budget</a></td>
 </tr>
 <tr>
 <td>Gateway (overload)</td>
 <td>Requests return <code>503</code> <code>concurrency_limit</code> with <code>Retry-After: 1</code></td>
-<td>Bounded-concurrency load shedding rejects excess requests instead of queuing them behind the httpx pool (<code>_overloaded_response</code> <code>main.py:490-509</code>, check at <code>main.py:809-814</code>); governed by <code>MAX_CONCURRENT_REQUESTS</code>. Per-sandbox burst throttle returns <code>429</code> <code>rate_limited</code> with <code>Retry-After</code> (<code>_rate_limited_response</code> <code>main.py:512-532</code>).</td>
+<td>Bounded-concurrency load shedding rejects excess requests immediately, ahead of the httpx pool (<code>_overloaded_response</code> <code>main.py:490-509</code>, check at <code>main.py:809-814</code>); governed by <code>MAX_CONCURRENT_REQUESTS</code>. Per-sandbox burst throttle returns <code>429</code> <code>rate_limited</code> with <code>Retry-After</code> (<code>_rate_limited_response</code> <code>main.py:512-532</code>).</td>
 <td>Excess load only; in-budget steady-state traffic is admitted</td>
 <td>Confirm load shedding/rate limiting is the cause via <code>inference_gateway_load_shed_total</code> / <code>inference_gateway_rate_limited_total</code>; scale out</td>
 <td><a href="../slo-error-budget/">SLO &amp; error budget</a>, <a href="../budget-controls/">Budget controls</a></td>
@@ -2230,40 +2230,40 @@ auth is enabled.</p>
 <tr>
 <td>Argo CD</td>
 <td>GitOps sync stops; manual <code>kubectl</code> edits drift; no new deploys</td>
-<td>Argo CD is the deploy control plane, not on the request path. Running workloads keep serving. The root application sets <code>automated: { prune: true, selfHeal: true }</code> (<code>deploy/gitops/argocd/root-app.yaml:21-23</code>), so drift is reconciled once Argo CD recovers.</td>
-<td>Deploy/reconcile capability and drift correction; live inference traffic is unaffected</td>
+<td>Argo CD is the deploy control plane, separate from the request path. Running workloads keep serving. The root application sets <code>automated: { prune: true, selfHeal: true }</code> (<code>deploy/gitops/argocd/root-app.yaml:21-23</code>), so drift is reconciled once Argo CD recovers.</td>
+<td>Deploy/reconcile capability and drift correction; live inference traffic keeps serving</td>
 <td>Restore Argo CD; for an urgent change use the documented direct-apply path before Argo CD returns</td>
 <td><a href="../upgrade/">Upgrade &amp; rollback</a>, <a href="../policy-blocked-deploy/">Policy-blocked deploy</a></td>
 </tr>
 <tr>
 <td>JWKS issuer (OIDC / JWT auth)</td>
 <td>Transient outage tolerated via last-known-good keys; a cold issuer (no cached keys) returns <code>503</code> <code>jwks_unavailable</code> with <code>Retry-After: 5</code></td>
-<td><code>JwksCache.keys</code> serves last-known-good keys on a fetch failure and applies a short negative-cache backoff; it raises <code>JwksUnavailableError</code> only when no keys were ever cached (<code>jwt_auth.py:77-108</code>). The middleware maps that to <code>503</code> (not a <code>401</code>) (<code>_jwks_unavailable_response</code> <code>main.py:468-487</code>, dispatch <code>main.py:770-776</code>). API-key auth, when enabled, is independent of JWKS and still authenticates. A valid token is rejected as <code>401</code> (<code>_auth_failure_response</code>); an invalid/unsupported <code>alg</code> is <code>401</code> without any network call (<code>jwt_auth.py:130-134</code>).</td>
-<td>JWT-authenticated callers during a cold-issuer outage; API-key callers unaffected</td>
+<td><code>JwksCache.keys</code> serves last-known-good keys on a fetch failure and applies a short negative-cache backoff; it raises <code>JwksUnavailableError</code> only when no keys were ever cached (<code>jwt_auth.py:77-108</code>). The middleware maps that to <code>503</code> (<code>_jwks_unavailable_response</code> <code>main.py:468-487</code>, dispatch <code>main.py:770-776</code>). API-key auth, when enabled, is independent of JWKS and still authenticates. An invalid or expired token is rejected as <code>401</code> (<code>_auth_failure_response</code>); an invalid/unsupported <code>alg</code> is <code>401</code>, decided locally (<code>jwt_auth.py:130-134</code>).</td>
+<td>JWT-authenticated callers during a cold-issuer outage; API-key callers keep authenticating</td>
 <td>Confirm issuer/JWKS reachability and key set; rotate per the rotation runbook if keys changed</td>
 <td><a href="../oidc-jwks-rotation/">OIDC / JWKS rotation</a>, <a href="../api-access/">API access</a></td>
 </tr>
 <tr>
 <td>OTLP / trace backend</td>
 <td>Spans are not exported</td>
-<td>Tracing is optional and configured at startup (<code>configure_tracing</code>); when no tracer is set the request path runs without it (<code>main.py:829-832</code> gateway, <code>main.py:298-301</code> RAG). An unreachable OTLP endpoint does not fail requests or readiness.</td>
-<td>Trace visibility only; correlation IDs in responses and audit logs still work</td>
+<td>Tracing is optional and configured at startup (<code>configure_tracing</code>); when no tracer is set the request path runs without it (<code>main.py:829-832</code> gateway, <code>main.py:298-301</code> RAG). Requests and readiness continue when the OTLP endpoint is unreachable.</td>
+<td>Trace visibility only; correlation IDs in responses and audit logs keep working</td>
 <td>Check the OTLP collector / <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>; requests continue meanwhile</td>
 <td><a href="../traceability-sandbox/">Traceability sandbox</a></td>
 </tr>
 <tr>
 <td>Prometheus / Loki / Promtail</td>
 <td>Metrics not scraped or logs not shipped</td>
-<td>Services still expose <code>/metrics</code> (the gateway on its dedicated metrics port, 9090 in the chart; RAG on its API port) and write redacted audit JSON to stdout regardless of whether anything scrapes/ships it. Promtail ships pod stdout (including the audit chain) to Loki; without a collector the audit trail is lost on pod restart (<code>deploy/observability/applications.yaml:81-83</code>). The kube-prometheus-stack default Alertmanager receiver is <code>null</code>, so alerts fire but reach no destination until a real receiver is wired per environment (<code>applications.yaml:22-38</code>).</td>
-<td>Observability, alerting, and durable audit retention, not request serving</td>
+<td>Services still expose <code>/metrics</code> (the gateway on its dedicated metrics port, 9090 in the chart; RAG on its API port) and write redacted audit JSON to stdout regardless of whether anything scrapes/ships it. Promtail ships pod stdout (including the audit chain) to Loki, which keeps the audit trail beyond pod restarts (<code>deploy/observability/applications.yaml:81-83</code>). The kube-prometheus-stack default Alertmanager receiver is <code>null</code>; wire a real receiver per environment so alerts reach a destination (<code>applications.yaml:22-38</code>).</td>
+<td>Observability, alerting, and durable audit retention; request serving continues</td>
 <td>Restore the observability stack; <strong>wire a real Alertmanager receiver</strong> and confirm Promtail ships to Loki</td>
 <td><a href="../evidence-pack/">Evidence pack</a>, <a href="../slo-error-budget/">SLO &amp; error budget</a>, <a href="../data-retention/">Data retention</a></td>
 </tr>
 <tr>
 <td>Backup / restore tooling</td>
 <td>Restore-drill CronJob fails; Velero backup/restore fails</td>
-<td>Backup is off the request path. The restore-drill (Redis AOF) and Velero examples (<code>deploy/backup/</code>) validate recoverability; a failed drill signals a recovery-readiness gap, not a live outage.</td>
-<td>Recovery confidence and evidence; no impact on serving traffic</td>
+<td>Backup runs outside the request path. The restore-drill (Redis AOF) and Velero examples (<code>deploy/backup/</code>) validate recoverability; a failed drill signals a recovery-readiness issue while serving continues.</td>
+<td>Recovery confidence and evidence; serving traffic continues</td>
 <td>Re-run the restore drill; investigate the AOF/Velero failure</td>
 <td><a href="../restore-drill/">Restore drill</a></td>
 </tr>
@@ -2271,19 +2271,18 @@ auth is enabled.</p>
 </table>
 <h2 id="cross-cutting-notes">Cross-cutting notes<a class="headerlink" href="#cross-cutting-notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Failover is route-aware, not blind retry.</strong> Only connection errors, retryable <code>5xx</code>/<code>429</code>, and an
-  open circuit fail over to the next route; a <code>4xx</code> client error is returned as-is because the next
-  runtime would reject it identically (<code>_is_failover_worthy</code>, <code>main.py:156-165</code>).</li>
+<li><strong>Failover is route-aware.</strong> Connection errors, retryable <code>5xx</code>/<code>429</code>, and an open circuit fail
+  over to the next route; a <code>4xx</code> client error is returned as-is because the next runtime would
+  return the same result (<code>_is_failover_worthy</code>, <code>main.py:156-165</code>).</li>
 <li><strong>Budget enforcement is fail-closed.</strong> When the <code>redis</code> backend is unreachable, requests are
-  rejected (<code>500</code>) rather than admitted un-metered. If availability must be prioritized over strict
-  enforcement, the <code>memory</code> backend removes the external dependency at the cost of cross-replica
-  accuracy. See <a href="../budget-controls/">Budget controls</a>.</li>
+  rejected (<code>503</code>), so every admitted request is metered. To prioritize availability, the <code>memory</code>
+  backend runs in-process with per-replica accounting. See <a href="../budget-controls/">Budget controls</a>.</li>
 <li><strong>Audit continuity is per replica.</strong> The tamper-evident SHA-256 chain is per gateway process; a pod
-  restart starts a fresh chain from genesis. Durable retention depends on shipping stdout to Loki
+  restart starts a fresh chain from genesis. Durable retention comes from shipping stdout to Loki
   (Promtail). Plan log retention accordingly; see <a href="../data-retention/">Data retention</a>.</li>
 <li><strong>Operator-owned resilience.</strong> HA replica counts, PodDisruptionBudgets, topology spread, a managed
   Redis-compatible service, a reachable JWKS issuer, and a wired Alertmanager receiver are operator
-  responsibilities; the platform ships sane defaults and examples but does not operate these for you. See
+  responsibilities; the platform ships sane defaults and examples. See
   <a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/scope-and-non-goals.md">Support Boundaries</a>.</li>
 </ul>
 <h2 id="validating-these-behaviors">Validating these behaviors<a class="headerlink" href="#validating-these-behaviors" title="Permanent link">&para;</a></h2>

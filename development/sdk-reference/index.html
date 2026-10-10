@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2282,7 +2282,7 @@
 <p>This reference describes the Python SDK and CLI in release v0.9.0. Install the release wheel
 (see <a href="../distribution/">distribution</a>), or from a v0.9.0 checkout run
 <code>python -m pip install ./sdk/python</code> in a virtual environment. Use a gateway of the same version.
-<code>agentworkflows --help</code> and each subcommand's <code>--help</code> work without a key.
+<code>agentworkflows --help</code> and each subcommand's <code>--help</code> work offline, before you set a key.
 The equivalent module entry point is <code>python -m agentworkflows.cli</code>.</p>
 <p>The <a href="../team-lifecycle/">team lifecycle reference</a> lists the Python and TypeScript methods
 for versioned template installation, secret rotation/resolution, team retention,
@@ -2402,11 +2402,11 @@ data export/erasure and telemetry status, including access rules and version hea
 </tr>
 <tr>
 <td><code>runs cancel RUN_ID</code></td>
-<td>Request cancellation; cannot undo already-sent tool actions</td>
+<td>Request cancellation; the run stops from its current step onward</td>
 </tr>
 <tr>
 <td><code>runs retry RUN_ID</code></td>
-<td>Start a new execution after failure/cancellation; steps may run again</td>
+<td>Start a new execution after failure/cancellation; steps run again in the new execution</td>
 </tr>
 <tr>
 <td><code>triggers list</code></td>
@@ -2424,39 +2424,37 @@ Exit codes: <strong>0</strong> success, <strong>1</strong> gateway/transport fai
 <p>Run cursors and JSON Lines export require gateway v0.9.0 or newer. <code>runs list</code> and <code>runs export</code> accept <code>--project</code>,
 <code>--workflow</code>, <code>--status</code>, <code>--cursor</code> and <code>--limit</code> (1–100, default 20). Limit bounds
 records scanned before filtering; an empty page can still have <code>next_cursor</code>.
-Continue until it is null. Cursors use creation time and run ID, so new runs and
-expired entries do not shift subsequent pages, including tied timestamps. Keep
-project and filters unchanged; otherwise the API returns 422 <code>run_cursor_invalid</code>.
-Legacy <code>--offset</code>/<code>next_offset</code> remain available; don't combine them with cursors.</p>
+Continue until it is null. Cursors use creation time and run ID, so subsequent pages
+stay stable as runs are added or expire, including tied timestamps. Keep
+project and filters unchanged while paging (a changed filter returns 422 <code>run_cursor_invalid</code>).
+Legacy <code>--offset</code>/<code>next_offset</code> remain available; use either offsets or cursors in one listing.</p>
 <p>Exports follow all pages, fetch each run's result, budget and timeline, and include
-step input/output only while retained and allowed by capture policy. They omit the
-stored start input. Files are UTF-8; omit <code>--output</code> or use <code>-</code> for stdout. A read or
-write failure exits 1 and can leave a partial file. Retention and run status changes
-continue during export: this is not a transactional snapshot or backup, and it does
-not recover expired runs or content. Each call enforces the credential's team and
-project access. Store exports according to your content policy; server expiry does
-not remove downloaded files.</p>
+step input/output while retained and allowed by capture policy. The stored start input
+stays on the server. Files are UTF-8; omit <code>--output</code> or use <code>-</code> for stdout. A read or
+write failure exits 1; rerun the export for a complete file. Retention and run status changes
+continue during export, so the file reflects retained runs at export time. Each call enforces
+the credential's team and project access. Store exports according to your content policy;
+downloaded files follow your own retention.</p>
 <p>The Python methods are <code>runs(**filters) -&gt; RunPage</code> and
 <code>export_runs(**filters) -&gt; Iterator[str]</code>, with <code>RunFilters</code>, <code>RunStatus</code> and
 <code>RunPage</code> in <code>agentworkflows.types</code>. Each exported string is one full run detail
 object followed by a newline. <code>GatewayError</code>/transport errors propagate on failed
 reads, including when a run expires between its listing and detail request. Export
-rejects gateways without cursor support with an upgrade message before writing rows.</p>
+checks for cursor support first and prints an upgrade message for older gateways before writing rows.</p>
 <p>Key creation and updates accept <code>--expires-at</code> as ISO-8601 with a timezone, for example
 <code>2027-01-01T00:00:00Z</code>. On updates, <code>--expires-at ''</code> clears expiry and <code>--project ''</code>
 clears a project binding. Commands return JSON; keep the <code>key_id</code> for future changes and
-save a newly created <code>key</code> securely, since list/update cannot recover it. Keys are scoped
-to the authenticated admin's team and project access. You cannot revoke or demote your
-current key. Bootstrap file records continue to be edited in gateway configuration.
+save a newly created <code>key</code> securely, since it is shown only once. Keys are scoped
+to the authenticated admin's team and project access. Your current key is protected from
+revocation and demotion by itself. Bootstrap file records continue to be edited in gateway configuration.
 Machine-readable command output stays on stdout; actionable errors go to stderr.</p>
 <p>Settings and audit SDK methods and CLI commands require an
 unrestricted team admin credential. Run <code>settings show</code> before changing settings,
 review the values, and pass its <code>revision</code> to <code>set</code> or <code>reset</code>. <code>--fields</code> is a
-non-empty JSON object of field names to values, without an outer <code>fields</code> wrapper.
+non-empty JSON object of field names to values, given directly as the top-level object.
 Only supplied fields change. A 409 means another writer changed the settings:
-reload, review and reapply with the new revision. The CLI never refreshes the
-revision or resubmits a stale change automatically. A 422 reports invalid fields;
-the entire patch is rejected. See <a href="../team-settings/">team settings</a> for field names
+reload, review and reapply with the new revision. You choose when to resubmit with a
+fresh revision. A 422 reports invalid fields, and the patch is applied atomically. See <a href="../team-settings/">team settings</a> for field names
 and accepted values.</p>
 <p><code>audit list</code> and <code>audit export</code> accept <code>--from</code>, <code>--to</code> (inclusive Unix seconds),
 <code>--event-type</code>, <code>--actor</code>, <code>--project</code>, <code>--run-id</code>, <code>--cursor</code>, and <code>--limit</code> (1–200,
@@ -2467,9 +2465,9 @@ Verification accepts only time bounds and checks all team events in that range,
 including events hidden by other filters. <code>audit verify</code> prints the full result
 and exits <strong>1</strong> for a broken chain or disabled view; <code>audit export</code> also exits <strong>1</strong>
 when disabled. A disabled <code>audit list</code> returns its <code>enabled: false</code> JSON response.
-Failed exports exit nonzero and may leave partial output. Retention continues
-during paging; these exports are not complete process logs for the operator
-verifier. See <a href="../audit-log/">audit log</a> for boundaries and verification limits.</p>
+Failed exports exit nonzero; rerun them for a complete file. Retention continues
+during paging. For full process logs, use the operator verifier. See <a href="../audit-log/">audit log</a>
+for boundaries and verification.</p>
 <p>The <a href="../templates/">template gallery</a> includes input fields, expected results and adaptation
 steps for every starter. The release wheel and a v0.9.0 checkout carry the same template set.
 Scaffolds include <code>input-schema.json</code> and a schema declaration in <code>workflow.py</code>. Copy the
@@ -2479,9 +2477,9 @@ schema to the workflow policy's <code>inputSchema</code> to enable console forms
 restriction. It returns <code>TeamSSO</code>: team ID, enabled state, provider hostname,
 <code>role_source</code> (<code>groups</code> or <code>claim</code>), team/project claim names, and only the current
 team's group-to-role mappings. In group mode, <code>role_claim</code> and <code>default_role</code> are
-null; in claim mode, <code>groups_claim</code> is null and mappings are empty. No secrets,
-other teams' mappings or user group memberships are returned. A disabled provider
-has <code>enabled: false</code> and <code>provider_name: null</code>.</p>
+null; in claim mode, <code>groups_claim</code> is null and mappings are empty. The response covers
+the current team's policy only, with secrets and user group memberships kept private.
+A disabled provider has <code>enabled: false</code> and <code>provider_name: null</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"https://agents.example.com"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">admin_key</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
@@ -2497,16 +2495,15 @@ has <code>enabled: false</code> and <code>provider_name: null</code>.</p>
 <p>Both helpers use the SDK's authenticated GET retries and preserve 401/403 errors.
 This is an inspection API; an operator configures mappings through Helm or
 environment variables. See <a href="../workflows/#sso-group-to-role-mapping">group access semantics and acceptance</a>.
-Members &amp; keys displays the same policy. The API does not log users into their
-identity provider, create groups or change memberships.</p>
+Members &amp; keys displays the same policy. Group membership is managed in your identity provider.</p>
 <h2 id="trigger-history-and-usage-csv">Trigger history and usage CSV<a class="headerlink" href="#trigger-history-and-usage-csv" title="Permanent link">&para;</a></h2>
 <p><code>runs list</code> and <code>runs export</code> accept <code>--trigger NAME</code> together with <code>--workflow WORKFLOW</code>.
 The API uses <code>GET /v1/workflow-runs?workflow=WORKFLOW&amp;trigger=NAME</code>; retain both filters
 when following <code>next_cursor</code>. Missing workflow returns 422 <code>trigger_workflow_required</code>.
 Run metadata includes <code>trigger: {name, kind}</code> for cron/webhook launches.
-Manual runs and manual retries have no trigger provenance. History survives
+Manual runs and retries are listed under the workflow alone. History survives
 removal of the trigger's configuration, until run retention expires. Rejected deliveries
-do not have a run; inspect their audit receipts instead.</p>
+are recorded in their audit receipts.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"local-development-only"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
@@ -2526,10 +2523,11 @@ only that project; an unrestricted credential sees team totals. Columns are
 <code>team_id,project,period_start,period_end,dimension,name,calls,tokens,cost_usd,currency</code>.
 The period is the current UTC month (<code>period_end</code> exclusive); currency is USD and costs
 have nine decimal places. There is one <code>total</code> row, then sorted <code>provider</code> and <code>workflow</code>
-rows. Empty months have a zero total. These are overlapping views, <strong>not additive rows</strong>.
+rows. Empty months have a zero total. Provider and workflow rows are overlapping views of the
+same total, so sum one dimension at a time.
 Totals include tool costs and held reservations; call/token counts come from provider
-accounting. Data uses configured prices, not provider invoices. Older months and raw
-per-call data are outside this export. CSV names that could execute spreadsheet formulas
+accounting. Data uses configured prices. The export covers the current month at the
+provider/workflow level. CSV names that could execute spreadsheet formulas
 have a leading apostrophe; quotes, commas, newlines and Unicode are escaped by CSV rules.
 Export errors propagate through each SDK's existing error and read-retry handling.</p>
 <h2 id="environment">Environment<a class="headerlink" href="#environment" title="Permanent link">&para;</a></h2>
@@ -2543,7 +2541,7 @@ Export errors propagate through each SDK's existing error and read-retry handlin
 <tbody>
 <tr>
 <td><code>AGENTWORKFLOWS_API_KEY</code></td>
-<td>Required gateway credential, never a provider key; <code>local-development-only</code> for local human use, <code>demo-worker</code> for its worker</td>
+<td>Required gateway credential (provider keys stay on the gateway); <code>local-development-only</code> for local human use, <code>demo-worker</code> for its worker</td>
 </tr>
 <tr>
 <td><code>AGENTWORKFLOWS_URL</code></td>
@@ -2573,7 +2571,7 @@ Use <code>@input_schema(schema)</code> from the same module on a workflow class 
 the schema is available as <code>WorkflowClass.input_schema</code>. In TypeScript, import <code>InputSchema</code>
 and <code>withInputSchema</code> from <code>@agentworkflows/sdk/workflows</code>, then export
 <code>withInputSchema(schema, implementation)</code>; it preserves the function and exposes <code>.inputSchema</code>.
-Declarations do not register or replace administrator-approved workflow policies.</p>
+Administrator-approved workflow policies stay authoritative; copy the declaration into policy to apply it.</p>
 <p>Schemas use the flat JSON Schema draft 2020-12 subset documented in
 <a href="../workflows/#workflow-forms-and-step-content">workflow forms</a>: object properties with primitive
 types or string arrays, enums, required fields, descriptions, defaults, and examples.</p>
@@ -2607,7 +2605,7 @@ types or string arrays, enums, required fields, descriptions, defaults, and exam
 </tr>
 <tr>
 <td><code>await gateway.container(name, arguments)</code></td>
-<td>Approved sandbox's output; no automatic retry of arbitrary code</td>
+<td>Approved sandbox's output; runs once per call, with retries left to your workflow</td>
 </tr>
 <tr>
 <td><code>await self.approval(draft)</code></td>
@@ -2620,14 +2618,13 @@ types or string arrays, enums, required fields, descriptions, defaults, and exam
 </tbody>
 </table>
 <p>Activity defaults are three minutes per attempt, fifteen minutes overall, and five attempts
-with exponential backoff. Policy denials are non-retryable; transient gateway failures can
-retry. Existing Temporal <code>RetryPolicy</code> and <code>timedelta</code> parameters remain available on
+with exponential backoff. Policy denials are final; transient gateway failures retry. Existing Temporal <code>RetryPolicy</code> and <code>timedelta</code> parameters remain available on
 <code>WorkflowGateway</code>. <code>data_classification</code> defaults to <code>internal</code>; confidential data needs an
 approved self-hosted route. Approval expires after seven days with an actionable failure.</p>
 <p>Both SDKs send model/tool input and output through gateway capture automatically when
 the policy enables <code>captureContent</code>. Run inspection includes per-step text, redaction mode,
 and per-field truncation flags. Capture uses a separate Redis TTL (seven days by default),
-never receipt bodies. Terminal run records default to 30-day retention.</p>
+stored apart from receipt bodies. Terminal run records default to 30-day retention.</p>
 <p>Template research budgets accept integer <code>token_limit</code> from 1 to 1,000,000,000 and finite
 <code>cost_limit_usd</code> greater than zero up to 1,000,000. Policy ceilings still take precedence.</p>
 <h2 id="gateway-client-and-errors">Gateway client and errors<a class="headerlink" href="#gateway-client-and-errors" title="Permanent link">&para;</a></h2>
@@ -2662,7 +2659,7 @@ ISO-8601 string with a timezone.</p>
 </tr>
 <tr>
 <td><code>revoke_key(key_id)</code></td>
-<td>Revoked <code>ManagedKey</code>; the current key cannot revoke itself</td>
+<td>Revoked <code>ManagedKey</code>; the current key is protected from revoking itself</td>
 </tr>
 <tr>
 <td><code>team_settings()</code></td>
@@ -2692,7 +2689,7 @@ ISO-8601 string with a timezone.</p>
 </table>
 <p>Audit filter names are <code>from_time</code>, <code>to</code>, <code>event_type</code>, <code>actor</code>, <code>project</code>, <code>run_id</code>,
 <code>cursor</code>, and <code>limit</code>. Both time bounds are inclusive Unix seconds. All filters
-are optional; <code>limit</code> defaults to 50 on the gateway and cannot exceed 200.</p>
+are optional; <code>limit</code> defaults to 50 on the gateway, with a maximum of 200.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">agentworkflows</span><span class="w"> </span><span class="kn">import</span> <span class="n">GatewayClient</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="s2">"http://127.0.0.1:8080"</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_ADMIN_KEY"</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
@@ -2702,16 +2699,15 @@ are optional; <code>limit</code> defaults to 50 on the gateway and cannot exceed
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"audit-log.jsonl"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">output</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_audit</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="s2">"team_settings_changed"</span><span class="p">))</span>
 </code></pre></div>
-<p>Admin mutations do not retry ambiguous HTTP failures or read timeouts. Settings
+<p>Admin mutations surface ambiguous HTTP failures and read timeouts to the caller for review. Settings
 conflicts and validation failures surface as <code>GatewayError</code> with the original
 status and structured detail; settings field errors are in <code>detail["fields"]</code>.</p>
 <p><code>GatewayError</code> exposes <code>status_code</code>, <code>reason</code>, <code>request_id</code>, and <code>detail</code>. Validation errors
-identify the invalid fields. CLI output includes a recovery action and request ID without
-printing your credential. <code>GatewayRetryAfterError.retry_after</code> reports when the server asks
+identify the invalid fields. CLI output includes a recovery action and request ID, and keeps your credential private. <code>GatewayRetryAfterError.retry_after</code> reports when the server asks
 for a delay longer than the client's retry cap; transport errors are <code>httpx.HTTPError</code>.
 Schema errors return HTTP 422 with <code>detail.reason = "workflow_input_invalid"</code> and a
 <code>detail.fields</code> list of <code>{field: "input.property", message: "..."}</code>. Validation happens
-before a start intent or Temporal execution is created; defaults are not inserted by the API.</p>
+before a start intent or Temporal execution is created, and the API validates input exactly as sent.</p>
 <table>
 <thead>
 <tr>
@@ -2738,7 +2734,7 @@ before a start intent or Temporal execution is created; defaults are not inserte
 </tr>
 <tr>
 <td><code>approval_not_waiting</code></td>
-<td>Inspect the run's stage and existing decision; never approve an unseen draft</td>
+<td>Inspect the run's stage and existing decision; read each draft before approving</td>
 </tr>
 <tr>
 <td><code>workflow_start_conflict</code></td>
@@ -2758,7 +2754,7 @@ before a start intent or Temporal execution is created; defaults are not inserte
 </tr>
 <tr>
 <td><code>audit_view_unavailable</code> (503)</td>
-<td>Restore the audit Redis backend before retrying; an export may be partial</td>
+<td>Restore the audit Redis backend, then rerun the command for a complete export</td>
 </tr>
 <tr>
 <td><code>workflow_run_missing</code></td>
@@ -2779,9 +2775,9 @@ endpoints. The full <a href="https://github.com/RamazanKara/agentworkflows/blob/
 is checked in and can be viewed at <code>/docs</code> on the running gateway when enabled.</p>
 <h2 id="approval-quorum-and-expiry">Approval quorum and expiry<a class="headerlink" href="#approval-quorum-and-expiry" title="Permanent link">&para;</a></h2>
 <p>Upgrade the gateway before workers. Both SDKs' <code>ApprovalWorkflow.approval(draft)</code>
-read the run's saved policy through a versioned worker activity. No workflow-code
-change is needed for an existing approval gate. <code>review</code> accepts a vote, while
-<code>approval</code> resolves only after quorum or rejection; expiry raises <code>ApprovalExpired</code>.
+read the run's saved policy through a versioned worker activity. Existing approval
+gates pick this up with their current workflow code. <code>review</code> accepts a vote, while
+<code>approval</code> resolves at quorum or rejection; expiry raises <code>ApprovalExpired</code>.
 The TypeScript <code>ApprovalProgress</code> type includes the quorum, reviewer IDs and deadline.
 Python exposes the same fields in the status query and <code>GatewayClient.run()</code> response.</p>
 <p>Use the existing settings helpers to change the policy for new runs:</p>
@@ -2798,8 +2794,8 @@ Python exposes the same fields in the status query and <code>GatewayClient.run()
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="w"> </span><span class="p">});</span>
 </code></pre></div>
 <p><code>approve_run</code> / <code>approveRun</code> retain their existing signature. A successful positive
-vote can leave the run waiting for other reviewers; inspect the run before assuming
-it completed. Repeating a vote never adds a reviewer. See <a href="../workflows/#approval-policies">approval policies</a>
+vote can leave the run waiting for other reviewers; inspect the run to see its current state.
+Each reviewer counts once, no matter how many times they vote. See <a href="../workflows/#approval-policies">approval policies</a>
 for identity, replay, automatic decisions and upgrade boundaries.</p>
 <h2 id="team-adoption-apis">Team adoption APIs<a class="headerlink" href="#team-adoption-apis" title="Permanent link">&para;</a></h2>
 <table>
@@ -2868,8 +2864,8 @@ for identity, replay, automatic decisions and upgrade boundaries.</p>
 </tr>
 </tbody>
 </table>
-<p>Invitation creation and redemption never automatically retry: a lost response can
-contain the only copy of a token or key. Ask an admin to revoke uncertain access and
+<p>Invitation creation and redemption run once per call, since the response holds the only
+copy of a token or key. If a response is lost, ask an admin to revoke that access and
 issue a fresh invitation. See <a href="../workflows/">invitations and alerts</a>,
 <a href="../quickstart/#60-second-console-walkthrough">provider onboarding</a>, and
 <a href="../single-tenant/#install-and-verify">deployment checks</a> for roles, boundaries and examples.</p>

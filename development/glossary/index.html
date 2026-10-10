@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2449,7 +2449,7 @@ and <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/tr
 runbooks.</p>
 <p><strong>Agent sandbox (workspace runtime)</strong>: The hardened kubernetes-sigs/agent-sandbox <code>Sandbox</code> that
 every coding-agent workspace runs on (<a href="../adr/0010-agent-sandbox-standard-runtime/">ADR 0010</a>):
-non-root, read-only root filesystem, no ambient ServiceAccount token, and an optional
+non-root, read-only root filesystem, ambient ServiceAccount token disabled, and an optional
 kernel-isolation runtime class (<code>sandbox.runtimeClassName</code>). Each workspace is bound 1:1 to the
 sandbox id the gateway sees as <code>X-Sandbox-ID</code>. The controller is a platform prerequisite (synced
 as the <code>agent-sandbox-controller</code> Application, or installed with <code>make agent-sandbox-install</code>),
@@ -2473,7 +2473,7 @@ watch the 99.5 percent objective on short and long horizons. See
 <p><strong>Canary vs shadow (progressive delivery)</strong>: Two gateway routing behaviors used to roll out a model
 or backend change safely. <em>Canary</em> sends a weighted fraction of live traffic to a candidate route and
 counts it with <code>inference_gateway_canary_routed_total</code>. <em>Shadow</em> mirrors requests fire-and-forget to a
-candidate route without returning its response to the caller
+candidate route and discards its response
 (<code>inference_gateway_shadow_requests_total</code>). Both are first-class in the gateway; see
 <a href="../adr/0005-openai-compatible-gateway/">ADR 0005</a> and <a href="../architecture/">Architecture</a>.</p>
 <p><strong>catalogRef</strong>: The field that ties a requested egress destination back to an approved entry in the
@@ -2489,8 +2489,8 @@ attribute usage to the same owner. Kept stable across upgrades so cost history s
 <p><strong>Cross-encoder reranker</strong>: An optional second retrieval stage that reorders over-fetched candidates
 by joint query-document relevance, raising precision where dense retrieval is weakest (paraphrase,
 synonymy, multi-hop). Configured via <code>retrieval.reranker</code> in the RAG chart; the default provider is
-<code>none</code>, and an <code>openai-compatible</code> provider calls a Cohere/Jina/TEI-style <code>/rerank</code> endpoint. A
-reranker outage is non-fatal; the first-stage hybrid ranking is kept. See
+<code>none</code>, and an <code>openai-compatible</code> provider calls a Cohere/Jina/TEI-style <code>/rerank</code> endpoint.
+During a reranker outage, the RAG service keeps the first-stage hybrid ranking. See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/src/rag-service/app/reranker.py"><code>src/rag-service/app/reranker.py</code></a>.</p>
 <h2 id="d">D<a class="headerlink" href="#d" title="Permanent link">&para;</a></h2>
 <p><strong>dataClassification</strong>: A model catalog field recording the sensitivity of the data a model is
@@ -2544,8 +2544,8 @@ config is operator-owned. See
 <p><strong>Model card</strong>: The human-readable companion to a model's machine-checked catalog entry and
 provenance record. Every <code>status: approved</code> model must have a card under
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/model-cards/README.md"><code>platform/model-catalog/model-cards/</code></a>;
-cards introduce no new facts; every field is copied from the governed YAML, and <code>make model-check</code>
-fails if an approved model is missing one.</p>
+every card field is copied from the governed YAML, and <code>make model-check</code> checks that every
+approved model has one.</p>
 <p><strong>Model provenance / immutableRef / digest</strong>: The attested origin of a served model artifact, recorded
 in <code>platform/governance/model-provenance.yaml</code>. Each approved model carries a <code>sourceUri</code>, an
 <code>immutableRef</code> (an immutable reference pinned by a SHA-256 <code>digest</code>), a digest scope and verification
@@ -2557,9 +2557,9 @@ files against the inventory before production. See
 <h2 id="o">O<a class="headerlink" href="#o" title="Permanent link">&para;</a></h2>
 <p><strong>Output guardrail</strong>: A response-path control that inspects the model's completion before it is
 returned or cached, contributing controls for OWASP LLM02:2025 (sensitive information disclosure)
-and LLM05:2025 (improper output handling); the input-side prompt secret detection cannot catch a
-secret the <em>model</em> emits. Modes are
-<code>flag</code>, <code>redact</code> (default), and <code>block</code>; streaming responses are detected/flagged only. Configured
+and LLM05:2025 (improper output handling); it complements input-side prompt secret detection by
+covering secrets the <em>model</em> emits. Modes are
+<code>flag</code>, <code>redact</code> (default), and <code>block</code>; streaming responses are flagged. Configured
 under <code>guardrails.outputGuardrail</code>. See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/guardrails.md">Guardrails</a>.</p>
 <h2 id="p">P<a class="headerlink" href="#p" title="Permanent link">&para;</a></h2>
@@ -2567,8 +2567,8 @@ under <code>guardrails.outputGuardrail</code>. See
 their tenant on the configured <code>retrieval.tenantIsolation.field</code> (default <code>owner</code>, stamped per point at
 ingest and matched against the caller's <code>X-Sandbox-ID</code>). Both backends enforce it (the Qdrant query
 filter appends the match; the lexical corpus is stamped with the default sandbox id) and it fails closed:
-a missing or unasserted tenant returns no documents, never the whole corpus. <strong>Enabled by default;</strong>
-the single-tenant local lexical lab is the only shipped profile that turns it off. See
+a missing or unasserted tenant returns an empty result. <strong>Enabled by default;</strong>
+the single-tenant local lexical lab turns it off. See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/src/rag-service/app/retriever.py"><code>src/rag-service/app/retriever.py</code></a>.</p>
 <p><strong>Pod Security Admission (restricted)</strong>: The Kubernetes built-in that enforces the <code>restricted</code> Pod
 Security Standard on platform namespaces via the <code>pod-security.kubernetes.io/enforce|audit|warn:
@@ -2578,14 +2578,14 @@ Sandbox and tenant-lab namespaces get these labels so workloads run non-root, dr
 use a restricted seccomp profile.</p>
 <p><strong>Promotion request</strong>: A reviewed <code>ModelPromotionRequest</code> (under
 <code>platform/model-catalog/promotion-requests/</code>) that authorizes moving a model to a target status. It
-records <code>targetStatus</code>, <code>requestedBy</code>, <code>approvers</code>, and a <code>businessJustification</code>. A model cannot reach
-<code>approved</code> or a gateway allowlist without a matching promotion request, provenance digest, and evidence.
+records <code>targetStatus</code>, <code>requestedBy</code>, <code>approvers</code>, and a <code>businessJustification</code>. A model reaches
+<code>approved</code> or a gateway allowlist only with a matching promotion request, provenance digest, and evidence.
 See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/model-governance.md">Model governance</a>.</p>
 <p><strong>Prompt secret detection</strong>: An input-path guardrail that rejects requests appearing to carry
 credential material (e.g. <code>private_key</code>, <code>github_token</code>, <code>bearer_token</code>), protecting coding-agent
 prompts that may accidentally include repo files or env output. PII detectors (<code>email</code>, <code>us_ssn</code>,
 <code>credit_card</code>) are built in but opt-in. A match returns HTTP 400 with <code>prompt_secret_detected</code> and
-names the pattern without echoing the matched text. See
+names the pattern and keeps the matched text out of the response. See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/guardrails.md">Guardrails</a>.</p>
 <h2 id="q">Q<a class="headerlink" href="#q" title="Permanent link">&para;</a></h2>
 <p><strong>Quantization (FP8/AWQ)</strong>: Serving model weights (and optionally the KV cache) at reduced precision
@@ -2603,9 +2603,9 @@ evidence-pack evidence before a customer handoff. Run the default gate with <cod
 failed gate means the handoff evidence is incomplete or below threshold. See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/release-gates.md">Release gates</a>.</p>
 <p><strong>Response cache</strong>: An exact-match, per-sandbox cache of non-streaming chat completions, keyed by
-<code>(sandbox_id, canonical-payload)</code> so a repeated identical request skips the runtime and one tenant's
-cached answer is never served to another. TTL + LRU bounded; <code>stream</code> is excluded from the key and
-streaming responses are never cached. Off by default (<code>responseCache</code> in
+<code>(sandbox_id, canonical-payload)</code> so a repeated identical request skips the runtime and each tenant's
+cached answers stay scoped to that tenant. TTL + LRU bounded; <code>stream</code> is excluded from the key and
+only non-streaming responses are cached. Off by default (<code>responseCache</code> in
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/inference-gateway/values.yaml"><code>deploy/charts/inference-gateway/values.yaml</code></a>);
 use the Redis backend for a cache shared across replicas. See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/src/inference-gateway/app/cache.py"><code>src/inference-gateway/app/cache.py</code></a>.</p>
@@ -2630,17 +2630,16 @@ For a tenant lab it equals the namespace sandbox id. See
 <p><strong>Strict release gate</strong>: The stricter form of the release gate, run with <code>make release-gate-strict</code>
 for customer demos, release reviews, restore-drill reviews, and production-readiness handoff. It fails
 when a required gate falls back to checked-in <code>sample-*</code> evidence or when selected evidence is older
-than <code>RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS</code> (default 24h), so the report is based on the current build
-rather than only validating sample report shapes. It does not establish production readiness by
-itself. See
+than <code>RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS</code> (default 24h), so the report reflects the current build.
+See
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/release-gates.md">Release gates</a>
 and <a href="../proof/">Evidence and validation</a>.</p>
 <h2 id="t">T<a class="headerlink" href="#t" title="Permanent link">&para;</a></h2>
 <p><strong>Tamper-evident audit chain</strong>: A per-process SHA-256 hash chain linking the gateway's redacted audit
 events (<code>h_i = SHA-256(h_{i-1} || canonical(record_i))</code>) so any edit, insertion, deletion, or reordering
 is detectable by recomputation. The live construction matches the offline auditor/verifier reference in
-<code>scripts/audit-verify.py</code> byte for byte. The chain is per replica; cross-replica and
-long-horizon integrity depend on log shipping and an external head commitment. See
+<code>scripts/audit-verify.py</code> byte for byte. The chain is per replica; log shipping and an external
+head commitment extend integrity across replicas and over time. See
 <a href="../adr/0006-tamper-evident-audit-hash-chain/">ADR 0006</a>.</p>
 <p><strong>Tensor-parallel</strong>: Splitting a single model's tensors across the GPUs of one node via
 <code>--tensor-parallel-size</code> (set through the vLLM chart's <code>extraArgs</code>/GPU profiles). Keep
@@ -2655,7 +2654,7 @@ coding-agent workspace values. Driven by a spec under <code>tenants/onboarding/<
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/tenant-labs.md">Tenant labs</a>.</p>
 <p><strong>Traceable sandbox</strong>: The <code>ai-sandbox</code> namespace deployed by the <code>traceable-sandbox</code> Application:
 quota, default resource limits, restricted Pod Security Admission labels, and default-deny network
-policy, proving that a request can be traced end to end without leaking prompt text. Exercised by
+policy, proving that a request can be traced end to end while prompt text stays out of the trace. Exercised by
 <code>make trace-smoke</code> (renamed from the retired <code>sandbox-smoke</code> target in
 <a href="../adr/0010-agent-sandbox-standard-runtime/">ADR 0010</a>). Distinct from the <em>agent sandbox</em> workspace
 runtime (see above). See

@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2097,66 +2097,60 @@
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>The gateway ships <code>POST /v1/responses</code> (the OpenAI Responses API) as a <strong>stateless</strong> subset:
 requests are translated to and from the internal chat shape and run through the same governance
-path as chat, but a request asking for server-side state (<code>store: true</code> or
-<code>previous_response_id</code>) is rejected with <code>stateful_not_supported</code>. Clients that want a
-conversation to persist server-side must resend the whole history each turn.</p>
-<p>The requirement now is to support that stateful surface: persist a response so it can be
+path as chat. A request asking for server-side state (<code>store: true</code> or
+<code>previous_response_id</code>) returns <code>stateful_not_supported</code>, and clients resend the whole history
+each turn.</p>
+<p>The requirement is to support the stateful surface: persist a response so it can be
 retrieved and chained, and expose <code>GET</code>/<code>DELETE</code>/<code>input_items</code> on stored responses.</p>
-<p>This collides with a deliberate privacy posture. The tamper-evident audit chain (ADR 0006)
-<strong>never</strong> stores raw prompt or completion text, only counts, roles, and SHA-256 fingerprints.
-Honoring <code>store: true</code> means the gateway now persists <strong>raw conversation content</strong> (the input
-and output text) server-side, which is the opposite of that default. The decision must be
-explicit, opt-in, and bounded, not a silent behavior change.</p>
+<p>This interacts with a deliberate privacy posture. The tamper-evident audit chain (ADR 0006)
+stores only counts, roles, and SHA-256 fingerprints in place of raw prompt or completion text.
+Honoring <code>store: true</code> means the gateway persists <strong>raw conversation content</strong> (the input
+and output text) server-side. The decision is therefore explicit, opt-in, and bounded.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Add an <strong>opt-in</strong> server-side response store, off by default (<code>RESPONSES_STORE_ENABLED</code>).</p>
 <ul>
-<li><strong>Disabled (default):</strong> unchanged. <code>store</code> / <code>previous_response_id</code> are rejected with
-  <code>stateful_not_supported</code>, so no raw content is persisted unless an operator turns it on.</li>
+<li><strong>Disabled (default):</strong> <code>store</code> / <code>previous_response_id</code> return <code>stateful_not_supported</code>, and
+  raw content is persisted only after an operator turns the store on.</li>
 <li><strong>Enabled:</strong></li>
 <li><code>store: true</code> persists the response object, the turn's input items, and the running
     conversation, keyed by <code>&lt;tenant&gt;/&lt;response_id&gt;</code>, with a retention TTL.</li>
 <li><code>previous_response_id</code> loads the prior response (tenant-scoped; <code>404</code> if absent) and
-    <strong>prepends its conversation</strong> so the stateless runtime is shown the full history; chaining
-    is reconstructed by the gateway, not delegated to runtime memory.</li>
+    <strong>prepends its conversation</strong> so the stateless runtime is shown the full history; the
+    gateway reconstructs the chain itself.</li>
 <li>New endpoints: <code>GET /v1/responses/{id}</code>, <code>DELETE /v1/responses/{id}</code>, and
     <code>GET /v1/responses/{id}/input_items</code>, all tenant-scoped.</li>
 <li><strong>Storage:</strong> a <code>ResponseStore</code> protocol with a <code>MemoryResponseStore</code> (local/tests) and a
   <code>RedisResponseStore</code> (shared, TTL-bounded, on the existing budget Redis). Records are
-  tenant-scoped, so a tenant can neither read nor delete another tenant's responses.</li>
+  tenant-scoped, so each tenant reads and deletes only its own responses.</li>
 <li>The content store is <strong>separate from the audit chain</strong>. The audit chain stays redacted
   (fingerprints only); stored responses are the caller's own conversation content, retained
   only for the TTL and deletable on demand.</li>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The gateway can persist raw conversation content when an operator opts in, a deliberate
-  departure from the redacted-only default, bounded by off-by-default operation, per-tenant isolation, a
-  retention TTL, an explicit <code>DELETE</code>, and a store that is a distinct backend from the audit
-  log, budget, and cache. Operators handling regulated data keep it off (the default) or set a
-  short TTL.</li>
-<li>Governance is unchanged: every stateful request still runs the full chat governance path
-  (allowlist, admission, prompt-secret policy, budget, output guardrail, audit) on the
-  reconstructed conversation, so chaining cannot bypass any control.</li>
-<li>Streaming and background (<code>background: true</code>) response objects remain out of scope
-  (documented); this is the stateful-but-synchronous subset.</li>
-<li>Operational cost: a Redis keyspace for stored responses (or per-replica memory locally). Off
-  by default, so operators who do not enable it pay nothing.</li>
+<li>The gateway persists raw conversation content when an operator opts in, bounded by
+  off-by-default operation, per-tenant isolation, a retention TTL, an explicit <code>DELETE</code>, and a
+  store that is a distinct backend from the audit log, budget, and cache. Operators handling
+  regulated data keep it off (the default) or set a short TTL.</li>
+<li>Every stateful request runs the full chat governance path (allowlist, admission,
+  prompt-secret policy, budget, output guardrail, audit) on the reconstructed conversation, so
+  every control applies to chained requests.</li>
+<li>The store provides the stateful synchronous surface: store, retrieve, chain, and delete.</li>
+<li>Operators who enable it provision a Redis keyspace for stored responses (or per-replica memory
+  locally).</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Keep it stateless (reject as before).</strong> Simplest and privacy-safest, but leaves the
-  Responses API incomplete and forces every client to resend the full history each turn.
-  Rejected now that agents want server-side state; the trade-off is instead made explicit and
-  opt-in.</li>
-<li><strong>Store raw content in, or alongside, the audit chain.</strong> Would violate the audit chain's
-  redaction guarantee (ADR 0006) and conflate an integrity control with a content store.
-  Rejected: the response store is a separate, deletable, TTL-bounded backend.</li>
+<li><strong>Stateless only.</strong> Simplest. The opt-in store was chosen because agents want server-side
+  state, and making it explicit and opt-in keeps the privacy trade-off in the operator's hands.</li>
+<li><strong>Store raw content in, or alongside, the audit chain.</strong> A separate, deletable, TTL-bounded
+  backend was chosen so the audit chain keeps its redaction guarantee (ADR 0006) and stays a pure
+  integrity control.</li>
 <li><strong>Persist responses to the object store (like batch blobs).</strong> Response objects are small
-  structured records with a natural TTL, which Redis fits better than blob storage; the object
-  store (ADR 0011) is for large JSONL batch files. Rejected for this record type.</li>
-<li><strong>Background (async) responses via the batch-processor pattern.</strong> Deferred: the synchronous
-  stateful subset covers the common agent use (store + chain). Background responses can be a
-  later ADR if the demand appears.</li>
+  structured records with a natural TTL, which Redis fits well; the object store (ADR 0011) holds
+  large JSONL batch files.</li>
+<li><strong>Background (async) responses via the batch-processor pattern.</strong> The synchronous stateful
+  surface covers the common agent use (store + chain).</li>
 </ul>
 
 

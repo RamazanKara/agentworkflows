@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2111,7 +2111,7 @@ kyverno apply deploy/policies/kyverno/policies.yaml --resource &lt;rendered-reso
 <h2 id="likely-causes">Likely Causes<a class="headerlink" href="#likely-causes" title="Permanent link">&para;</a></h2>
 <p>The workload is missing required labels, uses <code>latest</code>, lacks CPU or memory requests and limits, runs as root, or references an unsigned project image.</p>
 <h2 id="mitigation">Mitigation<a class="headerlink" href="#mitigation" title="Permanent link">&para;</a></h2>
-<p>Fix the manifest. Do not bypass policy unless the exception is time-boxed, documented, and reviewed. Use audit mode only for rollout of new signature verification rules.</p>
+<p>Fix the manifest. Keep policy enforced, and make any exception time-boxed, documented, and reviewed. Reserve audit mode for rolling out new signature verification rules.</p>
 <h2 id="evidence">Evidence<a class="headerlink" href="#evidence" title="Permanent link">&para;</a></h2>
 <p>Record the blocked manifest, Kyverno error message, Argo CD sync status, and corrected manifest diff.</p>
 

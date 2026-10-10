@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2112,7 +2112,7 @@ repo). Use this runbook to read the findings and decide what to fix.</p>
 </code></pre></div></li>
 </ul>
 <h2 id="triage-order">Triage Order<a class="headerlink" href="#triage-order" title="Permanent link">&para;</a></h2>
-<p>Score each finding by exploitability, not just the raw number. Work top-down:</p>
+<p>Score each finding by exploitability as well as the raw number. Work top-down:</p>
 <ol>
 <li><strong>Critical / high-risk checks first</strong>: <code>Dangerous-Workflow</code>, <code>Token-Permissions</code>,
    <code>Branch-Protection</code>, <code>Binary-Artifacts</code>. A failing <code>Dangerous-Workflow</code> or broad
@@ -2144,7 +2144,7 @@ repo). Use this runbook to read the findings and decide what to fix.</p>
 </tr>
 <tr>
 <td><code>Dangerous-Workflow</code></td>
-<td>Remove <code>pull_request_target</code> + untrusted checkout patterns; never interpolate untrusted input into <code>run:</code>.</td>
+<td>Remove <code>pull_request_target</code> + untrusted checkout patterns; keep untrusted input out of <code>run:</code> interpolation.</td>
 </tr>
 <tr>
 <td><code>Branch-Protection</code></td>
@@ -2161,10 +2161,10 @@ repo). Use this runbook to read the findings and decide what to fix.</p>
 </tbody>
 </table>
 <h2 id="accepting-a-finding">Accepting A Finding<a class="headerlink" href="#accepting-a-finding" title="Permanent link">&para;</a></h2>
-<p>Some checks (for example <code>Fuzzing</code>, <code>Branch-Protection</code> on a solo-maintained repo) may be
-intentionally out of scope. Record the decision and rationale in the pull request that touches the
-related area, and dismiss the code-scanning alert with the matching reason so it does not re-surface
-as actionable. Do not silence a finding without a written rationale.</p>
+<p>Some checks (for example <code>Fuzzing</code>, <code>Branch-Protection</code> on a solo-maintained repo) can be accepted
+deliberately. Record the decision and rationale in the pull request that touches the related area,
+and dismiss the code-scanning alert with the matching reason so it stays resolved. Give every
+dismissed finding a written rationale.</p>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
 <p>After remediation, re-run the workflow and confirm the alert clears in the Security tab. For
 pinning or permissions changes, also run <code>make validate</code> and <code>make repo-hygiene</code> so contract and

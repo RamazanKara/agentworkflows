@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2094,64 +2094,61 @@
 <li>Date: 2026-10-04</li>
 <li>Deciders: Platform maintainer</li>
 <li>Refines: <a href="../0011-async-files-and-batch-api/">0011</a> (its decisions stand; this records how three of
-  its guarantees are now met)</li>
+  its guarantees are met)</li>
 </ul>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>ADR 0011 promised that a batch is durable, safe to process with N workers, and replayed only
-within its tenant's identity. A review of the shipped worker (<code>src/inference-gateway/app/batch_worker.py</code>)
-found each promise weaker than stated:</p>
+<p>ADR 0011 specifies that a batch is durable, safe to process with N workers, and replayed only
+within its tenant's identity. A review of the worker (<code>src/inference-gateway/app/batch_worker.py</code>)
+set out what each guarantee needs:</p>
 <ul>
-<li><strong>N workers.</strong> A claim was keyed only by batch. A worker that stalled past the reclaim interval
-  kept processing, and later acknowledged, a batch the reaper had already handed to another
-  replica: two workers running the same items, and the second one's claim deleted by the first.</li>
-<li><strong>Durability.</strong> The worker read the whole input file into memory, held every result until the
-  end, and a redelivered batch replayed from line one. A 100 MB file meant hundreds of MB of
-  resident memory, and a crash near the end charged every item twice.</li>
-<li><strong>Tenant identity.</strong> The worker replayed with one API key and a per-item <code>X-Sandbox-ID</code>. That
-  key had to be unbound to serve every tenant, which made it a key able to act as any tenant at
-  any time, and the receipts named the worker rather than the person who submitted the batch.</li>
+<li><strong>N workers.</strong> When the reaper hands a stalled batch to another replica, exactly one worker
+  must hold the claim and be able to acknowledge it.</li>
+<li><strong>Durability.</strong> Worker memory should stay bounded for large input files (for example 100 MB),
+  and a redelivered batch should resume near where it stopped so items are charged once.</li>
+<li><strong>Tenant identity.</strong> Replay should act for one tenant at a time, scoped to that tenant's running
+  batch, and receipts should name the person who submitted the batch.</li>
 </ul>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Owner tokens.</strong> <code>BatchStore.claim()</code> returns a <code>Claim</code> carrying a random token, stored with
   the claim time (<code>&lt;token&gt;|&lt;time&gt;</code> in Redis). <code>heartbeat(claim)</code> and <code>ack(claim)</code> act only when the
   token still holds the claim; the reaper reads the time after the separator. The worker
-  heartbeats between chunks and stops without finalizing when the token no longer holds. Claims
-  written before this change parse as token-less, age out, and are re-queued normally.</li>
+  heartbeats between chunks and stops cleanly, leaving finalization to the new owner, once its
+  token is replaced. Claims written before this change age out and are re-queued normally.</li>
 <li><strong>Streamed, checkpointed processing.</strong> <code>ObjectStore.open_lines()</code> streams input from every
   backend. Results are written as parts of <code>BATCH_WORKER_PART_LINES</code> items under
   <code>&lt;tenant&gt;/parts/&lt;batch&gt;/</code>, and after each part the batch record stores <code>processed_lines</code> and the
   part counts. A resumed batch skips the processed lines, so a crash replays at most one part.
-  Parts are written before the record moves forward, so the record never points at a missing
-  part; parts are combined through a spooled temporary file at finalize and then deleted.</li>
+  Parts are written before the record moves forward, so the record always points at stored
+  parts; parts are combined through a spooled temporary file at finalize and then deleted.</li>
 <li><strong>Replay bound to a running batch.</strong> Batches record their submitter (from the audit principal).
   An API-key record with the <code>batch_replay</code> scope may assert a tenant only when <code>X-Batch-ID</code>
   names that tenant's batch and the batch is <code>in_progress</code>; the request is then treated as bound
   to that sandbox, and the receipt records <code>batch_id</code> and <code>on_behalf_of</code>. Any other use of the key
-  is <code>403 batch_replay_not_authorized</code>. A worker key without the scope behaves as before.</li>
+  returns <code>403 batch_replay_not_authorized</code>. A worker key without the scope keeps its existing
+  behavior.</li>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Two workers can no longer finish the same batch, and a stalled worker cannot interfere with
-  the replica that took over.</li>
+<li>Exactly one worker finishes each batch, and the replica that takes over a batch owns it alone.</li>
 <li>Worker memory is bounded by one part plus one chunk, independent of file size. The worker pod
-  needs a writable <code>/tmp</code> sized for one assembled result file; the chart mounts one.</li>
-<li>A leaked worker key is limited to tenants with running batches and leaves a receipt per item
-  naming the batch and its submitter. Operators should issue the worker key as a scoped record.</li>
-<li>At-least-once delivery still applies inside a part: a crash between a part's last item and its
-  checkpoint replays that part's items.</li>
+  uses a writable <code>/tmp</code> sized for one assembled result file; the chart mounts one.</li>
+<li>The worker key acts only for tenants with running batches and leaves a receipt per item naming
+  the batch and its submitter. Operators issue the worker key as a scoped record.</li>
+<li>Delivery is at-least-once within a part: a resume after a crash replays at most the items of
+  the current part.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Per-batch credentials minted for the submitter.</strong> The gateway would mint a short-lived token
-  for each batch and the worker would present it. This gives true delegation, but requires the
-  gateway to issue and store tokens, and API-key submitters have no identity provider to
-  delegate from. Rejected in favor of binding the worker to the running batch.</li>
-<li><strong>Per-item checkpoints.</strong> Exact resume with no replay, at the cost of a store write per item.
-  Rejected: parts bound the replay at a small, configurable cost.</li>
-<li><strong>Redis streams with consumer groups instead of lists.</strong> Built-in ownership and pending
-  entries, but a different data model to migrate. Rejected while the list-based queue, with
-  tokens, meets the same guarantees.</li>
+  for each batch and the worker would present it, which requires token issuance and storage and an
+  identity provider behind each submitter. Binding the worker to the running batch was chosen
+  because it works for API-key submitters too.</li>
+<li><strong>Per-item checkpoints.</strong> Exact resume, with a store write per item. Parts were chosen because
+  they bound the replay at a small, configurable cost.</li>
+<li><strong>Redis streams with consumer groups.</strong> Built-in ownership and pending entries in a different
+  data model. The list-based queue with tokens was chosen because it meets the same guarantees on
+  the existing model.</li>
 </ul>
 
 

@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2170,7 +2170,7 @@
 
 <h1 id="audit-log">Audit log<a class="headerlink" href="#audit-log" title="Permanent link">&para;</a></h1>
 <p>Team admins can open <strong>Audit log</strong> in the console to read retained gateway receipts
-without access to gateway logs. Other roles cannot open the view or its APIs.
+directly, separate from gateway logs. The view and its APIs are for team admins.
 Use an admin credential without a project restriction: this view covers the whole team.</p>
 <p>Filter by time, actor, event type, project or run ID, then choose <strong>Apply filters</strong>.
 Times in the form use your local timezone. Events appear newest first; <strong>Older
@@ -2179,28 +2179,28 @@ events</strong> pages through the results. Run links open the existing run detai
 <p><strong>Verify chain</strong> checks every team event in the selected time range, including
 events hidden by actor, event, project or run filters. The result shows how many
 events were checked and, on failure, the first break's process chain, sequence
-and reason. A range boundary means earlier events are outside the retained or
-selected range; it is not a chain break. An empty range checks zero events.</p>
+and reason. A range boundary marks where the retained or selected range begins,
+separate from chain breaks. An empty range checks zero events.</p>
 <p><strong>Export JSON Lines</strong> downloads all pages of the applied filters as
 <code>audit-log.jsonl</code>, newest first, one original event per line. The page captures
-an upper time bound when opened or when filters are applied so newer events do
-not enter an ongoing export. Retention continues during paging and export;
-export promptly when collecting evidence.</p>
+an upper time bound when opened or when filters are applied, so an ongoing export
+covers a fixed window. Retention continues during paging and export, so export
+promptly when collecting evidence.</p>
 <h2 id="enable-and-retain-the-view">Enable and retain the view<a class="headerlink" href="#enable-and-retain-the-view" title="Permanent link">&para;</a></h2>
 <p>The view uses the existing budget Redis: set <code>SANDBOX_BUDGET_BACKEND=redis</code>,
 configure <code>SANDBOX_BUDGET_REDIS_URL</code> and enable Redis persistence. Keep
-<code>AUDIT_LOG_ENABLED=true</code>. Existing Redis-backed teams need no additional service.
-Without that configuration the page says <strong>Audit log is turned off</strong> and shows how to
-enable it. Storage read failures return 503 instead of an empty or verified trail.</p>
+<code>AUDIT_LOG_ENABLED=true</code>. Existing Redis-backed teams use their current services.
+Until that configuration is in place, the page says <strong>Audit log is turned off</strong> and shows how to
+enable it. Storage read failures return 503.</p>
 <p>With <code>STORAGE_BACKEND=postgres</code>, the same APIs and verification use
 <a href="../postgresql-storage/">PostgreSQL gateway storage</a>. PostgreSQL also persists original
 events and process chain heads; the operator log format remains unchanged.</p>
 <p><code>AUDIT_VIEW_RETENTION_SECONDS</code> defaults to <strong>7776000</strong> (90 days). In Helm, use
 <code>inference-gateway.traceability.auditViewRetentionSeconds</code> in the umbrella chart,
-or <code>traceability.auditViewRetentionSeconds</code> in the gateway chart. Each team is
-also limited to <strong>100,000 events</strong> in Redis. The earlier limit wins. Redis writes and reads trim
+or <code>traceability.auditViewRetentionSeconds</code> in the gateway chart. Each team
+also keeps up to <strong>100,000 events</strong> in Redis, and the earlier limit applies. Redis writes and reads trim
 old entries; an inactive team's stream expires after the retention interval.
-Only events written after this feature is enabled are available; logs are not backfilled.</p>
+The view collects events from the moment the feature is enabled.</p>
 <h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
 <p><code>GET /v1/team/audit</code> accepts inclusive <code>from</code> and <code>to</code> Unix timestamps in seconds,
 exact-match <code>event_type</code>, <code>actor</code>, <code>project</code>, <code>run_id</code>, and an opaque <code>cursor</code> from
@@ -2212,19 +2212,17 @@ Actor matches the event's actor, or the principal's subject/key ID.</p>
 <p><code>GET /v1/team/audit/verify?from=...&amp;to=...</code> returns <code>enabled</code>, <code>ok</code>, <code>checked</code>,
 <code>first_break</code> (null or <code>{chain_id, sequence, reason}</code>), and <code>boundaries</code>.
 When the view is off, <code>ok</code> is null. Both APIs require a team admin and return
-403 with <code>detail.reason: team_role_required</code> otherwise. Responses are not cached.</p>
+403 with <code>detail.reason: team_role_required</code> otherwise. Responses are always fresh.</p>
 <h2 id="what-verification-proves">What verification proves<a class="headerlink" href="#what-verification-proves" title="Permanent link">&para;</a></h2>
 <p>The original process-wide log and its hashes are unchanged. The view recomputes
 each original event hash. Because a process chain interleaves different teams,
 the view also links its stored envelopes per team and process with SHA-256,
 covering the original event, process sequence and team sequence. This detects
-edits, internal deletions and reordering without disclosing another team's events.
+edits, internal deletions and reordering while keeping each team's view to its own events.
 Direct original links are checked when process sequences are consecutive.</p>
-<p>Checks cover the available range. A removed prefix is a range boundary;
-missing tails, whole process chains, or a wholesale rewrite cannot be proved
-from this view alone. Cross-process continuity and independently anchored evidence
-still use the complete operator logs and the existing verifier. A team-filtered
-export is not a complete process log for <code>scripts/audit-verify.py</code>.
+<p>Checks cover the available range, and a removed prefix appears as a range boundary.
+For cross-process continuity and independently anchored evidence, verify the complete
+operator logs with the existing verifier, <code>scripts/audit-verify.py</code>.
 See the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">audit chain runbook</a>
 for full-log verification, anchoring and SIEM retention.</p>
 

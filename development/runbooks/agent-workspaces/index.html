@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2102,7 +2102,7 @@
 <li>workspace PVC</li>
 <li><code>agent-platform-contract</code> ConfigMap with gateway URL, RAG URL, sandbox ID, and required headers</li>
 </ul>
-<p>The workspace does not grant cluster-admin privileges and does not include runtime secrets. Customers should wire Git credentials, API keys, package mirrors, ticketing tools, or artifact stores through their own secret backend and explicit egress allowlists.</p>
+<p>The workspace RBAC is namespace-scoped, and runtime secrets come from the customer. Wire Git credentials, API keys, package mirrors, ticketing tools, or artifact stores through your own secret backend and explicit egress allowlists.</p>
 <p>External egress must also be approved in <code>platform/network/egress-catalog.yaml</code> and referenced with <code>catalogRef</code>. Run <code>make egress-check</code> before applying a workspace that adds external CIDRs.</p>
 <h2 id="create-a-workspace">Create A Workspace<a class="headerlink" href="#create-a-workspace" title="Permanent link">&para;</a></h2>
 <p>The workspace is a GitOps-managed instance (the <code>agent-workspace</code> Application) and
@@ -2132,9 +2132,9 @@ kernel-isolation runtime class, expected at the <code>high</code> risk tier. The
 admission.</p>
 <p>Operational notes:</p>
 <ul>
-<li>The controller does <strong>not</strong> roll the singleton pod when the Sandbox pod template
-  changes; delete the pod (<code>kubectl -n ai-agents delete pod &lt;sandbox-id&gt;</code>) and the
-  controller recreates it from the current spec. The smoke does this automatically
+<li>To apply a changed Sandbox pod template, delete the singleton pod
+  (<code>kubectl -n ai-agents delete pod &lt;sandbox-id&gt;</code>) and the controller recreates it
+  from the current spec. The smoke does this automatically
   when it detects image or volume drift.</li>
 <li>The projected workspace credential is on by default: a short-lived,
   audience-bound token replaces long-lived secrets; the token path and audience
@@ -2143,9 +2143,9 @@ admission.</p>
 <li>The workspace PVC is ReadWriteOnce and is held by the sandbox pod; the
   <code>agent-smoke</code> Job shares it on the same node (fine on single-node labs; on
   multi-node clusters co-schedule them or use RWX storage).</li>
-<li>NetworkPolicy enforcement requires a policy-capable CNI; on kindnet the smoke
-  reports non-enforcement instead of passing vacuously (see the threat model).
-  For a genuinely fail-closed local lab, create it with <code>LOCAL_CNI=calico
+<li>NetworkPolicy enforcement requires a policy-capable CNI. The smoke reports the
+  enforcement status it observes, so on kindnet it reports non-enforcement (see the
+  threat model). For a fail-closed local lab, create it with <code>LOCAL_CNI=calico
   make quickstart</code>.</li>
 <li>For an end-to-end demonstration (real coding agent, allow/deny receipts on the
   audit chain, evidence pack), run <code>make agent-sandbox-demo</code>.</li>

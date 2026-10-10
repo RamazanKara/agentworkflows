@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2128,29 +2128,29 @@ cluster, and approachable for a single maintainer to author and review.</p>
   conditions), so a maintainer reads a policy and the object it constrains in the same dialect.</li>
 <li>The signed-image policy turns the CI Cosign signing investment into a real runtime guarantee: only
   images keylessly signed by this repo's <code>ci.yml</code> workflow on <code>refs/heads/main</code> are admitted in
-  non-infra namespaces. Forks that republish images must update <code>imageReferences</code> and the
-  subject/issuer, which is a deliberate manual edit, not an auto-rewrite.</li>
+  non-infra namespaces. Forks that republish images update <code>imageReferences</code> and the
+  subject/issuer as a deliberate manual edit.</li>
 <li>Both engines and the rest of the platform are excluded from the restricted-pod and label policies
-  by namespace (<code>kube-system</code>, <code>argocd</code>, <code>kyverno</code>, <code>monitoring</code>, and so on), so infrastructure is
-  not blocked by tenant rules.</li>
-<li>Kyverno is an in-cluster admission dependency; if it is unhealthy, admission of new workloads in
-  governed namespaces is affected. This is the intended fail-closed posture for <code>Enforce</code> policies.</li>
+  by namespace (<code>kube-system</code>, <code>argocd</code>, <code>kyverno</code>, <code>monitoring</code>, and so on), so infrastructure runs
+  independently of tenant rules.</li>
+<li>Kyverno is an in-cluster admission dependency, and <code>Enforce</code> policies fail closed: admission of
+  new workloads in governed namespaces waits on a healthy Kyverno. Operators monitor it alongside
+  other platform operators.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>OPA Gatekeeper.</strong> A mature CNCF policy controller with a large constraint-template ecosystem.
-  Rejected as the default because authoring requires Rego, a separate language from the Kubernetes
-  manifests it guards; Kyverno's Kubernetes-native YAML lowers the authoring and review cost for a
+  Authoring uses Rego, a separate language from the Kubernetes manifests it guards; Kyverno's Kubernetes-native YAML lowers the authoring and review cost for a
   single maintainer, and its built-in <code>verifyImages</code> covers the Cosign keyless verification AgentWorkflows
   needs without a separate component.</li>
-<li><strong>Plain Pod Security Admission (PSA).</strong> Built in and zero-dependency, and it would cover the
-  non-root/privileged/read-only baseline. Rejected as sufficient on its own because PSA cannot
-  express the label requirements, the pinned-image and resource rules, signed-image verification, the
-  egress-CIDR backstop, or the PVC encryption attestation. PSA can still be layered underneath; the
-  decision here is which engine carries the platform-specific rules.</li>
-<li><strong>Validating Admission Policy (CEL, in-tree).</strong> Promising and dependency-free for validation, but
-  it does not perform image signature verification and the rule set predates broad reliance on it.
-  Kyverno consolidates validation and image verification in one already-pinned operator.</li>
+<li><strong>Plain Pod Security Admission (PSA).</strong> Built in and zero-dependency, and it covers the
+  non-root/privileged/read-only baseline. Kyverno adds the label requirements, the pinned-image and
+  resource rules, signed-image verification, the egress-CIDR backstop, and the PVC encryption
+  attestation. PSA can be layered underneath; the decision here is which engine carries the
+  platform-specific rules.</li>
+<li><strong>Validating Admission Policy (CEL, in-tree).</strong> Dependency-free for validation. Kyverno was
+  preferred because it consolidates validation and image signature verification in one
+  already-pinned operator.</li>
 </ul>
 
 

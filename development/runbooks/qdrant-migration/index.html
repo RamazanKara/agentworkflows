@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2114,7 +2114,7 @@
 <p>Use this runbook when changing the RAG vector store: a new embedding model or dimension count, a
 re-chunking pass, or a knowledge refresh. The RAG service reads a fixed collection name plus a
 logical <code>collectionVersion</code>, so migrations are done by writing a new collection version and cutting
-over, never by mutating the live collection in place.</p>
+over, with the live collection kept intact.</p>
 <p>See <a href="../vector-rag/">Vector RAG</a> for the steady-state profile and
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/scripts/rag-ingest.py">scripts/rag-ingest.py</a> for the ingestion job this runbook drives.</p>
 <h2 id="key-settings">Key Settings<a class="headerlink" href="#key-settings" title="Permanent link">&para;</a></h2>
@@ -2152,7 +2152,7 @@ over, never by mutating the live collection in place.</p>
 <p>Each ingested point's <code>payload.collection_version</code> records the version, so multiple versions can
 coexist in one collection and retrieval filters to the active one.</p>
 <h2 id="1-dry-run-no-writes">1. Dry Run (no writes)<a class="headerlink" href="#1-dry-run-no-writes" title="Permanent link">&para;</a></h2>
-<p>Validate the source manifest, embedding provider, and chunk plan without touching Qdrant. The
+<p>Validate the source manifest, embedding provider, and chunk plan before writing to Qdrant. The
 <code>--check</code> mode loads and validates the manifest, builds chunks, and prints a summary:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--check<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--source<span class="w"> </span>platform/rag/sources/manifest.yaml<span class="w"> </span><span class="se">\</span>
@@ -2165,8 +2165,8 @@ coexist in one collection and retrieval filters to the active one.</p>
 <code>dimensions</code> equals the embedding provider's output size. A dimension mismatch against an existing
 collection is rejected at write time by <code>ensure_collection</code>, so catch it here first.</p>
 <h2 id="2-write-the-new-version">2. Write The New Version<a class="headerlink" href="#2-write-the-new-version" title="Permanent link">&para;</a></h2>
-<p>Run the ingestion against Qdrant. <code>ensure_collection</code> creates the collection if missing and refuses
-to write if the existing collection's dimensions differ from <code>--dimensions</code>:</p>
+<p>Run the ingestion against Qdrant. <code>ensure_collection</code> creates the collection if needed and writes
+when the existing collection's dimensions equal <code>--dimensions</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python3<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--write<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--source<span class="w"> </span>platform/rag/sources/manifest.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--qdrant-url<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_URL</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
@@ -2174,7 +2174,7 @@ to write if the existing collection's dimensions differ from <code>--dimensions<
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--collection-version<span class="w"> </span>v2<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--dimensions<span class="w"> </span><span class="m">384</span>
 </code></pre></div>
-<p>The previous version (<code>v1</code>) is untouched, so retrieval keeps serving it until cutover.</p>
+<p>The previous version (<code>v1</code>) stays intact, so retrieval keeps serving it until cutover.</p>
 <h2 id="3-cut-over">3. Cut Over<a class="headerlink" href="#3-cut-over" title="Permanent link">&para;</a></h2>
 <p>Point the RAG service at the new version and roll the deployment:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># deploy/clusters/&lt;env&gt;/values/rag-service.yaml</span>
@@ -2185,18 +2185,18 @@ to write if the existing collection's dimensions differ from <code>--dimensions<
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>sync<span class="w">                 </span><span class="c1"># or helm upgrade for direct-apply installs</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span>rag-smoke<span class="w">            </span><span class="c1"># confirm grounded retrieval returns v2 results</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>make<span class="w"> </span>rag-eval<span class="w">             </span><span class="c1"># REQUIRED: score recall@k / MRR / nDCG / grounding vs the</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">                          </span><span class="c1"># golden set so an embedding or chunking change cannot silently</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">                          </span><span class="c1"># regress retrieval quality. Fails when metrics fall below the</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">                          </span><span class="c1"># golden set so every embedding or chunking change is scored</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">                          </span><span class="c1"># for retrieval quality. Fails when metrics fall below the</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">                          </span><span class="c1"># suite thresholds (platform/evals/rag-retrieval-suite.yaml).</span>
 </code></pre></div>
-<p><code>rag-smoke</code> only checks that grounded results are <em>present</em>; <code>rag-eval</code> checks they are
+<p><code>rag-smoke</code> checks that grounded results are <em>present</em>; <code>rag-eval</code> checks they are
 <em>correct</em>. Always run <code>make rag-eval</code> after changing the embedding model, chunking, or
 collection so a quality regression is caught before promotion. Update the golden suite and
 its thresholds when the corpus or the expected-relevant documents change.</p>
 <p>A changed dimension count also requires a new collection name (Qdrant collections are
 fixed-dimension); set both <code>collection</code> and <code>collectionVersion</code> and re-run from step 1.</p>
 <h2 id="4-rollback">4. Rollback<a class="headerlink" href="#4-rollback" title="Permanent link">&para;</a></h2>
-<p>Because the old version was never overwritten, rollback is a values revert:</p>
+<p>Because the old version stays intact, rollback is a values revert:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">retrieval</span><span class="p">:</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">vectorStore</span><span class="p">:</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">collectionVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
@@ -2204,8 +2204,8 @@ fixed-dimension); set both <code>collection</code> and <code>collectionVersion</
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>make<span class="w"> </span>sync
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>make<span class="w"> </span>rag-smoke
 </code></pre></div>
-<p>Retrieval immediately filters back to <code>v1</code>. Reclaim the abandoned <code>v2</code> points only after the
-rollback is confirmed stable, by deleting them through the Qdrant API filtered on
+<p>Retrieval immediately filters back to <code>v1</code>. Once the rollback is confirmed stable, reclaim the
+<code>v2</code> points by deleting them through the Qdrant API filtered on
 <code>collection_version == v2</code>.</p>
 <h2 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h2>
 <ul>

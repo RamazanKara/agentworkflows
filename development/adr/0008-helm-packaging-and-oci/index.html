@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2099,8 +2099,8 @@
 need a packaging format that is parameterizable per environment (local versus customer, Ollama versus
 vLLM, NVIDIA versus AMD), reconcilable by Argo CD, and distributable as verifiable, versioned
 artifacts a customer can pull and check before installing into a production cluster. The artifacts
-must fit AgentWorkflows' supply-chain story (pinned digests, SBOMs, Cosign signatures) without standing up
-a separate chart-hosting service.</p>
+must fit AgentWorkflows' supply-chain story (pinned digests, SBOMs, Cosign signatures) using the
+existing image registry.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Package every first-party workload as a Helm chart and distribute the charts as Cosign-signed OCI
 artifacts in the same registry as the images.</p>
@@ -2108,7 +2108,7 @@ artifacts in the same registry as the images.</p>
 <li>Each workload is a Helm chart under <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts"><code>deploy/charts/</code></a>: inference-gateway,
   ollama, vllm, rag-service, qdrant-vector-store, budget-redis, and agent-workspace, all <code>apiVersion:
   v2</code>, <code>version: 0.13.0</code>, with <code>kubeVersion: "&gt;=1.25.0"</code>.</li>
-<li>Environment differences are value files, not chart forks: Argo CD applications reference per-cluster
+<li>Environment differences are value files on shared charts: Argo CD applications reference per-cluster
   values such as <code>../../clusters/local/values/inference-gateway.yaml</code>
   (<a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/clusters/local/apps.yaml"><code>deploy/clusters/local/apps.yaml</code></a>), and the customer
   overlay supplies its own values including the GPU profiles.</li>
@@ -2125,31 +2125,30 @@ artifacts in the same registry as the images.</p>
 <li>One distribution mechanism covers images and charts: the same registry, the same keyless Cosign
   identity, the same verification command shape. A customer pulls a chart, verifies its signature,
   renders it with their values, and reviews before install.</li>
-<li>OCI distribution needs no separate chart repository or index to host and secure; it reuses GHCR,
-  which already holds the signed images, SBOM, and provenance attestations.</li>
+<li>OCI distribution reuses GHCR, which already holds the signed images, SBOM, and provenance
+  attestations, so charts live in the same secured registry.</li>
 <li>Helm's per-environment values keep local/customer and Ollama/vLLM/NVIDIA/AMD differences as data,
   which is what lets <a href="../0003-inference-runtime-vllm-and-ollama/">0003</a> and
   <a href="../0007-local-first-kind-then-customer-cluster/">0007</a> share charts across environments.</li>
-<li>The tag convention (charts strip the leading <code>v</code>, images keep it) is a sharp edge: the verification
-  docs call it out explicitly because mixing the two breaks <code>helm pull</code>/<code>cosign verify</code>.</li>
-<li>Templating complexity is the cost of parameterization; it is bounded by the API and config contract
-  snapshots (<code>platform/config-contracts</code>) that pin chart configuration surfaces.</li>
+<li>The tag convention (charts strip the leading <code>v</code>, images keep it) is spelled out in the
+  verification docs so operators use the right form with <code>helm pull</code> and <code>cosign verify</code>.</li>
+<li>The API and config contract snapshots (<code>platform/config-contracts</code>) pin chart configuration
+  surfaces, keeping parameterized templates reviewable.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>A classic Helm HTTP chart repository (<code>index.yaml</code> on a static host or ChartMuseum).</strong> Works and
-  is widely understood. Rejected as the default because it is a second artifact store to host, secure,
-  and index, with its own signing approach (provenance files). OCI keeps charts in the registry that
-  already stores and signs the images, unifying the supply-chain story.</li>
-<li><strong>Raw manifests / Kustomize instead of Helm.</strong> Kustomize overlays could express some
-  per-environment differences. Rejected because AgentWorkflows' variability (model selection, GPU vendor,
+  is widely understood, with its own signing approach (provenance files). OCI was preferred because it
+  keeps charts in the registry that already stores and signs the images, unifying the supply-chain
+  story in one artifact store.</li>
+<li><strong>Raw manifests / Kustomize.</strong> Kustomize overlays can express per-environment differences. Helm
+  was preferred because AgentWorkflows' variability (model selection, GPU vendor,
   replica/parallelism tuning) is naturally values-driven, Argo CD already drives these as Helm
   sources, and Helm gives a single packaged, versioned, signable artifact to pull and verify.</li>
-<li><strong>Plain <code>git</code>-only delivery (no packaged artifact).</strong> Argo CD can render charts directly from this
-  repo, which is exactly the local path. Rejected as the customer distribution unit because a pulled,
-  pinned, signed OCI artifact is verifiable out-of-band before it ever touches a cluster, which the
-  release-verification flow depends on; in-repo rendering and OCI artifacts coexist rather than
-  compete.</li>
+<li><strong>Plain <code>git</code>-only delivery.</strong> Argo CD can render charts directly from this repo, which is exactly
+  the local path. For customer distribution, a pulled, pinned, signed OCI artifact is verifiable
+  out-of-band before it reaches a cluster, which the release-verification flow depends on. In-repo
+  rendering and OCI artifacts work side by side.</li>
 </ul>
 
 

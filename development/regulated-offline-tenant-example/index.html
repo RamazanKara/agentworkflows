@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2169,8 +2169,8 @@
 
 
 <h1 id="restricted-egress-tenant-example">Restricted-egress tenant example<a class="headerlink" href="#restricted-egress-tenant-example" title="Permanent link">&para;</a></h1>
-<p>The file <code>tenants/onboarding/regulated-offline-coding-agents.yaml</code> defines a tenant named <code>regulated-offline</code>. The name describes its intended use; the generated manifests enforce a narrower fact: pods in that tenant namespace receive no external CIDR egress rule.</p>
-<p>This is not an air-gap configuration for the cluster. Image pulls, model downloads, GitOps, identity, and services outside the tenant namespace need separate offline controls.</p>
+<p>The file <code>tenants/onboarding/regulated-offline-coding-agents.yaml</code> defines a tenant named <code>regulated-offline</code>. The generated manifests restrict pods in that tenant namespace to in-cluster egress: DNS, the inference gateway and the RAG service.</p>
+<p>The profile scopes egress for the tenant namespace. Image pulls, model downloads, GitOps, identity, and services outside the tenant namespace use their own offline controls, listed at the end of this page.</p>
 <h2 id="render-the-manifests">Render the manifests<a class="headerlink" href="#render-the-manifests" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>tenant-onboard-regulated<span class="w"> </span><span class="nv">TENANT_OUTPUT</span><span class="o">=</span>.out/tenants
 </code></pre></div>
@@ -2210,22 +2210,22 @@
 </tr>
 </tbody>
 </table>
-<p><code>requirePrivateRegistry</code> and <code>evidenceRetentionDays</code> are contract fields. They do not configure a registry, storage lifecycle, or retention job by themselves.</p>
+<p><code>requirePrivateRegistry</code> and <code>evidenceRetentionDays</code> are contract fields that record the tenant's requirements. Configure the registry, storage lifecycle and retention job to match them.</p>
 <h2 id="review-before-apply">Review before apply<a class="headerlink" href="#review-before-apply" title="Permanent link">&para;</a></h2>
 <p>Confirm that:</p>
 <ul>
 <li>the target namespace and sandbox ID are correct;</li>
-<li>the CNI actually enforces Kubernetes NetworkPolicy;</li>
-<li>no generated rule contains an external CIDR;</li>
+<li>the CNI enforces Kubernetes NetworkPolicy;</li>
+<li>every generated egress rule targets an in-cluster destination;</li>
 <li>the gateway and RAG namespace selectors match the target cluster;</li>
 <li>the workspace image is available from an internal registry;</li>
 <li>storage class, quota, and PVC size are appropriate;</li>
-<li>identity and API-key material are supplied without being written to Git.</li>
+<li>identity and API-key material are supplied from a secret store, outside Git.</li>
 </ul>
-<p>Apply the reviewed files through the customer's GitOps process. A direct <code>kubectl apply</code> can be used in a disposable lab, but it is not the documented customer handoff path.</p>
+<p>Apply the reviewed files through the customer's GitOps process. Reserve a direct <code>kubectl apply</code> for a disposable lab.</p>
 <h2 id="test-the-boundary">Test the boundary<a class="headerlink" href="#test-the-boundary" title="Permanent link">&para;</a></h2>
-<p>Use an image that is already present or available from the internal registry. From a pod in the tenant namespace, test both an allowed in-cluster destination and a destination that is otherwise reachable from the cluster. A timeout to an unroutable address does not prove that NetworkPolicy is working.</p>
-<p>The repository's agent-sandbox smoke test uses the Kubernetes API as the deny target for this reason:</p>
+<p>Use an image that is already present or available from the internal registry. From a pod in the tenant namespace, test both an allowed in-cluster destination and a destination that is otherwise reachable from the cluster, so the denied result reflects NetworkPolicy.</p>
+<p>The repository's agent-sandbox smoke test uses the Kubernetes API as the deny target:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>agent-sandbox-smoke
 </code></pre></div>
 <p>To make the entire deployment offline, add private image/chart mirrors, preloaded model weights, internal Git and identity endpoints, DNS policy, cluster-wide egress rules, and an offline release-verification process.</p>

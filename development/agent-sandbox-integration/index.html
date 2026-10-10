@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -1844,10 +1844,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#limits" class="md-nav__link">
+  <a href="#operator-hardening" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limits
+        Operator hardening
       
     </span>
   </a>
@@ -2265,10 +2265,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#limits" class="md-nav__link">
+  <a href="#operator-hardening" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limits
+        Operator hardening
       
     </span>
   </a>
@@ -2302,7 +2302,7 @@
 
 <h1 id="agent-sandbox-integration">Agent-sandbox integration<a class="headerlink" href="#agent-sandbox-integration" title="Permanent link">&para;</a></h1>
 <p>Agent workspaces run as <code>agents.x-k8s.io/v1beta1</code> <code>Sandbox</code> resources managed by the
-vendored <code>kubernetes-sigs/agent-sandbox</code> controller. This is the only workspace runtime in
+vendored <code>kubernetes-sigs/agent-sandbox</code> controller. It is the standard workspace runtime in
 release <code>v0.9.0</code>.</p>
 <p>The decisions are recorded in <a href="../adr/0009-adopt-agent-sandbox-workspace-runtime/">ADR 0009</a>
 and <a href="../adr/0010-agent-sandbox-standard-runtime/">ADR 0010</a>. This page describes the current
@@ -2327,34 +2327,31 @@ last-applied annotation.</p>
 </ul>
 <p>The pod template runs as UID/GID <code>10001</code>, uses <code>RuntimeDefault</code> seccomp, drops all Linux
 capabilities, disables privilege escalation, and makes the root filesystem read-only. The
-default Kubernetes service-account token is not mounted.</p>
+default Kubernetes service-account token mount is disabled.</p>
 <h2 id="kernel-isolation">Kernel isolation<a class="headerlink" href="#kernel-isolation" title="Permanent link">&para;</a></h2>
-<p>The controller-managed pod is a lifecycle and policy boundary. It is not automatically a separate
-kernel boundary. <code>sandbox.runtimeClassName</code> is empty in the checked-in local and customer values.
-Set it to a cluster-provided runtime such as gVisor or Kata when that isolation is required, and
-verify that the runtime exists on every node that may host a workspace.</p>
+<p>The controller-managed pod is a lifecycle and policy boundary that shares the node kernel by
+default; <code>sandbox.runtimeClassName</code> is empty in the checked-in local and customer values. For a
+separate kernel boundary, set it to a cluster-provided runtime such as gVisor or Kata, and verify
+that the runtime exists on every node that may host a workspace.</p>
 <h2 id="platform-credential">Platform credential<a class="headerlink" href="#platform-credential" title="Permanent link">&para;</a></h2>
 <p>The chart projects a service-account token at <code>/var/run/platform/token</code>. It is scoped to the
 <code>inference-gateway</code> audience, expires after 600 seconds by default, and is rotated by the kubelet.
 The gateway only accepts it when JWT/JWKS verification is configured against the cluster issuer.</p>
-<p>This token is still a credential. Audience binding and expiry reduce its usefulness elsewhere but
-do not make the workspace trusted.</p>
+<p>Handle this token as a credential. Audience binding and expiry scope it to the gateway for a short
+window.</p>
 <h2 id="network-boundary">Network boundary<a class="headerlink" href="#network-boundary" title="Permanent link">&para;</a></h2>
-<p>The direct <code>Sandbox</code> resource does not create an upstream NetworkPolicy. The chart's
-NetworkPolicies are therefore the network boundary for this path. They require a CNI that enforces
-NetworkPolicy; the local profile uses Calico. The smoke check refuses to treat kindnet as valid
-egress evidence.</p>
+<p>The chart's NetworkPolicies form the network boundary for the direct <code>Sandbox</code> path. They require
+a CNI that enforces NetworkPolicy; the local profile uses Calico. The smoke check requires an
+enforcing CNI for egress evidence.</p>
 <p>Every external CIDR entry needs a <code>catalogRef</code> from
-<code>platform/network/egress-catalog.yaml</code>. Approved destinations can still receive data, so the
-catalog must stay narrow and be reviewed as an exfiltration boundary.</p>
+<code>platform/network/egress-catalog.yaml</code>. Approved destinations receive workspace traffic, so keep
+the catalog narrow and review it as an exfiltration boundary.</p>
 <h2 id="updates-and-lifecycle">Updates and lifecycle<a class="headerlink" href="#updates-and-lifecycle" title="Permanent link">&para;</a></h2>
 <p><code>workspace.shutdownTime</code> and <code>workspace.shutdownPolicy</code> can bound a workspace lifetime. They are
 unset by default.</p>
-<p>The v0.5.0 controller does not replace its singleton pod when the <code>Sandbox</code> pod template changes.
+<p>The v0.5.0 controller keeps its singleton pod running when the <code>Sandbox</code> pod template changes.
 After a chart update, delete the managed pod so the controller recreates it from the current
 template. <code>make agent-sandbox-smoke</code> detects image or volume drift and performs that refresh.</p>
-<p>Warm pools, <code>SandboxClaim</code>, multi-cluster scheduling, and workspace snapshot/restore are not
-implemented by this chart.</p>
 <h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
 <p>After the controller and workspace application are synced, run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>agent-sandbox-smoke
@@ -2367,7 +2364,7 @@ README animation.</p>
 <h2 id="container-workflow-steps">Container workflow steps<a class="headerlink" href="#container-workflow-steps" title="Permanent link">&para;</a></h2>
 <p><code>await WorkflowGateway().container("coder", {"task": "Review this code"})</code> executes an
 administrator-approved command in an <strong>existing</strong> agent-sandbox workspace. It reuses this
-chart and controller; there is no additional execution service or Docker socket on the worker.
+chart and controller, so the worker runs it without an additional execution service or Docker socket.
 The included <code>CodeWorkflow</code> and
 <a href="https://github.com/RamazanKara/agentworkflows/blob/main/sdk/python/agentworkflows/examples/container_agent.py">container agent</a>
 write <code>review.txt</code> inside <code>/workspace</code> and call the gateway with a short-lived credential.</p>
@@ -2388,8 +2385,8 @@ Set <code>networkPolicy.gateway.namespace</code> and <code>port</code> if your g
 After changing an existing Sandbox template, recreate its pod as described above.
 The worker checks the actual pod's owner, hardening, volumes, image, and namespace policies
 before execution. Extra egress policies, external CIDRs, sidecars, secret/projected volumes,
-or ambient environment credentials cause an actionable refusal. An enforcing CNI is still
-a deployment prerequisite; inspecting policy objects cannot prove CNI enforcement.</p>
+or ambient environment credentials produce an actionable refusal. An enforcing CNI is a
+deployment prerequisite; confirm enforcement with <code>make agent-sandbox-smoke</code>.</p>
 <p>Add the agent to the team's gateway policy (substitute your approved routes/origins):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">workflows</span><span class="p">:</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">CodeWorkflow</span><span class="p">:</span>
@@ -2410,8 +2407,7 @@ a deployment prerequisite; inspecting policy objects cannot prove CNI enforcemen
 <p>The route named <code>demo-openai</code> must exist in this gateway; the Compose fixture route uses
 <code>http://cloud-fake:8000</code>, while a live OpenAI route uses its configured origin. The example
 agent's model is explicit in its source. Credentials for providers stay on the gateway.
-Commands, namespace, and Sandbox names come only from this reviewed policy, never from
-workflow input. Agent input is JSON on stdin, scanned for secrets before authorization.</p>
+Commands, namespace, and Sandbox names come only from this reviewed policy. Agent input is JSON on stdin, scanned for secrets before authorization.</p>
 <p>In your existing workflows Helm values, grant the worker access to that workspace:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">worker</span><span class="p">:</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-registry/agentworkflows-worker:your-tag</span>
@@ -2422,7 +2418,7 @@ workflow input. Agent input is JSON on stdin, scanned for secrets before authori
 </code></pre></div>
 <p>Upgrade the workflows release with those values. Its worker service account receives read
 access to the named Sandbox/pod and namespace policies, and exec access to that pod only.
-It cannot create pods, change network policies, or read Secrets. Use the actual gateway
+Pod creation, network-policy changes and Secret reads stay outside its role. Use the actual gateway
 Service DNS URL: container steps validate that the approved egress rule reaches its namespace
 and port. Workers running outside Kubernetes instead need kubectl and equivalently scoped
 kubeconfig access. The example worker already registers <code>CodeWorkflow</code> on <code>research</code>:</p>
@@ -2444,29 +2440,28 @@ kubeconfig access. The example worker already registers <code>CodeWorkflow</code
 <p>The gateway issues an opaque credential scoped to the team, run, step, and classification;
 it expires with <code>timeoutSeconds</code> (at most ten minutes). Only governed model/tool endpoints
 accept it, even when the agent omits correlation headers. The worker passes it through stdin,
-never command-line arguments or Temporal results, and revokes it when the step finishes.
-No team key, provider key, or Kubernetes credential enters the workspace. Failed/crashed
+keeping it out of command-line arguments and Temporal results, and revokes it when the step
+finishes. Team keys, provider keys and Kubernetes credentials stay outside the workspace. Failed/crashed
 steps retain their conservative cost; expiry bounds grants after a lost worker. A Redis lease
 prevents simultaneous workflow steps in one workspace. Failed execution holds the lease until
 its timeout plus 30 seconds, since remote work may still be stopping.</p>
-<p>Container steps default to <strong>one attempt</strong>: arbitrary code side effects cannot safely be
-replayed. The runner bounds runtime and output, kills its process group, and sends output
+<p>Container steps default to <strong>one attempt</strong>, so code side effects run once. The runner bounds runtime and output, kills its process group, and sends output
 through gateway DLP before returning it to Temporal. <code>agent_start</code> and <code>agent_exec</code> receipts
-correlate authorization and completion; a missing completion is an unknown outcome, not
-proof of success. Each model/tool call has its own receipt. Filesystem/process actions are
-not individually intercepted. Workspace data persists on its PVC; dedicate workspaces to a
+correlate authorization and completion; a start receipt without a completion receipt marks
+an unknown outcome. Each model/tool call has its own receipt. Workspace data persists on its PVC; dedicate workspaces to a
 trust boundary and clean/recreate them between untrusted workloads.</p>
 <p>Compose validates framework/MCP flows without Kubernetes. Container unit tests validate the
 runner contract and refusals; <code>make agent-sandbox-smoke</code> verifies the actual cluster boundary.
 Use a gVisor/Kata RuntimeClass when a separate kernel boundary is required.</p>
-<h2 id="limits">Limits<a class="headerlink" href="#limits" title="Permanent link">&para;</a></h2>
+<h2 id="operator-hardening">Operator hardening<a class="headerlink" href="#operator-hardening" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A missing isolation <code>RuntimeClass</code> means the workspace shares the node kernel.</li>
-<li>NetworkPolicy restricts connections but does not encrypt them.</li>
-<li>Namespace RBAC does not restrict actions performed through an approved external service.</li>
-<li>The gateway audit chain records governed model calls, not every process or file operation inside
-  the workspace.</li>
-<li>PVC availability, backup, retention, and secure deletion depend on the cluster storage system.</li>
+<li>Set an isolation <code>RuntimeClass</code> to give workspaces a kernel separate from the node.</li>
+<li>Add CNI or mesh mTLS to encrypt workspace connections; NetworkPolicy controls which connections
+  are allowed.</li>
+<li>Review each approved external service as part of the workspace's effective permissions.</li>
+<li>The gateway audit chain records governed model and tool calls; use node or runtime monitoring for
+  process and file activity inside the workspace.</li>
+<li>Configure PVC availability, backup, retention, and secure deletion in the cluster storage system.</li>
 </ul>
 
 

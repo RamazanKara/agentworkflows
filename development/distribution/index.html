@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2239,18 +2239,18 @@ TypeScript SDKs are attached to the GitHub release, and versioned documentation 
 <code>artifacthub.io</code> OCI tag. To finish discoverability, a maintainer must register
 <code>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows</code> once in the Artifact Hub
 control panel, copy the assigned <code>repositoryID</code> into <code>artifacthub-repo.yml</code>, and cut the next
-release. This external registration cannot be completed from repository code.</p>
+release.</p>
 <h2 id="python-package">Python package<a class="headerlink" href="#python-package" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.0/agentworkflows-0.9.0-py3-none-any.whl
 </code></pre></div>
 <p>The wheel, source archive, TypeScript SDK package (<code>agentworkflows-sdk-*.tgz</code>) and
 <code>sdk-checksums.txt</code> are attached to each GitHub release.
 Follow <a href="../release-verification/">release verification</a> to verify the files before installing.
-The default release channel is GitHub downloads; PyPI publishing requires the setup below.
+The default release channel is GitHub downloads; PyPI publishing uses the setup below.
 To install from a checkout instead, run <code>python -m pip install ./sdk/python</code>.</p>
 <h3 id="optional-pypi-publishing">Optional PyPI publishing<a class="headerlink" href="#optional-pypi-publishing" title="Permanent link">&para;</a></h3>
-<p>PyPI is disabled unless the repository Actions variable <code>PYPI_PUBLISH_ENABLED</code> is exactly
-<code>true</code>. GitHub downloads complete independently of this setting and PyPI environment approval.</p>
+<p>PyPI publishing turns on when the repository Actions variable <code>PYPI_PUBLISH_ENABLED</code> is exactly
+<code>true</code>. GitHub downloads publish independently of this setting and PyPI environment approval.</p>
 <p>Before enabling it, register a pending PyPI Trusted Publisher with owner
 <code>RamazanKara</code>, repository <code>agentworkflows</code>, workflow <code>release.yml</code>, environment <code>pypi</code>,
 and project <code>agentworkflows</code>. Protect the GitHub <code>pypi</code> environment with
@@ -2261,12 +2261,11 @@ attestations remain enabled. After completing this setup, set the repository var
 <h2 id="versioned-documentation">Versioned documentation<a class="headerlink" href="#versioned-documentation" title="Permanent link">&para;</a></h2>
 <p>Main publishes the <code>development</code> documentation alias. A <code>v*</code> release tag publishes its exact
 version, moves <code>latest</code>, and makes <code>latest</code> the site root. The tag build retains its generated
-content on <code>gh-pages</code>, then dispatches a run on main to publish that tree. This avoids GitHub
-Pages retaining the earlier main artifact when main and the tag share a commit. Older
+content on <code>gh-pages</code>, then dispatches a run on main to publish that tree. This keeps GitHub
+Pages on the tag's content when main and the tag share a commit. Older
 generated versions remain on the <code>gh-pages</code> branch and in the version selector.</p>
 <h2 id="operator-owned-one-time-setup">Operator-owned one-time setup<a class="headerlink" href="#operator-owned-one-time-setup" title="Permanent link">&para;</a></h2>
-<p>The code and workflows are complete, but these account-level actions require repository-owner
-authority:</p>
+<p>These account-level actions use repository-owner authority:</p>
 <ol>
 <li>Set GitHub Pages source to <strong>GitHub Actions</strong>.</li>
 <li>For optional PyPI publishing, configure its protected environment and trusted publisher,

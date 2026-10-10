@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2139,12 +2139,12 @@
 <p>Run:</p>
 <div class="highlight"><pre><span></span><code>make toolchain-report
 </code></pre></div>
-<p>The command writes JSON and Markdown reports under <code>results/toolchain/</code>. Attach the Markdown report to customer handoff notes when strict validation cannot be run directly on the customer's workstation.</p>
+<p>The command writes JSON and Markdown reports under <code>results/toolchain/</code>. Attach the Markdown report to customer handoff notes when strict validation runs on a workstation other than the customer's.</p>
 <h2 id="full-validation">Full Validation<a class="headerlink" href="#full-validation" title="Permanent link">&para;</a></h2>
 <p>Run:</p>
 <div class="highlight"><pre><span></span><code>make validate-full
 </code></pre></div>
-<p>This first checks the <code>strict</code> tool profile, then runs <code>make validate</code> with <code>REQUIRE_FULL_TOOLCHAIN=1</code>. Missing strict tools should be fixed before customer release or production-readiness sign-off.</p>
+<p>This first checks the <code>strict</code> tool profile, then runs <code>make validate</code> with <code>REQUIRE_FULL_TOOLCHAIN=1</code>. Install any missing strict tools before customer release or production-readiness sign-off.</p>
 <h2 id="customer-notes">Customer Notes<a class="headerlink" href="#customer-notes" title="Permanent link">&para;</a></h2>
 <p>Customers can keep their own Kubernetes distribution, registry, secret backend, and observability stack. The required validation tools are client-side controls used to prove the portable charts, policies, supply-chain workflow, restore drill, and load-test path before handoff.</p>
 

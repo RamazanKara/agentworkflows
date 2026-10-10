@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2079,12 +2079,12 @@
 
 <h1 id="chaos-drills-runbook">Chaos Drills Runbook<a class="headerlink" href="#chaos-drills-runbook" title="Permanent link">&para;</a></h1>
 <p>Use this runbook to prove how platform components behave under controlled
-disruption. Be precise about what each drill proves:</p>
+disruption. Each drill type proves something specific:</p>
 <ul>
 <li><strong>Rollout/recovery drills</strong> (<code>*-rollout</code>) restart a workload with <code>kubectl
   rollout restart</code> and assert it comes back healthy. They prove graceful
-  restart and post-restart smoke. They are <em>not</em> fault injection -- nothing is
-  taken away or broken, the workload is simply rolled.</li>
+  restart and post-restart smoke. The workload is rolled with every dependency
+  left in place.</li>
 <li><strong>Capacity preflight</strong> (<code>gpu-capacity-preflight</code>) is a non-mutating check of
   GPU node labels and allocatable capacity.</li>
 <li><strong>Fault-injection drills</strong> (<code>rag-degradation-fault</code>) actively remove a
@@ -2153,12 +2153,12 @@ DRILL=gpu-capacity-preflight RUN_SMOKE=0 make chaos-drill
 <p>A successful <code>rag-degradation-fault</code> fault-injection drill shows:</p>
 <ul>
 <li>Qdrant was scaled to 0 (the fault was actually injected).</li>
-<li>The RAG Deployment stayed <code>Available</code> while Qdrant was down (no hard crash; PDB/error-budget held).</li>
+<li>The RAG Deployment stayed <code>Available</code> while Qdrant was down (PDB/error-budget held).</li>
 <li>Qdrant was restored to its original replica count.</li>
 <li>Post-fault RAG smoke passed against the qdrant backend.</li>
 </ul>
-<p>Record failed drills as incidents if a component does not roll out, does not
-stay available under the injected fault, or the smoke check fails after recovery.</p>
+<p>Record a drill as an incident when a component fails to roll out, loses
+availability under the injected fault, or fails the smoke check after recovery.</p>
 
 
 

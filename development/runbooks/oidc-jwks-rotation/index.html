@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2165,7 +2165,7 @@ follows standard JWKS key rotation without a redeploy.</p>
 stops accepting retired keys.</p>
 <ol>
 <li><strong>Publish the new key.</strong> Add the new signing key to the IdP so the JWKS document serves both
-   the current key (<code>kid-old</code>) and the new key (<code>kid-new</code>). Do not retire the old key yet.</li>
+   the current key (<code>kid-old</code>) and the new key (<code>kid-new</code>). Keep the old key published.</li>
 <li><strong>Wait for cache expiry.</strong> The gateway refreshes its JWKS cache after at most
    <code>JWT_CACHE_SECONDS</code>. New gateway pods refresh on first authenticated request.</li>
 <li><strong>Verify new-key acceptance.</strong> Mint a token signed with <code>kid-new</code> and confirm a
@@ -2176,8 +2176,8 @@ stops accepting retired keys.</p>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"messages":[{"role":"user","content":"ping"}]}'</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="s2">"</span><span class="nv">$GATEWAY_URL</span><span class="s2">/v1/chat/completions"</span>
 </code></pre></div></li>
-<li><strong>Confirm old-key tokens still validate</strong> until they expire, so in-flight sessions are not
-   broken during the overlap window.</li>
+<li><strong>Confirm old-key tokens still validate</strong> until they expire, so in-flight sessions continue
+   through the overlap window.</li>
 <li><strong>Retire the old key.</strong> Once all <code>kid-old</code> tokens have expired (after their <code>exp</code>), remove
    <code>kid-old</code> from the IdP. After the next cache refresh the gateway rejects any token still
    presenting <code>kid-old</code> with <code>401</code> and reason <code>invalid_or_missing_api_key</code>.</li>
@@ -2188,8 +2188,8 @@ stops accepting retired keys.</p>
 <p>If new-key tokens are rejected after the cache window, re-add <code>kid-old</code> to the JWKS document
 (reverting step 5) so existing tokens validate, then investigate the new key's <code>kid</code>, <code>alg</code>,
 and <code>use</code> fields. Lowering <code>JWT_CACHE_SECONDS</code> shortens the propagation window for the next
-attempt. Tightening <code>issuer</code>, <code>audience</code>, or <code>requiredScopes</code> only affects claim validation,
-not key selection.</p>
+attempt. <code>issuer</code>, <code>audience</code>, and <code>requiredScopes</code> govern claim validation; key selection
+follows <code>kid</code>.</p>
 <h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
 <p>Key selection, signature verification, claim validation, and rotation behavior are covered by
 <code>src/inference-gateway/tests/test_jwt_auth.py</code>, including the rotated-key case where a

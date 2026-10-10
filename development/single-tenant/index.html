@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2250,7 +2250,7 @@
 <p>Give one customer one namespace, one gateway URL, dedicated database credentials,
 a Redis instance, and a persistent secret-encryption key. The customer uses the console;
 your operations team owns upgrades, backups, identity, availability and provider access.
-This is a reference deployment you operate. AgentWorkflows does not sell a hosted SLA.</p>
+This is a reference deployment you operate.</p>
 <h2 id="choose-the-path">Choose the path<a class="headerlink" href="#choose-the-path" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2264,7 +2264,7 @@ This is a reference deployment you operate. AgentWorkflows does not sell a hoste
 <tr>
 <td>Local evaluation</td>
 <td><code>docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker</code></td>
-<td>Gateway, console, Temporal, persistent stores, worker and a simulated provider; no paid key needed.</td>
+<td>Gateway, console, Temporal, persistent stores, worker and a simulated provider; runs without a paid key.</td>
 </tr>
 <tr>
 <td>Disposable kind trial</td>
@@ -2280,8 +2280,7 @@ This is a reference deployment you operate. AgentWorkflows does not sell a hoste
 </table>
 <p>Use the <a href="../quickstart/">quickstart</a> for kind's image-build and dependency commands.
 The trial has a <strong>300-second</strong> deadline after images are prepared. The README's
-60-second walkthrough covers console interaction on a ready stack. Neither number is a
-cold image download or cluster provisioning benchmark.</p>
+60-second walkthrough covers console interaction on a ready stack.</p>
 <h2 id="prepare-a-tenant">Prepare a tenant<a class="headerlink" href="#prepare-a-tenant" title="Permanent link">&para;</a></h2>
 <p>Start with <a href="https://github.com/RamazanKara/agentworkflows/blob/main/deploy/charts/agentworkflows/values-single-tenant.yaml">values-single-tenant.yaml</a>.
 Copy it into your deployment configuration and replace the example domains, OIDC application
@@ -2292,7 +2291,7 @@ Use separate gateway and Temporal database users. The Temporal user needs schema
 privileges during upgrades; database creation remains an operator action.
 The reference enables verified PostgreSQL TLS for Temporal. Use a certificate whose
 name matches <code>serverName</code>; configure the provider CA through Temporal's chart mounts
-when it is not in the image trust store.</p>
+when the image trust store lacks it.</p>
 <p>Create these Kubernetes Secrets in the tenant namespace from your secret manager:</p>
 <table>
 <thead>
@@ -2339,15 +2338,14 @@ when it is not in the image trust store.</p>
 <code>python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"</code>
 on your secure administration host and store it in the secret manager.</p>
 <p>Set <code>networkPolicy.externalEgress</code> to reviewed CIDRs and ports for managed Redis,
-gateway PostgreSQL, providers and your identity provider. An empty list deliberately
-blocks those connections. The CNI must enforce NetworkPolicy. Public provider IPs change;
-maintain the approved list or use a controlled network egress layer. No public
-<code>0.0.0.0/0</code> or <code>::/0</code> rule is accepted.</p>
+gateway PostgreSQL, providers and your identity provider. Gateway egress is limited to
+the listed destinations. The CNI must enforce NetworkPolicy. Public provider IPs change;
+maintain the approved list or use a controlled network egress layer. The chart accepts
+specific CIDRs and rejects public <code>0.0.0.0/0</code> and <code>::/0</code> rules.</p>
 <p>The umbrella policy isolates the gateway and any bundled stores. Apply your platform's
-namespace isolation policy to Temporal, workers and research tools as well; their
-intra-namespace RPC is not configured for mutual TLS by this profile. Keep Temporal
-and database services private. The Research example's tools are synthetic; replace
-them before treating publication as a business integration.</p>
+namespace isolation policy, and mutual TLS where you require it, to Temporal, workers and
+research tools as well. Keep Temporal and database services private. Replace the Research
+example's synthetic tools with your own integrations for business publication.</p>
 <h2 id="install-and-verify">Install and verify<a class="headerlink" href="#install-and-verify" title="Permanent link">&para;</a></h2>
 <p>The chart defaults to the published v0.9.0 gateway and worker images. Pin their digests in
 <code>tenant-values.yaml</code>, or build images from this checkout and make them available in your
@@ -2364,8 +2362,8 @@ the sample approval. Test company sign-in with each mapped role, then use
 <p><code>GET /v1/team/deployment</code> returns <code>checks[]</code> with <code>id</code>, <code>name</code>, <code>configured</code>
 and <code>action</code>, plus <code>verification_required[]</code>. It requires an unrestricted team admin.
 Python: <code>client.deployment()</code>. TypeScript: <code>client.deployment()</code>.
-It reports settings without secrets or connection strings. A configured check does
-not prove database TLS, backup recovery, egress enforcement or service availability.
+It reports settings without secrets or connection strings. Confirm database TLS, backup
+recovery, egress enforcement and service availability with their own checks.
 Check <code>/readyz</code>, then prove the install end to end before admitting users.</p>
 <h3 id="prove-the-install">Prove the install<a class="headerlink" href="#prove-the-install" title="Permanent link">&para;</a></h3>
 <p><code>agentworkflows check</code> walks the console's first-run path against any gateway, including this one:
@@ -2377,16 +2375,15 @@ verification. It prints each stage's time against a 300-second budget and exits 
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTWORKFLOWS_API_KEY</span><span class="o">=</span>...<span class="w">             </span><span class="c1"># an admin key from your secret manager</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>agentworkflows<span class="w"> </span>check<span class="w"> </span>--allow-paid
 </code></pre></div>
-<p>The reference profile routes the sample to a real provider, so <code>--allow-paid</code> is required; the check
-refuses to spend without it. A policy that needs several reviewers needs one more key per reviewer, passed
-by environment variable name: <code>--approver-key-env SECOND_REVIEWER_KEY</code>. Keys are never accepted on the
-command line. Use <code>--json</code> in CI. Run it after every install, upgrade and restore. A passing check is
-evidence that approvals, workers, Temporal, storage and the audit chain work together; it does not prove
-backups, network egress rules or sign-in with company accounts.</p>
+<p>The reference profile routes the sample to a real provider, so <code>--allow-paid</code> is required; the flag
+authorizes the check to spend. A policy that needs several reviewers needs one more key per reviewer, passed
+by environment variable name: <code>--approver-key-env SECOND_REVIEWER_KEY</code>. Keys are read from environment
+variables only. Use <code>--json</code> in CI. Run it after every install, upgrade and restore. A passing check is
+evidence that approvals, workers, Temporal, storage and the audit chain work together. Verify backups,
+network egress rules and company sign-in with the other steps on this page.</p>
 <h2 id="back-up-a-recoverable-unit">Back up a recoverable unit<a class="headerlink" href="#back-up-a-recoverable-unit" title="Permanent link">&para;</a></h2>
 <p>Redis holds budgets, sessions, key records and invitation tokens even when gateway
-records use PostgreSQL. The legacy multi-namespace platform's Redis-is-ephemeral
-assumption <strong>does not apply</strong> to this deployment.</p>
+records use PostgreSQL. Treat Redis as <strong>durable state</strong> in this deployment.</p>
 <p>Back up these together:</p>
 <ol>
 <li>Gateway PostgreSQL, both Temporal databases, and Redis persistence.</li>
@@ -2407,11 +2404,11 @@ out of command arguments):</p>
 an access-controlled off-cluster store, record checksums and secret versions, then
 restore Temporal, gateways and workers to their recorded replica counts and reopen
 traffic. Record the interruption duration and backup timestamp. Choose and measure
-your RPO/RTO; this reference makes no unmeasured recovery guarantee.</p>
+your RPO/RTO.</p>
 <p>Restore quarterly and before a database migration in an isolated namespace with
 outbound provider/tool access blocked. Restore PostgreSQL and Redis to the same
-checkpoint and restore the matching encryption key. Do not mix an old Temporal
-snapshot with current gateway records. Use <code>pg_restore --exit-on-error</code> into empty
+checkpoint and restore the matching encryption key. Restore Temporal and gateway
+records from the same checkpoint. Use <code>pg_restore --exit-on-error</code> into empty
 databases, restore Redis through the managed service, then start the matching
 application versions. Verify an existing run, approval receipts, budget balances,
 key revocations and decryption before a new approved run. Revoke restored sessions
@@ -2428,9 +2425,10 @@ Keep triggers paused until operators reconcile external side effects.</p>
 <li>Run the same <code>helm upgrade --install</code> command with reviewed new image digests.
    Watch migration jobs, rollout health and <code>/readyz</code>; exercise sign-in, then run <code>agentworkflows check</code>.</li>
 <li>Keep the old images and checkpoint until acceptance finishes. Roll back application
-   images only when their storage schema remains compatible. Otherwise restore the
+   images when their storage schema remains compatible; otherwise restore the
    coordinated checkpoint into an isolated recovery environment. A Helm rollback
-   does not reverse a database migration or an external tool action.</li>
+   changes application resources only; database migrations and external tool actions
+   stay in place.</li>
 </ol>
 <p>Run the Compose recovery and upgrade drills in
 <a href="../release-verification/">release verification</a> on a Docker-capable host before promotion.</p>

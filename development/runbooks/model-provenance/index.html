@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2116,24 +2116,24 @@ checksum returned by the registry manifest. The approved Hugging Face models use
 <code>artifact-manifest</code> digests: the SHA-256 of a checked-in JSON inventory containing
 every safetensors filename, byte size, and upstream LFS SHA-256 at an immutable
 commit. See <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/model-catalog/artifacts/README.md">the inventory format</a>.</p>
-<p>The legacy <code>source-reference</code> scope identifies only a source pointer. It remains
-supported for externally maintained records, but no approved bundled model uses it.</p>
+<p>The <code>source-reference</code> scope identifies a source pointer and serves externally
+maintained records; the approved bundled models use the scopes above.</p>
 <p>Run the optional network check to reproduce approved upstream metadata:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>model-provenance-verify
 </code></pre></div>
-<p>This fetches small registry/API responses. It does not download model weights or
-verify the bytes in a customer model store. During ingestion, compare each downloaded
-weight file's size and SHA-256 with the inventory. Keep that artifact verification
+<p>This fetches small registry/API responses to check upstream metadata. Verify the
+weight bytes during ingestion: compare each downloaded weight file's size and SHA-256
+with the inventory. Keep that artifact verification
 and real-model evaluation evidence with the deployment's release evidence.</p>
-<p>Keep provenance changes reviewed with the matching <code>ModelPromotionRequest</code>. Do not
-add a model to gateway allowlists until <code>make model-check</code>,
-<code>make model-provenance-check</code>, and <code>make release-gate-strict</code> pass with current evidence.</p>
+<p>Keep provenance changes reviewed with the matching <code>ModelPromotionRequest</code>. Add a
+model to gateway allowlists once <code>make model-check</code>, <code>make model-provenance-check</code>,
+and <code>make release-gate-strict</code> pass with current evidence.</p>
 <h2 id="pinning-the-served-revision">Pinning the Served Revision<a class="headerlink" href="#pinning-the-served-revision" title="Permanent link">&para;</a></h2>
 <p>A bare Hugging Face repo id resolves against a mutable default branch. The default
 vLLM chart and approved customer profiles therefore set <code>model.revision</code> to the
 full commit recorded in provenance. The chart passes it to vLLM as <code>--revision</code>.
-The embedding profile uses its own model's commit. If a custom overlay changes
-<code>model.name</code>, it must also change <code>model.revision</code>.</p>
+The embedding profile uses its own model's commit. When a custom overlay changes
+<code>model.name</code>, change <code>model.revision</code> with it.</p>
 <p>To rotate a Hugging Face model revision:</p>
 <ol>
 <li>Resolve and review a full upstream commit SHA, including configuration and license changes.</li>
@@ -2154,8 +2154,8 @@ The embedding profile uses its own model's commit. If a custom overlay changes
 </ol>
 <p>The offline gate checks manifest integrity, identity, and serving-revision parity.
 The network check additionally rebuilds the inventory from the pinned upstream
-metadata. A failed check blocks promotion; do not change a digest merely to silence
-the check without reviewing the upstream change.</p>
+metadata. A failed check blocks promotion; review the upstream change before
+updating a digest.</p>
 
 
 

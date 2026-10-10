@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2129,9 +2129,9 @@
 <li>attach the quota report to the customer handoff or tenant onboarding ticket</li>
 </ul>
 <h2 id="chargeback">Chargeback<a class="headerlink" href="#chargeback" title="Permanent link">&para;</a></h2>
-<p>Use the required labels as the stable attribution keys for OpenCost, Prometheus, logs, evidence packs, and customer reporting. Customers can add their own labels, but should keep these stable across upgrades so cost history remains comparable.</p>
+<p>Use the required labels as the stable attribution keys for OpenCost, Prometheus, logs, evidence packs, and customer reporting. Customers can add their own labels; keep these stable across upgrades so cost history remains comparable.</p>
 <h2 id="adjusting-quotas">Adjusting Quotas<a class="headerlink" href="#adjusting-quotas" title="Permanent link">&para;</a></h2>
-<p>Tune <code>platform/governance/quota-plans.yaml</code> first, then update tenant onboarding specs or gateway values. Do not raise live Kubernetes or gateway limits without a matching quota-plan update and refreshed <code>make quota-report</code> evidence.</p>
+<p>Tune <code>platform/governance/quota-plans.yaml</code> first, then update tenant onboarding specs or gateway values. Raise live Kubernetes or gateway limits together with a matching quota-plan update and refreshed <code>make quota-report</code> evidence.</p>
 
 
 

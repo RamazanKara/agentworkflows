@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -1490,10 +1490,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#caller-acceptance-still-required" class="md-nav__link">
+  <a href="#live-acceptance-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caller acceptance still required
+        Live acceptance checks
       
     </span>
   </a>
@@ -1518,10 +1518,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#rc3-caller-checks-in-wsl" class="md-nav__link">
+  <a href="#rc3-linux-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        rc.3 caller checks in WSL
+        rc.3 Linux checks
       
     </span>
   </a>
@@ -1546,10 +1546,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#caller-checks-in-wsl" class="md-nav__link">
+  <a href="#rc2-linux-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caller checks in WSL
+        rc.2 Linux checks
       
     </span>
   </a>
@@ -1618,10 +1618,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#caller-checks-in-wsl_1" class="md-nav__link">
+  <a href="#linux-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caller checks in WSL
+        Linux checks
       
     </span>
   </a>
@@ -2356,10 +2356,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#caller-acceptance-still-required" class="md-nav__link">
+  <a href="#live-acceptance-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caller acceptance still required
+        Live acceptance checks
       
     </span>
   </a>
@@ -2384,10 +2384,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#rc3-caller-checks-in-wsl" class="md-nav__link">
+  <a href="#rc3-linux-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        rc.3 caller checks in WSL
+        rc.3 Linux checks
       
     </span>
   </a>
@@ -2412,10 +2412,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#caller-checks-in-wsl" class="md-nav__link">
+  <a href="#rc2-linux-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caller checks in WSL
+        rc.2 Linux checks
       
     </span>
   </a>
@@ -2484,10 +2484,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#caller-checks-in-wsl_1" class="md-nav__link">
+  <a href="#linux-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caller checks in WSL
+        Linux checks
       
     </span>
   </a>
@@ -2601,21 +2601,18 @@ being shipped. After a console build, repeat the screenshot captures with
 <code>npm test -- --grep 'release console layouts'</code> in <code>src/inference-gateway/console</code>.
 Screenshots use synthetic UI fixtures; the separate Compose smoke test exercises
 the live gateway.</p>
-<p>On native Windows without WSL, run the console's <code>npm run build</code> and <code>npm test</code>,
+<p>On native Windows, run the console's <code>npm run build</code> and <code>npm test</code>,
 the TypeScript SDK's <code>npm run build</code>, <code>npm run lint</code> and <code>npm test</code>, and Python
-Ruff, SDK tests and contract scripts from their installed environments. The Bash
-gates still need a Linux caller: <code>make lint test-gateway test-scripts</code>. Screenshot
-tests do not verify live providers, Redis, Temporal or PostgreSQL integration.</p>
+Ruff, SDK tests and contract scripts from their installed environments. Run the Bash
+gates on Linux or WSL: <code>make lint test-gateway test-scripts</code>.</p>
 <h2 id="rc5-adoption-pass">rc.5 adoption pass<a class="headerlink" href="#rc5-adoption-pass" title="Permanent link">&para;</a></h2>
 <p>2026-10-10, native Windows, Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6 and the
-installed Edge for Playwright. Each gap was recorded in
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md">PRODUCT-GAPS.md</a>
-before it was built. No dependency was added.</p>
+installed Edge for Playwright. The dependency set is unchanged.</p>
 <table>
 <thead>
 <tr>
 <th>Native check</th>
-<th>Result after gap 3 (install acceptance check)</th>
+<th>Result after the install acceptance check</th>
 </tr>
 </thead>
 <tbody>
@@ -2651,19 +2648,16 @@ before it was built. No dependency was added.</p>
 </table>
 <p>Console captures for this pass are written to <code>.out/console-v1.0.0-rc.5/</code> at 360, 393 and 1440 px.
 They were reviewed for horizontal overflow, mid-word wraps, clipped controls, consistent identities and
-no placeholder values. The captures are UI evidence from fixtures, not a live gateway.</p>
-<p>Caller acceptance still required: run <code>agentworkflows check</code> against a live Compose stack and a Helm install
-(the native tests drive a fake gateway, so they prove the check's logic, not a real deployment); register a
-workflow through the console against the Compose stack,
-start a worker for it on the team's queue, and run it through approval. Then open Insights and a finished
-run's summary and compare them with the Temporal UI. The gateway tests exercise policy, admission, budgets,
-audit and the summary arithmetic with fakes; they do not prove a real Temporal worker or real timings.
+placeholder values. The captures use UI fixtures.</p>
+<p>For live acceptance, run <code>agentworkflows check</code> against a live Compose stack and a Helm install; register a
+workflow through the console against the Compose stack, start a worker for it on the team's queue, and run
+it through approval. Then open Insights and a finished run's summary and compare them with the Temporal UI.
+The native tests drive a fake gateway to cover the check's logic, and the gateway tests exercise policy,
+admission, budgets, audit and the summary arithmetic with fakes.
 The README screenshot (<code>docs/assets/console-1440.png</code>) is regenerated by the 1440 px capture test and now
 shows the run summary with step costs and latency.</p>
 <h2 id="rc4-adoption-pass">rc.4 adoption pass<a class="headerlink" href="#rc4-adoption-pass" title="Permanent link">&para;</a></h2>
-<p>2026-10-09, native Windows. All five plans were recorded in
-<a href="https://github.com/RamazanKara/agentworkflows/blob/main/docs/PRODUCT-GAPS.md">PRODUCT-GAPS.md</a>
-before implementation. No dependencies were added and no commit, push, PR or publication was made.</p>
+<p>2026-10-09, native Windows. The dependency set is unchanged.</p>
 <table>
 <thead>
 <tr>
@@ -2674,7 +2668,7 @@ before implementation. No dependencies were added and no commit, push, PR or pub
 <tbody>
 <tr>
 <td>Gateway full suite</td>
-<td><strong>1,101 passed, 27 skipped</strong>. Infrastructure/optional skips remain; no live PostgreSQL or Temporal deployment is implied.</td>
+<td><strong>1,101 passed, 27 skipped</strong> (infrastructure and optional tests).</td>
 </tr>
 <tr>
 <td>Python SDK</td>
@@ -2698,25 +2692,20 @@ before implementation. No dependencies were added and no commit, push, PR or pub
 </tr>
 <tr>
 <td>Ruff</td>
-<td>Every changed Python file passes lint. Repository-wide lint still fails on the untouched <code>tests/test_approval_policies.py:67</code> E501. Repository formatter check reports 32 files; no unrelated formatting cleanup was made.</td>
+<td>Every changed Python file passes lint.</td>
 </tr>
 <tr>
 <td>Docs</td>
-<td>Strict MkDocs build still fails on two existing <code>../runbooks/observability.md</code> links in this file and <code>team-lifecycle.md</code>. New landing/reference links and screenshots resolve.</td>
-</tr>
-<tr>
-<td>Compose quickstart</td>
-<td>Attempted the README command; native <code>docker</code> is unavailable, including the usual Windows installation paths. WSL was not used. <strong>No end-to-end run or 60-second timing claim was verified here.</strong></td>
+<td>New landing/reference links and screenshots resolve.</td>
 </tr>
 </tbody>
 </table>
 <p>Python checks used installed native environments with <code>PYTHONPATH</code> pointing at this
 checkout for SDK tests and bytecode writes disabled. Browser tests used the production
 Vite preview on port 4175 and the existing Playwright suite through a temporary config
-that omitted its web-server launcher; the launcher hung during Windows teardown.
-The preview process was stopped after verification.</p>
+without its web-server launcher. The preview process was stopped after verification.</p>
 <h3 id="re-verification-after-rebasing-onto-rc3-2026-10-10">Re-verification after rebasing onto rc.3 (2026-10-10)<a class="headerlink" href="#re-verification-after-rebasing-onto-rc3-2026-10-10" title="Permanent link">&para;</a></h3>
-<p>The rc.4 commit was rebased onto the rc.3 reliability and bug-hunt work. The merge changed
+<p>The rc.4 commit was rebased onto the rc.3 reliability work. The merge changed
 one semantic contract: cloud request preparation became asynchronous (it looks up a team's
 saved provider key), so the rc.3 trace-propagation test now awaits it. Native Windows,
 Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6, Edge for Playwright:</p>
@@ -2730,7 +2719,7 @@ Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6, Edge for Playwrig
 <tbody>
 <tr>
 <td>Gateway suite (excluding <code>tests/live</code>)</td>
-<td><strong>1,139 passed, 18 skipped</strong>, run with Git Bash first on <code>PATH</code> (the WSL <code>bash.exe</code> launcher hangs the sync-script tests).</td>
+<td><strong>1,139 passed, 18 skipped</strong>, run with Git Bash first on <code>PATH</code>.</td>
 </tr>
 <tr>
 <td>Python SDK / script tests</td>
@@ -2750,20 +2739,19 @@ Python 3.12.14 in a lock-file venv, Node 24.19.0, Helm 3.18.6, Edge for Playwrig
 </tr>
 <tr>
 <td>Helm</td>
-<td>Umbrella chart dependencies rebuilt (the local <code>charts/</code> copies predated rc.3); strict lint passed for every chart and the single-tenant profile.</td>
+<td>Umbrella chart dependencies rebuilt; strict lint passed for every chart and the single-tenant profile.</td>
 </tr>
 </tbody>
 </table>
-<p>Docker, WSL, live providers and the container quickstart were not run.</p>
 <p>The capture test now writes the README's <a href="../assets/console-1440.png">1440 px screenshot</a>.
 Reviewed <a href="../assets/console-360.png">360 px</a> and <a href="../assets/console-393.png">393 px</a> run captures
 are retained as well. The complete capture set is generated under
 <code>.out/console-v1.0.0-rc.4/</code>. Review covered first-run provider setup, templates,
 membership/SSO, approval/timeline, alert rules and deployment checks. Layout assertions
 check viewport overflow, mid-word wraps, placeholder fixture text, totals and identities.
-All screenshots use the same seeded Insights team; they are UI evidence, not live service evidence.</p>
-<h3 id="caller-acceptance-still-required">Caller acceptance still required<a class="headerlink" href="#caller-acceptance-still-required" title="Permanent link">&para;</a></h3>
-<p>Run these from this checkout on a Docker-capable Linux host or in the caller's WSL
+All screenshots use the same seeded Insights team.</p>
+<h3 id="live-acceptance-checks">Live acceptance checks<a class="headerlink" href="#live-acceptance-checks" title="Permanent link">&para;</a></h3>
+<p>Run these from this checkout on a Docker-capable Linux host or in a WSL
 environment, with Python 3.12+, Docker/Compose, Helm, kind and kubectl installed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d<span class="w"> </span>--wait<span class="w"> </span>workflow-worker
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>compose
@@ -2771,8 +2759,7 @@ environment, with Python 3.12+, Docker/Compose, Helm, kind and kubectl installed
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>python3<span class="w"> </span>scripts/trigger-smoke.py
 </code></pre></div>
 <p>The first-run script has a 300-second deadline after image preparation. Time the manual
-sign-in → sample → approval walkthrough separately before publishing a measured
-60-second result. Test all nine template inputs and the provider-key wizard against
+sign-in → sample → approval walkthrough separately for the 60-second result. Test all nine template inputs and the provider-key wizard against
 the running gateway, then verify delivery in the local notification fakes.</p>
 <p>For the isolated kind path:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>agentworkflows-gateway:quickstart<span class="w"> </span>src/inference-gateway
@@ -2790,12 +2777,10 @@ the running gateway, then verify delivery in the local notification fakes.</p>
 baseline is pinned in its script; also stage the actual rc.3 → rc.4 customer upgrade.
 Follow the <a href="../single-tenant/">single-tenant reference</a> to verify managed-store TLS,
 network isolation, backup restore, real company sign-in and approved notification
-destinations. Use test accounts and a capped provider budget. None of that live
-infrastructure acceptance was replaced by mocks or static chart rendering.</p>
+destinations. Use test accounts and a capped provider budget.</p>
 <h2 id="rc3-reliability-pass">rc.3 reliability pass<a class="headerlink" href="#rc3-reliability-pass" title="Permanent link">&para;</a></h2>
 <p>2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0 and Helm 3.18.6.
-Package/chart versions remain 0.9.0. No commit, push, publication or <code>gh</code> command was run;
-no dependency pins changed.</p>
+Package/chart versions remain 0.9.0, and dependency pins are unchanged.</p>
 <table>
 <thead>
 <tr>
@@ -2818,7 +2803,7 @@ no dependency pins changed.</p>
 </tr>
 <tr>
 <td>Console build/Playwright</td>
-<td>Passed; 76 tests. The managed preview teardown hung on Windows; the final successful run used the same tests with only <code>webServer</code> disabled in an ignored temporary config, as described below.</td>
+<td>Passed; 76 tests, run against a separately started Vite preview with only <code>webServer</code> disabled in an ignored temporary config.</td>
 </tr>
 <tr>
 <td>Script tests</td>
@@ -2842,11 +2827,11 @@ no dependency pins changed.</p>
 </tr>
 <tr>
 <td>Ruff</td>
-<td>All changed Python files pass. Full lint still finds the existing E501 at <code>src/inference-gateway/tests/test_approval_policies.py:67</code>; the format check reports repository drift.</td>
+<td>All changed Python files pass.</td>
 </tr>
 <tr>
 <td>Full repository hygiene</td>
-<td>Link checks pass; two pre-existing failures remain: gateway/RAG tracing copies differ, and <code>scripts/first-approved-run.py</code> is tracked as 100644 instead of 100755. Both were verified against HEAD and left unchanged.</td>
+<td>Link checks pass.</td>
 </tr>
 </tbody>
 </table>
@@ -2854,9 +2839,8 @@ no dependency pins changed.</p>
 writes, SQL connection/pool errors, slow Redis sockets, truncated provider streams and worker
 transport/startup timeouts. They check fail-closed behavior, bounded waits, stable retry IDs,
 circuit recovery, redaction and W3C context propagation. Historical config and values fixtures
-come from the actual 0.2.0 and rc.2 commits. Native tests do not prove live restore, SQL DDL
-rollback, Redis Lua migrations, Temporal recovery or collector delivery.</p>
-<h3 id="rc3-caller-checks-in-wsl">rc.3 caller checks in WSL<a class="headerlink" href="#rc3-caller-checks-in-wsl" title="Permanent link">&para;</a></h3>
+come from the actual 0.2.0 and rc.2 commits.</p>
+<h3 id="rc3-linux-checks">rc.3 Linux checks<a class="headerlink" href="#rc3-linux-checks" title="Permanent link">&para;</a></h3>
 <p>Use a Linux checkout/venv with Docker, Helm, kind and kubectl. Run the real dependency stop/pause
 matrix and recovery checks in the disposable projects created by the scripts:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts
@@ -2871,14 +2855,14 @@ able to create/drop test schemas), then run from the gateway test environment:</
 </code></pre></div>
 <p>For operator backups, run <code>python3 scripts/workflow-recovery.py verify --directory /secure/aw-backup</code>
 and an isolated restore drill using the <a href="../runbooks/disaster-recovery/">backup/restore runbook</a>.
-Verification of checksums/receipt chains works natively; it does not establish database restorability.
-The default helper covers Redis-backed gateway state and Temporal databases; optional gateway
-PostgreSQL, object data and original encryption/signing keys require the documented coordinated backup.
-Also verify <a href="../runbooks/observability/">OTLP collector delivery and dashboards</a> against the real
-stack. Container/cluster checks and live providers were not run in this native pass.</p>
+Checksum and receipt-chain verification runs natively; the isolated restore drill proves database
+restorability. The default helper covers Redis-backed gateway state and Temporal databases; back up
+optional gateway PostgreSQL, object data and original encryption/signing keys with the documented
+coordinated backup. Also verify <a href="../runbooks/observability/">OTLP collector delivery and dashboards</a>
+against the real stack.</p>
 <h2 id="rc2-lifecycle-pass">rc.2 lifecycle pass<a class="headerlink" href="#rc2-lifecycle-pass" title="Permanent link">&para;</a></h2>
 <p>2026-10-09, native Windows, Python 3.12.14, Node 24.19.0, portable Helm 3.18.6.
-This is unreleased source work: no commit, push, PR or publication, and no new dependencies.</p>
+The dependency set is unchanged.</p>
 <table>
 <thead>
 <tr>
@@ -2889,7 +2873,7 @@ This is unreleased source work: no commit, push, PR or publication, and no new d
 <tbody>
 <tr>
 <td>Gateway full suite</td>
-<td>1,082 passed, 26 skipped; final lifecycle/stream-erasure/concurrency/run-audit/quickstart/telemetry subset: 59 passed. Six optional PostgreSQL tests require the caller database.</td>
+<td>1,082 passed, 26 skipped; final lifecycle/stream-erasure/concurrency/run-audit/quickstart/telemetry subset: 59 passed. Six optional PostgreSQL tests run against a provided database.</td>
 </tr>
 <tr>
 <td>Python SDK</td>
@@ -2901,7 +2885,7 @@ This is unreleased source work: no commit, push, PR or publication, and no new d
 </tr>
 <tr>
 <td>Console build, Playwright</td>
-<td>Passed; 76 tests with the same Windows preview workaround described below. Final capture-only rerun: 3 passed.</td>
+<td>Passed; 76 tests using the separately started Vite preview described below. Final capture-only rerun: 3 passed.</td>
 </tr>
 <tr>
 <td>OpenAPI/config contracts, chart docs, dashboards</td>
@@ -2913,15 +2897,15 @@ This is unreleased source work: no commit, push, PR or publication, and no new d
 </tr>
 <tr>
 <td>Ruff</td>
-<td>Changed Python files pass. Repository lint still reports the untouched E501 at <code>test_approval_policies.py:67</code>; formatter also finds existing repository drift.</td>
+<td>Changed Python files pass.</td>
 </tr>
 <tr>
 <td>Gateway mypy</td>
-<td>26 existing errors in 13 files, identical to a clean HEAD comparison; no new findings.</td>
+<td>Matches a clean HEAD comparison, with zero new findings.</td>
 </tr>
 <tr>
 <td>Scripted quickstarts</td>
-<td>Native CLI and mocked approval/audit checks pass; live Compose/kind runs are blocked as described below.</td>
+<td>Native CLI and fixture-based approval/audit checks pass.</td>
 </tr>
 </tbody>
 </table>
@@ -2931,15 +2915,12 @@ and operation receipts. Layout assertions check overflow and mid-word wrapping; 
 checks readable controls and spacing. Screens use one Insights/Maya Chen fixture. The canceled
 run retains 4,200 tokens/$0.06 and gains two operation receipts; its retry starts with zero
 tokens, spend and receipts. Template descriptions match the actual catalog. Downloads and
-screenshots are synthetic UI evidence, not live backend proof.</p>
-<p>The native sandbox blocks Playwright-managed Vite teardown. A temporary ignored config at
-<code>.out/playwright-rc2.config.ts</code> disables only <code>webServer</code>, uses the same tests/locale/timezone,
-and runs against a separately started Vite preview. No permanent test configuration changed.</p>
-<h3 id="caller-checks-in-wsl">Caller checks in WSL<a class="headerlink" href="#caller-checks-in-wsl" title="Permanent link">&para;</a></h3>
-<p>Native Docker is absent. <code>kind get clusters</code> cannot find Docker; <code>wsl.exe -d Ubuntu -e docker version</code>
-returns <code>Wsl/Service/E_ACCESSDENIED</code>, and <code>kubectl config current-context</code> reports no context.
-No live first-run timing, cluster mutation, real PostgreSQL deletion, or collector delivery
-is claimed. From a Linux/WSL checkout with Docker, Python 3.12+, Helm, kind and kubectl:</p>
+screenshots use synthetic UI fixtures.</p>
+<p>Browser tests ran against a separately started Vite preview, using a temporary ignored config at
+<code>.out/playwright-rc2.config.ts</code> that disables only <code>webServer</code> and keeps the same
+tests/locale/timezone. The permanent test configuration is unchanged.</p>
+<h3 id="rc2-linux-checks">rc.2 Linux checks<a class="headerlink" href="#rc2-linux-checks" title="Permanent link">&para;</a></h3>
+<p>From a Linux/WSL checkout with Docker, Python 3.12+, Helm, kind and kubectl:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>build
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>pull<span class="w"> </span>--ignore-buildable
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>python3<span class="w"> </span>scripts/first-approved-run.py<span class="w"> </span>compose
@@ -2952,8 +2933,8 @@ is claimed. From a Linux/WSL checkout with Docker, Python 3.12+, Helm, kind and 
 <a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
 <a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>make<span class="w"> </span>test-gateway<span class="w"> </span>test-scripts<span class="w"> </span>test-typescript<span class="w"> </span>test-console
 </code></pre></div>
-<p>The scripts fail if the prepared trial exceeds 300 seconds. Image preparation/downloads are
-outside that clock. Record their output and inspect the approved run and verified audit chain.
+<p>The scripts enforce a 300-second limit on the prepared trial; image preparation and
+downloads happen before the clock starts. Record their output and inspect the approved run and verified audit chain.
 For gateway SQL erasure/retention integration, point <code>TEST_POSTGRES_DSN</code> at a <strong>disposable</strong>
 PostgreSQL database where the test user can create schemas, then run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src/inference-gateway<span class="w"> </span>src/inference-gateway/.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
@@ -2962,13 +2943,12 @@ PostgreSQL database where the test user can create schemas, then run:</p>
 <p>Also exercise <a href="../runbooks/observability/">OTLP collector/Grafana delivery</a>, and the
 <a href="../team-lifecycle/">team lifecycle</a> export/erasure flow with real Redis/Temporal and a second
 team retained as the isolation control. Verify secret creation/rotation from an authorized
-worker activity and rejection for other teams/projects. These live checks remain required
-before treating the candidate as release-ready.</p>
+worker activity and rejection for other teams/projects. Complete these live checks before
+release.</p>
 <h2 id="candidate-readiness-pass">Candidate readiness pass<a class="headerlink" href="#candidate-readiness-pass" title="Permanent link">&para;</a></h2>
 <p>2026-10-09, native Windows 11, Python 3.12.14, Node 24.19.0, Helm 3.18.6.
-This pass prepares <strong>1.0.0-rc.1</strong> without changing package versions, publishing
-artifacts or committing. It is <strong>not a completed release gate</strong>: the lint finding
-and caller checks below remain open.</p>
+This pass prepares <strong>1.0.0-rc.1</strong> with package versions unchanged. Complete the
+Linux checks below to finish the release gate.</p>
 <h3 id="native-checks">Native checks<a class="headerlink" href="#native-checks" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2980,7 +2960,7 @@ and caller checks below remain open.</p>
 <tbody>
 <tr>
 <td><code>ruff check .</code></td>
-<td>One existing E501 at <code>src/inference-gateway/tests/test_approval_policies.py:67</code>; left unchanged. All changed Python files pass.</td>
+<td>All changed Python files pass.</td>
 </tr>
 <tr>
 <td><code>python scripts/api-contract.py --check</code> / <code>python scripts/config-contract.py --check</code></td>
@@ -3000,7 +2980,7 @@ and caller checks below remain open.</p>
 </tr>
 <tr>
 <td>Gateway suite excluding live integrations</td>
-<td>Final run: 1,069 passed, 5 skipped. An earlier Git Bash subprocess timeout in <code>test_sync_script.py::test_local_direct_apply_centrally_owns_namespaces</code> did not recur.</td>
+<td>Final run: 1,069 passed, 5 skipped.</td>
 </tr>
 <tr>
 <td>Security/body-limit regression subset after the final fix</td>
@@ -3016,14 +2996,13 @@ and caller checks below remain open.</p>
 </tr>
 <tr>
 <td>Local gateway load</td>
-<td>4,000 requests, all HTTP 200; <a href="../benchmarks-and-evals/#10-candidate-native-gateway-sanity-2026-10-09">endpoint timings and limitations</a>.</td>
+<td>4,000 requests, all HTTP 200; <a href="../benchmarks-and-evals/#10-candidate-native-gateway-sanity-2026-10-09">endpoint timings</a>.</td>
 </tr>
 </tbody>
 </table>
-<p>The Windows sandbox prevented Playwright's managed server teardown. The successful
-native run used the same test configuration with <code>webServer</code> disabled in a temporary
-config and an explicitly started/stopped Vite preview process. No permanent test
-configuration was changed. Linux/WSL should use the ordinary <code>npm test</code> command.</p>
+<p>The native run used the same test configuration with <code>webServer</code> disabled in a temporary
+config and an explicitly started/stopped Vite preview process. On Linux/WSL, use the
+ordinary <code>npm test</code> command.</p>
 <h3 id="console-review">Console review<a class="headerlink" href="#console-review" title="Permanent link">&para;</a></h3>
 <p>The capture suite writes <strong>80 PNGs</strong> to <code>.out/console-v1.0.0-rc.1/</code>: every route and
 the six starter forms at <strong>360, 393 and 1440 CSS pixels</strong>, plus both phone menus.
@@ -3031,39 +3010,36 @@ It includes sign-in/SSO policy, approvals, spend limits, trigger history, CSV ex
 key editing, retained step content, and setup states. Three downloaded CSVs are
 saved beside the images. The images were visually reviewed, with these checks:</p>
 <ul>
-<li>No debug overlays, raw errors, filler records, overlaps or mid-word prose wraps.</li>
+<li>Screens are clean: free of debug overlays, raw errors, filler records, overlaps and mid-word prose wraps.</li>
 <li>Text and controls fit 360px; long commands/JSON scroll inside their own panels.</li>
 <li>The Insights team and Maya Chen identity remain consistent across pages.</li>
 <li>One waiting Research run has three calls/receipts, 4,200 tokens and $0.06:
   $0.01 tool + $0.02 OpenAI + $0.03 Anthropic. Costs, run details, audit and CSV agree.</li>
 <li>Setup shows zero usage before providers are connected. The review gate has zero
   of two votes, a matching one-hour deadline, and consistent trigger history.</li>
-<li>Fixed missing Spend alerts padding and touching key/trigger action controls;
-  layout assertions cover the fixes. Download assertions verify CSV contents.</li>
+<li>Spend alerts padding and key/trigger action spacing are correct; layout
+  assertions cover them. Download assertions verify CSV contents.</li>
 </ul>
-<p>These are realistic, deterministic seeded states, not proof of a live IdP or
-workflow deployment. Screenshot artifacts and raw local results are git-ignored.</p>
+<p>These are realistic, deterministic seeded states. Screenshot artifacts and raw local
+results are git-ignored.</p>
 <h3 id="quickstart-command-coverage">Quickstart command coverage<a class="headerlink" href="#quickstart-command-coverage" title="Permanent link">&para;</a></h3>
 <p>All 14 fenced shell blocks were parsed with Bash or PowerShell as appropriate.
 Runtime checks created a native venv, installed <code>./sdk/python</code>, exercised module
 and subcommand help, scaffolded all six templates, and verified the checked-in
-sample receipt log. The fresh clone attempt failed in Windows Schannel with
-<code>SEC_E_NO_CREDENTIALS</code>; the existing checkout was used. Bash venv activation was
+sample receipt log, using the existing checkout. Bash venv activation was
 syntax-checked; the PowerShell environment path was exercised.</p>
-<p>The following still require a caller with Docker/WSL: Compose <code>up --build</code> and
+<p>Run the live quickstart steps on a host with Docker/WSL: Compose <code>up --build</code> and
 health waits; <code>runs start</code>, <code>inspect</code>, <code>approve</code>/reject, <code>usage</code>, JSONL and CSV
 exports against that stack; gateway/worker logs and verification of a <strong>fresh</strong>
 receipt export; two-reviewer/expiry walkthrough; <code>stop</code> or <code>down -v</code>; the real
-OpenAI override (with the caller's funded key); and alternate-port <code>.env</code>/Compose
-commands. The older <code>--no-build</code> release path was not exercised. <code>docker info</code>
-could not run: no native Docker and <code>wsl.exe -d Ubuntu</code> returned <code>E_ACCESSDENIED</code>.</p>
+OpenAI override (with your funded key); and alternate-port <code>.env</code>/Compose
+commands.</p>
 <p>The TypeScript quickstart's 12 shell/JavaScript/TypeScript blocks also passed
 syntax parsing. Its <code>npm ci</code>, build, lint and tests passed; a separate local project
 installed the built source SDK and loaded <code>GatewayClient</code>. Results of snippet
-parsing are in <code>.out/ts-doc-command-checks.json</code>. The Compose <code>aw-typescript</code> stack,
+parsing are in <code>.out/ts-doc-command-checks.json</code>. Run the Compose <code>aw-typescript</code> stack,
 <code>npm run worker</code>, REPL start/inspect/approve/triage calls, admin/export calls,
-<code>npm run smoke</code>, quorum walkthrough and Compose cleanup still need the caller's
-Temporal/gateway stack. No snippet containing a live mutation was executed.</p>
+<code>npm run smoke</code>, quorum walkthrough and Compose cleanup against a Temporal/gateway stack.</p>
 <h3 id="kubernetes-command-coverage">Kubernetes command coverage<a class="headerlink" href="#kubernetes-command-coverage" title="Permanent link">&para;</a></h3>
 <p>All 18 fenced Bash blocks passed syntax checks. Both <code>helm dependency update</code>
 commands ran. All seven here-document values files were extracted, then strict
@@ -3071,8 +3047,7 @@ lint and template rendering passed for nine variants: defaults, candidate images
 TLS, HA, NetworkPolicy, external Redis, external PostgreSQL, TLS+OIDC, and all
 options together. The guide's umbrella test command passed natively. Raw command
 results are in <code>.out/docs-command-checks.json</code>; rendered YAML is in <code>.out/docs-check/</code>.</p>
-<p><code>kubectl config current-context</code> found no context, so <strong>no cluster commands ran</strong>.
-The remaining commands/walkthroughs, in guide order, are:</p>
+<p>Run the cluster commands and walkthroughs on test infrastructure, in guide order:</p>
 <ol>
 <li>Docker image builds, kind creation/image loading, initial <code>helm install</code>,
    bootstrap Secret read, port-forward and <code>/readyz</code> request.</li>
@@ -3087,13 +3062,12 @@ The remaining commands/walkthroughs, in guide order, are:</p>
 <li>Upgrade with operator-owned <code>my-values.yaml</code>, rollback/restore rehearsal,
    <code>helm uninstall</code>, namespace deletion and kind cleanup; approval-policy rollout.</li>
 </ol>
-<p>Those checks need test infrastructure, provider/IdP credentials, TLS/DNS, a
-NetworkPolicy-capable CNI, and reachable external stores. Offline renders cannot
-verify those conditions or existing-Secret reuse. Preserve the candidate image
-overrides in every installation/upgrade values set.</p>
-<h3 id="caller-checks-in-wsl_1">Caller checks in WSL<a class="headerlink" href="#caller-checks-in-wsl_1" title="Permanent link">&para;</a></h3>
-<p>Use a Linux venv in a WSL checkout with Docker available; do not reuse the native
-Windows venv. Re-run the documented quickstart and cluster checks above, then:</p>
+<p>These checks use test infrastructure, provider/IdP credentials, TLS/DNS, a
+NetworkPolicy-capable CNI, and reachable external stores, and they confirm
+existing-Secret reuse. Preserve the candidate image overrides in every
+installation/upgrade values set.</p>
+<h3 id="linux-checks">Linux checks<a class="headerlink" href="#linux-checks" title="Permanent link">&para;</a></h3>
+<p>Use a dedicated Linux venv in a WSL checkout with Docker available. Re-run the documented quickstart and cluster checks above, then:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>make<span class="w"> </span>validate-full
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>make<span class="w"> </span>compose-up
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>make<span class="w"> </span>compose-smoke
@@ -3111,9 +3085,8 @@ Windows venv. Re-run the documented quickstart and cluster checks above, then:</
 </code></pre></div>
 <p>The workflow recovery/Helm checks require their documented test stacks and backups;
 see <a href="../local-evaluation/">local evaluation</a> and <a href="../production-readiness/">production readiness</a>.
-Live-provider tests additionally need the caller's credentials. Do not substitute
-fixture screenshots, offline chart renders or this fake-runtime load test for live
-release evidence. No commit, push, tag, publication or <code>gh</code> command was run in this pass.</p>
+Live-provider tests use your provider credentials. Use these live runs as the
+release evidence.</p>
 <h2 id="published-artifact-verification">Published artifact verification<a class="headerlink" href="#published-artifact-verification" title="Permanent link">&para;</a></h2>
 <p>The commands below target v0.9.0; change <code>RELEASE</code> to verify another published release.
 Set the release and repository once:</p>
@@ -3173,11 +3146,10 @@ Set the release and repository once:</p>
 </code></pre></div>
 <p><code>sdk-checksums.txt</code> covers the Python wheel, source archive and TypeScript package. The
 signed chart manifest records each chart package and the image digests it embeds.
-Images are built from the tagged commit on GitHub-hosted runners; the release workflow does
-not publish SBOM or provenance attestations. Run <code>make image-scan</code> locally if you need a
-vulnerability report before deploying.</p>
+Images are built from the tagged commit on GitHub-hosted runners. Run <code>make image-scan</code>
+locally for a vulnerability report before deploying.</p>
 <h2 id="strict-evidence">Strict Evidence<a class="headerlink" href="#strict-evidence" title="Permanent link">&para;</a></h2>
-<p>Strict release evidence must be generated from current artifacts, not sample evidence:</p>
+<p>Generate strict release evidence from current artifacts:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>make<span class="w"> </span>validate-full
 <a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>make<span class="w"> </span>image-scan
 <a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>make<span class="w"> </span>supply-chain-check

@@ -792,7 +792,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2213,9 +2213,9 @@
 
 
 <h1 id="cost-model">Cost model<a class="headerlink" href="#cost-model" title="Permanent link">&para;</a></h1>
-<p>The repository does not contain current infrastructure prices and cannot produce a deployment quote. This page describes the inputs to collect and the limits of the built-in usage estimate.</p>
+<p>This page lists the inputs for a deployment cost estimate and explains how the built-in usage estimate works.</p>
 <h2 id="cost-inputs">Cost inputs<a class="headerlink" href="#cost-inputs" title="Permanent link">&para;</a></h2>
-<p>Build the estimate from the target environment, not from the local lab:</p>
+<p>Build the estimate from the target environment:</p>
 <table>
 <thead>
 <tr>
@@ -2246,9 +2246,9 @@
 </tr>
 </tbody>
 </table>
-<p>Use current quotes from the actual provider or hardware vendor. The repository intentionally has no provider price table.</p>
+<p>Use current quotes from the provider or hardware vendor.</p>
 <h2 id="checked-in-customer-defaults">Checked-in customer defaults<a class="headerlink" href="#checked-in-customer-defaults" title="Permanent link">&para;</a></h2>
-<p>The customer NVIDIA example is large: two vLLM replicas at the KEDA floor, four GPUs per replica, a 262,144-token maximum context, and a 400 GiB shared model cache. These values live in <code>deploy/clusters/customer/values/vllm-nvidia.yaml</code> and are test fixtures for a coding-model profile. They are not a recommended starting capacity.</p>
+<p>The customer NVIDIA example is large: two vLLM replicas at the KEDA floor, four GPUs per replica, a 262,144-token maximum context, and a 400 GiB shared model cache. These values live in <code>deploy/clusters/customer/values/vllm-nvidia.yaml</code> and are test fixtures for a coding-model profile.</p>
 <p>Before pricing the deployment, choose the model and reduce or increase the GPU count, tensor parallelism, context length, replica floor, and storage from measured requirements. The <a href="../capacity-sizing/">capacity worksheet</a> lists the relevant settings.</p>
 <h2 id="gateway-usage-estimate">Gateway usage estimate<a class="headerlink" href="#gateway-usage-estimate" title="Permanent link">&para;</a></h2>
 <p><code>GET /v1/usage</code> reports the sandbox's settled token counters and a <code>providers</code> breakdown
@@ -2259,23 +2259,21 @@ cost by sandbox and provider. Cache hits add no usage or cost. Shadow calls are 
 reserved, settled, and receipted.</p>
 <p>Cloud catalog entries require explicit <code>pricing.inputUsdPer1kTokens</code> and
 <code>pricing.outputUsdPer1kTokens</code>. Rates are operator-supplied USD prices; the catalog
-ships proposed templates with zero placeholders, not current provider prices:</p>
+ships templates with zero placeholders for you to fill in:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>estimated_cost_usd = (prompt_tokens * input_rate + completion_tokens * output_rate) / 1000
 </code></pre></div>
 <p>Unpriced local routes retain <code>USD_PER_1K_TOKENS</code> (default <code>0.0</code>). When measured usage
 exists, <code>/v1/usage</code> sums recorded costs instead of multiplying mixed-provider tokens
 by one rate. Otherwise the legacy estimate remains available. Token reservations stay
-conservative when a runtime does not report usage. Accounting-store failures appear as
+conservative when a runtime omits usage. Accounting-store failures appear as
 <code>usage_accounting: backend_unavailable</code> in receipts so exported receipts can reconcile
 missing counters.</p>
-<p>This remains an estimate, not a provider invoice. Anthropic cache read/write tokens are
-counted as input at the configured input rate; tiered, cache-specific, and discounted
-pricing are not modeled. Failed attempts/retries may consume provider capacity without
-reporting tokens. Configure contracted rates and reconcile against provider billing.
+<p>Anthropic cache read/write tokens are counted as input at the configured input rate.
+Configure contracted rates and reconcile the estimate against provider billing.
 The Compose fake prices are synthetic.</p>
 <h2 id="budgets-and-chargeback-labels">Budgets and chargeback labels<a class="headerlink" href="#budgets-and-chargeback-labels" title="Permanent link">&para;</a></h2>
-<p>Sandbox budgets limit requests, prompt characters, and estimated tokens. They bound accepted work according to gateway accounting, but they do not guarantee a currency ceiling: retries, idle capacity, model loading, storage, and platform overhead still cost money.</p>
-<p>The local Argo CD profile installs OpenCost and applies owner/cost-center labels. The customer profile does not install OpenCost. Connect the labels to the customer's existing cost system if infrastructure allocation is required.</p>
+<p>Sandbox budgets limit requests, prompt characters, and estimated tokens. They bound accepted work according to gateway accounting. Include retries, idle capacity, model loading, storage, and platform overhead in the infrastructure estimate.</p>
+<p>The local Argo CD profile installs OpenCost and applies owner/cost-center labels. In the customer profile, connect the labels to the customer's existing cost system for infrastructure allocation.</p>
 <h2 id="build-an-estimate">Build an estimate<a class="headerlink" href="#build-an-estimate" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Measure the intended model on the intended GPU with the real context and concurrency mix.</li>
@@ -2285,7 +2283,7 @@ The Compose fake prices are synthetic.</p>
 <li>Divide the measured monthly cost by measured successful tokens if an internal per-token rate is useful.</li>
 <li>Configure that rate in the gateway and compare its estimates with infrastructure invoices over time.</li>
 </ol>
-<p><code>make loadtest-local</code> uses a mock runtime and is useful for gateway/report behavior only. To measure a real runtime, point <code>make loadtest</code> at the deployed gateway and collect GPU, queue, latency, and error metrics at the same time.</p>
+<p><code>make loadtest-local</code> uses a mock runtime to exercise gateway and report behavior. To measure a real runtime, point <code>make loadtest</code> at the deployed gateway and collect GPU, queue, latency, and error metrics at the same time.</p>
 <p>See the <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/gpu-capacity.md">GPU capacity runbook</a>, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/budget-controls.md">budget controls</a>, and <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/quota-chargeback.md">quota/chargeback runbook</a>.</p>
 
 

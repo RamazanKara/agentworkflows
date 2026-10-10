@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2067,24 +2067,21 @@ declared settings explicitly:</p>
 <p>The apply mode enables private vulnerability reporting, vulnerability alerts, automated security
 updates, secret scanning and push protection; enables Discussions; normalizes merge behavior; and
 protects <code>main</code> with required CI checks and review/conversation rules, publishes project topics and
-the docs homepage, and creates a reviewer-gated <code>pypi</code> environment restricted to <code>v*</code> tags. GitHub plan or organization
-policies can reject features unavailable to the repository; do not weaken the declaration to hide
-that failure. Record the platform limitation and remediate it at the account level.</p>
-<p>Run the audit after renaming CI jobs because required-check context names are exact. Never run
-<code>--apply</code> against a fork or mirror without first reviewing the resolved repository printed by
-<code>gh repo view</code>.</p>
+the docs homepage, and creates a reviewer-gated <code>pypi</code> environment restricted to <code>v*</code> tags. If a GitHub plan
+or organization policy rejects a feature, keep the declaration as is, record the result, and
+resolve it at the account level.</p>
+<p>Run the audit after renaming CI jobs because required-check context names are exact. Before running
+<code>--apply</code> against a fork or mirror, review the resolved repository printed by <code>gh repo view</code>.</p>
 <h2 id="why-enforce_admins-is-false">Why <code>enforce_admins</code> is false<a class="headerlink" href="#why-enforce_admins-is-false" title="Permanent link">&para;</a></h2>
-<p>The declaration sets <code>enforce_admins: false</code> deliberately. GitHub does not allow approving your
-own pull request, so <code>required_approving_review_count: 1</code> cannot be satisfied by a sole
-maintainer. With admin enforcement on, cutting a release meant temporarily deleting a
-branch-protection control and restoring it afterwards, which turns a bypass into routine
-procedure and is worse than not claiming the control.</p>
-<p>What still holds for everyone, maintainer included: all ten required status checks must pass,
-conversations must be resolved, force pushes and deletions stay blocked, and a contributor's
-pull request still needs a review. What changed is only that the maintainer can merge their own
-reviewed work without a second account.</p>
-<p>Revisit this the moment the project has more than one maintainer with write access; at that
-point the review requirement becomes satisfiable and <code>enforce_admins</code> should go back to true.</p>
+<p>The declaration sets <code>enforce_admins: false</code> deliberately. GitHub requires an approving reviewer
+other than the author, so <code>required_approving_review_count: 1</code> needs a second maintainer. With
+admin enforcement off, a sole maintainer cuts releases with every branch-protection control kept
+in place.</p>
+<p>For everyone, maintainer included: all ten required status checks must pass, conversations must
+be resolved, force pushes and deletions stay blocked, and a contributor's pull request needs a
+review. The maintainer can merge their own reviewed work.</p>
+<p>Once the project has more than one maintainer with write access, the review requirement becomes
+satisfiable; set <code>enforce_admins</code> back to true at that point.</p>
 
 
 

@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2098,44 +2098,43 @@
 <p>The inference gateway and the RAG service need the same request body limit, the same tracing
 setup, and the same JWKS cache and JWT signature verification. Each service builds its image
 from its own directory (<code>context: src/&lt;service&gt;</code> in <code>.github/workflows/ci.yml</code> and in both
-Dockerfiles), so neither can import code that lives outside that directory.</p>
-<p>The repository had dealt with this by copying the modules, and the copies drifted. The JWKS
-cache gained a fix in one service and not the other, the RAG copy compared API keys with an
-early-exit <code>any()</code> where the gateway compared in constant time, and the audit helpers diverged
-until the RAG service lost a persistence metric. Each drift was a correctness or security gap
-found only by reading both files side by side.</p>
+Dockerfiles), so each image contains only code from that directory.</p>
+<p>The modules are copied into each service, and copies need a guard to stay aligned: JWKS cache
+fixes, constant-time API-key comparison, and audit persistence metrics must land in both services
+together. A mechanical check makes that alignment automatic.</p>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Shared code stays copied into each service, and the copies must be byte-identical:</p>
 <ul>
 <li><code>app/body_limit.py</code>, <code>app/tracing.py</code>, and <code>app/jwks.py</code> exist in both services with the same
   bytes. <code>make repo-hygiene</code> (part of <code>make validate</code>) fails when any pair differs, naming the
-  file, so a change to one copy cannot merge without the other.</li>
-<li>A shared module takes its configuration as an explicit value, not a service's <code>Settings</code>
-  class. <code>app/jwks.py</code> defines <code>JwtConfig</code>; each service's <code>app/jwt_auth.py</code> maps its own
+  file, so both copies merge together.</li>
+<li>A shared module takes its configuration as an explicit value, independent of a service's
+  <code>Settings</code> class. <code>app/jwks.py</code> defines <code>JwtConfig</code>; each service's <code>app/jwt_auth.py</code> maps its own
   settings onto it and adds what only that service needs (the gateway's required scopes, the RAG
-  service's tenant claim). Service-specific code never lives in a shared file.</li>
+  service's tenant claim). Service-specific code lives only in service files.</li>
 <li>To share another module, move its service-independent part into a file listed in
   <code>SHARED_SERVICE_MODULES</code> in <code>scripts/repo-hygiene.py</code>, and keep the service-specific
   remainder in the service.</li>
 </ul>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A fix to shared code is one edit applied to two files, and CI refuses a partial application.</li>
-<li>Images stay self-contained: each build context holds everything its image needs, and no
-  packaging step or second build context is introduced.</li>
-<li>The audit chain helpers remain separate implementations that share the hash primitives and
-  the verifier (<code>scripts/audit-verify.py</code>) rather than code. Their record shapes differ by design
-  (<code>inference_request</code> and <code>rag_query</code>); unifying them is not worth the coupling.</li>
+<li>A fix to shared code is one edit applied to two files, and CI requires both.</li>
+<li>Images stay self-contained: each build context holds everything its image needs, with a single
+  build context per image.</li>
+<li>The audit chain helpers are separate implementations that share the hash primitives and the
+  verifier (<code>scripts/audit-verify.py</code>). Their record shapes differ by design (<code>inference_request</code>
+  and <code>rag_query</code>), and each service keeps its own.</li>
 </ul>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>A shared Python package under <code>src/common/</code>, installed into both images.</strong> The cleanest
-  long-term layout. Rejected for now because it changes both Docker build contexts, the image
-  CI jobs, the Dependabot directories, coverage, and the locks, for three small modules. If the
-  shared surface grows past a handful of files, revisit this.</li>
-<li><strong>A git submodule or vendored wheel.</strong> Adds a release step and version skew between the
-  services for code that changes together. Rejected.</li>
-<li><strong>Accept the duplication and review it.</strong> This is what produced the drift above. Rejected.</li>
+<li><strong>A shared Python package under <code>src/common/</code>, installed into both images.</strong> A clean long-term
+  layout that touches both Docker build contexts, the image CI jobs, the Dependabot directories,
+  coverage, and the locks. Byte-identical copies were chosen as the right fit for three small
+  modules.</li>
+<li><strong>A git submodule or vendored wheel.</strong> Copies were chosen so code that changes together ships
+  together, with no extra release step.</li>
+<li><strong>Manual review of copies.</strong> The automated byte-identity check was chosen because it enforces
+  alignment on every change.</li>
 </ul>
 
 

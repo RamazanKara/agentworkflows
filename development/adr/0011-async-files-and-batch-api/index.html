@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2097,27 +2097,25 @@
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>The gateway is OpenAI-compatible and already offers a <strong>synchronous</strong> fan-out at
 <code>POST /v1/batch-inference</code>: it runs a bounded set of chat requests concurrently and returns
-every result inline, within one request timeout. ADR 0005 and <code>docs/scope-and-non-goals.md</code>
-listed the OpenAI <strong>asynchronous</strong> file-batch API (<code>/v1/files</code> + <code>/v1/batches</code>) as an explicit
-non-goal, because it is a stateful subsystem rather than a request handler.</p>
-<p>The requirement now is to support large, offline, bulk workloads that do not fit a single
-request: submit thousands of requests as a JSONL file, have them processed asynchronously under
+every result inline, within one request timeout. The OpenAI <strong>asynchronous</strong> file-batch API
+(<code>/v1/files</code> + <code>/v1/batches</code>) is a stateful subsystem in its own right, beyond a request handler.</p>
+<p>The requirement is to support large, offline, bulk workloads that span many requests: submit thousands of requests as a JSONL file, have them processed asynchronously under
 the same governance as live traffic, poll for status, and retrieve the results (and per-item
 errors) later. That is the real OpenAI Batch API shape (<code>input_file_id</code>, <code>completion_window</code>,
 <code>status: validating → in_progress → finalizing → completed</code>, <code>output_file_id</code>/<code>error_file_id</code>,
 <code>request_counts</code>, cancellation).</p>
 <p>Constraints that shape the design:</p>
 <ul>
-<li><strong>The gateway must stay stateless and horizontally scalable.</strong> It carries no local disk or
-  batch state today (no PVC, no StatefulSet); that property must survive.</li>
+<li><strong>The gateway stays stateless and horizontally scalable.</strong> It runs as a plain Deployment with
+  all state held externally, and that property is preserved.</li>
 <li><strong>Governance must be enforced exactly once, identically to live traffic.</strong> Every batched item
   has to pass the model allowlist, admission caps, prompt-secret policy, per-tenant budget, the
-  output guardrail, tenant isolation, and the tamper-evident audit chain (ADR 0006), with no
-  second, drifting copy of that policy.</li>
+  output guardrail, tenant isolation, and the tamper-evident audit chain (ADR 0006), from a single
+  copy of that policy.</li>
 <li><strong>Durable, cancellable, horizontally safe.</strong> A submitted batch must survive a worker restart,
   be cancellable mid-run, honor its completion window, and be safe to process with N workers.</li>
 <li><strong>Minimal heavyweight dependencies.</strong> The repo keeps a lean, hash-pinned dependency set and
-  hand-rolls small primitives (e.g. the audit chain) rather than pulling large SDKs.</li>
+  hand-rolls small primitives (e.g. the audit chain) in place of large SDKs.</li>
 </ul>
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
 <p>Add an OpenAI-compatible asynchronous <strong>Files</strong> and <strong>Batches</strong> API as a durable,
@@ -2135,12 +2133,13 @@ horizontally-safe subsystem. State is externalized so the gateway stays stateles
 <p><strong>Storage.</strong></p>
 <ul>
 <li><strong>Object store (S3 / MinIO)</strong> holds the JSONL blobs (input, output, and error files), keyed by
-  tenant and file id. Blobs do not belong in Redis.</li>
+  tenant and file id. Redis holds only metadata and the queue.</li>
 <li><strong>Redis</strong> holds file metadata, batch job records (status, <code>request_counts</code>, file ids,
   timestamps, <code>completion_window</code>, <code>metadata</code>), and the <strong>durable work queue</strong> as a reliable
   Redis list pair: a <code>pending</code> list plus a <code>processing</code> list with a claim-time hash the reaper
   reads. Redis is already a platform dependency (<code>budget-redis</code>) and this uses only single atomic
-  commands (<code>RPOPLPUSH</code>, <code>LREM</code>, <code>LPUSH</code>, <code>HSET</code>/<code>HDEL</code>), with no Lua or multi/exec to reason about.
+  commands (<code>RPOPLPUSH</code>, <code>LREM</code>, <code>LPUSH</code>, <code>HSET</code>/<code>HDEL</code>), which keeps the queue logic simple to
+  reason about.
   AOF persistence makes the queue durable.</li>
 </ul>
 <p><strong>Processing (<code>batch-processor</code>, a new stateless Deployment).</strong></p>
@@ -2156,12 +2155,12 @@ horizontally-safe subsystem. State is externalized so the gateway stays stateles
   error JSONL; update <code>request_counts</code> in Redis; on completion upload the output/error files, set
   <code>output_file_id</code>/<code>error_file_id</code>, and transition to <code>completed</code> (or <code>failed</code>).</li>
 <li><strong>Replaying through the gateway is the core decision</strong>: governance stays single-sourced. The
-  worker holds no policy. Allowlist, admission, prompt-secret handling, budget, guardrail, tenant
+  gateway holds all policy. Allowlist, admission, prompt-secret handling, budget, guardrail, tenant
   isolation, and audit all execute in the gateway per item, identically to live traffic, so batch
   items produce the same audit receipts (extending the ADR 0006 chain) and obey the same budgets.</li>
 <li><strong>Cancellation</strong> is a per-batch flag in Redis, checked between items; the worker finalizes
-  partial output and sets <code>cancelled</code>. <strong>Expiry</strong>: a batch not finished within its
-  <code>completion_window</code> is swept to <code>expired</code> by a reaper loop, which also reclaims orphaned work.</li>
+  partial output and sets <code>cancelled</code>. <strong>Expiry</strong>: a reaper loop sweeps a batch to <code>expired</code> when
+  its <code>completion_window</code> elapses before it finishes, and also reclaims orphaned work.</li>
 <li><strong>At-least-once</strong> delivery is made safe by idempotent output writes (deterministic object keys
   per batch) and by removing the batch from the <code>processing</code> list only after the output/error
   files are durably written; a redelivered batch is a no-op because processing checks for a
@@ -2169,38 +2168,36 @@ horizontally-safe subsystem. State is externalized so the gateway stays stateles
 </ul>
 <p><strong>Object-store access.</strong> A minimal in-tree S3 client (SigV4 request signing over the existing
 <code>httpx</code> + <code>cryptography</code> HMAC, path-style addressing for MinIO) behind an <code>ObjectStore</code>
-abstraction, with a filesystem/in-memory implementation for tests and local runs. This avoids a
-heavyweight cloud SDK, matching the repo's hand-rolled-primitive philosophy (cf. ADR 0006).</p>
+abstraction, with a filesystem/in-memory implementation for tests and local runs. This keeps the
+dependency set lean, matching the repo's hand-rolled-primitive philosophy (cf. ADR 0006).</p>
 <p><strong>Tenancy.</strong> The batch record binds its tenant at creation. The worker replays only within that
-tenant's identity, and the gateway enforces tenant binding on every replayed request, so a batch
-cannot cross tenants.</p>
+tenant's identity, and the gateway enforces tenant binding on every replayed request, so each batch
+stays within its tenant.</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <ul>
-<li>New backing state is introduced (an object store and a durable Redis queue) plus one new
-  worker Deployment. The <strong>gateway itself stays stateless</strong>; all batch state is external. Operators
-  who do not enable the feature pay nothing (the endpoints and worker are gated off by default).</li>
+<li>The feature adds backing state (an object store and a durable Redis queue) plus one worker
+  Deployment. The <strong>gateway itself stays stateless</strong>; all batch state is external. The endpoints and
+  worker are off by default and enabled per deployment.</li>
 <li>Governance is single-sourced: because items are replayed through the gateway, per-item audit
   receipts extend the existing chain, admission and budget apply per item, and <strong>partial completion
   is normal</strong> (some items land in the output file, some in the error file with the standard error
-  envelope). No batch-specific copy of the policy exists to drift.</li>
-<li>This <strong>reverses the async-batch non-goal</strong> in ADR 0005 and <code>docs/scope-and-non-goals.md</code>, which
-  are updated when the subsystem lands. The synchronous <code>/v1/batch-inference</code> route is unchanged
-  and remains the right tool for small inline batches.</li>
-<li>Operational cost: an object store (MinIO locally, external S3 for customers) and a durable Redis
-  must be run, and the <code>batch-processor</code> Deployment sized. This is documented for both the local
-  and customer overlays, with the feature off by default.</li>
-<li>The self-hosted context means OpenAI's 50% batch <strong>cost discount</strong> has no analogue; the
-  <code>completion_window</code> is honored as an <strong>expiry</strong> bound, not a scheduling SLA. Streaming batch
-  output is out of scope; the batch <code>endpoint</code> set is limited to chat/completions/embeddings.</li>
+  envelope). One copy of the policy serves both paths.</li>
+<li>The async batch API is part of the product scope alongside the synchronous
+  <code>/v1/batch-inference</code> route, which stays the right tool for small inline batches.</li>
+<li>Operators run an object store (MinIO locally, external S3 for customers) and a durable Redis, and
+  size the <code>batch-processor</code> Deployment. This is documented for both the local and customer
+  overlays, with the feature off by default.</li>
+<li>The <code>completion_window</code> is honored as an <strong>expiry</strong> bound. The batch <code>endpoint</code> set is
+  chat/completions/embeddings, and results are delivered as output and error files.</li>
 </ul>
-<p><strong>Phased rollout</strong> (each phase independently shippable and gated by <code>make validate</code> + <code>make
+<p><strong>Delivery phases</strong> (each phase independently shippable and gated by <code>make validate</code> + <code>make
 coverage</code> + <code>make production-check</code>):</p>
 <ol>
 <li><strong>Foundations</strong>: settings, the <code>ObjectStore</code> abstraction + fake, Redis file/batch stores,
-   config/api contracts scaffolding. No externally visible behavior.</li>
+   config/api contracts scaffolding.</li>
 <li><strong>Files API</strong>: <code>/v1/files</code> endpoints over the object store + Redis metadata, size/line caps.</li>
 <li><strong>Batches API (state)</strong>: <code>/v1/batches</code> create/get/cancel/list, job records, enqueue to the
-   queue; batches reach <code>in_progress</code> but are not yet processed.</li>
+   queue.</li>
 <li><strong><code>batch-processor</code> worker</strong>: the Deployment consumes, replays through the gateway, writes
    output/error files, updates counts/status, cancellation, expiry/reaper, crash recovery.</li>
 <li><strong>Governance &amp; hardening</strong>: per-item budget/audit correctness, tenant-isolation enforcement in
@@ -2211,27 +2208,22 @@ coverage</code> + <code>make production-check</code>):</p>
 </ol>
 <h2 id="alternatives-considered">Alternatives considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>In-gateway, in-process worker (no separate service).</strong> Simplest to build: an <code>asyncio</code>
-  background task in the gateway drains a queue. Rejected for the production goal because it makes
-  the gateway stateful, couples long bulk runs to the serving pods (a big batch competes with live
-  traffic), and loses horizontal safety and clean restart semantics. This was the lighter "MVP"
-  tier that was explicitly not chosen.</li>
-<li><strong>Import the governance code into the worker (no HTTP replay).</strong> Runs items in-process in the
-  worker against the policy modules directly. Rejected: it duplicates the gateway's app wiring and
-  risks the batch path and the live path drifting apart, the exact failure the single-sourced
-  design prevents. Replaying through the gateway keeps one enforcement point.</li>
-<li><strong>PVC filesystem for blobs instead of an object store.</strong> Simpler locally, but <code>ReadWriteOnce</code>
-  ties files to one node and <code>ReadWriteMany</code> is storage-class-dependent and awkward across the
-  gateway and worker. An object store is the natural multi-writer blob backend and what customers
-  already operate; the filesystem backend is kept only as an <code>ObjectStore</code> implementation for tests
-  and single-node local runs.</li>
-<li><strong>A heavyweight cloud SDK (<code>boto3</code>/<code>aioboto3</code>).</strong> Pulls a large, transitive dependency tree into
-  a repo that deliberately hash-pins a lean set. Rejected in favor of a small in-tree SigV4 client,
-  consistent with how the repo hand-rolls primitives (ADR 0006). If the signing surface grows
-  beyond object PUT/GET/DELETE/list, this can be revisited.</li>
-<li><strong>Postgres (or another RDBMS) for job state.</strong> Robust and queryable, but adds a new stateful
-  dependency when Redis, already present, covers small job records plus a durable list-based queue.
-  Rejected to avoid new infrastructure; revisit if batch metadata grows relational query needs.</li>
+<li><strong>In-gateway, in-process worker.</strong> Simplest to build: an <code>asyncio</code> background task in the
+  gateway drains a queue. A separate worker was chosen because it keeps the gateway stateless,
+  keeps long bulk runs off the serving pods so live traffic has its own capacity, and gives
+  horizontal safety and clean restart semantics.</li>
+<li><strong>Import the governance code into the worker.</strong> Runs items in-process in the worker against the
+  policy modules directly. HTTP replay was chosen because it keeps one enforcement point and one
+  copy of the gateway's app wiring for both the batch path and the live path.</li>
+<li><strong>PVC filesystem for blobs.</strong> Simple locally. An object store was chosen because it is the
+  natural multi-writer blob backend across the gateway and worker, independent of node placement
+  and storage-class access modes, and customers already operate one. The filesystem backend serves
+  as an <code>ObjectStore</code> implementation for tests and single-node local runs.</li>
+<li><strong>A heavyweight cloud SDK (<code>boto3</code>/<code>aioboto3</code>).</strong> A small in-tree SigV4 client was chosen because
+  it keeps the deliberately lean, hash-pinned dependency set, consistent with how the repo
+  hand-rolls primitives (ADR 0006). It covers object PUT/GET/DELETE/list.</li>
+<li><strong>Postgres (or another RDBMS) for job state.</strong> Robust and queryable. Redis was chosen because it
+  is already present and covers small job records plus a durable list-based queue.</li>
 </ul>
 
 

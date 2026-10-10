@@ -786,7 +786,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -2121,10 +2121,10 @@ make evidence LIVE=1
 <li>Error-rate failures usually mean the gateway, runtime, budget backend, or API-key clients are unhealthy.</li>
 <li>Latency failures usually mean runtime capacity, model size, GPU placement, or queueing policy needs tuning.</li>
 <li>Eval failures usually mean the selected model or prompt path is not ready for the customer's task mix.</li>
-<li>Restore failures mean backup evidence is not trustworthy enough for handoff.</li>
+<li>Restore failures mean the backup evidence needs a passing rerun before handoff.</li>
 <li>Evidence-control failures mean a required coding-agent platform control is missing from the handoff pack.</li>
 </ul>
-<p>Tune targets only through reviewed changes to <code>platform/slo/objectives.yaml</code>. Do not edit generated evidence to make an SLO pass.</p>
+<p>Tune targets only through reviewed changes to <code>platform/slo/objectives.yaml</code>. Regenerate evidence with the commands above.</p>
 <h2 id="customer-adaptation">Customer Adaptation<a class="headerlink" href="#customer-adaptation" title="Permanent link">&para;</a></h2>
 <p>For a real customer cluster, set targets to the contract they expect. Keep the objective IDs stable so dashboards, release gates, and evidence automation can compare reports across releases.</p>
 

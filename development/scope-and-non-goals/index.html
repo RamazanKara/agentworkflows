@@ -27,7 +27,7 @@
     
     
       
-        <title>Scope and non-goals - AgentWorkflows</title>
+        <title>Scope - AgentWorkflows</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#scope-and-non-goals" class="md-skip">
+        <a href="#scope" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Scope and non-goals
+              Scope
             
           </span>
         </div>
@@ -806,7 +806,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -824,7 +824,7 @@
   <span class="md-ellipsis">
     
   
-    Scope and non-goals
+    Scope
   
 
     
@@ -850,10 +850,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#in-scope" class="md-nav__link">
+  <a href="#what-it-covers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        In scope
+        What it covers
       
     </span>
   </a>
@@ -861,10 +861,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#protocol-limits" class="md-nav__link">
+  <a href="#api-surface" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Protocol limits
+        API surface
       
     </span>
   </a>
@@ -872,10 +872,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#operator-owned-work" class="md-nav__link">
+  <a href="#how-it-fits-with-your-platform" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Operator-owned work
+        How it fits with your platform
       
     </span>
   </a>
@@ -883,21 +883,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#out-of-scope" class="md-nav__link">
+  <a href="#security-and-compliance" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Out of scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-and-compliance-boundary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security and compliance boundary
+        Security and compliance
       
     </span>
   </a>
@@ -2133,10 +2122,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#in-scope" class="md-nav__link">
+  <a href="#what-it-covers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        In scope
+        What it covers
       
     </span>
   </a>
@@ -2144,10 +2133,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#protocol-limits" class="md-nav__link">
+  <a href="#api-surface" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Protocol limits
+        API surface
       
     </span>
   </a>
@@ -2155,10 +2144,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#operator-owned-work" class="md-nav__link">
+  <a href="#how-it-fits-with-your-platform" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Operator-owned work
+        How it fits with your platform
       
     </span>
   </a>
@@ -2166,21 +2155,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#out-of-scope" class="md-nav__link">
+  <a href="#security-and-compliance" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Out of scope
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#security-and-compliance-boundary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Security and compliance boundary
+        Security and compliance
       
     </span>
   </a>
@@ -2212,11 +2190,12 @@
   
 
 
-<h1 id="scope-and-non-goals">Scope and non-goals<a class="headerlink" href="#scope-and-non-goals" title="Permanent link">&para;</a></h1>
-<p>This page defines the current checkout's boundary. For per-feature defaults, use the <a href="../feature-inventory/">feature inventory</a>.</p>
+<h1 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h1>
+<p>This page describes what AgentWorkflows covers and how it fits alongside the other tools
+your team runs. For per-feature defaults, use the <a href="../feature-inventory/">feature inventory</a>.</p>
 <p>AgentWorkflows is cloud-first. Temporal provides durable execution and approval signals;
-the gateway governs model/tool activities and per-run budgets. Self-hosted models remain optional.</p>
-<h2 id="in-scope">In scope<a class="headerlink" href="#in-scope" title="Permanent link">&para;</a></h2>
+the gateway governs model/tool activities and per-run budgets. Self-hosted models are optional.</p>
+<h2 id="what-it-covers">What it covers<a class="headerlink" href="#what-it-covers" title="Permanent link">&para;</a></h2>
 <p>The repository contains and tests:</p>
 <ul>
 <li>the inference gateway and RAG service under <code>src/</code>;</li>
@@ -2228,6 +2207,10 @@ the gateway governs model/tool activities and per-run budgets. Self-hosted model
 <li>validation, evidence, release, and supply-chain scripts;</li>
 <li>operational runbooks and customer handoff documentation.</li>
 </ul>
+<p>The team console at <code>/console</code> uses the authenticated workflow API. Teams use it to start
+and approve runs, inspect receipts and costs, install templates, manage triggers, members
+and keys, edit team settings, and read the audit log. See the <a href="../workflows/#web-console">console guide</a>.</p>
+<h2 id="api-surface">API surface<a class="headerlink" href="#api-surface" title="Permanent link">&para;</a></h2>
 <p>The gateway implements these protocol families:</p>
 <ul>
 <li>OpenAI-style chat completions, legacy completions, embeddings, moderations, models, Files, Batch, and Responses;</li>
@@ -2235,46 +2218,43 @@ the gateway governs model/tool activities and per-run budgets. Self-hosted model
 <li>an Anthropic Messages translation endpoint, with streaming.</li>
 </ul>
 <p>The generated <a href="https://github.com/RamazanKara/agentworkflows/blob/main/platform/api-contracts/inference-gateway.openapi.json">OpenAPI contract</a> is the route-level reference.</p>
-<h2 id="protocol-limits">Protocol limits<a class="headerlink" href="#protocol-limits" title="Permanent link">&para;</a></h2>
-<p>This is not a complete OpenAI or Anthropic API implementation.</p>
 <ul>
-<li>Chat completions and Anthropic Messages support streaming. Legacy completions and Responses do not.</li>
-<li>Responses supports the synchronous request shape, function tools with multi-turn <code>function_call</code> / <code>function_call_output</code> items, and <code>input_image</code> parts. Optional stored state supports <code>store</code>, <code>previous_response_id</code>, retrieve, delete, and input-items routes. Background responses and built-in tools (web search, file search) are not implemented.</li>
-<li>The asynchronous Batch implementation accepts chat completions, completions, and embeddings. <code>completion_window</code> is treated as an expiry bound, not a scheduling or pricing commitment.</li>
-<li>Audio, image generation, fine-tuning, and a general training API are not implemented.</li>
-<li>Translated Messages and Responses payloads preserve supported text and tool fields but do not promise byte-for-byte parity with upstream services.</li>
+<li>Chat completions and Anthropic Messages stream. Legacy completions and Responses return synchronous responses.</li>
+<li>Responses supports the synchronous request shape, function tools with multi-turn <code>function_call</code> / <code>function_call_output</code> items, and <code>input_image</code> parts. Optional stored state supports <code>store</code>, <code>previous_response_id</code>, retrieve, delete, and input-items routes.</li>
+<li>The asynchronous Batch implementation accepts chat completions, completions, and embeddings. <code>completion_window</code> sets the batch expiry bound.</li>
+<li>Translated Messages and Responses payloads carry the supported text and tool fields through the governed chat path.</li>
 </ul>
-<h2 id="operator-owned-work">Operator-owned work<a class="headerlink" href="#operator-owned-work" title="Permanent link">&para;</a></h2>
-<p>The project does not:</p>
+<h2 id="how-it-fits-with-your-platform">How it fits with your platform<a class="headerlink" href="#how-it-fits-with-your-platform" title="Permanent link">&para;</a></h2>
+<p>AgentWorkflows runs on the infrastructure your team already operates. Your platform supplies:</p>
 <ul>
-<li>create or upgrade a Kubernetes cluster;</li>
-<li>provision networks, load balancers, GPU nodes, or cloud databases;</li>
-<li>run an identity provider or secret manager;</li>
-<li>provide a production ingress, certificate authority, logging service, backup destination, or incident team;</li>
-<li>select, host, license, or validate customer model weights;</li>
-<li>classify customer data or decide whether a use case is regulated;</li>
-<li>size replicas, GPU memory, context windows, storage, retention, or SLOs for a customer workload;</li>
-<li>operate the resulting platform.</li>
+<li>the Kubernetes cluster and its upgrades;</li>
+<li>networks, load balancers, GPU nodes, and cloud databases;</li>
+<li>the identity provider and secret manager;</li>
+<li>production ingress, certificate authority, logging service, backup destination, and incident response;</li>
+<li>the choice, hosting, licensing, and validation of model weights;</li>
+<li>data classification and regulatory decisions for each use case;</li>
+<li>sizing of replicas, GPU memory, context windows, storage, retention, and SLOs for each workload;</li>
+<li>day-to-day operation of the deployment.</li>
 </ul>
-<p>The customer values are examples that must be reviewed. Their placeholders, large GPU defaults, and single-node stateful services are not production recommendations.</p>
-<h2 id="out-of-scope">Out of scope<a class="headerlink" href="#out-of-scope" title="Permanent link">&para;</a></h2>
-<p>The project is not intended to become:</p>
+<p>AgentWorkflows connects to these through Helm values, environment variables, and Kubernetes
+Secrets. The customer values are examples to review: replace their placeholders and size the
+GPU defaults and stateful services for your workload.</p>
+<p>Training, fine-tuning, audio, and image generation run in purpose-built systems alongside
+the gateway. Multi-node serving uses LeaderWorkerSet or Ray, and Open WebUI is available as
+an example end-user chat UI.</p>
+<h2 id="security-and-compliance">Security and compliance<a class="headerlink" href="#security-and-compliance" title="Permanent link">&para;</a></h2>
+<p>The repository includes security controls and compliance crosswalks. Use them together with
+your deployment's configuration and evidence:</p>
 <ul>
-<li>a managed Kubernetes operations service;</li>
-<li>a desktop Ollama application;</li>
-<li>a cloud-infrastructure provisioning framework;</li>
-<li>a distributed training platform;</li>
-<li>a general multi-node serving operator;</li>
-<li>a full billing system;</li>
-<li>a general-purpose identity provider.</li>
+<li>NetworkPolicy controls which pods can connect. Enable transport encryption where your deployment requires it.</li>
+<li>Select a gVisor, Kata, or equivalent <code>RuntimeClass</code> with <code>sandbox.runtimeClassName</code> to give agent workspaces a separate kernel boundary.</li>
+<li>Anchor hash-chain heads outside the process for durable, rollback-resistant audit logs.</li>
+<li>Checked-in <code>sample-*</code> evidence shows report shape. Generate fresh reports for each release or deployment.</li>
 </ul>
-<p>Hosted delivery and team administration are product goals, not current capabilities.
-The optional <code>/console</code> uses the authenticated workflow API for team runs, approvals, receipts,
-and costs. Admins inspect provider/budget configuration there; membership, provider keys,
-and policy edits remain reviewed deployment configuration. See the <a href="../workflows/#web-console">console guide</a>.</p>
-<h2 id="security-and-compliance-boundary">Security and compliance boundary<a class="headerlink" href="#security-and-compliance-boundary" title="Permanent link">&para;</a></h2>
-<p>The repository includes controls and crosswalks, not certifications. NetworkPolicy does not encrypt traffic. A container sandbox without a configured gVisor, Kata, or equivalent <code>RuntimeClass</code> does not provide a separate kernel boundary. Hash-chained logs are not durable or rollback-resistant until their heads are anchored outside the process. Checked-in sample evidence proves report shape, not the state of a release or deployment.</p>
-<p>Whether a deployment meets a law, standard, or internal policy depends on its use case, configuration, operations, and current evidence. See the <a href="../security-overview/">security overview</a>, <a href="../threat-model/">threat model</a>, and <a href="../production-readiness/">production readiness matrix</a>.</p>
+<p>Assess a deployment against a law, standard, or internal policy using its use case,
+configuration, operations, and current evidence. The <a href="../security-overview/">security overview</a>,
+<a href="../threat-model/">threat model</a>, and <a href="../production-readiness/">production readiness matrix</a>
+support that review.</p>
 
 
 
