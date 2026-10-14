@@ -114,18 +114,27 @@ def auth_gateway(tmp_path, monkeypatch):
         {"name": role, "sha256": hashlib.sha256(role.encode()).hexdigest(), "sandbox": "team", "role": role}
         for role in ("admin", "builder", "approver", "viewer")
     ]
-    records.extend([
-        {"name": "other", "sha256": hashlib.sha256(b"other").hexdigest(), "sandbox": "other", "role": "admin"},
-        {
-            "name": "project", "sha256": hashlib.sha256(b"project").hexdigest(),
-            "sandbox": "team", "role": "admin", "project": "private",
-        },
-    ])
+    records.extend(
+        [
+            {"name": "other", "sha256": hashlib.sha256(b"other").hexdigest(), "sandbox": "other", "role": "admin"},
+            {
+                "name": "project",
+                "sha256": hashlib.sha256(b"project").hexdigest(),
+                "sandbox": "team",
+                "role": "admin",
+                "project": "private",
+            },
+        ]
+    )
     path = tmp_path / "keys.json"
     path.write_text(json.dumps(records))
     settings = _tool_settings(
-        api_key_auth_enabled=True, api_key_records_path=path, sandbox_budget_backend="redis",
-        sandbox_budget_enabled=True, audit_log_enabled=True, admin_console_enabled=True,
+        api_key_auth_enabled=True,
+        api_key_records_path=path,
+        sandbox_budget_backend="redis",
+        sandbox_budget_enabled=True,
+        audit_log_enabled=True,
+        admin_console_enabled=True,
     )
     store = AuthRedis()
     monkeypatch.setattr(sessions, "time", lambda: store.now)
@@ -136,10 +145,12 @@ def auth_gateway(tmp_path, monkeypatch):
         config = replace(settings, **overrides)
         app = create_app(config)
         app.state.budget_tracker = RedisSandboxBudgetTracker(config, client=store)
-        app.state.sandbox_policy_set = SandboxPolicySet({
-            "team": SandboxPolicy("team", projects=("default", "private")),
-            "other": SandboxPolicy("other", projects=("default",)),
-        })
+        app.state.sandbox_policy_set = SandboxPolicySet(
+            {
+                "team": SandboxPolicy("team", projects=("default", "private")),
+                "other": SandboxPolicy("other", projects=("default",)),
+            }
+        )
         return TestClient(app, base_url="https://localhost"), app
 
     first, app = build()
@@ -241,10 +252,18 @@ def test_team_and_project_isolation_and_self_protection(auth_gateway):
     assert response.status_code == 201
 
 
-@pytest.mark.parametrize("body", [
-    {"role": None}, {"name": None}, {"name": " "}, {"role": "owner"},
-    {"expires_at": "bad"}, {"team": "other"}, {"sha256": "a" * 64},
-])
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"role": None},
+        {"name": None},
+        {"name": " "},
+        {"role": "owner"},
+        {"expires_at": "bad"},
+        {"team": "other"},
+        {"sha256": "a" * 64},
+    ],
+)
 def test_update_validates_mutable_fields(auth_gateway, body):
     client, _, _, _ = auth_gateway
     key = create_key(client)
@@ -253,8 +272,12 @@ def test_update_validates_mutable_fields(auth_gateway, body):
 
 def test_auth_order_preserves_flat_file_managed_and_jwt(auth_gateway, monkeypatch):
     _, _, _, build = auth_gateway
-    client, app = build(api_key_sha256s=(hashlib.sha256(b"flat").hexdigest(),), jwt_auth_enabled=True,
-                        jwt_jwks_url="https://issuer/keys", jwt_tenant_claim="team")
+    client, app = build(
+        api_key_sha256s=(hashlib.sha256(b"flat").hexdigest(),),
+        jwt_auth_enabled=True,
+        jwt_jwks_url="https://issuer/keys",
+        jwt_tenant_claim="team",
+    )
     lookup = AsyncMock(return_value=None)
     monkeypatch.setattr(managed_keys, "lookup_key", lookup)
     verifier = AsyncMock(return_value={"sub": "alice", "team": "team", "role": "viewer", "exp": time() + 300})

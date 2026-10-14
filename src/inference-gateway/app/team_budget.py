@@ -23,7 +23,9 @@ local function alert(level, limit, spent, requested, now)
 end
 """
 
-RESERVE_COST = ALERT + """
+RESERVE_COST = (
+    ALERT
+    + """
 local current = tonumber(redis.call('HGET', KEYS[1], 'cost') or '0')
 if tonumber(ARGV[2]) >= 0 and current + tonumber(ARGV[1]) > tonumber(ARGV[2]) then
   alert('hard', tonumber(ARGV[2]), current, tonumber(ARGV[1]), ARGV[6])
@@ -37,13 +39,17 @@ alert('soft', tonumber(ARGV[5]), current + tonumber(ARGV[1]), 0, ARGV[6])
 alert('hard', tonumber(ARGV[2]), current + tonumber(ARGV[1]), 0, ARGV[6])
 return 1
 """
+)
 
-CHECK_ALERTS = ALERT + """
+CHECK_ALERTS = (
+    ALERT
+    + """
 local current = tonumber(redis.call('HGET', KEYS[1], 'cost') or '0')
 alert('soft', tonumber(ARGV[1]), current, 0, ARGV[3])
 alert('hard', tonumber(ARGV[2]), current, 0, ARGV[3])
 return 1
 """
+)
 
 SETTLE_COST = """
 redis.call('HINCRBY', KEYS[1], 'cost', ARGV[1])
@@ -93,10 +99,17 @@ async def reserve_team_cost(request: Request, payload: dict[str, Any]) -> None:
     )
     project_limit = team.project_budgets.get(project)
     result = await redis_call(
-        request, "eval", RESERVE_COST, 1, key, amount,
+        request,
+        "eval",
+        RESERVE_COST,
+        1,
+        key,
+        amount,
         nanodollars(team.cost_limit_usd) if team.cost_limit_usd is not None else -1,
-        f"project.{project}.cost", nanodollars(project_limit) if project_limit is not None else -1,
-        nanodollars(team.soft_cost_limit_usd) if team.soft_cost_limit_usd is not None else -1, time(),
+        f"project.{project}.cost",
+        nanodollars(project_limit) if project_limit is not None else -1,
+        nanodollars(team.soft_cost_limit_usd) if team.soft_cost_limit_usd is not None else -1,
+        time(),
     )
     if result != 1:
         dimension = "project" if result == -1 else "team"
@@ -138,8 +151,15 @@ async def settle_team_cost(request: Request, response: dict[str, Any] | None) ->
         for base in bases:
             args.extend((f"{base}.cost", amount, f"{base}.tokens", tokens, f"{base}.calls", 1))
     await redis_call(
-        request, "eval", SETTLE_COST, 1, key, charged - reserved,
-        f"project.{project}.cost", charged - reserved, *args,
+        request,
+        "eval",
+        SETTLE_COST,
+        1,
+        key,
+        charged - reserved,
+        f"project.{project}.cost",
+        charged - reserved,
+        *args,
     )
     request.state.team_cost_usd = charged / 1_000_000_000
 
@@ -165,15 +185,20 @@ async def team_cost_report(request: Request) -> dict[str, Any]:
         "team_id": request.state.sandbox_id,
         "project": project,
         "window_start": start,
-        "window_seconds": monthrange(datetime.fromtimestamp(start, UTC).year,
-                                     datetime.fromtimestamp(start, UTC).month)[1] * 86400,
+        "window_seconds": monthrange(datetime.fromtimestamp(start, UTC).year, datetime.fromtimestamp(start, UTC).month)[
+            1
+        ]
+        * 86400,
         "period": "month",
         "cost_limit_usd": team.cost_limit_usd,
         "soft_cost_limit_usd": team.soft_cost_limit_usd,
         "project_budgets": {
-            name: {"cost_limit_usd": team.project_budgets.get(name),
-                   "reserved_and_spent_usd": int(raw.get(f"project.{name}.cost", 0)) / 1_000_000_000}
-            for name in team.projects if not project or name == project
+            name: {
+                "cost_limit_usd": team.project_budgets.get(name),
+                "reserved_and_spent_usd": int(raw.get(f"project.{name}.cost", 0)) / 1_000_000_000,
+            }
+            for name in team.projects
+            if not project or name == project
         },
         "reserved_and_spent_usd": None if project else int(raw.get("cost", 0)) / 1_000_000_000,
         **groups,

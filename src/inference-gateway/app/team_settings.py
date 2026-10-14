@@ -144,8 +144,10 @@ def layer_settings(
             project_budgets={name: fields[f"project_budgets.{name}"]["value"] for name in team.projects},
             workflows={
                 name: workflow.model_copy(
-                    update={field: fields[f"workflows.{name}.{field}"]["value"]
-                            for field in (*WORKFLOW_FIELDS, "capture_content")}
+                    update={
+                        field: fields[f"workflows.{name}.{field}"]["value"]
+                        for field in (*WORKFLOW_FIELDS, "capture_content")
+                    }
                 )
                 for name, workflow in team.workflows.items()
             },
@@ -262,7 +264,11 @@ async def change_settings(
     }
     try:
         saved = current.document["revision"] == revision and await storage_call(
-            request, "change_settings", request.state.sandbox_id, revision, document,
+            request,
+            "change_settings",
+            request.state.sandbox_id,
+            revision,
+            document,
         )
     finally:
         forget_team_settings(request)
@@ -305,8 +311,11 @@ async def save_team_document(
 ) -> dict[str, Any]:
     principal = require_settings_admin(request)
     document = {
-        **current, **changes, "revision": current["revision"] + 1,
-        "updated_at": time(), "updated_by": principal.get("sub") or principal.get("key_id"),
+        **current,
+        **changes,
+        "revision": current["revision"] + 1,
+        "updated_at": time(),
+        "updated_by": principal.get("sub") or principal.get("key_id"),
     }
     try:
         saved = await storage_call(request, "change_settings", request.state.sandbox_id, current["revision"], document)
@@ -315,9 +324,15 @@ async def save_team_document(
     if not saved:
         raise HTTPException(409, detail="Team configuration changed. Reload before trying again.")
     event = {
-        "event": action, "action_type": action, "chain_id": request.app.state.audit_chain_id,
-        "sandbox_id": request.state.sandbox_id, "request_id": request.state.request_id,
-        "principal": principal, "ts": document["updated_at"], "revision": document["revision"], **details,
+        "event": action,
+        "action_type": action,
+        "chain_id": request.app.state.audit_chain_id,
+        "sandbox_id": request.state.sandbox_id,
+        "request_id": request.state.request_id,
+        "principal": principal,
+        "ts": document["updated_at"],
+        "revision": document["revision"],
+        **details,
     }
     chain_audit_event(request, event)
     emit_audit_record(event)
@@ -326,7 +341,9 @@ async def save_team_document(
 
 def register_team_settings_routes(app: FastAPI) -> None:
     @app.get(
-        "/v1/team/settings", tags=["teams"], summary="Inspect effective team settings and policy defaults",
+        "/v1/team/settings",
+        tags=["teams"],
+        summary="Inspect effective team settings and policy defaults",
         responses={403: {"description": "Team admin role required"}},
     )
     async def get_settings(request: Request, response: Response) -> dict[str, Any]:
@@ -337,22 +354,30 @@ def register_team_settings_routes(app: FastAPI) -> None:
         return settings.public()
 
     @app.patch(
-        "/v1/team/settings", tags=["teams"], summary="Override team settings at the supplied revision",
+        "/v1/team/settings",
+        tags=["teams"],
+        summary="Override team settings at the supplied revision",
         responses={403: {"description": "Team admin role required"}, 409: {"description": "Stale settings revision"}},
     )
     async def patch_settings(
-        request: Request, response: Response, body: TeamSettingsPatch,
+        request: Request,
+        response: Response,
+        body: TeamSettingsPatch,
         if_match: Annotated[str, Header(alias="If-Match", title="If-Match")],
     ) -> dict[str, Any]:
         require_settings_admin(request)
         return await change_settings(request, response, match_revision(if_match), body.fields)
 
     @app.delete(
-        "/v1/team/settings/{field:path}", tags=["teams"], summary="Reset one override to its YAML policy default",
+        "/v1/team/settings/{field:path}",
+        tags=["teams"],
+        summary="Reset one override to its YAML policy default",
         responses={403: {"description": "Team admin role required"}, 409: {"description": "Stale settings revision"}},
     )
     async def reset_setting(
-        request: Request, response: Response, field: str,
+        request: Request,
+        response: Response,
+        field: str,
         if_match: Annotated[str, Header(alias="If-Match", title="If-Match")],
     ) -> dict[str, Any]:
         require_settings_admin(request)

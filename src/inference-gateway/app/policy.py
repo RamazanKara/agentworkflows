@@ -354,9 +354,7 @@ class WorkflowPolicy(BaseModel):
     approval_threshold_usd: float = Field(default=0, alias="approvalThresholdUsd", ge=0, allow_inf_nan=False)
     approver_role: Literal["admin", "approver"] = Field(default="approver", alias="approverRole")
     required_approvals: int = Field(default=1, alias="requiredApprovals", ge=1, le=10, strict=True)
-    approval_timeout_seconds: int = Field(
-        default=604800, alias="approvalTimeoutSeconds", ge=60, le=604800, strict=True
-    )
+    approval_timeout_seconds: int = Field(default=604800, alias="approvalTimeoutSeconds", ge=60, le=604800, strict=True)
     agents: dict[str, WorkspaceAgent] = Field(default_factory=dict)
     triggers: dict[str, WorkflowTrigger] = Field(default_factory=dict)
     capture_content: Literal["none", "redacted", "full"] = Field(default="none", alias="captureContent")
@@ -513,7 +511,9 @@ class SandboxPolicySet:
                 raise ValueError("budgets.costLimitUsd must be a finite non-negative USD amount")
             soft_limit = budgets.get("softCostLimitUsd")
             if soft_limit is not None and (
-                type(soft_limit) not in (int, float) or not isfinite(soft_limit) or soft_limit < 0
+                type(soft_limit) not in (int, float)
+                or not isfinite(soft_limit)
+                or soft_limit < 0
                 or (cost_limit is not None and soft_limit > cost_limit)
             ):
                 raise ValueError("budgets.softCostLimitUsd must be non-negative and no greater than costLimitUsd")

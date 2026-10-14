@@ -615,7 +615,9 @@ def test_slow_redis_socket_times_out_and_fails_closed():
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         settings = _tool_settings(
-            sandbox_budget_enabled=True, sandbox_request_budget=100, sandbox_budget_backend="redis",
+            sandbox_budget_enabled=True,
+            sandbox_request_budget=100,
+            sandbox_budget_backend="redis",
             sandbox_budget_redis_url=f"redis://127.0.0.1:{server.server_address[1]}/0",
             sandbox_budget_redis_timeout_seconds=0.05,
         )

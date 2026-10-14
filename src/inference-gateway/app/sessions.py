@@ -82,12 +82,10 @@ async def bind_session(request: Request) -> Response | None:
     check_csrf(request, session)
     settings = request.app.state.settings
     digest = session.get("oidc_policy_digest")
-    if (
-        (digest is not None and digest != access_policy_digest(settings, session["sandbox_id"]))
-        or (
-            settings.oidc_group_role_mappings and "oidc_policy_digest" not in session
-            and not session.get("credential_digest")
-        )
+    if (digest is not None and digest != access_policy_digest(settings, session["sandbox_id"])) or (
+        settings.oidc_group_role_mappings
+        and "oidc_policy_digest" not in session
+        and not session.get("credential_digest")
     ):
         await redis_call(request, "delete", session_key(request, request.cookies[SESSION_COOKIE]))
         raise HTTPException(401, detail="Company sign-in policy changed. Sign in again.")
@@ -101,7 +99,8 @@ async def bind_session(request: Request) -> Response | None:
         request.state.sandbox_id = session["sandbox_id"]
     explicit = request.headers.get("x-sandbox-id")
     if (
-        request.state.sandbox_bound and explicit is not None
+        request.state.sandbox_bound
+        and explicit is not None
         and validate_sandbox_id(explicit) != request.state.sandbox_id
     ):
         return _sandbox_binding_response(request, "sandbox_identity_mismatch")
@@ -127,7 +126,8 @@ async def create_session(request: Request, response: Response) -> dict[str, Any]
     cookie_options(request)
     token = secrets.token_urlsafe(32)
     session = {
-        "principal": request.state.principal, "sandbox_id": request.state.sandbox_id,
+        "principal": request.state.principal,
+        "sandbox_id": request.state.sandbox_id,
         "sandbox_bound": request.state.sandbox_bound,
         "credential_digest": getattr(request.state, "credential_digest", None),
         "oidc_policy_digest": getattr(request.state, "oidc_policy_digest", None),
@@ -149,6 +149,8 @@ async def create_session(request: Request, response: Response) -> dict[str, Any]
 def session_info(request: Request) -> dict[str, Any]:
     session = request.state.browser_session
     return {
-        "principal": request.state.principal, "sandbox_id": request.state.sandbox_id,
-        "csrf_token": session["csrf_token"], "absolute_expires_at": session["absolute_expires_at"],
+        "principal": request.state.principal,
+        "sandbox_id": request.state.sandbox_id,
+        "csrf_token": session["csrf_token"],
+        "absolute_expires_at": session["absolute_expires_at"],
     }

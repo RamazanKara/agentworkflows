@@ -32,8 +32,12 @@ def test_retention_configuration(monkeypatch):
 
 def record(app, **fields):
     event = {
-        "event": "inference_request", "chain_id": app.state.audit_chain_id,
-        "sandbox_id": "team", "principal": {"key_id": "admin"}, "project": "default", "ts": time(),
+        "event": "inference_request",
+        "chain_id": app.state.audit_chain_id,
+        "sandbox_id": "team",
+        "principal": {"key_id": "admin"},
+        "project": "default",
+        "ts": time(),
         **fields,
     }
     request = Request({"type": "http", "app": app})
@@ -58,9 +62,15 @@ def verify(client, **params):
 def test_stream_copies_logged_event_and_keeps_original_verifier_working(team_gateway, caplog):
     client, app = team_gateway
     caplog.set_level(logging.INFO)
-    response = client.post("/v1/chat/completions", headers=auth("builder"), json={
-        "model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "private prompt text"}],
-    })
+    response = client.post(
+        "/v1/chat/completions",
+        headers=auth("builder"),
+        json={
+            "model": "primary",
+            "max_tokens": 20,
+            "messages": [{"role": "user", "content": "private prompt text"}],
+        },
+    )
     assert response.status_code == 200, response.text
     verifier = _load_verifier()
     logged = verifier.deduplicate(verifier.extract_audit_events(_double_logged_lines(caplog)))
@@ -95,16 +105,27 @@ def test_retention_time_length_and_idle_read_trimming(team_gateway, monkeypatch)
     assert client.get(PATH, headers=auth("admin")).json()["events"] == []
 
 
-@pytest.mark.parametrize("params", [
-    {"event_type": "team_settings_changed"}, {"actor": "alice"}, {"project": "private"},
-    {"run_id": "run-1"}, {"from": 101, "to": 102},
-    {"event_type": "team_settings_changed", "actor": "alice", "project": "private", "run_id": "run-1"},
-])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"event_type": "team_settings_changed"},
+        {"actor": "alice"},
+        {"project": "private"},
+        {"run_id": "run-1"},
+        {"from": 101, "to": 102},
+        {"event_type": "team_settings_changed", "actor": "alice", "project": "private", "run_id": "run-1"},
+    ],
+)
 def test_filters(team_gateway, params):
     client, app = team_gateway
     record(app, ts=100)
     wanted = record(
-        app, ts=102, event="team_settings_changed", actor="alice", project="private", workflow_run_id="run-1",
+        app,
+        ts=102,
+        event="team_settings_changed",
+        actor="alice",
+        project="private",
+        workflow_run_id="run-1",
     )
     record(app, ts=103)
     data = client.get(PATH, headers=auth("admin"), params=params).json()
@@ -132,8 +153,9 @@ def test_cursor_pages_are_newest_first_without_duplicates_during_appends(team_ga
     assert page["next_cursor"] is None
 
 
-@pytest.mark.parametrize("params", [{"limit": 201}, {"limit": 0}, {"cursor": "bad"}, {"from": 2, "to": 1},
-                                   {"from": "nan"}, {"to": "inf"}])
+@pytest.mark.parametrize(
+    "params", [{"limit": 201}, {"limit": 0}, {"cursor": "bad"}, {"from": 2, "to": 1}, {"from": "nan"}, {"to": "inf"}]
+)
 def test_invalid_query(team_gateway, params):
     client, _ = team_gateway
     assert client.get(PATH, headers=auth("admin"), params=params).status_code == 422
@@ -156,12 +178,17 @@ def test_verification_handles_interleaved_teams_replicas_and_time_range(team_gat
     assert result["boundaries"][0]["reason"] == "time_range"
 
 
-@pytest.mark.parametrize(("change", "reason"), [
-    ("payload", "record_hash_mismatch"), ("metadata", "event_metadata_mismatch"),
-    ("view", "view_hash_mismatch"), ("delete", "sequence_gap_or_reordered"),
-    ("reorder", "sequence_gap_or_reordered"),
-    ("malformed", "malformed_event"),
-])
+@pytest.mark.parametrize(
+    ("change", "reason"),
+    [
+        ("payload", "record_hash_mismatch"),
+        ("metadata", "event_metadata_mismatch"),
+        ("view", "view_hash_mismatch"),
+        ("delete", "sequence_gap_or_reordered"),
+        ("reorder", "sequence_gap_or_reordered"),
+        ("malformed", "malformed_event"),
+    ],
+)
 def test_verification_reports_first_break(team_gateway, change, reason):
     client, app = team_gateway
     for _ in range(4):
@@ -219,9 +246,13 @@ def test_admin_role_required_before_query_validation(team_gateway, role, suffix)
 
 def test_project_bound_admin_cannot_read_team_wide_audit(team_gateway):
     client, app = team_gateway
-    app.state.key_record_set = replace(app.state.key_record_set, records=tuple(
-        replace(key, project="private") if key.key_id == "admin" else key for key in app.state.key_record_set.records
-    ))
+    app.state.key_record_set = replace(
+        app.state.key_record_set,
+        records=tuple(
+            replace(key, project="private") if key.key_id == "admin" else key
+            for key in app.state.key_record_set.records
+        ),
+    )
     for suffix in ("", "/verify"):
         response = client.get(PATH + suffix, headers=auth("admin"))
         assert response.status_code == 403
@@ -274,9 +305,15 @@ def test_rows_are_stored_off_the_event_loop_before_the_response(team_gateway, mo
         original(*args)
 
     monkeypatch.setattr(storage, "append_audit", append)
-    response = client.post("/v1/chat/completions", headers=auth("builder"), json={
-        "model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}],
-    })
+    response = client.post(
+        "/v1/chat/completions",
+        headers=auth("builder"),
+        json={
+            "model": "primary",
+            "max_tokens": 20,
+            "messages": [{"role": "user", "content": "hello"}],
+        },
+    )
     assert response.status_code == 200, response.text
     assert threads and all(name.startswith("audit-view") for name in threads)
     # The row is already readable when the caller sees the answer.

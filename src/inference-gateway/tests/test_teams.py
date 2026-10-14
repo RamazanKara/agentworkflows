@@ -36,11 +36,15 @@ def test_usage_csv_matches_monthly_accounting_and_project_scope(team_gateway, mo
     end = start + seconds
     prefix = app.state.settings.sandbox_budget_key_prefix
     raw = {
-        "cost": 4_000_000_007, "project.private.cost": 1_000_000_001,
-        "provider.openai.cost": 3_000_000_007, "provider.openai.calls": 2, "provider.openai.tokens": 11,
+        "cost": 4_000_000_007,
+        "project.private.cost": 1_000_000_001,
+        "provider.openai.cost": 3_000_000_007,
+        "provider.openai.calls": 2,
+        "provider.openai.tokens": 11,
         'workflow.=SUM(1,2)\n"Grüße".cost': 2_000_000_000,
         "project.private.provider.anthropic.cost": 1_000_000_001,
-        "project.private.provider.anthropic.calls": 1, "project.private.provider.anthropic.tokens": 3,
+        "project.private.provider.anthropic.calls": 1,
+        "project.private.provider.anthropic.tokens": 3,
         "project.private.workflow.PrivateWorkflow.cost": 1_000_000_001,
     }
     app.state.budget_tracker.client.data[f"{prefix}:team:cost:month:{start}"] = raw
@@ -121,7 +125,7 @@ class TeamRedis(RunRedis):
         if script == RUN_PAGE:
             rows = self.zrevrange(key, 0, len(self.data.get(key, {})), withscores=True)
             older = [row for row in rows if (row[1], row[0]) < (args[0], args[1])]
-            return [value for row in older[:args[2] + 1] for value in row]
+            return [value for row in older[: args[2] + 1] for value in row]
         if script == CHANGE_SETTINGS:
             old = json.loads(self.data[key]) if key in self.data else {"revision": 0}
             if old["revision"] != args[0]:
@@ -150,10 +154,18 @@ class TeamRedis(RunRedis):
 
     def alert(self, raw, level, limit, spent, requested, now):
         if limit >= 0 and spent + requested >= limit:
-            raw.setdefault(f"alert.{level}", json.dumps({
-                "level": level, "limit_usd": limit / 1e9, "reserved_and_spent_usd": spent / 1e9,
-                "requested_usd": requested / 1e9, "created_at": now,
-            }))
+            raw.setdefault(
+                f"alert.{level}",
+                json.dumps(
+                    {
+                        "level": level,
+                        "limit_usd": limit / 1e9,
+                        "reserved_and_spent_usd": spent / 1e9,
+                        "requested_usd": requested / 1e9,
+                        "created_at": now,
+                    }
+                ),
+            )
 
 
 class Execution:
@@ -166,8 +178,9 @@ class Execution:
         self.updates = {}
 
     async def describe(self, **kwargs):
-        return SimpleNamespace(status=SimpleNamespace(name=self.status), close_time=self.close_time,
-                               run_id=self.first_execution_run_id)
+        return SimpleNamespace(
+            status=SimpleNamespace(name=self.status), close_time=self.close_time, run_id=self.first_execution_run_id
+        )
 
     async def query(self, name, **kwargs):
         return {"stage": self.stage, "draft": "Reviewed draft"}
@@ -407,13 +420,17 @@ def test_completed_run_exposes_result_in_detail_not_listing(team_gateway):
 def test_gallery_inputs_are_validated_before_temporal(team_gateway, workflow, field):
     client, app = team_gateway
     workflows = app.state.sandbox_policy_set.policies["team"].workflows
-    workflows[workflow] = WorkflowPolicy.model_validate({
-        **workflows["ResearchWorkflow"].model_dump(by_alias=True),
-        "inputSchema": {
-            "type": "object", "properties": {field: {"type": "string", "minLength": 1, "pattern": r"\S"}},
-            "required": [field], "additionalProperties": False,
-        },
-    })
+    workflows[workflow] = WorkflowPolicy.model_validate(
+        {
+            **workflows["ResearchWorkflow"].model_dump(by_alias=True),
+            "inputSchema": {
+                "type": "object",
+                "properties": {field: {"type": "string", "minLength": 1, "pattern": r"\S"}},
+                "required": [field],
+                "additionalProperties": False,
+            },
+        }
+    )
     for value in ({}, {field: " "}, {field: 12}, {field: "valid", "typo": True}):
         response = start(client, workflow=workflow, input=value)
         assert response.status_code == 422
@@ -570,9 +587,11 @@ def test_provider_credentials_are_team_scoped_and_not_forwarded_as_client_auth(m
     )
     for team in ("a", "b"):
         monkeypatch.setenv(f"TEAM_{team.upper()}", f"fake-{team}")
-        _, _, headers, _ = asyncio.run(runtime._request_parts(
-            {"model": "primary", "messages": []}, "openai", "chat/completions", {"X-Sandbox-ID": team}
-        ))
+        _, _, headers, _ = asyncio.run(
+            runtime._request_parts(
+                {"model": "primary", "messages": []}, "openai", "chat/completions", {"X-Sandbox-ID": team}
+            )
+        )
         assert headers["Authorization"] == f"Bearer fake-{team}"
         assert "X-Sandbox-ID" not in headers
     assert asyncio.run(runtime.health("openai"))["status"] == "configured"

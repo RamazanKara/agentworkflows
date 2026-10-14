@@ -107,16 +107,26 @@ async def lookup_key(request: Request, digest: str) -> KeyRecord | None:
     if record["revoked_at"] is not None:
         raise HTTPException(401, detail={"reason": "api_key_revoked", "message": "This API key was revoked."})
     return KeyRecord(
-        sha256=digest, key_id=record["key_id"], sandbox=record["team"], role=record["role"],
-        project=record["project"], expires_at=record["expires_at"], name=record.get("name"),
+        sha256=digest,
+        key_id=record["key_id"],
+        sandbox=record["team"],
+        role=record["role"],
+        project=record["project"],
+        expires_at=record["expires_at"],
+        name=record.get("name"),
     )
 
 
 def key_receipt(request: Request, action: str, record: dict[str, Any]) -> None:
     event = {
-        "event": "team_key", "action_type": action, "chain_id": request.app.state.audit_chain_id,
-        "sandbox_id": request.state.sandbox_id, "request_id": request.state.request_id,
-        "principal": request.state.principal, "ts": time(), "key": public_record(record),
+        "event": "team_key",
+        "action_type": action,
+        "chain_id": request.app.state.audit_chain_id,
+        "sandbox_id": request.state.sandbox_id,
+        "request_id": request.state.request_id,
+        "principal": request.state.principal,
+        "ts": time(),
+        "key": public_record(record),
     }
     chain_audit_event(request, event)
     emit_audit_record(event)
@@ -134,7 +144,12 @@ async def change_key(request: Request, key_id: str, changes: dict[str, Any], act
     if principal.get("key_id") == key_id and ("revoked_at" in changes or changes.get("role", "admin") != "admin"):
         raise HTTPException(409, detail="You cannot revoke or demote the key you are currently using.")
     record = await storage_call(
-        request, "change_key", request.state.sandbox_id, key_id, principal.get("project") or "", changes,
+        request,
+        "change_key",
+        request.state.sandbox_id,
+        key_id,
+        principal.get("project") or "",
+        changes,
     )
     if record is None:
         raise HTTPException(404, detail="Key not found in your team or project.")

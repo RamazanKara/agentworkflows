@@ -344,7 +344,11 @@ class Settings:
                 url = urlsplit(oidc_url)
                 local = url.hostname in {"localhost", "127.0.0.1", "::1"}
                 if (
-                    not url.hostname or url.username or url.password or url.fragment or url.query
+                    not url.hostname
+                    or url.username
+                    or url.password
+                    or url.fragment
+                    or url.query
                     or (url.scheme != "https" and not (url.scheme == "http" and local))
                 ):
                     raise ValueError("OIDC URLs must use HTTPS (HTTP is allowed only on localhost)")
@@ -391,7 +395,9 @@ class Settings:
         if self.responses_retention_seconds <= 0:
             raise ValueError("responses_retention_seconds must be greater than zero")
         for name in (
-            "content_retention_seconds", "content_max_bytes", "run_record_retention_seconds",
+            "content_retention_seconds",
+            "content_max_bytes",
+            "run_record_retention_seconds",
             "audit_view_retention_seconds",
         ):
             if getattr(self, name) <= 0:

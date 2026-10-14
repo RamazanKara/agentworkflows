@@ -39,9 +39,14 @@ def group_role(settings: Settings, team: str, claims: dict[str, Any]) -> str:
 
 def access_policy_digest(settings: Settings, team: str) -> str:
     policy = [
-        settings.oidc_issuer, settings.oidc_client_id, settings.oidc_team_claim or settings.jwt_tenant_claim,
-        settings.oidc_project_claim, settings.oidc_role_claim, settings.oidc_default_role,
-        settings.oidc_groups_claim, bool(settings.oidc_group_role_mappings),
+        settings.oidc_issuer,
+        settings.oidc_client_id,
+        settings.oidc_team_claim or settings.jwt_tenant_claim,
+        settings.oidc_project_claim,
+        settings.oidc_role_claim,
+        settings.oidc_default_role,
+        settings.oidc_groups_claim,
+        bool(settings.oidc_group_role_mappings),
         settings.oidc_group_role_mappings.get(team, {}),
     ]
     return hashlib.sha256(json.dumps(policy, sort_keys=True).encode()).hexdigest()

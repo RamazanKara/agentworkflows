@@ -72,8 +72,12 @@ async def provider(request: Request) -> dict[str, Any]:
                 raise ValueError("invalid provider endpoint")
             url = urlsplit(data[name])
             local = url.hostname in {"localhost", "127.0.0.1", "::1"}
-            if not url.hostname or url.fragment or url.username or url.password or (
-                url.scheme != "https" and not (local and url.scheme == "http")
+            if (
+                not url.hostname
+                or url.fragment
+                or url.username
+                or url.password
+                or (url.scheme != "https" and not (local and url.scheme == "http"))
             ):
                 raise ValueError("invalid provider endpoint")
         if "S256" not in data.get("code_challenge_methods_supported", ["S256"]):
@@ -83,8 +87,12 @@ async def provider(request: Request) -> dict[str, Any]:
             503, detail="Company sign-in is unavailable. Check the OIDC provider configuration."
         ) from exc
     config = JwtConfig(
-        True, data["jwks_uri"], settings.oidc_issuer, settings.oidc_client_id,
-        settings.jwt_cache_seconds, settings.request_timeout_seconds,
+        True,
+        data["jwks_uri"],
+        settings.oidc_issuer,
+        settings.oidc_client_id,
+        settings.jwt_cache_seconds,
+        settings.request_timeout_seconds,
     )
     request.app.state.oidc_verifier = JwtVerifierCore(config, JwksCache(config))
     request.app.state.oidc_provider = (time() + settings.jwt_cache_seconds, data)
@@ -211,14 +219,26 @@ def register_auth_routes(app: FastAPI) -> None:
         data = await provider(request)
         options = cookie_options(request)
         state, nonce, verifier = (secrets.token_urlsafe(32) for _ in range(3))
-        await redis_call(request, "setex", session_key(request, state, "oidc"), 600,
-                         json.dumps({"nonce": nonce, "verifier": verifier}))
+        await redis_call(
+            request,
+            "setex",
+            session_key(request, state, "oidc"),
+            600,
+            json.dumps({"nonce": nonce, "verifier": verifier}),
+        )
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
-        query = urlencode({
-            "response_type": "code", "client_id": app.state.settings.oidc_client_id,
-            "redirect_uri": app.state.settings.oidc_redirect_url, "scope": app.state.settings.oidc_scopes,
-            "state": state, "nonce": nonce, "code_challenge": challenge, "code_challenge_method": "S256",
-        })
+        query = urlencode(
+            {
+                "response_type": "code",
+                "client_id": app.state.settings.oidc_client_id,
+                "redirect_uri": app.state.settings.oidc_redirect_url,
+                "scope": app.state.settings.oidc_scopes,
+                "state": state,
+                "nonce": nonce,
+                "code_challenge": challenge,
+                "code_challenge_method": "S256",
+            }
+        )
         separator = "&" if "?" in data["authorization_endpoint"] else "?"
         response = RedirectResponse(data["authorization_endpoint"] + separator + query, 302)
         response.set_cookie(STATE_COOKIE, state, max_age=600, httponly=True, **options)
@@ -251,8 +271,11 @@ def register_auth_routes(app: FastAPI) -> None:
         data = await provider(request)
         settings = app.state.settings
         form = {
-            "grant_type": "authorization_code", "code": code, "client_id": settings.oidc_client_id,
-            "redirect_uri": settings.oidc_redirect_url, "code_verifier": transaction["verifier"],
+            "grant_type": "authorization_code",
+            "code": code,
+            "client_id": settings.oidc_client_id,
+            "redirect_uri": settings.oidc_redirect_url,
+            "code_verifier": transaction["verifier"],
         }
         auth = None
         if settings.oidc_client_secret:

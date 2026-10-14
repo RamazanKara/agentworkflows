@@ -98,18 +98,30 @@ def register_team_routes(app: FastAPI) -> None:
     register_spend_routes(app)
     register_team_data_routes(app)
 
-    @app.get("/v1/team/telemetry", tags=["observability"], response_model=TeamTelemetry,
-             summary="Inspect OTLP export configuration (team admin)")
+    @app.get(
+        "/v1/team/telemetry",
+        tags=["observability"],
+        response_model=TeamTelemetry,
+        summary="Inspect OTLP export configuration (team admin)",
+    )
     async def telemetry(request: Request) -> dict[str, Any]:
         from app.team_settings import require_settings_admin
 
         require_settings_admin(request)
         settings = app.state.settings
-        return {"traces_enabled": settings.otel_tracing_enabled, "metrics_enabled": settings.otel_metrics_enabled,
-                "protocol": "http/protobuf", "service_name": settings.otel_service_name}
+        return {
+            "traces_enabled": settings.otel_tracing_enabled,
+            "metrics_enabled": settings.otel_metrics_enabled,
+            "protocol": "http/protobuf",
+            "service_name": settings.otel_service_name,
+        }
 
-    @app.get("/v1/team/sso", tags=["teams"], response_model=TeamSSO,
-             summary="Inspect this team's company sign-in policy (unrestricted admin only)")
+    @app.get(
+        "/v1/team/sso",
+        tags=["teams"],
+        response_model=TeamSSO,
+        summary="Inspect this team's company sign-in policy (unrestricted admin only)",
+    )
     async def team_sso(request: Request) -> dict[str, Any]:
         principal = require_role(request, "admin")
         if principal.get("project"):

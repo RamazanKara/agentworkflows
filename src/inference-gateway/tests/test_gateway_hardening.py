@@ -355,9 +355,7 @@ LONE_SURROGATE = "\\ud800"  # the JSON escape, as a client would send it
 )
 def test_lone_surrogates_in_rejected_input_are_a_422_not_a_500(path, body):
     client = TestClient(create_app(_tool_settings()), raise_server_exceptions=False)
-    response = client.post(
-        path, content=(body % LONE_SURROGATE).encode(), headers={"Content-Type": "application/json"}
-    )
+    response = client.post(path, content=(body % LONE_SURROGATE).encode(), headers={"Content-Type": "application/json"})
     assert response.status_code == 422
     assert response.json()["detail"]
 

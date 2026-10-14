@@ -275,7 +275,7 @@ def test_audit_sql_roundtrip_keeps_hash_payload_and_original_verification(team_g
     assert "event" not in params[5].obj
     reader = connection.cursor.return_value.__enter__.return_value
     reader.fetchmany.side_effect = [[(1, params[2], params[3], params[4].obj, params[5].obj)], []]
-    entry, = store.audit_entries("team", None, True)
+    (entry,) = store.audit_entries("team", None, True)
     assert check_entry(entry, None) is None
     entry["event"]["text"] = "edited"
     assert check_entry(entry, None) == "record_hash_mismatch"

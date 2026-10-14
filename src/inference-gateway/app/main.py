@@ -402,6 +402,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_container_routes(app, resolved)
 
     if resolved.storage_backend == "postgres":
+
         async def _storage_shutdown() -> None:
             task = app.state.storage_retention_task
             task.cancel()

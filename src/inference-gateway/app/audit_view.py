@@ -166,8 +166,15 @@ def in_range(event: dict[str, Any], start: float | None, end: float | None) -> b
 
 
 def list_events(
-    request: Request, start: float | None, end: float | None, event_type: str | None,
-    actor: str | None, project: str | None, run_id: str | None, cursor: str | None, limit: int,
+    request: Request,
+    start: float | None,
+    end: float | None,
+    event_type: str | None,
+    actor: str | None,
+    project: str | None,
+    run_id: str | None,
+    cursor: str | None,
+    limit: int,
 ) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     for entry in read_entries(request, cursor):
@@ -238,9 +245,13 @@ def verify_events(request: Request, start: float | None, end: float | None) -> d
 def require_audit_admin(request: Request, response: Response, start: float | None, end: float | None) -> None:
     principal = require_role(request, "admin")
     if principal.get("project"):
-        raise HTTPException(403, detail={
-            "reason": "team_role_required", "message": "Use a team admin credential without a project restriction.",
-        })
+        raise HTTPException(
+            403,
+            detail={
+                "reason": "team_role_required",
+                "message": "Use a team admin credential without a project restriction.",
+            },
+        )
     if start is not None and end is not None and start > end:
         raise HTTPException(422, detail={"reason": "audit_range_invalid", "message": "from must be at or before to."})
     response.headers["Cache-Control"] = "no-store"
@@ -250,9 +261,13 @@ async def read_view(function: Callable[..., dict[str, Any]], *args: Any) -> dict
     try:
         return await asyncio.to_thread(function, *args)
     except (RedisError, PostgresError, OSError) as exc:
-        raise HTTPException(503, detail={
-            "reason": "audit_view_unavailable", "message": "Audit storage is unavailable. Retry after recovery.",
-        }) from exc
+        raise HTTPException(
+            503,
+            detail={
+                "reason": "audit_view_unavailable",
+                "message": "Audit storage is unavailable. Retry after recovery.",
+            },
+        ) from exc
 
 
 Timestamp = Annotated[float | None, Query(ge=0, allow_inf_nan=False, description="Inclusive Unix timestamp in seconds")]
@@ -260,11 +275,15 @@ Timestamp = Annotated[float | None, Query(ge=0, allow_inf_nan=False, description
 
 def register_audit_routes(app: FastAPI) -> None:
     @app.get(
-        "/v1/team/audit", tags=["teams"], summary="Read the team's retained audit events, newest first",
-        response_model=AuditPage, responses={403: {"description": "Team admin role required"}},
+        "/v1/team/audit",
+        tags=["teams"],
+        summary="Read the team's retained audit events, newest first",
+        response_model=AuditPage,
+        responses={403: {"description": "Team admin role required"}},
     )
     async def audit_list(
-        request: Request, response: Response,
+        request: Request,
+        response: Response,
         start: Annotated[float | None, Query(alias="from", ge=0, allow_inf_nan=False)] = None,
         to: Timestamp = None,
         event_type: Annotated[str | None, Query(max_length=128)] = None,
@@ -280,11 +299,15 @@ def register_audit_routes(app: FastAPI) -> None:
         return await read_view(list_events, request, start, to, event_type, actor, project, run_id, cursor, limit)
 
     @app.get(
-        "/v1/team/audit/verify", tags=["teams"], summary="Verify original receipts and the team projection chain",
-        response_model=AuditVerification, responses={403: {"description": "Team admin role required"}},
+        "/v1/team/audit/verify",
+        tags=["teams"],
+        summary="Verify original receipts and the team projection chain",
+        response_model=AuditVerification,
+        responses={403: {"description": "Team admin role required"}},
     )
     async def audit_verify(
-        request: Request, response: Response,
+        request: Request,
+        response: Response,
         start: Annotated[float | None, Query(alias="from", ge=0, allow_inf_nan=False)] = None,
         to: Timestamp = None,
     ) -> dict[str, Any]:

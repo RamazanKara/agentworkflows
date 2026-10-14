@@ -243,7 +243,9 @@ def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
             "description": "API key header accepted by gateway middleware when API key authentication is enabled.",
         }
         security_schemes["SessionCookieAuth"] = {
-            "type": "apiKey", "in": "cookie", "name": "aw_session",
+            "type": "apiKey",
+            "in": "cookie",
+            "name": "aw_session",
             "description": "Opaque console session; non-GET requests also require the double-submit CSRF token.",
         }
         security_schemes["CsrfToken"] = {"type": "apiKey", "in": "header", "name": "X-CSRF-Token"}
@@ -276,7 +278,8 @@ def _install_openapi_contract(app: FastAPI, settings: Settings) -> None:
                         [{"WebhookSignature": []}, {"GitHubSignature": []}]
                         if path.startswith("/v1/hooks/")
                         else [
-                            {"BearerAuth": []}, {"ApiKeyAuth": []},
+                            {"BearerAuth": []},
+                            {"ApiKeyAuth": []},
                             {"SessionCookieAuth": [], **({"CsrfToken": []} if method.lower() != "get" else {})},
                         ]
                     )
@@ -338,7 +341,10 @@ class ApiKeyOutcome:
 
 
 def _resolve_api_key(
-    request: Request, settings: Settings, record_set: KeyRecordSet, digest: str | None = None,
+    request: Request,
+    settings: Settings,
+    record_set: KeyRecordSet,
+    digest: str | None = None,
 ) -> ApiKeyOutcome:
     """Resolve the presented API key against key records and flat hashes.
 
@@ -364,7 +370,10 @@ def _resolve_api_key(
 
 
 async def authenticate_credential(
-    request: Request, token: str | None = None, *, digest: str | None = None,
+    request: Request,
+    token: str | None = None,
+    *,
+    digest: str | None = None,
 ) -> JSONResponse | None:
     settings = request.app.state.settings
     allow_jwt = token is not None or request.headers.get("authorization", "").strip().lower().startswith("bearer ")
@@ -374,10 +383,14 @@ async def authenticate_credential(
         return _auth_failure_response(request, "invalid_or_missing_api_key")
     outcome = (
         _resolve_api_key(request, settings, request.app.state.key_record_set, digest)
-        if settings.api_key_auth_enabled else ApiKeyOutcome(False, None, False)
+        if settings.api_key_auth_enabled
+        else ApiKeyOutcome(False, None, False)
     )
-    if not outcome.valid and not outcome.expired and digest and (
-        request.app.state.budget_tracker.backend == "redis" or request.app.state.storage.backend == "postgres"
+    if (
+        not outcome.valid
+        and not outcome.expired
+        and digest
+        and (request.app.state.budget_tracker.backend == "redis" or request.app.state.storage.backend == "postgres")
     ):
         from app.managed_keys import lookup_key
 

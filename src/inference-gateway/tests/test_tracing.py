@@ -145,7 +145,9 @@ def test_unknown_methods_and_unmatched_paths_do_not_create_metric_labels():
         point = count.data.data_points[0]
         assert point.value == 10
         assert dict(point.attributes) == {
-            "http.request.method": "_OTHER", "http.route": "/unmatched", "http.response.status_code": 404,
+            "http.request.method": "_OTHER",
+            "http.route": "/unmatched",
+            "http.response.status_code": 404,
         }
         assert "SECRET" not in str(data) and "/private/" not in str(data)
     finally:
@@ -171,7 +173,9 @@ def test_inbound_trace_propagates_gateway_span_to_runtime_without_credentials(mo
 
     async def dispatch():
         _, _, headers, _ = await runtime._request_parts(
-            {"messages": [], "model": "default-model"}, backend, "chat/completions",
+            {"messages": [], "model": "default-model"},
+            backend,
+            "chat/completions",
             {"traceparent": inbound, "Authorization": "Bearer caller-private-key", "baggage": "secret=value"},
         )
         forwarded.update(headers)
@@ -180,7 +184,7 @@ def test_inbound_trace_propagates_gateway_span_to_runtime_without_credentials(mo
     try:
         asyncio.run(trace_request(provider.get_tracer("test"), request, dispatch))
         provider.force_flush()
-        span, = exporter.get_finished_spans()
+        (span,) = exporter.get_finished_spans()
         assert span.parent.span_id == int("00f067aa0ba902b7", 16)
         from opentelemetry.trace import get_current_span
 
@@ -209,7 +213,7 @@ def test_failed_trace_redacts_exception_text_and_unmatched_path():
         with pytest.raises(RuntimeError):
             asyncio.run(trace_request(provider.get_tracer("test"), request, dispatch))
         provider.force_flush()
-        span, = exporter.get_finished_spans()
+        (span,) = exporter.get_finished_spans()
         assert span.name == "POST /unmatched" and span.status.status_code.name == "ERROR"
         assert not span.events and span.status.description is None
         assert "secret" not in str(span.attributes)

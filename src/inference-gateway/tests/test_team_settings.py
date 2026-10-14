@@ -25,7 +25,8 @@ def settings_gateway(team_gateway):
     client, app = team_gateway
     primary, backup = app.state.model_routing_policy.routes
     app.state.model_routing_policy = replace(
-        app.state.model_routing_policy, routes=(replace(primary, aliases=("research",)), backup),
+        app.state.model_routing_policy,
+        routes=(replace(primary, aliases=("research",)), backup),
     )
     return client, app
 
@@ -36,7 +37,8 @@ def update(client, fields, revision=0):
 
 def chat(client, headers=None, model="research"):
     return client.post(
-        "/v1/chat/completions", headers=headers or auth("builder"),
+        "/v1/chat/completions",
+        headers=headers or auth("builder"),
         json={"model": model, "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}]},
     )
 
@@ -47,8 +49,13 @@ def test_layering_defaults_overrides_and_team_isolation(settings_gateway):
     initial = client.get(PATH, headers=auth("admin"))
     assert initial.headers["etag"] == '"0"'
     assert initial.json()["fields"]["cost_limit_usd"] == {"value": 1, "source": "policy", "policy_default": 1}
-    changes = {"cost_limit_usd": 20, "project_budgets.default": 10, WORKFLOW + "token_limit": 200,
-               WORKFLOW + "allowed_providers": ["anthropic"], "model_routes.research": "backup"}
+    changes = {
+        "cost_limit_usd": 20,
+        "project_budgets.default": 10,
+        WORKFLOW + "token_limit": 200,
+        WORKFLOW + "allowed_providers": ["anthropic"],
+        "model_routes.research": "backup",
+    }
     saved = update(client, changes)
     assert saved.status_code == 200, saved.text
     assert saved.headers["etag"] == '"1"'
@@ -73,7 +80,8 @@ def test_reset_one_field_uses_current_yaml_default_and_preserves_other_overrides
     client, app = settings_gateway
     assert update(client, {"cost_limit_usd": 20, "project_budgets.default": 10}).status_code == 200
     app.state.sandbox_policy_set.policies["team"] = replace(
-        app.state.sandbox_policy_set.policies["team"], cost_limit_usd=3,
+        app.state.sandbox_policy_set.policies["team"],
+        cost_limit_usd=3,
     )
     response = client.delete(PATH + "/cost_limit_usd", headers={**auth("admin"), "If-Match": '"1"'})
     assert response.status_code == 200
@@ -103,8 +111,9 @@ def test_compare_and_set_checks_revision_inside_redis(settings_gateway, monkeypa
 
     def race(script, numkeys, key, *args):
         if script == CHANGE:
-            store.data[key] = json.dumps({"revision": 1, "updated_by": "other-admin", "updated_at": 1,
-                                          "overrides": {"cost_limit_usd": 7}})
+            store.data[key] = json.dumps(
+                {"revision": 1, "updated_by": "other-admin", "updated_at": 1, "overrides": {"cost_limit_usd": 7}}
+            )
         return original(script, numkeys, key, *args)
 
     monkeypatch.setattr(store, "eval", race)
@@ -123,23 +132,39 @@ def test_settings_require_admin_for_all_methods(settings_gateway, role):
 
 def test_project_bound_admin_cannot_edit_team_settings(settings_gateway):
     client, app = settings_gateway
-    app.state.key_record_set = replace(app.state.key_record_set, records=tuple(
-        replace(record, project="private") if record.key_id == "admin" else record
-        for record in app.state.key_record_set.records
-    ))
+    app.state.key_record_set = replace(
+        app.state.key_record_set,
+        records=tuple(
+            replace(record, project="private") if record.key_id == "admin" else record
+            for record in app.state.key_record_set.records
+        ),
+    )
     assert update(client, {"cost_limit_usd": 20}).status_code == 403
 
 
-@pytest.mark.parametrize(("field", "value"), [
-    ("cost_limit_usd", -1), ("cost_limit_usd", True), ("cost_limit_usd", "12"),
-    ("project_budgets.unknown", 1), ("project_budgets.default", -1),
-    (WORKFLOW + "token_limit", 1.5), (WORKFLOW + "token_limit", True), (WORKFLOW + "token_limit", -1),
-    (WORKFLOW + "cost_limit_usd", -1), (WORKFLOW + "approval_threshold_usd", -1),
-    (WORKFLOW + "approval_required", "true"), (WORKFLOW + "approver_role", "owner"),
-    (WORKFLOW + "allowed_providers", ["unknown"]), (WORKFLOW + "allowed_providers", "openai"),
-    ("model_routes.research", "unknown"), ("model_routes.unknown", "backup"),
-    ("provider_credentials", {"openai": "secret"}), ("connection.credential_env", "secret"),
-])
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("cost_limit_usd", -1),
+        ("cost_limit_usd", True),
+        ("cost_limit_usd", "12"),
+        ("project_budgets.unknown", 1),
+        ("project_budgets.default", -1),
+        (WORKFLOW + "token_limit", 1.5),
+        (WORKFLOW + "token_limit", True),
+        (WORKFLOW + "token_limit", -1),
+        (WORKFLOW + "cost_limit_usd", -1),
+        (WORKFLOW + "approval_threshold_usd", -1),
+        (WORKFLOW + "approval_required", "true"),
+        (WORKFLOW + "approver_role", "owner"),
+        (WORKFLOW + "allowed_providers", ["unknown"]),
+        (WORKFLOW + "allowed_providers", "openai"),
+        ("model_routes.research", "unknown"),
+        ("model_routes.unknown", "backup"),
+        ("provider_credentials", {"openai": "secret"}),
+        ("connection.credential_env", "secret"),
+    ],
+)
 def test_validation_is_field_specific_and_atomic(settings_gateway, field, value):
     client, _ = settings_gateway
     response = update(client, {"project_budgets.private": 2, field: value})
@@ -152,8 +177,11 @@ def test_validation_is_field_specific_and_atomic(settings_gateway, field, value)
 @pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity", "1" + "0" * 400])
 def test_non_finite_and_oversized_budgets_are_422(settings_gateway, value):
     client, _ = settings_gateway
-    response = client.patch(PATH, headers={**auth("admin"), "If-Match": "0", "Content-Type": "application/json"},
-                            content='{"fields":{"cost_limit_usd":' + value + '}}')
+    response = client.patch(
+        PATH,
+        headers={**auth("admin"), "If-Match": "0", "Content-Type": "application/json"},
+        content='{"fields":{"cost_limit_usd":' + value + "}}",
+    )
     assert response.status_code == 422
 
 
@@ -210,9 +238,13 @@ def initialized_run(client):
     return run, path, headers
 
 
-@pytest.mark.parametrize(("field", "reason"), [
-    ("cost_limit_usd", "workflow_cost_budget_exceeded"), ("token_limit", "workflow_token_budget_exceeded"),
-])
+@pytest.mark.parametrize(
+    ("field", "reason"),
+    [
+        ("cost_limit_usd", "workflow_cost_budget_exceeded"),
+        ("token_limit", "workflow_token_budget_exceeded"),
+    ],
+)
 def test_active_run_honors_live_caps_and_initialization_stays_idempotent(settings_gateway, field, reason):
     client, app = settings_gateway
     run, path, headers = initialized_run(client)
@@ -276,7 +308,8 @@ def test_fallback_rechecks_provider_settings_after_a_slow_attempt(settings_gatew
     client, app = settings_gateway
     primary, backup = app.state.model_routing_policy.routes
     app.state.model_routing_policy = replace(
-        app.state.model_routing_policy, routes=(replace(primary, fallbacks=("backup",)), backup),
+        app.state.model_routing_policy,
+        routes=(replace(primary, fallbacks=("backup",)), backup),
     )
     run, _, _ = initialized_run(client)
     calls = []
@@ -303,10 +336,14 @@ def test_approval_role_is_saved_when_run_starts(settings_gateway):
     assert client.post(path + "/approve", headers=auth("admin"), json={}).status_code == 200
 
 
-@pytest.mark.parametrize(("changes", "automatic"), [
-    ({"approval_required": False}, True), ({"approval_threshold_usd": 1}, True),
-    ({"approval_required": True, "approval_threshold_usd": 0}, False),
-])
+@pytest.mark.parametrize(
+    ("changes", "automatic"),
+    [
+        ({"approval_required": False}, True),
+        ({"approval_threshold_usd": 1}, True),
+        ({"approval_required": True, "approval_threshold_usd": 0}, False),
+    ],
+)
 def test_approval_requirement_and_threshold_are_saved_at_start(settings_gateway, changes, automatic):
     client, app = settings_gateway
     assert update(client, {WORKFLOW + key: value for key, value in changes.items()}).status_code == 200
@@ -358,7 +395,8 @@ def test_removed_route_can_be_inspected_and_reset(settings_gateway):
     client, app = settings_gateway
     assert update(client, {"model_routes.research": "backup"}).status_code == 200
     app.state.model_routing_policy = replace(
-        app.state.model_routing_policy, routes=app.state.model_routing_policy.routes[:1],
+        app.state.model_routing_policy,
+        routes=app.state.model_routing_policy.routes[:1],
     )
     assert chat(client).status_code == 400
     assert client.get(PATH, headers=auth("admin")).json()["fields"]["model_routes.research"]["value"] == "backup"
@@ -413,7 +451,8 @@ def test_failed_attempts_the_provider_never_processed_return_the_run_budget(sett
     client, app = settings_gateway
     primary, backup = app.state.model_routing_policy.routes
     app.state.model_routing_policy = replace(
-        app.state.model_routing_policy, routes=(replace(primary, fallbacks=("backup",)), backup),
+        app.state.model_routing_policy,
+        routes=(replace(primary, fallbacks=("backup",)), backup),
     )
     run, _, _ = initialized_run(client)
 

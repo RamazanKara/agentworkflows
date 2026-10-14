@@ -41,7 +41,9 @@ def test_sign_in_throttle_cannot_be_bypassed_by_team_or_forwarded_headers(auth_g
     app.state.rate_limiter = InMemoryRateLimiter(app.state.settings)
     for index in range(3):
         response = client.request(
-            method, f"/v1/auth/{path}", json={"key": "invalid"} if path == "session" else None,
+            method,
+            f"/v1/auth/{path}",
+            json={"key": "invalid"} if path == "session" else None,
             headers={"X-Sandbox-ID": f"team-{index}", "X-Forwarded-For": f"192.0.2.{index}"},
         )
         assert (response.status_code == 429) is (index == 2)
@@ -66,8 +68,13 @@ def test_sign_in_throttle_fails_closed_on_store_outage(auth_gateway, monkeypatch
 
 def test_access_log_omits_oidc_codes_and_state():
     record = logging.LogRecord(
-        "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d',
-        ("127.0.0.1", "GET", "/v1/auth/callback?code=private-code&state=private-state", "1.1", 303), None,
+        "uvicorn.access",
+        logging.INFO,
+        "",
+        0,
+        '%s - "%s %s HTTP/%s" %d',
+        ("127.0.0.1", "GET", "/v1/auth/callback?code=private-code&state=private-state", "1.1", 303),
+        None,
     )
     assert redact_auth_query(record)
     assert "/v1/auth/callback" in record.getMessage()
@@ -111,7 +118,8 @@ def test_cookie_writes_require_double_submit_csrf(auth_gateway, case):
         if case == "wrong_cookie":
             client.cookies.set(CSRF_COOKIE, "wrong", domain="localhost.local", path="/")
     for path, body in (
-        ("/v1/team/keys", {"name": "denied"}), ("/v1/auth/logout", None),
+        ("/v1/team/keys", {"name": "denied"}),
+        ("/v1/auth/logout", None),
         ("/v1/auth/session", {"key": "viewer"}),
     ):
         response = client.post(path, headers=headers, json=body)
@@ -194,9 +202,7 @@ def test_sign_in_rejects_cross_site_posts_and_local_cookie_configuration(auth_ga
 def test_sign_in_behind_tls_ingress_and_whitespace_key(auth_gateway):
     _, app, _, _ = auth_gateway
     client = TestClient(app, base_url="http://gateway.example")
-    response = client.post(
-        "/v1/auth/session", headers={"Origin": "https://gateway.example"}, json={"key": "admin"}
-    )
+    response = client.post("/v1/auth/session", headers={"Origin": "https://gateway.example"}, json={"key": "admin"})
     assert response.status_code == 200
     assert "Secure" in response.headers["set-cookie"]
     assert client.post("/v1/auth/session", headers=auth("admin"), json={"key": " "}).status_code == 401
@@ -205,9 +211,14 @@ def test_sign_in_behind_tls_ingress_and_whitespace_key(auth_gateway):
 def test_pasted_jwt_session_cannot_outlive_the_token(auth_gateway):
     _, _, store, build = auth_gateway
     client, app = build(jwt_auth_enabled=True, jwt_jwks_url="https://idp.example/keys", jwt_tenant_claim="team")
-    app.state.jwt_verifier.verify = AsyncMock(return_value={
-        "sub": "alice", "team": "team", "role": "viewer", "exp": store.now + 60,
-    })
+    app.state.jwt_verifier.verify = AsyncMock(
+        return_value={
+            "sub": "alice",
+            "team": "team",
+            "role": "viewer",
+            "exp": store.now + 60,
+        }
+    )
     login(client, "signed.jwt.token")
     assert "signed.jwt.token" not in repr(store.data)
     assert client.get("/v1/team").json()["role"] == "viewer"
@@ -218,7 +229,8 @@ def test_pasted_jwt_session_cannot_outlive_the_token(auth_gateway):
 def test_sign_in_is_off_by_default():
     client = TestClient(create_app(_tool_settings()))
     assert client.get("/v1/auth/config").json() == {
-        "api_key": False, "jwt": False,
+        "api_key": False,
+        "jwt": False,
         "oidc": {"enabled": False, "provider_name": None, "login_url": None},
     }
     assert client.post("/v1/auth/session", json={"key": "admin"}).status_code == 404
@@ -234,23 +246,35 @@ def signing_key():
 def oidc(auth_gateway, monkeypatch, signing_key):
     _, _, store, build = auth_gateway
     client, app = build(
-        oidc_issuer="https://idp.example", oidc_client_id="console", oidc_client_secret="client-secret",
-        oidc_redirect_url="https://localhost/v1/auth/callback", jwt_tenant_claim="team",
+        oidc_issuer="https://idp.example",
+        oidc_client_id="console",
+        oidc_client_secret="client-secret",
+        oidc_redirect_url="https://localhost/v1/auth/callback",
+        jwt_tenant_claim="team",
     )
     fixture = {
-        "claims": {}, "nonce": "", "challenge": "", "algorithm": "RS256",
-        "jwks_status": 200, "exchange_count": 0,
+        "claims": {},
+        "nonce": "",
+        "challenge": "",
+        "algorithm": "RS256",
+        "jwks_status": 200,
+        "exchange_count": 0,
     }
     public_key = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(signing_key.public_key()))
     public_key.update(kid="current", alg="RS256")
 
     def respond(request):
         if request.url.path == "/.well-known/openid-configuration":
-            return httpx.Response(200, json={
-                "issuer": "https://idp.example", "authorization_endpoint": "https://idp.example/authorize",
-                "token_endpoint": "https://idp.example/token", "jwks_uri": "https://idp.example/keys",
-                "code_challenge_methods_supported": ["S256"],
-            })
+            return httpx.Response(
+                200,
+                json={
+                    "issuer": "https://idp.example",
+                    "authorization_endpoint": "https://idp.example/authorize",
+                    "token_endpoint": "https://idp.example/token",
+                    "jwks_uri": "https://idp.example/keys",
+                    "code_challenge_methods_supported": ["S256"],
+                },
+            )
         if request.url.path == "/keys":
             return httpx.Response(fixture["jwks_status"], json={"keys": [public_key]})
         assert request.url.path == "/token"
@@ -266,8 +290,14 @@ def oidc(auth_gateway, monkeypatch, signing_key):
         else:
             assert "authorization" not in request.headers and "client_secret" not in form
         claims = {
-            "iss": "https://idp.example", "aud": "console", "sub": "alice", "iat": int(time()),
-            "exp": int(time()) + 300, "nonce": fixture["nonce"], "team": "team", **fixture["claims"],
+            "iss": "https://idp.example",
+            "aud": "console",
+            "sub": "alice",
+            "iat": int(time()),
+            "exp": int(time()) + 300,
+            "nonce": fixture["nonce"],
+            "team": "team",
+            **fixture["claims"],
         }
         for name in fixture.get("omit", []):
             claims.pop(name, None)
@@ -318,8 +348,13 @@ def test_oidc_code_pkce_nonce_session_and_public_configuration(oidc):
 
 def test_public_oidc_client_and_custom_claim_mapping(oidc):
     client, app, _, fixture, start = oidc
-    app.state.settings = replace(app.state.settings, oidc_client_secret="", oidc_team_claim="tenant",
-                                 oidc_role_claim="access", oidc_project_claim="workspace")
+    app.state.settings = replace(
+        app.state.settings,
+        oidc_client_secret="",
+        oidc_team_claim="tenant",
+        oidc_role_claim="access",
+        oidc_project_claim="workspace",
+    )
     fixture["claims"] = {"tenant": "team", "access": "builder", "workspace": "private"}
     assert client.get("/v1/auth/callback", params=start(), follow_redirects=False).status_code == 303
     assert client.get("/v1/team").json()["projects"] == ["private"]
@@ -362,13 +397,27 @@ def test_browser_callback_failures_return_to_the_console(oidc):
     assert not client.cookies.get(SESSION_COOKIE)
 
 
-@pytest.mark.parametrize("claims", [
-    {"iss": "https://wrong.example"}, {"aud": "other"}, {"exp": 1}, {"nonce": "wrong"},
-    {"sub": ""}, {"iat": "invalid"}, {"exp": "9999999999"}, {"nbf": 9999999999},
-    {"role": "owner"}, {"role": None},
-    {"team": "unknown"}, {"team": None}, {"project": "unknown"}, {"project": []},
-    {"aud": ["console", "other"]}, {"azp": "other"},
-])
+@pytest.mark.parametrize(
+    "claims",
+    [
+        {"iss": "https://wrong.example"},
+        {"aud": "other"},
+        {"exp": 1},
+        {"nonce": "wrong"},
+        {"sub": ""},
+        {"iat": "invalid"},
+        {"exp": "9999999999"},
+        {"nbf": 9999999999},
+        {"role": "owner"},
+        {"role": None},
+        {"team": "unknown"},
+        {"team": None},
+        {"project": "unknown"},
+        {"project": []},
+        {"aud": ["console", "other"]},
+        {"azp": "other"},
+    ],
+)
 def test_id_token_validation_failures(oidc, claims):
     client, _, _, fixture, start = oidc
     fixture["claims"] = claims
@@ -387,9 +436,7 @@ def test_required_id_token_claims(oidc, field):
 def test_browser_sees_unavailable_when_signing_keys_are_down(oidc):
     client, _, _, fixture, start = oidc
     fixture["jwks_status"] = 503
-    response = client.get(
-        "/v1/auth/callback", params=start(), headers={"accept": "text/html"}, follow_redirects=False
-    )
+    response = client.get("/v1/auth/callback", params=start(), headers={"accept": "text/html"}, follow_redirects=False)
     assert response.headers["location"] == "/console/?signin_error=unavailable"
 
 
@@ -409,9 +456,12 @@ def test_bad_signature_algorithm_and_jwks_outage(oidc, failure):
 
 def test_oidc_settings_from_environment_and_secret_repr(monkeypatch):
     for name, value in {
-        "OIDC_ISSUER": "https://idp.example", "OIDC_CLIENT_ID": "console",
-        "OIDC_CLIENT_SECRET": "never-print-me", "OIDC_REDIRECT_URL": "https://gateway.example/v1/auth/callback",
-        "JWT_TENANT_CLAIM": "team", "SANDBOX_BUDGET_BACKEND": "redis",
+        "OIDC_ISSUER": "https://idp.example",
+        "OIDC_CLIENT_ID": "console",
+        "OIDC_CLIENT_SECRET": "never-print-me",
+        "OIDC_REDIRECT_URL": "https://gateway.example/v1/auth/callback",
+        "JWT_TENANT_CLAIM": "team",
+        "SANDBOX_BUDGET_BACKEND": "redis",
     }.items():
         monkeypatch.setenv(name, value)
     settings = Settings.from_env()
@@ -428,12 +478,18 @@ def test_oidc_settings_from_environment_and_secret_repr(monkeypatch):
 @pytest.mark.parametrize("role", ["admin", "builder", "approver", "viewer"])
 def test_group_mapping_uses_exact_team_scoped_groups_instead_of_role_claim(oidc, role):
     client, app, store, fixture, start = oidc
-    app.state.settings = replace(app.state.settings, oidc_groups_claim="company.groups", oidc_group_role_mappings={
-        "team": {"Engineering": role, "Other matching group": role}, "other": {"Unrelated": "admin"},
-    })
+    app.state.settings = replace(
+        app.state.settings,
+        oidc_groups_claim="company.groups",
+        oidc_group_role_mappings={
+            "team": {"Engineering": role, "Other matching group": role},
+            "other": {"Unrelated": "admin"},
+        },
+    )
     fixture["claims"] = {
         "company.groups": ["Unrelated", "Engineering", "Engineering", "Other matching group"],
-        "role": "invalid-and-ignored", "project": "private",
+        "role": "invalid-and-ignored",
+        "project": "private",
     }
     response = client.get("/v1/auth/callback", params=start(), follow_redirects=False)
     assert response.status_code == 303
@@ -444,13 +500,32 @@ def test_group_mapping_uses_exact_team_scoped_groups_instead_of_role_claim(oidc,
     assert "Engineering" not in repr(store.data)
 
 
-@pytest.mark.parametrize("groups", [None, "builders", {}, 123, [], [None], [1], [""], [" "],
-                                    ["Builders"], [" builders"], ["unmapped"], ["builders", "reviewers"]])
+@pytest.mark.parametrize(
+    "groups",
+    [
+        None,
+        "builders",
+        {},
+        123,
+        [],
+        [None],
+        [1],
+        [""],
+        [" "],
+        ["Builders"],
+        [" builders"],
+        ["unmapped"],
+        ["builders", "reviewers"],
+    ],
+)
 def test_group_mapping_rejects_missing_malformed_unmapped_and_conflicting_groups(oidc, groups):
     client, app, _, fixture, start = oidc
-    app.state.settings = replace(app.state.settings, oidc_group_role_mappings={
-        "team": {"builders": "builder", "reviewers": "approver"},
-    })
+    app.state.settings = replace(
+        app.state.settings,
+        oidc_group_role_mappings={
+            "team": {"builders": "builder", "reviewers": "approver"},
+        },
+    )
     fixture["claims"] = {"role": "admin"}
     if groups is not None:
         fixture["claims"]["groups"] = groups
@@ -469,9 +544,13 @@ def test_group_mapping_does_not_fall_back_for_an_unmapped_team(oidc):
 @pytest.mark.parametrize("claims", [{"team": "unknown"}, {"project": "unknown"}, {"project": []}])
 def test_mapped_groups_still_require_an_existing_team_and_project(oidc, claims):
     client, app, _, fixture, start = oidc
-    app.state.settings = replace(app.state.settings, oidc_group_role_mappings={
-        "team": {"admins": "admin"}, "unknown": {"admins": "admin"},
-    })
+    app.state.settings = replace(
+        app.state.settings,
+        oidc_group_role_mappings={
+            "team": {"admins": "admin"},
+            "unknown": {"admins": "admin"},
+        },
+    )
     fixture["claims"] = {"groups": ["admins"], **claims}
     assert client.get("/v1/auth/callback", params=start(), follow_redirects=False).status_code == 401
 
@@ -479,15 +558,27 @@ def test_mapped_groups_still_require_an_existing_team_and_project(oidc, claims):
 def test_bearer_jwt_and_new_jwt_sessions_keep_their_own_authorization(oidc, signing_key):
     client, app, _, _, _ = oidc
     app.state.settings = replace(
-        app.state.settings, oidc_group_role_mappings={"team": {"builders": "builder"}},
-        jwt_auth_enabled=True, jwt_jwks_url="https://idp.example/keys", jwt_issuer="https://idp.example",
+        app.state.settings,
+        oidc_group_role_mappings={"team": {"builders": "builder"}},
+        jwt_auth_enabled=True,
+        jwt_jwks_url="https://idp.example/keys",
+        jwt_issuer="https://idp.example",
         jwt_audience="automation",
     )
     app.state.jwt_verifier = JwtVerifier(app.state.settings)
-    token = jwt.encode({
-        "iss": "https://idp.example", "aud": "automation", "sub": "bot", "exp": int(time()) + 300,
-        "team": "team", "role": "admin",
-    }, signing_key, algorithm="RS256", headers={"kid": "current"})
+    token = jwt.encode(
+        {
+            "iss": "https://idp.example",
+            "aud": "automation",
+            "sub": "bot",
+            "exp": int(time()) + 300,
+            "team": "team",
+            "role": "admin",
+        },
+        signing_key,
+        algorithm="RS256",
+        headers={"kid": "current"},
+    )
     assert client.get("/v1/team/sso", headers=auth(token)).status_code == 200
     login(client, token)
     assert client.get("/v1/team/sso").status_code == 200
@@ -501,9 +592,13 @@ def test_group_session_expires_with_id_token_and_policy_changes_require_sign_in(
     fixture["claims"] = {"groups": ["builders"], "exp": expiry}
     assert client.get("/v1/auth/callback", params=start(), follow_redirects=False).status_code == 303
     assert client.get("/v1/auth/session").json()["absolute_expires_at"] == expiry
-    app.state.settings = replace(app.state.settings, oidc_group_role_mappings={
-        "team": {"builders": "builder"}, "other": {"reviewers": "approver"},
-    })
+    app.state.settings = replace(
+        app.state.settings,
+        oidc_group_role_mappings={
+            "team": {"builders": "builder"},
+            "other": {"reviewers": "approver"},
+        },
+    )
     assert client.get("/v1/team").status_code == 200
     app.state.settings = replace(app.state.settings, oidc_group_role_mappings={"team": {"builders": "viewer"}})
     assert client.get("/v1/team").status_code == 401
@@ -532,15 +627,26 @@ def test_enabling_group_mapping_invalidates_existing_oidc_sessions(oidc, legacy)
 
 def test_sso_configuration_is_private_admin_only_and_team_scoped(oidc):
     client, app, _, _, _ = oidc
-    app.state.settings = replace(app.state.settings, oidc_group_role_mappings={
-        "team": {"builders": "builder"}, "other": {"secret-other-group": "admin"},
-    })
+    app.state.settings = replace(
+        app.state.settings,
+        oidc_group_role_mappings={
+            "team": {"builders": "builder"},
+            "other": {"secret-other-group": "admin"},
+        },
+    )
     response = client.get("/v1/team/sso", headers=auth("admin"))
     assert response.status_code == 200
     assert response.json() == {
-        "team_id": "team", "enabled": True, "provider_name": "idp.example", "role_source": "groups",
-        "team_claim": "team", "project_claim": "project", "role_claim": None, "default_role": None,
-        "groups_claim": "groups", "group_role_mappings": {"builders": "builder"},
+        "team_id": "team",
+        "enabled": True,
+        "provider_name": "idp.example",
+        "role_source": "groups",
+        "team_claim": "team",
+        "project_claim": "project",
+        "role_claim": None,
+        "default_role": None,
+        "groups_claim": "groups",
+        "group_role_mappings": {"builders": "builder"},
     }
     assert "client-secret" not in response.text and "secret-other-group" not in response.text
     assert "no-store" in response.headers["cache-control"]
@@ -556,9 +662,20 @@ def test_sso_configuration_is_private_admin_only_and_team_scoped(oidc):
     assert info["groups_claim"] is None and info["group_role_mappings"] == {}
 
 
-@pytest.mark.parametrize("mapping", [[], None, {"Team": {}}, {"bad team": {}}, {"team": []},
-                                     {"team": {"": "viewer"}}, {"team": {"  ": "viewer"}},
-                                     {"team": {"group": "owner"}}, {"team": {"group": ["admin"]}}])
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        [],
+        None,
+        {"Team": {}},
+        {"bad team": {}},
+        {"team": []},
+        {"team": {"": "viewer"}},
+        {"team": {"  ": "viewer"}},
+        {"team": {"group": "owner"}},
+        {"team": {"group": ["admin"]}},
+    ],
+)
 def test_invalid_group_mapping_configuration_fails_at_startup(oidc, mapping):
     _, app, _, _, _ = oidc
     with pytest.raises(ValueError):
@@ -567,9 +684,12 @@ def test_invalid_group_mapping_configuration_fails_at_startup(oidc, mapping):
 
 def test_group_mapping_environment_and_required_issuer(monkeypatch):
     for name, value in {
-        "OIDC_ISSUER": "https://idp.example", "OIDC_CLIENT_ID": "console",
-        "OIDC_REDIRECT_URL": "https://gateway.example/v1/auth/callback", "OIDC_TEAM_CLAIM": "team",
-        "SANDBOX_BUDGET_BACKEND": "redis", "OIDC_GROUPS_CLAIM": "memberOf",
+        "OIDC_ISSUER": "https://idp.example",
+        "OIDC_CLIENT_ID": "console",
+        "OIDC_REDIRECT_URL": "https://gateway.example/v1/auth/callback",
+        "OIDC_TEAM_CLAIM": "team",
+        "SANDBOX_BUDGET_BACKEND": "redis",
+        "OIDC_GROUPS_CLAIM": "memberOf",
         "OIDC_GROUP_ROLE_MAPPINGS": '{"team":{"Reviewers":"approver"}}',
     }.items():
         monkeypatch.setenv(name, value)

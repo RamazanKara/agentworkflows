@@ -60,9 +60,14 @@ def test_real_team_export_and_erasure_are_isolated(postgres):
         postgres.save_intent(document["workflow_id"], document)
         postgres.save_run(team, run_id, document)
         postgres.append_step(team, run_id, {"event": "workflow_operation", "action_type": "cancel"})
-        postgres.create_key({
-            "key_id": team, "team": team, "sha256": ("a" if team == "erase" else "b") * 64, "created_at": time(),
-        })
+        postgres.create_key(
+            {
+                "key_id": team,
+                "team": team,
+                "sha256": ("a" if team == "erase" else "b") * 64,
+                "created_at": time(),
+            }
+        )
     exported = postgres.export_team("erase")
     assert exported["runs"][0]["metadata"]["input"] == {"topic": "erase"}
     assert exported["start_intents"][0]["team_id"] == "erase"
@@ -181,8 +186,9 @@ def test_real_redis_import_dry_run_atomic_resume_and_conflict(postgres, monkeypa
     assert len(postgres.run_steps("team", "run")) == 1
     assert postgres.lookup_key("a" * 64, time())["revoked_at"] == 4
     entries = list(postgres.audit_entries("team", None, True))
-    assert len(entries) == 3 and all(check_entry(row, entries[i - 1] if i else None) is None
-                                   for i, row in enumerate(entries))
+    assert len(entries) == 3 and all(
+        check_entry(row, entries[i - 1] if i else None) is None for i, row in enumerate(entries)
+    )
     assert postgres.load() == head
     source[postgres.scope + ":team-settings:team"] = '{"revision":8,"overrides":{}}'
     with pytest.raises(ValueError, match="Destination conflict"):
@@ -235,7 +241,6 @@ def test_real_audit_hashes_restart_heads_paging_and_retention_boundary(postgres)
         )
     tampered = list(postgres.audit_entries("team", None, True))
     assert check_entry(tampered[1], tampered[0]) == "record_hash_mismatch"
-
 
 
 def test_real_statement_timeout_releases_connection_and_recovers(postgres):

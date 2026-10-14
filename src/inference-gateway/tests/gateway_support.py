@@ -109,8 +109,10 @@ class FakeRedisBudgetStore:
                 return True
             value = tuple(map(int, value.split("-")))
             limit = tuple(map(int, bound.lstrip("(").split("-")))
-            return (value > limit if lower else value < limit) if bound.startswith("(") else (
-                value >= limit if lower else value <= limit
+            return (
+                (value > limit if lower else value < limit)
+                if bound.startswith("(")
+                else (value >= limit if lower else value <= limit)
             )
 
         rows = [
