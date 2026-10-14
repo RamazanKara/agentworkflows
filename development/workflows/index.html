@@ -3301,6 +3301,9 @@ durable once the agent function returns; recovery from a crash mid-loop reruns t
 <strong>whole agent loop</strong> as new calls. Break long loops into separate workflow steps for
 finer-grained recovery. Workflow steps use non-streaming Chat Completions or Anthropic
 Messages. The optional frameworks are pinned in the worker/test locks.</p>
+<p>TypeScript workers register agents with <code>runWorker(path, { agents })</code> and build clients with
+<code>new OpenAI(context.openaiOptions())</code> or <code>new Anthropic(context.anthropicOptions())</code>; see
+<a href="../quickstart-typescript/#framework-agents">framework agents</a>.</p>
 <p>Framework callbacks run as trusted worker code. Route every side-effecting tool through
 <code>context.tool</code> so the gateway governs and records it.
 Use <a href="../agent-sandbox-integration/#container-workflow-steps">container steps</a> for code execution.
@@ -3383,8 +3386,9 @@ Registration narrows what your operator already approved for the team:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">admin_key</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
 <a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">gateway</span><span class="o">.</span><span class="n">register_workflow</span><span class="p">(</span><span class="n">TicketTriage</span><span class="p">,</span> <span class="n">models</span><span class="o">=</span><span class="p">[</span><span class="s2">"gpt-4.1-mini"</span><span class="p">],</span> <span class="n">allowed_tools</span><span class="o">=</span><span class="p">[</span><span class="s2">"team.search"</span><span class="p">],</span> <span class="n">cost_limit_usd</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 </code></pre></div>
-<p>TypeScript uses <code>registerWorkflow(name, models, options?, revision?)</code>, <code>teamWorkflows()</code> and
-<code>removeWorkflow(name, revision?)</code>. The API is <code>GET /v1/team/workflows</code> (registrations, reserved
+<p>TypeScript uses <code>registerWorkflow(nameOrFunction, models, options?, revision?)</code>, <code>teamWorkflows()</code> and
+<code>removeWorkflow(nameOrFunction, revision?)</code>; a workflow function declared with <code>withInputSchema</code> also
+supplies its schema. The API is <code>GET /v1/team/workflows</code> (registrations, reserved
 names, the models/tools you may choose, and your limits), <code>PUT /v1/team/workflows/{name}</code> and
 <code>DELETE /v1/team/workflows/{name}</code>. Writes need the current <code>If-Match</code> revision, which is shared with
 team settings and alert rules; a stale revision returns 409 and leaves everything unchanged. Repeating

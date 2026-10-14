@@ -599,6 +599,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#framework-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Framework agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#container-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Container steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#team-administration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2227,6 +2249,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#framework-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Framework agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#container-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Container steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#team-administration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2422,11 +2466,16 @@ path below with your checkout path (a local install; the release also attaches
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">}</span>
 </code></pre></div>
 <p>Register <code>MyReview</code> in the team's gateway workflow policy before starting it through
-the API. Worker code imports <code>runWorker</code> from <code>@agentworkflows/sdk/worker</code> and calls
+the API, or with <code>registerWorkflow(MyReview, models)</code> from an admin client (a function
+declared with <code>withInputSchema</code> also sends its schema). Worker code imports <code>runWorker</code>
+from <code>@agentworkflows/sdk/worker</code> and calls
 <code>await runWorker(require.resolve('./workflows'))</code> with the compiled workflow module.
 The helper reads the same <code>AGENTWORKFLOWS_API_KEY</code>, <code>AGENTWORKFLOWS_URL</code>,
 <code>AGENTWORKFLOWS_TEAM</code>, <code>TEMPORAL_ADDRESS</code>, <code>TEMPORAL_NAMESPACE</code>, and
-<code>TEMPORAL_TASK_QUEUE</code> variables as the Python worker.</p>
+<code>TEMPORAL_TASK_QUEUE</code> variables as the Python worker. Its second argument takes
+<code>agents</code> (below) and <code>healthPort</code>: set <code>healthPort: 8081</code> to serve the <code>/healthz</code> and
+<code>/readyz</code> probes the workflows Helm chart expects. A failed Temporal connection names
+the address it tried.</p>
 <table>
 <thead>
 <tr>
@@ -2452,6 +2501,14 @@ The helper reads the same <code>AGENTWORKFLOWS_API_KEY</code>, <code>AGENTWORKFL
 <td>Approved HTTP/MCP tool result through the gateway</td>
 </tr>
 <tr>
+<td><code>gateway.agent(name, arguments)</code></td>
+<td>Result of a framework agent registered on the worker</td>
+</tr>
+<tr>
+<td><code>gateway.container(name, arguments)</code></td>
+<td>Output of an approved command in an agent-sandbox workspace; runs once per call</td>
+</tr>
+<tr>
 <td><code>approval.approval(draft)</code></td>
 <td>Policy-driven reviewer quorum and expiry, exposed through <code>status</code>, <code>approve</code>, and <code>review</code> handlers</td>
 </tr>
@@ -2472,17 +2529,74 @@ Keep worker credentials and HTTP clients out of workflow modules.</p>
 <p>The workflow client methods are <code>startRun</code>, <code>runs</code>, <code>run</code>, <code>approveRun</code>, <code>cancelRun</code>,
 <code>retryRun</code>, <code>triggers</code>, and <code>pauseTrigger</code>. Use <code>{ paused: false }</code> to resume a
 trigger and <code>{ project, cursor }</code> to page through runs. JSON response fields retain
-the API's snake_case names. This SDK covers governed model/tool workflows and the
-workflow and team administration APIs; framework adapters and the container runner are in the Python SDK.</p>
+the API's snake_case names. The client also mirrors the Python client's inference
+calls: <code>chat</code>, <code>chatStream</code>, <code>completions</code>, <code>embeddings</code>, <code>moderations</code>, <code>batch</code>
+and <code>messages</code>; the Files/Batch API (<code>uploadBatchFile</code>, <code>createBatch</code>, <code>getBatch</code>,
+<code>getFileContent</code>, ...); the Responses API (<code>createResponse</code>, <code>getResponse</code>, ...);
+<code>recordReceipt</code>; and <code>team</code>, <code>usage</code>, <code>sandboxBudget</code> and <code>ready</code>. Request fields
+beyond the messages pass through with the API's names, for example
+<code>client.chat(messages, { model: 'demo-openai', max_tokens: 64 })</code>.</p>
 <p><code>GatewayError</code> exposes <code>statusCode</code>, <code>reason</code>, <code>requestId</code>, and <code>detail</code>.
-<code>GatewayTransportError</code> gives a redacted connection failure.
+<code>GatewayTransportError</code> gives a redacted connection failure with the system <code>code</code>
+(such as <code>ECONNREFUSED</code>); its subclass <code>GatewayTimeoutError</code> reports an attempt that
+exceeded <code>timeoutMs</code> (120 seconds by default). <code>GatewayStreamError</code> means a stream
+ended with a gateway error event, so its text is incomplete.
 <code>GatewayRetryAfterError.retryAfter</code> is a delay in seconds above the client's retry
-cap (30 seconds by default). Read requests and idempotent starts retry twice;
-approval, cancel, retry-run, trigger, key and settings mutations run once per call.
+cap (30 seconds by default). Read requests, idempotent starts and inference retry
+twice. Approval, cancel, retry-run, trigger, key, settings and other mutations
+retry only when the gateway provably did not act: the connection was refused or
+the gateway answered 429 or 503. Invitation creation and redemption run once.
 Keep a <code>requestId</code> and reuse it with identical input after an ambiguous start.
 Inside workflows, gateway failures arrive as Temporal <code>ActivityFailure</code> with an
 <code>ApplicationFailure</code> cause whose <code>type</code> is the gateway reason. See the Python
 <a href="../sdk-reference/#gateway-client-and-errors">error recovery table</a> for the shared reasons.</p>
+<p>Client options also take <code>sandboxId</code>, default <code>headers</code> (for example <code>traceparent</code>),
+<code>retryBackoffMs</code>, a custom <code>fetch</code>, and a <code>signal</code>. <code>withOptions</code> returns a copy for
+one call; aborting its signal rejects with the signal's reason and skips retries:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">reply</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">withOptions</span><span class="p">({</span><span class="w"> </span><span class="nx">signal</span><span class="o">:</span><span class="w"> </span><span class="kt">AbortSignal.timeout</span><span class="p">(</span><span class="mf">10</span><span class="nx">_000</span><span class="p">)</span><span class="w"> </span><span class="p">})</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="p">.</span><span class="nx">chat</span><span class="p">([{</span><span class="w"> </span><span class="nx">role</span><span class="o">:</span><span class="w"> </span><span class="s1">'user'</span><span class="p">,</span><span class="w"> </span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="s1">'Summarize the incident'</span><span class="w"> </span><span class="p">}]);</span>
+</code></pre></div>
+<h2 id="framework-agents">Framework agents<a class="headerlink" href="#framework-agents" title="Permanent link">&para;</a></h2>
+<p>Run an OpenAI, Anthropic or other framework agent as one governed workflow step.
+Register it on the worker and call it from the workflow with
+<code>await new WorkflowGateway().agent('briefing', { topic })</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">import</span><span class="w"> </span><span class="nx">OpenAI</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'openai'</span><span class="p">;</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">runWorker</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk/worker'</span><span class="p">;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">await</span><span class="w"> </span><span class="nx">runWorker</span><span class="p">(</span><span class="nx">require</span><span class="p">.</span><span class="nx">resolve</span><span class="p">(</span><span class="s1">'./workflows'</span><span class="p">),</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nx">agents</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="k">async</span><span class="w"> </span><span class="nx">briefing</span><span class="p">(</span><span class="nx">context</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">tool</span><span class="p">(</span><span class="s1">'team.search'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">query</span><span class="o">:</span><span class="w"> </span><span class="kt">args.topic</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">openai</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">OpenAI</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">openaiOptions</span><span class="p">());</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">reply</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">openai</span><span class="p">.</span><span class="nx">chat</span><span class="p">.</span><span class="nx">completions</span><span class="p">.</span><span class="nx">create</span><span class="p">({</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">        </span><span class="nx">model</span><span class="o">:</span><span class="w"> </span><span class="s1">'demo-openai'</span><span class="p">,</span><span class="w"> </span><span class="nx">max_tokens</span><span class="o">:</span><span class="w"> </span><span class="kt">128</span><span class="p">,</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="nx">messages</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">role</span><span class="o">:</span><span class="w"> </span><span class="s1">'user'</span><span class="p">,</span><span class="w"> </span><span class="nx">content</span><span class="o">:</span><span class="w"> </span><span class="sb">`Summarize: </span><span class="si">${</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">sources</span><span class="p">)</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">}],</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">      </span><span class="p">});</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="nx">reply</span><span class="p">.</span><span class="nx">choices</span><span class="p">[</span><span class="mf">0</span><span class="p">].</span><span class="nx">message</span><span class="p">.</span><span class="nx">content</span><span class="p">;</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="p">});</span>
+</code></pre></div>
+<p>Install the framework packages in your worker project; the SDK does not depend on
+them. <code>context.openaiOptions()</code> and <code>context.anthropicOptions()</code> return <code>baseURL</code>,
+<code>apiKey</code>, a governed <code>fetch</code> and <code>maxRetries: 0</code> for the official SDKs and for
+clients that accept the same options. <code>context.fetch</code> is that governed fetch and
+<code>context.tool(name, args)</code> calls an approved tool. Every request carries the run,
+classification and its own step ID (<code>&lt;step&gt;/&lt;n&gt;</code>), so each gets a receipt. Requests
+to any host other than the gateway fail the step with <code>AgentEgressDenied</code>. A policy
+or budget denial fails the step without retries, even when the framework wraps the
+error. Custom workers pass the same <code>agents</code> map to
+<code>new GatewayActivities(url, key, { agents })</code>. As in Python, a crash mid-agent reruns
+the whole agent function; see <a href="../workflows/#bring-your-agent">Bring your agent</a>.</p>
+<h2 id="container-steps">Container steps<a class="headerlink" href="#container-steps" title="Permanent link">&para;</a></h2>
+<p><code>await new WorkflowGateway().container('coder', { task })</code> runs the command the team
+policy approved for that agent in its existing agent-sandbox workspace and returns the
+output. It runs once per call. The worker checks the Sandbox pod and network policies
+exactly as the Python worker does, passes the short-lived grant to the workspace runner
+on stdin only, and always revokes the grant. The worker needs <code>kubectl</code> with access to
+that workspace; the workspace image needs the Python runner from <code>sdk/python/Dockerfile</code>.
+See <a href="../agent-sandbox-integration/#container-workflow-steps">container workflow steps</a>
+for the policy, chart and RBAC setup.</p>
 <h2 id="team-administration">Team administration<a class="headerlink" href="#team-administration" title="Permanent link">&para;</a></h2>
 <p>Use an admin key; settings and audit require
 a credential without a project restriction.</p>
@@ -2548,24 +2662,24 @@ write throws <code>GatewayError</code> with <code>statusCode: 409</code> and
 new revision. A 422 rejects the whole patch and
 retains <code>detail.fields</code> entries containing <code>field</code> and <code>message</code>. See
 <a href="../team-settings/">team settings</a> for field names and limits.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">open</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:fs/promises'</span><span class="p">;</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">admin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.AGENTWORKFLOWS_API_KEY</span><span class="p">,</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="p">});</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="kd">const</span><span class="w"> </span><span class="nx">settings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">teamSettings</span><span class="p">();</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="kd">const</span><span class="w"> </span><span class="nx">saved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">updateTeamSettings</span><span class="p">({</span><span class="w"> </span><span class="nx">cost_limit_usd</span><span class="o">:</span><span class="w"> </span><span class="kt">100</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">resetTeamSetting</span><span class="p">(</span><span class="s1">'cost_limit_usd'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">saved.revision</span><span class="w"> </span><span class="p">});</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="kd">const</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">open</span><span class="p">(</span><span class="s1">'audit-log.jsonl'</span><span class="p">,</span><span class="w"> </span><span class="s1">'w'</span><span class="p">);</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">exportAudit</span><span class="p">({</span><span class="w"> </span><span class="nx">eventType</span><span class="o">:</span><span class="w"> </span><span class="s1">'team_settings_changed'</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'@agentworkflows/sdk'</span><span class="p">;</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">open</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">'node:fs/promises'</span><span class="p">;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">admin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.AGENTWORKFLOWS_API_KEY</span><span class="p">,</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">});</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="kd">const</span><span class="w"> </span><span class="nx">settings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">teamSettings</span><span class="p">();</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="kd">const</span><span class="w"> </span><span class="nx">saved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">updateTeamSettings</span><span class="p">({</span><span class="w"> </span><span class="nx">cost_limit_usd</span><span class="o">:</span><span class="w"> </span><span class="kt">100</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">settings.revision</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="k">await</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">resetTeamSetting</span><span class="p">(</span><span class="s1">'cost_limit_usd'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">revision</span><span class="o">:</span><span class="w"> </span><span class="kt">saved.revision</span><span class="w"> </span><span class="p">});</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="kd">const</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">open</span><span class="p">(</span><span class="s1">'audit-log.jsonl'</span><span class="p">,</span><span class="w"> </span><span class="s1">'w'</span><span class="p">);</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">admin</span><span class="p">.</span><span class="nx">exportAudit</span><span class="p">({</span><span class="w"> </span><span class="nx">eventType</span><span class="o">:</span><span class="w"> </span><span class="s1">'team_settings_changed'</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="p">}</span>
 </code></pre></div>
 <p>Audit times are inclusive Unix seconds. List/export filters match exactly;
 <code>limit</code> is the page size (default 50, maximum 200). Supply the previous page's
@@ -2588,17 +2702,17 @@ when newer runs arrive or records expire; legacy <code>offset</code> remains sup
 retained run's full details, results and timeline, including captured content
 still retained by policy. It follows every cursor page. The package exports
 <code>RunFilters</code> and <code>RunPage</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">gateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.AGENTWORKFLOWS_API_KEY</span><span class="p">,</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="p">});</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">open</span><span class="p">(</span><span class="s1">'runs.jsonl'</span><span class="p">,</span><span class="w"> </span><span class="s1">'w'</span><span class="p">);</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">exportRuns</span><span class="p">({</span><span class="w"> </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="s1">'completed'</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">const</span><span class="w"> </span><span class="nx">gateway</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">GatewayClient</span><span class="p">(</span><span class="s1">'http://127.0.0.1:8080'</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nx">apiKey</span><span class="o">:</span><span class="w"> </span><span class="kt">process.env.AGENTWORKFLOWS_API_KEY</span><span class="p">,</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="p">});</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kd">const</span><span class="w"> </span><span class="nx">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">open</span><span class="p">(</span><span class="s1">'runs.jsonl'</span><span class="p">,</span><span class="w"> </span><span class="s1">'w'</span><span class="p">);</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">line</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">gateway</span><span class="p">.</span><span class="nx">exportRuns</span><span class="p">({</span><span class="w"> </span><span class="nx">status</span><span class="o">:</span><span class="w"> </span><span class="s1">'completed'</span><span class="w"> </span><span class="p">}))</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">write</span><span class="p">(</span><span class="nx">line</span><span class="p">,</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="s1">'utf8'</span><span class="p">);</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">output</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="p">}</span>
 </code></pre></div>
 <p>As in the audit example, import <code>GatewayClient</code> and <code>open</code> above. Gateway and
 transport errors propagate to the caller. Retention and status changes continue
@@ -2624,7 +2738,10 @@ reservations. See the <a href="../sdk-reference/#trigger-history-and-usage-csv">
 <h2 id="verify-and-stop">Verify and stop<a class="headerlink" href="#verify-and-stop" title="Permanent link">&para;</a></h2>
 <p>From <code>sdk/typescript</code>, run <code>npm run build</code>, <code>npm run lint</code>, and <code>npm test</code>. Vitest
 uses at most two workers. The equivalent repository target is <code>make test-typescript</code>,
-which runs locally to keep the CI job short.</p>
+which runs locally to keep the CI job short. <code>npm run check:package</code> (also run by
+<code>npm pack</code>) installs the packed tarball into a scratch project and checks its
+contents, CommonJS and ESM imports of every entry point, and TypeScript resolution
+under <code>node16</code>, <code>bundler</code> and legacy <code>node</code> module settings.</p>
 <p>For the integration check, stop the example worker with Ctrl+C, then run <code>npm run
 smoke</code> in that terminal. This starts and stops its own workers against the fake
 Compose stack and verifies both templates, restart/replay, approval/rejection,
@@ -2636,11 +2753,11 @@ remove this disposable trial's containers and volumes from the repository root:<
 <div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Bash (Linux/macOS)</label><label for="__tabbed_2_2">PowerShell (Docker in WSL)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>aw-typescript<span class="w"> </span>-f<span class="w"> </span>deploy/compose/compose.yaml<span class="w"> </span>down<span class="w"> </span>-v
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">wsl</span><span class="p">.</span><span class="n">exe</span> <span class="n">-d</span> <span class="n">Ubuntu</span> <span class="n">-e</span> <span class="n">docker</span> <span class="n">compose</span> <span class="n">-p</span> <span class="n">aw-typescript</span> <span class="o">-f</span> <span class="n">deploy</span><span class="p">/</span><span class="n">compose</span><span class="p">/</span><span class="n">compose</span><span class="p">.</span><span class="n">yaml</span> <span class="n">down</span> <span class="n">-v</span>
 </code></pre></div>
 </div>
 </div>
