@@ -176,6 +176,29 @@ it('requires the versioned gateway before the worker upgrade', async () => {
   await expect(new ApprovalWorkflow().approval('draft')).rejects.toMatchObject({ nonRetryable: true, type: 'ApprovalPolicyUnsupported' });
 });
 
+it('schedules registered agents with the run budget and classification', async () => {
+  mocks.call.mockResolvedValueOnce({ result: { summary: 'briefing' } });
+  const gateway = new WorkflowGateway(new Budget(300, 0.5), { dataClassification: 'restricted' });
+  await expect(gateway.agent('briefing', { topic: 'agents' })).resolves.toEqual({ summary: 'briefing' });
+  expect(mocks.call.mock.calls[0][0]).toEqual({
+    kind: 'agent', tool: 'briefing', payload: { topic: 'agents' },
+    budget: { token_limit: 300, cost_limit_usd: 0.5 }, data_classification: 'restricted',
+  });
+});
+
+it('runs container steps once, with the gateway timeouts, and returns text', async () => {
+  mocks.call.mockResolvedValueOnce({ result: 'review written' }).mockResolvedValueOnce({ result: { lines: 2 } })
+    .mockResolvedValueOnce({});
+  const gateway = new WorkflowGateway(new Budget(), { startToCloseTimeout: '2 minutes', retry: { maximumAttempts: 5 } });
+  await expect(gateway.container('coder', { task: 'review' })).resolves.toBe('review written');
+  await expect(gateway.container('coder', {})).resolves.toBe('{"lines":2}');
+  await expect(gateway.container('coder', {})).resolves.toBe('');
+  expect(proxyActivities).toHaveBeenLastCalledWith({
+    startToCloseTimeout: '2 minutes', scheduleToCloseTimeout: '15 minutes', retry: { maximumAttempts: 1 },
+  });
+  expect(mocks.call.mock.calls[0][0]).toMatchObject({ kind: 'container', tool: 'coder', payload: { arguments: { task: 'review' } } });
+});
+
 it.each([
   [ReleaseNotesWorkflow, { changes: 'REL-42 fixed approval expiry' }, 'release_notes'],
   [MeetingActionsWorkflow, { transcript: '09:02 Leo owns the rollout checklist' }, 'action_plan'],

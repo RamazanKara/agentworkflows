@@ -81,6 +81,30 @@ export class WorkflowGateway {
     const reply = await this.call('tool', { arguments: args }, name);
     return reply.result as T;
   }
+
+  /** Run an agent registered on the worker (`agents` option); its framework clients go through the gateway. */
+  async agent<T = unknown>(name: string, args: Record<string, unknown>): Promise<T> {
+    const reply = await this.call('agent', args, name);
+    return reply.result as T;
+  }
+
+  /**
+   * Run an approved command in its agent-sandbox workspace and return the output. Runs once per call: arbitrary
+   * code may have side effects that cannot be safely repeated after a worker crash, so retries are left to you.
+   */
+  async container(name: string, args: Record<string, unknown>): Promise<string> {
+    const activities = proxyActivities<GovernedActivities>({
+      startToCloseTimeout: this.options.startToCloseTimeout ?? '3 minutes',
+      scheduleToCloseTimeout: this.options.scheduleToCloseTimeout ?? '15 minutes',
+      retry: { maximumAttempts: 1 },
+    });
+    const reply = await activities['agentworkflows.call']({
+      kind: 'container', payload: { arguments: args }, tool: name,
+      budget: { token_limit: this.budget.tokenLimit, cost_limit_usd: this.budget.costLimitUsd },
+      data_classification: this.options.dataClassification ?? 'internal',
+    });
+    return typeof reply.result === 'string' ? reply.result : JSON.stringify(reply.result) ?? '';
+  }
 }
 
 export const approveSignal = defineSignal<[boolean, string]>('approve');
