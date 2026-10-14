@@ -18,7 +18,11 @@ name: agentworkflows
 
 # Published, signed release images are pulled by default, so a first run needs no local build.
 # `docker compose build` (or `make compose-up`) builds from this checkout under the same names instead.
-# Bump the default tag with each release.
+# Bump the default tag with each release (scripts/release-prep.py does it).
+#
+# Healthchecks probe every second while a service starts (start_interval, Docker Engine 25+)
+# and every 5 s once it is up, so each depends_on: service_healthy hop in the
+# postgres -> temporal -> gateway -> worker chain no longer waits out a full 5 s interval.
 x-gateway-image: &gateway-image ghcr.io/ramazankara/agentworkflows/inference-gateway:${AGENTWORKFLOWS_VERSION:-v0.9.1}
 
 services:
@@ -32,6 +36,8 @@ services:
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 5s
+      start_period: 60s
+      start_interval: 1s
       timeout: 5s
       retries: 30
     restart: unless-stopped
@@ -111,6 +117,8 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3)"]
       interval: 5s
+      start_period: 60s
+      start_interval: 1s
       timeout: 5s
       retries: 24
     read_only: true
@@ -150,6 +158,8 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
+      start_period: 60s
+      start_interval: 1s
       timeout: 3s
       retries: 20
     cpus: 0.5
@@ -165,6 +175,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U temporal"]
       interval: 5s
+      start_period: 60s
+      start_interval: 1s
       timeout: 3s
       retries: 20
     cpus: 0.5
@@ -192,6 +204,9 @@ services:
     healthcheck:
       test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "temporal:7233"]
       interval: 5s
+      # Schema setup takes longer, and the CLI probe is heavier than the others.
+      start_period: 120s
+      start_interval: 2s
       timeout: 5s
       retries: 40
     cpus: 1
@@ -229,6 +244,8 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/readyz', timeout=4)"]
       interval: 5s
+      start_period: 60s
+      start_interval: 1s
       timeout: 5s
       retries: 24
     read_only: true
@@ -255,6 +272,8 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=3)"]
       interval: 5s
+      start_period: 60s
+      start_interval: 1s
       timeout: 5s
       retries: 24
     read_only: true
