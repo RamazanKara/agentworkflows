@@ -92,6 +92,10 @@ temporal:
     useHelmHooks: false
     securityContext: *temporalPodSecurityContext
     containerSecurityContext: *temporalContainerSecurityContext
+    # Schema and namespace setup jobs; namespaces with a ResourceQuota reject pods without them.
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 500m, memory: 256Mi}
   admintools:
     enabled: false
     image:

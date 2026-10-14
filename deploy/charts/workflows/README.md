@@ -17,6 +17,10 @@ Temporal execution, dedicated PostgreSQL, and a governed Python workflow worker.
 | `temporal.schema.containerSecurityContext.allowPrivilegeEscalation` | `false` |
 | `temporal.schema.containerSecurityContext.capabilities.drop` | `["ALL"]` |
 | `temporal.schema.containerSecurityContext.readOnlyRootFilesystem` | `true` |
+| `temporal.schema.resources.limits.cpu` | `500m` |
+| `temporal.schema.resources.limits.memory` | `256Mi` |
+| `temporal.schema.resources.requests.cpu` | `50m` |
+| `temporal.schema.resources.requests.memory` | `64Mi` |
 | `temporal.schema.securityContext.fsGroup` | `1000` |
 | `temporal.schema.securityContext.runAsGroup` | `1000` |
 | `temporal.schema.securityContext.runAsNonRoot` | `true` |
