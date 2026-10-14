@@ -1,17 +1,25 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { condition, patched, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
+import { condition, continueAsNew, patched, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import { AgentWorkflowsTrigger, ApprovalWorkflow, Budget, WorkflowGateway, withInputSchema } from '../src/workflows';
 import { CodeReviewWorkflow, SupportTriageWorkflow, ReleaseNotesWorkflow, MeetingActionsWorkflow, SecurityQuestionnaireWorkflow } from '../src/examples/workflows';
 
-const mocks = vi.hoisted(() => ({ call: vi.fn(), trigger: vi.fn(), condition: vi.fn<() => Promise<boolean>>() }));
+const mocks = vi.hoisted(() => ({
+  call: vi.fn(), trigger: vi.fn(), condition: vi.fn<() => Promise<boolean>>(),
+  info: { runId: 'run-id', continueAsNewSuggested: false },
+}));
 vi.mock('@temporalio/workflow', async (original) => ({
   ...await original<typeof import('@temporalio/workflow')>(),
   proxyActivities: vi.fn(() => ({ 'agentworkflows.call': mocks.call, 'agentworkflows.trigger': mocks.trigger })),
   patched: vi.fn(() => false), condition: mocks.condition, setHandler: vi.fn(), sleep: vi.fn(async () => undefined),
-  workflowInfo: () => ({ runId: 'run-id' }),
+  workflowInfo: () => mocks.info,
+  continueAsNew: vi.fn(async () => { throw new Error('continued as new'); }),
 }));
 
-beforeEach(() => { vi.clearAllMocks(); vi.mocked(patched).mockReturnValue(false); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(patched).mockReturnValue(false);
+  mocks.info.continueAsNewSuggested = false;
+});
 
 it('declares serializable input schemas without wrapping or changing workflow calls', async () => {
   const schema = { type: 'object' as const, properties: { name: { type: 'string' as const } }, required: ['name'] };
@@ -111,6 +119,36 @@ it('keeps a scheduled action open until its run finishes and preserves firing co
   expect(mocks.trigger).toHaveBeenCalledTimes(2);
   expect(mocks.trigger.mock.calls[1][0]).toEqual({ workflow: 'DailyReportWorkflow', trigger: 'daily', firing_id: 'run-id', run_id: 'child' });
   expect(sleep).toHaveBeenCalledWith('30 seconds');
+});
+
+it('backs off status reads from 30 seconds to 5 minutes once patched', async () => {
+  vi.mocked(patched).mockImplementation(id => id === 'trigger-poll-backoff-v1');
+  for (let poll = 0; poll < 6; poll++) mocks.trigger.mockResolvedValueOnce({ run_id: 'child', status: 'running' });
+  mocks.trigger.mockResolvedValueOnce({ run_id: 'child', status: 'failed', error: { code: 'x', message: 'y' } });
+  await expect(AgentWorkflowsTrigger({ workflow: 'DailyReportWorkflow', trigger: 'daily' })).resolves.toMatchObject({ status: 'failed' });
+  expect(vi.mocked(sleep).mock.calls.map(([duration]) => duration)).toEqual([30_000, 60_000, 120_000, 240_000, 300_000, 300_000]);
+  expect(continueAsNew).not.toHaveBeenCalled();
+  expect(patched).toHaveBeenCalledWith('trigger-poll-backoff-v1');
+});
+
+it('continues as new when Temporal suggests it, keeping the firing ID and the backoff step', async () => {
+  vi.mocked(patched).mockReturnValue(true);
+  mocks.info.continueAsNewSuggested = true;
+  mocks.trigger.mockResolvedValueOnce({ run_id: 'child', status: 'running' });
+  const input = { workflow: 'DailyReportWorkflow', trigger: 'daily', firing_id: 'first-firing', run_id: 'child', polls: 3 };
+  await expect(AgentWorkflowsTrigger(input)).rejects.toThrow('continued as new');
+  expect(mocks.trigger.mock.calls[0][0]).toEqual({ workflow: 'DailyReportWorkflow', trigger: 'daily', firing_id: 'first-firing', run_id: 'child' });
+  expect(continueAsNew).toHaveBeenCalledWith({
+    workflow: 'DailyReportWorkflow', trigger: 'daily', firing_id: 'first-firing', run_id: 'child', polls: 3,
+  });
+  expect(sleep).not.toHaveBeenCalled();
+});
+
+it('resumes a continued trigger at its backoff step', async () => {
+  vi.mocked(patched).mockReturnValue(true);
+  mocks.trigger.mockResolvedValueOnce({ run_id: 'child', status: 'running' }).mockResolvedValueOnce({ run_id: 'child', status: 'completed' });
+  await AgentWorkflowsTrigger({ workflow: 'DailyReportWorkflow', trigger: 'daily', firing_id: 'first-firing', run_id: 'child', polls: 3 });
+  expect(sleep).toHaveBeenCalledWith(240_000);
 });
 
 it('ends paused scheduled actions without polling', async () => {

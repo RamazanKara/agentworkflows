@@ -1,5 +1,5 @@
 import {
-  ApplicationFailure, condition, defineQuery, defineSignal, defineUpdate,
+  ApplicationFailure, condition, continueAsNew, defineQuery, defineSignal, defineUpdate,
   patched, proxyActivities, setHandler, sleep, workflowInfo,
 } from '@temporalio/workflow';
 import type { ActivityOptions } from '@temporalio/workflow';
@@ -191,19 +191,46 @@ export class ApprovalWorkflow {
   }
 }
 
+const FINISHED = ['completed', 'failed', 'canceled', 'terminated', 'timed_out'];
+// Waiting for a review can take days: back off to five minutes between status reads.
+const FIRST_POLL_SECONDS = 30;
+const MAX_POLL_SECONDS = 300;
+
+/** Seconds before status read `polls + 1`: 30, 60, 120, 240, then every 300. */
+function pollDelay(polls: number): number {
+  return Math.min(MAX_POLL_SECONDS, FIRST_POLL_SECONDS * 2 ** Math.min(polls, 4));
+}
+
+/**
+ * Deliver one scheduled firing through the gateway's governed start API and keep the schedule action open until the
+ * run finishes, so Temporal's SKIP overlap policy covers it. Status reads back off from 30 seconds to 5 minutes and
+ * the trigger continues as new when Temporal suggests it, keeping its history bounded while a run waits for review.
+ */
 export async function AgentWorkflowsTrigger(input: TriggerRequest): Promise<TriggerResult> {
-  const request = { ...input, firing_id: workflowInfo().runId };
+  const { polls: previous = 0, ...rest } = input;
+  // A continued execution keeps the firing ID of the schedule action that started the chain.
+  const request: TriggerRequest = { firing_id: workflowInfo().runId, ...rest };
+  let polls = Number(previous);
+  const bounded = patched('trigger-poll-backoff-v1');
   const activities = proxyActivities<GovernedActivities>({
     startToCloseTimeout: '45 seconds', scheduleToCloseTimeout: '10 minutes',
     retry: { maximumInterval: '30 seconds' },
   });
   for (;;) {
     const result = await activities['agentworkflows.trigger'](request);
-    if (result.paused || (result.status && ['completed', 'failed', 'canceled', 'terminated', 'timed_out'].includes(result.status))) {
+    if (result.paused || (result.status && FINISHED.includes(result.status))) {
       return result;
     }
     request.run_id = result.run_id;
     // Keeping the action open lets Temporal's SKIP overlap policy cover the target run.
-    await sleep('30 seconds');
+    if (!bounded) {
+      await sleep('30 seconds');
+      continue;
+    }
+    if (workflowInfo().continueAsNewSuggested) {
+      await continueAsNew<typeof AgentWorkflowsTrigger>({ ...request, polls });
+    }
+    await sleep(pollDelay(polls) * 1000);
+    polls += 1;
   }
 }

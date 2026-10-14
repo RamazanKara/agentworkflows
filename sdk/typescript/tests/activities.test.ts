@@ -122,6 +122,16 @@ describe('governed activities', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('http://gateway.test/v1/workflow-triggers/Daily%2FReport/daily/fire');
     expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({ firing_id: runId });
     await expect(env.run(activities.trigger.bind(activities), { ...request, run_id: runId })).resolves.toEqual({ status: 'completed' });
+    expect(fetchMock.mock.calls[1][0]).toBe(`http://gateway.test/v1/workflow-runs/${runId}?timeline=false`);
     await expect(env.run(activities.trigger.bind(activities), request)).resolves.toEqual({ paused: true });
+  });
+
+  it('keeps the target run content out of the schedule history', async () => {
+    fetchMock.mockResolvedValueOnce(ok({
+      run_id: runId, status: 'completed', outcome: 'published', workflow: 'Daily', result: 'private draft',
+      progress: { draft: 'private draft' }, timeline: [{ receipt: {} }], budget: { tokens: 1 },
+    }));
+    await expect(environment().run(activities.trigger.bind(activities), { workflow: 'Daily', trigger: 'daily', run_id: runId }))
+      .resolves.toEqual({ run_id: runId, status: 'completed', outcome: 'published' });
   });
 });

@@ -120,9 +120,14 @@ export class GatewayActivities {
   }
 
   async trigger(request: TriggerRequest): Promise<TriggerResult> {
-    if (request.run_id) return this.request('GET', `/v1/workflow-runs/${encodeURIComponent(request.run_id)}`);
-    return this.request('POST', `/v1/workflow-triggers/${encodeURIComponent(request.workflow)}/${encodeURIComponent(request.trigger)}/fire`,
-      { firing_id: request.firing_id });
+    const body = request.run_id
+      ? await this.request<Record<string, unknown>>('GET', `/v1/workflow-runs/${encodeURIComponent(request.run_id)}?timeline=false`)
+      : await this.request<Record<string, unknown>>('POST',
+        `/v1/workflow-triggers/${encodeURIComponent(request.workflow)}/${encodeURIComponent(request.trigger)}/fire`,
+        { firing_id: request.firing_id });
+    // Activity results live in the schedule's Temporal history: keep the run's content out of it.
+    return Object.fromEntries(['paused', 'run_id', 'status', 'outcome', 'error']
+      .filter(key => key in body).map(key => [key, body[key]])) as TriggerResult;
   }
 
   activities(): GovernedActivities {
