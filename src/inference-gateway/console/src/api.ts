@@ -132,7 +132,30 @@ export async function api<T>(csrfToken: string, path: string, init: RequestInit 
     const fallback = advice[response.status] || (response.status >= 502 ? advice[503] : response.status >= 500 ? advice[500] : 'The request failed. Try again.');
     throw Object.assign(new Error(`${detail || fallback} (${response.status})`), { status: response.status, fields: body.detail?.fields });
   }
+  // Team settings, alert rules, retention, registered workflows and escalations share one document revision.
+  // A write here moves it on, so other editors on the page follow instead of failing their next save.
+  const match = headers.get('If-Match');
+  if (change && match !== null && typeof body?.revision === 'number') {
+    window.dispatchEvent(new CustomEvent<Moved>('aw:revision', { detail: { from: Number(match), to: body.revision } }));
+  }
   return body as T;
+}
+
+type Moved = { from: number; to: number };
+// The revision to send as If-Match: the one last read, moved on by this tab's own writes to the same document.
+// A change from anywhere else still conflicts, as it should.
+export function useRevision(current: number | undefined) {
+  const [revision, setRevision] = useState(current);
+  useEffect(() => setRevision(current), [current]);
+  useEffect(() => {
+    const follow = (event: Event) => {
+      const { from, to } = (event as CustomEvent<Moved>).detail;
+      setRevision(value => value === from ? to : value);
+    };
+    window.addEventListener('aw:revision', follow);
+    return () => window.removeEventListener('aw:revision', follow);
+  }, []);
+  return revision;
 }
 
 // Used when the gateway sends no message of its own.

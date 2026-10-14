@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DeploymentChecklist } from './deployment';
-import { api, date, policyCache, useData, workflowName, type Policy, type Session } from './api';
+import { api, date, policyCache, useData, useRevision, workflowName, type Policy, type Session } from './api';
 import { AdminOnly, Badge, Empty, ErrorMessage, Loading, NumberInput, PageHeader, Refresh } from './ui';
 import { WorkflowRegistry } from './workflows';
 
@@ -16,6 +16,8 @@ export function Templates({ session }: { session: Session }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // Installing a template changes the team's configuration, which the workflow registry below also saves to.
+  const [installed, setInstalled] = useState(0);
   return <><PageHeader title="Workflow templates" subtitle="Install a reviewed version, then start a run with your team’s policy."><Refresh busy={result.loading && Boolean(result.data)} onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={error || result.error} retry={result.error && !error ? () => setRevision(v => v + 1) : undefined}/><p className="status" role="status">{notice}</p>
     {!result.data ? !result.error && <Loading text="Loading templates…"/> : !result.data.length ? <div className="panel"><Empty title="No templates available"><p>Your gateway has no workflow templates. Register your own workflow below, or ask your operator to add templates.</p></Empty></div> : <div className="template-gallery">{result.data.map(template => <article className="panel template-card" key={`${template.id}:${template.version}`}>
@@ -25,11 +27,11 @@ export function Templates({ session }: { session: Session }) {
         setBusy(template.id); setError(''); setNotice('');
         try {
           await api(session.csrfToken, `/v1/workflow-templates/${encodeURIComponent(template.id)}/install`, { method: 'POST', body: JSON.stringify({ version: template.version }) });
-          setNotice(`${template.name} ${template.version} installed.`); setRevision(v => v + 1);
+          setNotice(`${template.name} ${template.version} installed.`); setRevision(v => v + 1); setInstalled(v => v + 1);
         } catch (value) { setError((value as Error).message); } finally { setBusy(''); }
       }}>{busy === template.id ? 'Installing…' : 'Install template'}</button>}
     </article>)}</div>}
-    {session.team.role === 'admin' && <WorkflowRegistry session={session}/>}
+    {session.team.role === 'admin' && <WorkflowRegistry session={session} changed={installed}/>}
   </>;
 }
 
@@ -146,10 +148,11 @@ function RetentionForm({ session, retention, onSaved }: { session: Session; rete
   const [value, setValue] = useState(() => Object.fromEntries(fields.map(([field]) => [field, Number((retention[field] / 86400).toFixed(3))])) as Record<Field, number | ''>);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const at = useRevision(retention.revision);
   return <form className="panel form-panel" onSubmit={async event => {
     event.preventDefault(); setBusy(true); setError('');
     const body = Object.fromEntries(fields.map(([field]) => [field, Math.max(60, Math.round(Number(value[field]) * 86400))]));
-    try { await api(session.csrfToken, '/v1/team/retention', { method: 'PUT', headers: { 'If-Match': String(retention.revision) }, body: JSON.stringify(body) }); onSaved(); }
+    try { await api(session.csrfToken, '/v1/team/retention', { method: 'PUT', headers: { 'If-Match': String(at ?? retention.revision) }, body: JSON.stringify(body) }); onSaved(); }
     catch (failure) { setError((failure as Error).message); } finally { setBusy(false); }
   }}><h2>Retention</h2><p>Run retention starts when a run closes. Content changes apply to new captures. Audit view changes apply when records are read or pruned. Temporal and backups use separate retention.</p>
     {fields.map(([field, label]) => <label key={field}>{label} (days)<NumberInput required min={0.001} max={365} step="any" value={value[field]} onChange={next => setValue(previous => ({ ...previous, [field]: next }))}/></label>)}

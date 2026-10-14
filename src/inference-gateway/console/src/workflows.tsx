@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, money, number, providerName, useData, type Session } from './api';
+import { api, money, number, providerName, useData, useRevision, type Session } from './api';
 import { Empty, ErrorMessage, Loading, NumberInput, Refresh } from './ui';
 
 type Registered = {
@@ -30,15 +30,17 @@ const fromRegistered = (workflow: Registered): Draft => ({
   schema: workflow.input_schema ? JSON.stringify(workflow.input_schema, null, 2) : '',
 });
 
-export function WorkflowRegistry({ session }: { session: Session }) {
+// `changed` counts changes made elsewhere on the page (a template install), so the list and its revision follow.
+export function WorkflowRegistry({ session, changed = 0 }: { session: Session; changed?: number }) {
   const [revision, setRevision] = useState(0);
-  const result = useData<Registry>(session.csrfToken, '/v1/team/workflows', revision);
+  const result = useData<Registry>(session.csrfToken, '/v1/team/workflows', revision + changed);
   const [draft, setDraft] = useState<Draft>();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const registry = result.data;
+  const at = useRevision(registry?.revision);
   const toggle = (field: 'models' | 'tools', value: string) => setDraft(current => current && ({
     ...current, [field]: current[field].includes(value) ? current[field].filter(item => item !== value) : [...current[field], value],
   }));
@@ -64,7 +66,7 @@ export function WorkflowRegistry({ session }: { session: Session }) {
               if (!window.confirm(`Remove ${workflow.name}? New calls from its runs are denied immediately.`)) return;
               setBusy(workflow.name); setError(''); setNotice('');
               try {
-                await api(session.csrfToken, `/v1/team/workflows/${encodeURIComponent(workflow.name)}`, { method: 'DELETE', headers: { 'If-Match': String(registry.revision) } });
+                await api(session.csrfToken, `/v1/team/workflows/${encodeURIComponent(workflow.name)}`, { method: 'DELETE', headers: { 'If-Match': String(at ?? registry.revision) } });
                 setNotice(`${workflow.name} removed.`); setDraft(undefined); setRevision(value => value + 1); document.getElementById('registry-title')?.focus();
               } catch (failure) { setError((failure as Error).message); } finally { setBusy(''); }
             }}>Remove</button></td>
@@ -85,7 +87,7 @@ export function WorkflowRegistry({ session }: { session: Session }) {
             required_approvals: form.approval ? form.reviewers : 1, approval_timeout_seconds: form.deadline, input_schema,
           };
           const saved = await api<{ workflow: Registered }>(session.csrfToken, `/v1/team/workflows/${encodeURIComponent(form.name)}`, {
-            method: 'PUT', headers: { 'If-Match': String(registry.revision) }, body: JSON.stringify(body),
+            method: 'PUT', headers: { 'If-Match': String(at ?? registry.revision) }, body: JSON.stringify(body),
           });
           setNotice(`${saved.workflow.name} ${editing ? 'updated' : 'registered'}. Start your worker, then run it.`); setDraft(undefined); setRevision(value => value + 1);
         } catch (failure) { setError((failure as Error).message); } finally { setBusy(''); }

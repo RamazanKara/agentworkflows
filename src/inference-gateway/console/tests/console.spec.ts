@@ -2480,3 +2480,40 @@ test('workflow policies are read once while moving between pages, and again afte
   await page.getByRole('button', { name: 'Refresh', exact: true }).click();
   await expect.poll(() => reads).toBe(3);
 });
+
+test('saving one part of team settings keeps the next save on the page from conflicting', async ({ page }) => {
+  let revision = 3;
+  const document = settings();
+  await page.route('**/v1/team/alert-rules', route => {
+    const rules = { revision, events: ['failed'], channels: ['webhook'], available_channels: ['webhook'], budget_threshold: 0.8, slow_step_ms: 30000 };
+    if (route.request().method() === 'PUT') {
+      if (route.request().headers()['if-match'] !== String(revision)) return route.fulfill({ status: 409, json: { detail: 'Team settings changed.' } });
+      revision++;
+      return route.fulfill({ json: { ...rules, ...route.request().postDataJSON(), revision } });
+    }
+    return route.fulfill({ json: rules });
+  });
+  await page.route('**/v1/team/settings', route => {
+    if (route.request().method() === 'PATCH') {
+      if (route.request().headers()['if-match'] !== String(revision)) return route.fulfill({ status: 409, json: { detail: { reason: 'team_settings_conflict' } } });
+      revision++;
+      for (const [field, value] of Object.entries(route.request().postDataJSON().fields)) document.fields[field] = { ...document.fields[field], value: value as number, source: 'override' };
+    }
+    return route.fulfill({ json: { ...document, revision } });
+  });
+  await login(page, 'admin', '/console/#team');
+  await page.getByLabel('Budget used (%)', { exact: true }).fill('90');
+  await page.getByRole('button', { name: 'Save alert rules', exact: true }).click();
+  await expect(page.getByText('Alert rules saved.', { exact: true })).toBeVisible();
+  await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('125');
+  const patch = page.waitForRequest(request => request.url().endsWith('/v1/team/settings') && request.method() === 'PATCH');
+  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  expect((await patch).headers()['if-match']).toBe('4');
+  await expect(page.getByText('Settings saved. They apply to the next request.')).toBeVisible();
+  await page.getByLabel('Budget used (%)', { exact: true }).fill('85');
+  const put = page.waitForRequest(request => request.url().endsWith('/v1/team/alert-rules') && request.method() === 'PUT');
+  await page.getByRole('button', { name: 'Save alert rules', exact: true }).click();
+  expect((await put).headers()['if-match']).toBe('5');
+  await expect(page.getByText('Alert rules saved.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

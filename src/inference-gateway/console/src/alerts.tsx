@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { api, useData, type Session } from './api';
+import { api, useData, useRevision, type Session } from './api';
 import { ErrorMessage, Loading, NumberInput, Refresh } from './ui';
 
 type Rules = { revision: number; events: string[]; channels: string[]; available_channels: string[]; budget_threshold: number; slow_step_ms: number };
@@ -18,6 +18,7 @@ export function AlertSettings({ session }: { session: Session }) {
 
 function AlertForm({ session, rules }: { session: Session; rules: Rules }) {
   const [value, setValue] = useState(rules);
+  const at = useRevision(value.revision);
   // Percent and seconds are edited as typed; clearing a field no longer snaps it to its minimum.
   const [percent, setPercent] = useState<number | ''>(Math.round(rules.budget_threshold * 100));
   const [seconds, setSeconds] = useState<number | ''>(rules.slow_step_ms / 1000);
@@ -27,10 +28,10 @@ function AlertForm({ session, rules }: { session: Session; rules: Rules }) {
   const toggle = (field: 'channels' | 'events', key: string) => setValue({ ...value, [field]: value[field].includes(key) ? value[field].filter(item => item !== key) : [...value[field], key] });
   return <form onSubmit={async event => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('');
-    const { revision, available_channels: _available, ...rest } = value;
+    const { revision: _revision, available_channels: _available, ...rest } = value;
     const body = { ...rest, budget_threshold: Number(percent) / 100, slow_step_ms: Math.max(1, Math.round(Number(seconds) * 1000)) };
     try {
-      const saved = await api<Rules>(session.csrfToken, '/v1/team/alert-rules', { method: 'PUT', headers: { 'If-Match': String(revision) }, body: JSON.stringify(body) });
+      const saved = await api<Rules>(session.csrfToken, '/v1/team/alert-rules', { method: 'PUT', headers: { 'If-Match': String(at ?? value.revision) }, body: JSON.stringify(body) });
       setValue(saved); setPercent(Math.round(saved.budget_threshold * 100)); setSeconds(saved.slow_step_ms / 1000); setMessage('Alert rules saved.');
     } catch (failure) { setError((failure as Error).message); } finally { setBusy(false); }
   }}>

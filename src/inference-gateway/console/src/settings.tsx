@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { AlertSettings } from './alerts';
-import { api, date, label as titleCase, money, number, policyCache, providerName, useData, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
+import { api, date, label as titleCase, money, number, policyCache, providerName, useData, useRevision, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
 import { DotList, ErrorMessage, Loading, NumberInput, PageHeader, useUnsavedChanges } from './ui';
 
 // Field keys: cost_limit_usd, project_budgets.<project>, workflows.<Workflow>.<field>, model_routes.<alias>.
@@ -69,7 +69,9 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
   const models = useData<Models>(session.csrfToken, '/v1/models', 0, policyCache);
   const owners = Object.fromEntries((models.data?.data || []).map(model => [model.id, providerName(model.owned_by)]));
   const [saved, setSaved] = useState<TeamSettings>();
-  const settings = saved || result.data;
+  // The newer of the last save and the last read; a refresh never shows values older than a save.
+  const settings = saved && (!result.data || saved.revision >= result.data.revision) ? saved : result.data;
+  const followed = useRevision(settings?.revision);
   // Edits and resets both wait for Save, so Discard undoes either.
   const [draft, setDraft] = useState<Record<string, SettingValue>>({});
   const [resets, setResets] = useState<string[]>([]);
@@ -116,14 +118,16 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
     if (!settings || !changes) return;
     setBusy(true); setError(''); setErrors({}); setJustSaved(false);
     let latest = settings;
+    let at = followed ?? settings.revision;
     let remaining = resets;
     try {
       for (const name of resets) {
-        latest = await api<TeamSettings>(session.csrfToken, `/v1/team/settings/${encodeURIComponent(name)}`, { method: 'DELETE', headers: { 'If-Match': String(latest.revision) } });
+        latest = await api<TeamSettings>(session.csrfToken, `/v1/team/settings/${encodeURIComponent(name)}`, { method: 'DELETE', headers: { 'If-Match': String(at) } });
+        at = latest.revision;
         remaining = remaining.filter(item => item !== name);
       }
       if (Object.keys(draft).length) latest = await api<TeamSettings>(session.csrfToken, '/v1/team/settings', {
-        method: 'PATCH', headers: { 'If-Match': String(latest.revision) }, body: JSON.stringify({ fields: draft }),
+        method: 'PATCH', headers: { 'If-Match': String(at) }, body: JSON.stringify({ fields: draft }),
       });
       setSaved(latest); setDraft({}); setResets([]); setJustSaved(true);
       onSaved?.();
