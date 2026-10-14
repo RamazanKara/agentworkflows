@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 SANDBOX_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 VALID_RETRIEVAL_BACKENDS = {"lexical", "qdrant"}
@@ -164,15 +166,29 @@ class Settings:
 
     def __post_init__(self) -> None:
         """Validate retrieval, vector store, embedding, and auth fields after init."""
-        validate_sandbox_id(self.default_sandbox_id)
+        try:
+            validate_sandbox_id(self.default_sandbox_id)
+        except ValueError as exc:
+            raise ValueError(f"default_sandbox_id: {exc}") from None
         if self.audit_chain_store_backend not in AUDIT_CHAIN_STORE_BACKENDS:
             raise ValueError("audit_chain_store_backend must be one of: memory, file, redis")
-        for name, value in (
-            ("audit_chain_store_timeout_seconds", self.audit_chain_store_timeout_seconds),
-            ("audit_chain_persist_interval_seconds", self.audit_chain_persist_interval_seconds),
-        ):
-            if value <= 0:
-                raise ValueError(f"{name} must be greater than zero")
+        if self.audit_chain_store_backend == "redis" and urlsplit(self.audit_chain_store_redis_url).scheme not in {
+            "redis",
+            "rediss",
+            "unix",
+        }:
+            raise ValueError("audit_chain_store_redis_url must be a redis://, rediss:// or unix:// URL")
+        # "nan" and "inf" parse as floats and slip past a plain "> 0" check: a NaN timeout
+        # compares false with everything and reached the HTTP clients unchecked.
+        for name in _DURATION_FIELDS:
+            value = getattr(self, name)
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be a finite number greater than zero")
+        # A URL without a scheme only failed on first use, as a 503 on every query.
+        for name in _URL_FIELDS:
+            value = getattr(self, name)
+            if value and not _is_http_url(value):
+                raise ValueError(f"{name} must be an http:// or https:// URL with a host")
         for name, value in (
             ("max_query_chars", self.max_query_chars),
             ("max_request_body_bytes", self.max_request_body_bytes),
@@ -192,8 +208,6 @@ class Settings:
             raise ValueError("vector_collection must not be empty")
         if not self.vector_collection_version.strip():
             raise ValueError("vector_collection_version must not be empty")
-        if self.vector_timeout_seconds <= 0:
-            raise ValueError("vector_timeout_seconds must be greater than zero")
         if self.vector_dimensions <= 0:
             raise ValueError("vector_dimensions must be greater than zero")
         if self.retrieval_candidate_multiplier < 1:
@@ -208,8 +222,6 @@ class Settings:
             raise ValueError("reranker_base_url must be set when reranker_provider is openai-compatible")
         if self.reranker_provider == "openai-compatible" and not self.reranker_model:
             raise ValueError("reranker_model must be set when reranker_provider is openai-compatible")
-        if self.reranker_timeout_seconds <= 0:
-            raise ValueError("reranker_timeout_seconds must be greater than zero")
         if self.embedding_provider not in VALID_EMBEDDING_PROVIDERS:
             raise ValueError(f"embedding_provider must be one of {sorted(VALID_EMBEDDING_PROVIDERS)}")
         if self.embedding_provider == "openai-compatible" and not self.embedding_base_url:
@@ -233,17 +245,26 @@ class Settings:
             raise ValueError("jwt_tenant_claim must be set when JWT verification is enabled")
         if self.jwt_cache_seconds <= 0:
             raise ValueError("jwt_cache_seconds must be greater than zero")
-        if self.jwt_request_timeout_seconds <= 0:
-            raise ValueError("jwt_request_timeout_seconds must be greater than zero")
         if self.otel_tracing_enabled and not self.otel_exporter_otlp_endpoint:
             raise ValueError("otel_exporter_otlp_endpoint must be set when OTEL tracing is enabled")
 
     @classmethod
     def from_env(cls) -> Settings:
-        """Construct settings from environment variables with validated defaults."""
+        """Construct settings from environment variables with validated defaults.
+
+        A validation error names the environment variables behind each setting it mentions,
+        so "max_top_k must be greater than zero" reads "max_top_k (MAX_TOP_K) must be ...".
+        """
+        try:
+            return cls._from_env()
+        except ValueError as exc:
+            raise ValueError(_with_env_names(str(exc))) from None
+
+    @classmethod
+    def _from_env(cls) -> Settings:
         return cls(
             document_dir=Path(os.getenv("RAG_DOCUMENT_DIR", "/knowledge")),
-            default_sandbox_id=validate_sandbox_id(os.getenv("DEFAULT_SANDBOX_ID", "local-lab")),
+            default_sandbox_id=os.getenv("DEFAULT_SANDBOX_ID", "local-lab").strip().lower(),
             audit_log_enabled=_bool_from_env("AUDIT_LOG_ENABLED", True),
             audit_chain_store_backend=os.getenv("RAG_AUDIT_CHAIN_STORE_BACKEND", "memory").strip().lower(),
             audit_chain_store_path=os.getenv(
@@ -299,6 +320,95 @@ class Settings:
             otel_exporter_otlp_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip(),
             otel_service_name=os.getenv("OTEL_SERVICE_NAME", "rag-service").strip(),
         )
+
+
+# Durations that must be positive and finite.
+_DURATION_FIELDS = (
+    "audit_chain_store_timeout_seconds",
+    "audit_chain_persist_interval_seconds",
+    "vector_timeout_seconds",
+    "reranker_timeout_seconds",
+    "jwt_request_timeout_seconds",
+)
+# Endpoints called over HTTP; each is validated only when set.
+_URL_FIELDS = (
+    "vector_store_url",
+    "embedding_base_url",
+    "reranker_base_url",
+    "jwt_jwks_url",
+    "otel_exporter_otlp_endpoint",
+)
+# The environment variables Settings.from_env reads for each field (first one wins).
+# tests/test_settings_validation.py keeps this in step with from_env.
+ENV_BY_FIELD: dict[str, tuple[str, ...]] = {
+    "document_dir": ("RAG_DOCUMENT_DIR",),
+    "default_sandbox_id": ("DEFAULT_SANDBOX_ID",),
+    "audit_log_enabled": ("AUDIT_LOG_ENABLED",),
+    "audit_chain_store_backend": ("RAG_AUDIT_CHAIN_STORE_BACKEND",),
+    "audit_chain_store_path": ("RAG_AUDIT_CHAIN_STORE_PATH",),
+    "audit_chain_store_redis_url": ("RAG_AUDIT_CHAIN_STORE_REDIS_URL",),
+    "audit_chain_store_key": ("RAG_AUDIT_CHAIN_STORE_KEY",),
+    "audit_chain_store_timeout_seconds": ("RAG_AUDIT_CHAIN_STORE_TIMEOUT_SECONDS",),
+    "audit_chain_persist_interval_seconds": ("RAG_AUDIT_CHAIN_PERSIST_INTERVAL_SECONDS",),
+    "max_query_chars": ("MAX_QUERY_CHARS",),
+    "max_request_body_bytes": ("MAX_REQUEST_BODY_BYTES",),
+    "default_top_k": ("DEFAULT_TOP_K",),
+    "max_top_k": ("MAX_TOP_K",),
+    "max_context_chars": ("MAX_CONTEXT_CHARS",),
+    "retrieval_backend": ("RAG_RETRIEVAL_BACKEND", "RETRIEVAL_BACKEND"),
+    "vector_store_url": ("QDRANT_URL", "VECTOR_STORE_URL"),
+    "vector_collection": ("QDRANT_COLLECTION", "VECTOR_COLLECTION"),
+    "vector_collection_version": ("QDRANT_COLLECTION_VERSION", "VECTOR_COLLECTION_VERSION"),
+    "vector_timeout_seconds": ("QDRANT_TIMEOUT_SECONDS", "VECTOR_TIMEOUT_SECONDS"),
+    "vector_dimensions": ("QDRANT_VECTOR_DIMENSIONS",),
+    "vector_bootstrap_enabled": ("QDRANT_BOOTSTRAP_FROM_KNOWLEDGE",),
+    "retrieval_candidate_multiplier": ("RAG_RETRIEVAL_CANDIDATE_MULTIPLIER",),
+    "retrieval_lexical_weight": ("RAG_RETRIEVAL_LEXICAL_WEIGHT",),
+    "retrieval_allowed_classifications": ("RAG_RETRIEVAL_ALLOWED_CLASSIFICATIONS",),
+    "retrieval_tenant_isolation_enabled": ("RAG_RETRIEVAL_TENANT_ISOLATION_ENABLED",),
+    "retrieval_tenant_field": ("RAG_RETRIEVAL_TENANT_FIELD",),
+    "reranker_provider": ("RAG_RERANKER_PROVIDER",),
+    "reranker_base_url": ("RAG_RERANKER_BASE_URL",),
+    "reranker_model": ("RAG_RERANKER_MODEL",),
+    "reranker_timeout_seconds": ("RAG_RERANKER_TIMEOUT_SECONDS",),
+    "embedding_provider": ("RAG_EMBEDDING_PROVIDER",),
+    "embedding_base_url": ("RAG_EMBEDDING_BASE_URL",),
+    "embedding_model": ("RAG_EMBEDDING_MODEL",),
+    "rag_source_manifest": ("RAG_SOURCE_MANIFEST",),
+    "api_key_auth_enabled": ("API_KEY_AUTH_ENABLED",),
+    "api_key_sha256s": ("API_KEY_SHA256S",),
+    "api_key_header": ("API_KEY_HEADER",),
+    "jwt_enabled": ("RAG_JWT_ENABLED",),
+    "jwt_jwks_url": ("RAG_JWT_JWKS_URL",),
+    "jwt_issuer": ("RAG_JWT_ISSUER",),
+    "jwt_audience": ("RAG_JWT_AUDIENCE",),
+    "jwt_tenant_claim": ("RAG_JWT_TENANT_CLAIM",),
+    "jwt_cache_seconds": ("RAG_JWT_CACHE_SECONDS",),
+    "jwt_request_timeout_seconds": ("RAG_JWT_REQUEST_TIMEOUT_SECONDS",),
+    "jwt_required": ("RAG_JWT_REQUIRED",),
+    "otel_tracing_enabled": ("OTEL_TRACING_ENABLED",),
+    "otel_exporter_otlp_endpoint": ("OTEL_EXPORTER_OTLP_ENDPOINT",),
+    "otel_service_name": ("OTEL_SERVICE_NAME",),
+}
+_FIELD_WORD = re.compile(r"\b[a-z][a-z0-9_]*\b")
+
+
+def _with_env_names(message: str) -> str:
+    """Follow each setting named in a validation message with its environment variables."""
+
+    def annotate(match: re.Match[str]) -> str:
+        names = ENV_BY_FIELD.get(match.group(0))
+        return f"{match.group(0)} ({' or '.join(names)})" if names else match.group(0)
+
+    return _FIELD_WORD.sub(annotate, message)
+
+
+def _is_http_url(value: str) -> bool:
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return False
+    return parts.scheme in {"http", "https"} and bool(parts.netloc)
 
 
 def _path_from_env(name: str) -> Path | None:
