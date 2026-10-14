@@ -1,6 +1,6 @@
 # Built from the repository root; Dockerfile.dockerignore beside this file limits the context
 # to the SDK package and its lock.
-FROM registry.k8s.io/kubectl:v1.36.5@sha256:0667e3f3e6ef435d7cd4c16684244703ebd67314c17511c2a9f87ea44f6cdf6b AS kubectl
+FROM registry.k8s.io/kubectl:v1.37.1@sha256:b7cab618e281b1ee7484e7b706a96e2135fbb6e072c2a573a7dab4e87d7f2385 AS kubectl
 
 # Install the locked dependencies into a separate prefix and strip debug symbols from their
 # native extensions. Only that prefix reaches the runtime; binutils stays here.
