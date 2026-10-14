@@ -169,7 +169,7 @@ def list_events(
     request: Request, start: float | None, end: float | None, event_type: str | None,
     actor: str | None, project: str | None, run_id: str | None, cursor: str | None, limit: int,
 ) -> dict[str, Any]:
-    entries = []
+    entries: list[dict[str, Any]] = []
     for entry in read_entries(request, cursor):
         event = entry["event"]
         if (

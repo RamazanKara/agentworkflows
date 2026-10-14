@@ -340,8 +340,8 @@ class Settings:
                 raise ValueError("OIDC requires OIDC_TEAM_CLAIM or JWT_TENANT_CLAIM")
             if "openid" not in self.oidc_scopes.split():
                 raise ValueError("OIDC_SCOPES must include openid")
-            for value in (self.oidc_issuer, self.oidc_redirect_url):
-                url = urlsplit(value)
+            for oidc_url in (self.oidc_issuer, self.oidc_redirect_url):
+                url = urlsplit(oidc_url)
                 local = url.hostname in {"localhost", "127.0.0.1", "::1"}
                 if (
                     not url.hostname or url.username or url.password or url.fragment or url.query

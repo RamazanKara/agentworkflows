@@ -70,8 +70,9 @@ class KeyCreate(BaseModel):
 
 
 class KeyUpdate(KeyCreate):
-    name: Name | None = None
-    role: Role | None = None
+    # Optional overrides of the create fields; a subclass keeps the schema field order.
+    name: Name | None = None  # type: ignore[assignment]
+    role: Role | None = None  # type: ignore[assignment]
 
 
 class ManagedKey(BaseModel):

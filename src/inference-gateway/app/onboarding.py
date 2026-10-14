@@ -93,7 +93,7 @@ def register_onboarding_routes(app: FastAPI) -> None:
         policy = team.workflows.get("ResearchWorkflow") if team else None
         blockers = []
         sample = None
-        if not policy:
+        if team is None or policy is None:
             blockers.append("Ask your operator to register ResearchWorkflow and its research/publish tools.")
         else:
             routes = [

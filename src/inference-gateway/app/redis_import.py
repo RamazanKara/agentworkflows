@@ -91,7 +91,7 @@ def import_record(connection: Any, scope: str, kind: str, identity: str, data: d
     params: tuple[Any, ...] = (scope, identity)
     if kind == "settings":
         query = "SELECT document FROM aw_team_settings WHERE scope = %s AND team = %s"
-        expected = (data["document"],)
+        expected: tuple[Any, ...] = (data["document"],)
         insert = "INSERT INTO aw_team_settings VALUES (%s, %s, %s, %s)"
         values = (*params, data["document"]["revision"], Jsonb(data["document"]))
     elif kind == "key":

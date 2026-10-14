@@ -73,7 +73,7 @@ async def effective_team_settings(request: Request) -> EffectiveTeamSettings:
         return cached[1]
     team = request.app.state.sandbox_policy_set.policies.get(sandbox_id)
     routing = request.app.state.model_routing_policy
-    document = {"revision": 0, "updated_by": None, "updated_at": None, "overrides": {}}
+    document: dict[str, Any] = {"revision": 0, "updated_by": None, "updated_at": None, "overrides": {}}
     # Legacy memory-backed sandboxes keep their YAML-only behavior.
     if team and (
         request.app.state.storage.backend == "postgres" or request.app.state.budget_tracker.backend == "redis"
