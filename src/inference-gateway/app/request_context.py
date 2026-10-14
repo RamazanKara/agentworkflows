@@ -496,74 +496,61 @@ def _bound_sandbox_id(claims: dict[str, Any], claim_name: str) -> str:
     return validate_sandbox_id(str(raw))
 
 
-def _auth_failure_response(request: Request, reason: str) -> JSONResponse:
-    """Record the failure metric and build the 401 response with trace headers."""
-    AUTH_FAILURES.labels(_route_label(request), reason).inc()
-    response = JSONResponse(
-        status_code=401,
+def _gateway_error(
+    request: Request, status_code: int, message: str, reason: str, headers: dict[str, str] | None = None
+) -> JSONResponse:
+    """Build a refusal the middleware returns before routing, in the standard envelope.
+
+    Carries the request's correlation headers, which the response-header stamping that
+    routed responses get never adds to an early refusal.
+    """
+    response = GatewayJSONResponse(
+        status_code=status_code,
         content=_error_envelope(
-            401,
+            status_code,
             {
-                "message": "Gateway authentication is missing or invalid. Set AGENTWORKFLOWS_API_KEY "
-                "or send Authorization: Bearer <gateway-key>; use local-development-only for Compose.",
+                "message": message,
                 "reason": reason,
                 "request_id": request.state.request_id,
                 "sandbox_id": request.state.sandbox_id,
             },
         ),
+        headers=headers,
     )
-    response.headers["WWW-Authenticate"] = "Bearer"
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Sandbox-ID"] = request.state.sandbox_id
     if request.state.traceparent:
         response.headers["traceparent"] = request.state.traceparent
     return response
+
+
+def _auth_failure_response(request: Request, reason: str) -> JSONResponse:
+    """Record the failure metric and build the 401 response with trace headers."""
+    AUTH_FAILURES.labels(_route_label(request), reason).inc()
+    return _gateway_error(
+        request,
+        401,
+        "Gateway authentication is missing or invalid. Set AGENTWORKFLOWS_API_KEY "
+        "or send Authorization: Bearer <gateway-key>; use local-development-only for Compose.",
+        reason,
+        {"WWW-Authenticate": "Bearer"},
+    )
 
 
 def _jwks_unavailable_response(request: Request) -> JSONResponse:
     """Build a 503 response when the JWKS issuer is unreachable (not a token rejection)."""
     AUTH_FAILURES.labels(_route_label(request), "jwks_unavailable").inc()
-    response = JSONResponse(
-        status_code=503,
-        content=_error_envelope(
-            503,
-            {
-                "message": "authentication is temporarily unavailable",
-                "reason": "jwks_unavailable",
-                "request_id": request.state.request_id,
-                "sandbox_id": request.state.sandbox_id,
-            },
-        ),
-        headers={"Retry-After": "5"},
+    return _gateway_error(
+        request, 503, "authentication is temporarily unavailable", "jwks_unavailable", {"Retry-After": "5"}
     )
-    response.headers["X-Request-ID"] = request.state.request_id
-    response.headers["X-Sandbox-ID"] = request.state.sandbox_id
-    if request.state.traceparent:
-        response.headers["traceparent"] = request.state.traceparent
-    return response
 
 
 def _overloaded_response(request: Request) -> JSONResponse:
     """Build a 503 response when the gateway concurrency limit is exceeded (load shed)."""
     LOAD_SHED.labels(_route_label(request)).inc()
-    response = JSONResponse(
-        status_code=503,
-        content=_error_envelope(
-            503,
-            {
-                "message": "gateway is at capacity; retry shortly",
-                "reason": "concurrency_limit",
-                "request_id": request.state.request_id,
-                "sandbox_id": request.state.sandbox_id,
-            },
-        ),
-        headers={"Retry-After": "1"},
+    return _gateway_error(
+        request, 503, "gateway is at capacity; retry shortly", "concurrency_limit", {"Retry-After": "1"}
     )
-    response.headers["X-Request-ID"] = request.state.request_id
-    response.headers["X-Sandbox-ID"] = request.state.sandbox_id
-    if request.state.traceparent:
-        response.headers["traceparent"] = request.state.traceparent
-    return response
 
 
 def _rate_limit_backend_unavailable_response(request: Request) -> JSONResponse:
@@ -572,67 +559,28 @@ def _rate_limit_backend_unavailable_response(request: Request) -> JSONResponse:
     Mirrors the budget tracker's backend-outage contract: a governance-store outage
     is a retryable 503, never a silent fail-open or an unhandled 500.
     """
-    response = JSONResponse(
-        status_code=503,
-        content=_error_envelope(
-            503,
-            {
-                "message": "rate limit backend is unavailable; retry shortly",
-                "reason": "rate_limit_backend_unavailable",
-                "request_id": request.state.request_id,
-                "sandbox_id": request.state.sandbox_id,
-            },
-        ),
-        headers={"Retry-After": "5"},
+    return _gateway_error(
+        request,
+        503,
+        "rate limit backend is unavailable; retry shortly",
+        "rate_limit_backend_unavailable",
+        {"Retry-After": "5"},
     )
-    response.headers["X-Request-ID"] = request.state.request_id
-    response.headers["X-Sandbox-ID"] = request.state.sandbox_id
-    if request.state.traceparent:
-        response.headers["traceparent"] = request.state.traceparent
-    return response
 
 
 def _rate_limited_response(request: Request, retry_after: int) -> JSONResponse:
     """Build a 429 response with Retry-After when the per-sandbox rate limit is hit."""
     RATE_LIMITED.labels(_sandbox_label(request.state.sandbox_id)).inc()
-    response = JSONResponse(
-        status_code=429,
-        content=_error_envelope(
-            429,
-            {
-                "message": "rate limit exceeded for this sandbox",
-                "reason": "rate_limited",
-                "request_id": request.state.request_id,
-                "sandbox_id": request.state.sandbox_id,
-            },
-        ),
+    return _gateway_error(
+        request,
+        429,
+        "rate limit exceeded for this sandbox",
+        "rate_limited",
+        {"Retry-After": str(retry_after)} if retry_after > 0 else None,
     )
-    if retry_after > 0:
-        response.headers["Retry-After"] = str(retry_after)
-    response.headers["X-Request-ID"] = request.state.request_id
-    response.headers["X-Sandbox-ID"] = request.state.sandbox_id
-    if request.state.traceparent:
-        response.headers["traceparent"] = request.state.traceparent
-    return response
 
 
 def _sandbox_binding_response(request: Request, reason: str) -> JSONResponse:
     """Build a 403 when a JWT tenant claim is missing/invalid or contradicts the header."""
     AUTH_FAILURES.labels(_route_label(request), reason).inc()
-    response = JSONResponse(
-        status_code=403,
-        content=_error_envelope(
-            403,
-            {
-                "message": "sandbox identity is not authorized for this caller",
-                "reason": reason,
-                "request_id": request.state.request_id,
-                "sandbox_id": request.state.sandbox_id,
-            },
-        ),
-    )
-    response.headers["X-Request-ID"] = request.state.request_id
-    response.headers["X-Sandbox-ID"] = request.state.sandbox_id
-    if request.state.traceparent:
-        response.headers["traceparent"] = request.state.traceparent
-    return response
+    return _gateway_error(request, 403, "sandbox identity is not authorized for this caller", reason)

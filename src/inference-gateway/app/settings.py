@@ -630,37 +630,7 @@ class Settings:
         self._validate_tools(payload)
         for text in iter_payload_strings(payload):
             self._enforce_content_policy(text)
-        # Validate BOTH completion-cap fields independently: the request forwards both to
-        # the runtime, and different runtimes honor different fields (vLLM prefers
-        # max_completion_tokens, Ollama honors max_tokens), so a cap on only the "preferred"
-        # field would let the other slip an uncapped value through to the backend.
-        for field in ("max_completion_tokens", "max_tokens"):
-            value = payload.get(field)
-            if value is None:
-                continue
-            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-                raise AdmissionPolicyError(
-                    "invalid_max_tokens",
-                    "max_tokens/max_completion_tokens must be a positive integer",
-                )
-            if value > self.max_completion_tokens:
-                raise AdmissionPolicyError(
-                    "max_tokens_too_large",
-                    f"requested completion tokens is {value}; limit is {self.max_completion_tokens}",
-                )
-        requested_completions = payload.get("n")
-        if requested_completions is not None:
-            if (
-                not isinstance(requested_completions, int)
-                or isinstance(requested_completions, bool)
-                or requested_completions <= 0
-            ):
-                raise AdmissionPolicyError("invalid_n", "n must be a positive integer")
-            if requested_completions > self.max_completions_per_request:
-                raise AdmissionPolicyError(
-                    "too_many_completions",
-                    f"n is {requested_completions}; limit is {self.max_completions_per_request}",
-                )
+        self._validate_completion_caps(payload)
         rejected_url = disallowed_image_url(messages, self.image_url_allowed_hosts)
         if rejected_url is not None:
             raise AdmissionPolicyError(
@@ -689,10 +659,50 @@ class Settings:
                     "invalid_temperature",
                     "temperature must be between 0 and 2",
                 )
+        self._validate_streaming(payload)
+
+    def _validate_completion_caps(self, payload: dict) -> None:
+        """Bound the requested completion length and count.
+
+        Both cap fields are validated independently: the request forwards both to the
+        runtime, and different runtimes honor different fields (vLLM prefers
+        ``max_completion_tokens``, Ollama honors ``max_tokens``), so a cap on only the
+        "preferred" field would let the other slip an uncapped value through.
+        """
+        for field in ("max_completion_tokens", "max_tokens"):
+            value = payload.get(field)
+            if value is None:
+                continue
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                raise AdmissionPolicyError(
+                    "invalid_max_tokens",
+                    "max_tokens/max_completion_tokens must be a positive integer",
+                )
+            if value > self.max_completion_tokens:
+                raise AdmissionPolicyError(
+                    "max_tokens_too_large",
+                    f"requested completion tokens is {value}; limit is {self.max_completion_tokens}",
+                )
+        requested_completions = payload.get("n")
+        if requested_completions is not None:
+            if (
+                not isinstance(requested_completions, int)
+                or isinstance(requested_completions, bool)
+                or requested_completions <= 0
+            ):
+                raise AdmissionPolicyError("invalid_n", "n must be a positive integer")
+            if requested_completions > self.max_completions_per_request:
+                raise AdmissionPolicyError(
+                    "too_many_completions",
+                    f"n is {requested_completions}; limit is {self.max_completions_per_request}",
+                )
+
+    def _validate_streaming(self, payload: dict) -> None:
         if payload.get("stream") and not self.allow_streaming:
             raise AdmissionPolicyError(
                 "streaming_disabled",
-                "streaming responses are disabled for this gateway",
+                "streaming responses are disabled for this gateway; omit stream, or ask the operator to set "
+                "ALLOW_STREAMING=true (or allowStreaming in the sandbox policy)",
             )
 
     def validate_tool_admission(self, payload: dict) -> None:
@@ -752,38 +762,8 @@ class Settings:
             )
         for text in iter_payload_strings(payload):
             self._enforce_content_policy(text)
-        for field in ("max_completion_tokens", "max_tokens"):
-            value = payload.get(field)
-            if value is None:
-                continue
-            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-                raise AdmissionPolicyError(
-                    "invalid_max_tokens",
-                    "max_tokens/max_completion_tokens must be a positive integer",
-                )
-            if value > self.max_completion_tokens:
-                raise AdmissionPolicyError(
-                    "max_tokens_too_large",
-                    f"requested completion tokens is {value}; limit is {self.max_completion_tokens}",
-                )
-        requested_completions = payload.get("n")
-        if requested_completions is not None:
-            if (
-                not isinstance(requested_completions, int)
-                or isinstance(requested_completions, bool)
-                or requested_completions <= 0
-            ):
-                raise AdmissionPolicyError("invalid_n", "n must be a positive integer")
-            if requested_completions > self.max_completions_per_request:
-                raise AdmissionPolicyError(
-                    "too_many_completions",
-                    f"n is {requested_completions}; limit is {self.max_completions_per_request}",
-                )
-        if payload.get("stream") and not self.allow_streaming:
-            raise AdmissionPolicyError(
-                "streaming_disabled",
-                "streaming responses are disabled for this gateway",
-            )
+        self._validate_completion_caps(payload)
+        self._validate_streaming(payload)
 
     def matched_secret_pattern(self, text: str) -> str | None:
         """Return the name of the first configured secret/PII pattern matched, or None."""
