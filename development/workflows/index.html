@@ -3656,7 +3656,9 @@ team admin). PUT takes <code>after_seconds</code>, optional <code>approver_role<
 <code>approval_escalation_removed</code>; removing a team-registered workflow removes its escalation.
 <code>GET /v1/workflow-policies</code> shows each workflow's <code>approvalEscalation</code>. Python:
 <code>approval_escalations()</code>, <code>set_approval_escalation(workflow, after_seconds=..., ...)</code>,
-<code>remove_approval_escalation(workflow)</code> and <code>review_queue()</code>.</p>
+<code>remove_approval_escalation(workflow)</code> and <code>review_queue()</code>. TypeScript: <code>approvalEscalations()</code>,
+<code>setApprovalEscalation(workflow, afterSeconds, options?, revision?)</code>,
+<code>removeApprovalEscalation(workflow, revision?)</code> and <code>reviewQueue()</code>.</p>
 <h2 id="invite-teammates-without-company-sign-in">Invite teammates without company sign-in<a class="headerlink" href="#invite-teammates-without-company-sign-in" title="Permanent link">&para;</a></h2>
 <p>In <strong>Members &amp; keys → Invite a teammate</strong>, choose a name, role, and project. Create and
 copy the invitation link, then share it privately. The recipient opens it and chooses

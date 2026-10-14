@@ -2473,9 +2473,11 @@ from <code>@agentworkflows/sdk/worker</code> and calls
 The helper reads the same <code>AGENTWORKFLOWS_API_KEY</code>, <code>AGENTWORKFLOWS_URL</code>,
 <code>AGENTWORKFLOWS_TEAM</code>, <code>TEMPORAL_ADDRESS</code>, <code>TEMPORAL_NAMESPACE</code>, and
 <code>TEMPORAL_TASK_QUEUE</code> variables as the Python worker. Its second argument takes
-<code>agents</code> (below) and <code>healthPort</code>: set <code>healthPort: 8081</code> to serve the <code>/healthz</code> and
-<code>/readyz</code> probes the workflows Helm chart expects. A failed Temporal connection names
-the address it tried.</p>
+<code>agents</code> (below) and <code>healthPort</code>. The <code>/healthz</code> and <code>/readyz</code> probes the workflows
+Helm chart expects listen on <code>healthPort</code>, or on <code>AGENTWORKFLOWS_HEALTH_ADDRESS</code>
+(<code>host:port</code>, such as <code>0.0.0.0:8081</code>). Unlike the Python worker, the TypeScript worker
+opens no port when neither is set, so a local trial needs no firewall exception. A
+failed Temporal connection or a taken health port names the setting to change.</p>
 <table>
 <thead>
 <tr>
@@ -2514,10 +2516,17 @@ the address it tried.</p>
 </tr>
 <tr>
 <td><code>AgentWorkflowsTrigger</code></td>
-<td>Export alongside your workflows for governed Temporal schedule delivery</td>
+<td>Export alongside your workflows for governed Temporal schedule delivery; it reads the target run's status after 30 seconds, backs off to every five minutes, keeps only the run's ID and status in history, and continues as new when Temporal suggests it</td>
 </tr>
 </tbody>
 </table>
+<p>To widen who may review a run that waits too long, an admin calls
+<code>setApprovalEscalation(workflow, afterSeconds, { approver_role, reviewers, channels })</code>
+(revision-checked like the other team settings; <code>approvalEscalations()</code> lists them and
+<code>removeApprovalEscalation(workflow)</code> stops new runs escalating). Reviewers iterate
+<code>for await (const run of client.reviewQueue())</code> over the waiting runs they may review now;
+each run's <code>approval_access</code> and <code>approval_escalation</code> say why and when. See
+<a href="../workflows/#approval-escalation">approval escalation</a>.</p>
 <p>Activity defaults match Python: three minutes per attempt, fifteen minutes overall,
 five attempts with exponential backoff. <code>WorkflowGateway</code> accepts a second options
 argument with Temporal's <code>retry</code>, <code>startToCloseTimeout</code>, <code>scheduleToCloseTimeout</code>, and
