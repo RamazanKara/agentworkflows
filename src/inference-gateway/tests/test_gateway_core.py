@@ -745,3 +745,15 @@ def test_derived_settings_are_validated_once_and_reused():
     assert derive_settings(_tool_settings(), max_messages=3) is not derived
     with pytest.raises(ValueError, match="budget_estimated_chars_per_token"):
         derive_settings(base, budget_estimated_chars_per_token=0)
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [{"X-Request-ID": "has space"}, {"X-Sandbox-ID": "Not Valid!"}, {"traceparent": "garbage"}],
+)
+def test_malformed_headers_are_refused_in_the_error_envelope(headers):
+    response = TestClient(create_app(_tool_settings())).get("/v1/models", headers=headers)
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"]["type"] == "invalid_request_error"
+    assert body["error"]["message"] == body["detail"]

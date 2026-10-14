@@ -86,7 +86,7 @@ class RequestContextMiddleware:
             # correct API behavior, not information disclosure. Also logged for server-side triage.
             reason = str(exc)
             LOGGER.warning("rejected malformed request header: %s", reason)
-            await JSONResponse(status_code=400, content={"detail": reason})(scope, receive, send)
+            await GatewayJSONResponse(status_code=400, content=_error_envelope(400, reason))(scope, receive, send)
             return
         outcome = _Outcome()
 
@@ -250,9 +250,9 @@ class RequestContextMiddleware:
 
         # Bounded concurrency is enforced by ConcurrencyLimitMiddleware inside this one.
         if getattr(request.state, "workflow_run_id", None) and not _workflow_step_path(path):
-            return JSONResponse(
+            return GatewayJSONResponse(
                 status_code=400,
-                content={"detail": "Workflow steps support chat, messages, tools, and container agents."},
+                content=_error_envelope(400, "Workflow steps support chat, messages, tools, and container agents."),
             )
         return None
 
