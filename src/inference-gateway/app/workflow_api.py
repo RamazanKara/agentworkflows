@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 
 from app.governance import effective_settings, governed, request_classification, reserve_budget
@@ -111,14 +111,18 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
         return {"run_id": str(run_id), **budget.model_dump(), **effective_run_limits(raw, policy)}
 
     @app.get("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Inspect this team's run budget")
-    async def run_usage(request: Request, run_id: UUID) -> dict[str, Any]:
+    async def run_usage(
+        request: Request,
+        run_id: UUID,
+        timeline: bool = Query(True, description="Include the step timeline, step content and the run's result."),
+    ) -> dict[str, Any]:
         team = (await effective_team_settings(request)).team
         if team and team.projects:
             from app.teams import project_access
 
             metadata = await storage_call(request, "get_run", request.state.sandbox_id, str(run_id))
             if metadata:
-                return await describe_run(request, str(run_id))
+                return await describe_run(request, str(run_id), timeline=timeline)
         raw = await redis_call(request, "hgetall", run_key(request, str(run_id)))
         if not raw:
             raise HTTPException(

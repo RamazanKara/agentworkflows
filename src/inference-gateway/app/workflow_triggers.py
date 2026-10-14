@@ -31,6 +31,8 @@ from app.teams import project_access, require_role
 from app.workflow_budget import redis_call
 from app.workflow_operations import RPC_TIMEOUT, StartRun, operation_receipt, start_run, temporal_client
 
+# Signed timestamps expire after five minutes, so a delivery ID only needs to outlive its runs.
+DELIVERY_SECONDS = 8 * 86400
 WEBHOOK_PATH = re.compile(r"^/v1/hooks/([A-Za-z0-9_-]+)/([A-Za-z0-9_.-]+)/([A-Za-z0-9_-]+)$")
 
 
@@ -327,5 +329,9 @@ def register_trigger_routes(app: FastAPI) -> None:
             raise HTTPException(422, detail="Webhook body must be valid JSON.") from None
         result = await fire(request, workflow, name, delivery, payload)
         # Deterministic workflow IDs protect concurrent deliveries and ambiguous start failures.
-        await redis_call(request, "set", key, result["run_id"])
+        if request.state.github_webhook:
+            # GitHub signs only the body, so its replay record cannot expire.
+            await redis_call(request, "set", key, result["run_id"])
+        else:
+            await redis_call(request, "setex", key, DELIVERY_SECONDS, result["run_id"])
         return result

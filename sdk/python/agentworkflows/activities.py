@@ -35,7 +35,7 @@ class GatewayActivities:
             base_url=self.base_url, headers={"Authorization": f"Bearer {self.api_key}"}, timeout=30
         ) as client:
             if request.get("run_id"):
-                response = await client.get(f"/v1/workflow-runs/{request['run_id']}")
+                response = await client.get(f"/v1/workflow-runs/{request['run_id']}", params={"timeline": "false"})
             else:
                 response = await client.post(
                     f"/v1/workflow-triggers/{quote(request['workflow'], safe='')}/"
@@ -51,7 +51,9 @@ class GatewayActivities:
                     "Scheduled launch unavailable; inspect gateway trigger receipts.",
                     non_retryable=exc.status_code < 500 and exc.status_code != 429,
                 ) from None
-            return response.json()
+            # Activity results live in the schedule's Temporal history: keep the run's content out of it.
+            body = response.json()
+            return {key: body[key] for key in ("run_id", "status", "outcome", "error") if key in body}
 
     @activity.defn(name="agentworkflows.call")
     async def call(self, call: Call) -> dict[str, Any]:

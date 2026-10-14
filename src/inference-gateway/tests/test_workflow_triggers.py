@@ -428,3 +428,36 @@ def test_budget_crossing_survives_settlement_before_monitor_poll(gateway):
     store = app.state.budget_tracker.client.data
     assert store[run_key(request)]["tokens"] == 7
     assert store[run_key(request) + ":notifications"] == {"budget_threshold": "1"}
+
+
+def test_signed_delivery_records_expire_but_github_replay_records_do_not(gateway):
+    from app.workflow_triggers import DELIVERY_SECONDS
+
+    client, app, _ = gateway
+    store = app.state.budget_tracker.client
+    assert client.post(PATH, content=b'{"topic":"from webhook"}', headers=signed()).status_code == 201
+    delivery = next(key for key in store.data if key.endswith(":delivery:event-1"))
+    assert store.ttl(delivery) == DELIVERY_SECONDS
+    body = b'{"topic":"native GitHub payload"}'
+    headers = {
+        "X-Hub-Signature-256": "sha256=" + hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest(),
+        "X-GitHub-Delivery": str(uuid4()),
+        "Content-Type": "application/json",
+    }
+    assert client.post(PATH, content=body, headers=headers).status_code == 201
+    github = [key for key in store.data if ":github-webhook:" in key]
+    assert len(github) == 2 and all(store.ttl(key) == -1 for key in github)
+
+
+def test_schedule_status_reads_skip_the_timeline_and_result(gateway):
+    client, app, _ = gateway
+    url = "/v1/workflow-triggers/ResearchWorkflow/daily/fire"
+    run = client.post(url, headers=auth("worker"), json={"firing_id": str(uuid4())}).json()
+    app.state.temporal_client.executions[run["workflow_id"]].status = "COMPLETED"
+    path = f"/v1/workflow-runs/{run['run_id']}"
+    brief = client.get(path, params={"timeline": "false"}, headers=auth("worker"))
+    assert brief.status_code == 200
+    assert brief.json()["status"] == "completed" and brief.json()["outcome"] == "published"
+    assert "timeline" not in brief.json() and "result" not in brief.json()
+    full = client.get(path, headers=auth("worker")).json()
+    assert full["result"]["status"] == "published" and full["timeline"]
