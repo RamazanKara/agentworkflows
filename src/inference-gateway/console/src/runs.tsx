@@ -342,7 +342,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
         <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="copy-id" aria-label="Copy run ID" onClick={async () => {
           try { await navigator.clipboard.writeText(run.run_id); setCopied('Run ID copied.'); } catch { setCopied(`Run ID: ${run.run_id}`); }
         }}><Icon name="copy"/>Copy ID</button></span></div>
-      {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" autoFocus onClick={() => { refocus.current = true; setConfirmCancel(false); }}>Keep running</button></div></div>}
+      {confirmCancel && running && <div className="callout confirm"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" autoFocus onClick={() => { refocus.current = true; setConfirmCancel(false); }}>Keep running</button></div></div>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
       <Metrics items={[[ 'Tokens', `${number(run.budget.tokens)} of ${number(run.budget.token_limit)}` ], ['Cost', `${money(run.budget.cost_usd)} of ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
       {run.summary && <RunSummaryPanel summary={run.summary}/>}

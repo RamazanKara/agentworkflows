@@ -682,9 +682,10 @@ th[aria-sort] button.sort { color: var(--text); }
 .refresh[aria-busy] svg { animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .refresh[aria-busy] svg { animation: none; opacity: .5; } }
-/* Rejecting a draft asks once, inside its card. */
+/* Rejecting a draft or cancelling a run asks once, in place, tinted as the irreversible step it is. */
+.callout.confirm { background: var(--danger-soft); border-color: var(--danger-border); }
+.callout.confirm p { margin-bottom: 12px; }
 .review .confirm { margin: 16px 0 0; }
-.review .confirm p { margin-bottom: 12px; }
 .key-search { max-width: 380px; margin: 0 0 14px; }
 .key-search label { margin-bottom: 7px; }
 /* Initials sit on the solid accent, which keeps them readable in both themes. */

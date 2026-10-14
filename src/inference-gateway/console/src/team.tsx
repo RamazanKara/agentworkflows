@@ -36,6 +36,7 @@ export function GetStarted({ session }: { session: Session }) {
         {session.team.role === 'admin' ? blocked ? <a className="button" href="#providers">Connect a provider</a> : <a className="tap" href="#providers">Connect a provider or review budgets</a> : <p className="muted">Your team admin manages providers.</p>}
       </div></li>
       <li className={done[1] ? 'done' : ''}><span className="onboarding-number">02</span><div>{heading(1, 'Run the example workflow')}<p>Research a topic, draft a briefing, review it, and publish. The example has a budget and a human approval step built in.</p>
+        <ErrorMessage message={setup.error}/>
         {exampleMissing.length > 0 && <p className="note-warn">The example uses {providerList(exampleMissing)}, which {exampleMissing.length > 1 ? 'have' : 'has'} no key yet, so those steps will fail. <a className="nowrap" href="#providers">Add the key</a> first.</p>}
         {!builder ? <p>Your role can inspect work. Ask a builder to start the example.</p>
           : sampleReady && setup.data ? <><div className="actions"><SampleButton session={session} setup={setup.data}/><a className="button secondary" href={start}>Run workflow</a></div><p className="muted">The sample uses a ready-made topic. Run workflow lets you choose your own.</p></>
