@@ -172,7 +172,8 @@ a quoted revision in `ETag`, which can be used as `If-Match`.
 A stale revision returns 409 with `detail.reason: team_settings_conflict` for
 PATCH and DELETE. Reload, review the current values, then reapply the intended
 change. The console retains the unsaved draft until you choose **Reload settings**,
-so you decide when to reapply a stale write. Cookie-authenticated writes also require
+so you decide when to reapply a stale write. Leaving the page, reloading or switching
+account with unsaved changes asks before discarding them. Cookie-authenticated writes also require
 the normal CSRF token.
 
 Every successful save/reset emits a hash-chained `team_settings_changed` audit

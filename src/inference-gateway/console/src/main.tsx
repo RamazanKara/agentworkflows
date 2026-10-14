@@ -116,6 +116,8 @@ function Landing({ session }: { session: Session }) {
     };
     const any = (status?: string) => Promise.all(session.team.projects.map(project => first(project, status))).then(found => found.some(Boolean));
     const reviewer = ['admin', 'approver'].includes(session.team.role);
+    // Approvals and runs share a chunk, so it downloads while the gateway is asked where to land.
+    void chunks.runs().catch(() => undefined);
     (async () => {
       const page = reviewer && await any('awaiting_approval') ? 'approvals' : await any() ? 'runs' : 'start';
       if (!controller.signal.aborted) location.replace(`#${page}`);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api, date, label, useData, type Session, type Team } from './api';
-import { ErrorMessage, Loading } from './ui';
+import { ErrorMessage, Loading, useUnsavedChanges } from './ui';
 
 type Invitation = { invitation_id: string; name: string; role: Team['role']; project: string | null; expires_at: number; accepted_at: number | null; revoked_at: number | null };
 
@@ -11,11 +11,12 @@ export function Invitations({ session, onChanged }: { session: Session; onChange
   const [role, setRole] = useState<Team['role']>('viewer');
   const [project, setProject] = useState(session.team.projects[0] || '');
   const [link, setLink] = useState('');
+  useUnsavedChanges(Boolean(link), 'The invitation link will not be shown again. Leave without copying it?');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   return <section className="panel form-panel" aria-labelledby="invitations-title">
-    <h2 id="invitations-title">Invite a teammate</h2>
+    <h2 id="invitations-title" tabIndex={-1}>Invite a teammate</h2>
     <p>Share a single-use link through a trusted channel. It expires in 24 hours. Company SSO access still comes from your identity provider.</p>
     <ErrorMessage message={error || result.error}/>{message && <p role="status">{message}</p>}
     {link ? <><label>Invitation link<input readOnly value={link}/></label><div className="actions">
@@ -40,7 +41,7 @@ export function Invitations({ session, onChanged }: { session: Session; onChange
       {!invite.revoked_at && <button className="danger" disabled={busy} aria-label={`Revoke invitation for ${invite.name}`} onClick={async () => {
         if (!window.confirm(`Revoke access for ${invite.name}?`)) return;
         setBusy(true); setError(''); setMessage('');
-        try { await api(session.csrfToken, `/v1/team/invitations/${encodeURIComponent(invite.invitation_id)}`, { method: 'DELETE' }); setMessage(`Invitation for ${invite.name} revoked.`); setRevision(value => value + 1); onChanged(); }
+        try { await api(session.csrfToken, `/v1/team/invitations/${encodeURIComponent(invite.invitation_id)}`, { method: 'DELETE' }); setMessage(`Invitation for ${invite.name} revoked.`); setRevision(value => value + 1); onChanged(); document.getElementById('invitations-title')?.focus(); }
         catch (failure) { setError((failure as Error).message); } finally { setBusy(false); }
       }}>Revoke invitation</button>}
     </div>)}

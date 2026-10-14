@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Invitations } from './invitations';
 import { api, label, useData, type Session, type Team, type TeamSSO } from './api';
-import { AdminOnly, Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh } from './ui';
+import { AdminOnly, Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh, useUnsavedChanges } from './ui';
 
 type Key = {
   key_id: string; name: string; role: Team['role']; project: string | null; created_at: number;
@@ -47,15 +47,18 @@ function KeyManagement({ session }: { session: Session }) {
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
   // The one-time key is announced and focused as soon as it appears; the form that made it is gone.
+  // A revoked key loses its buttons and a saved edit closes its form; focus goes back to the list.
+  const focusList = () => document.getElementById('access-title')?.focus();
   const createdHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (created) createdHeading.current?.focus(); }, [created]);
+  useUnsavedChanges(Boolean(created), 'The new key will not be shown again. Leave without copying it?');
   const all = [...result.data?.keys ?? []].sort((a, b) => Number(state(a) !== 'active') - Number(state(b) !== 'active') || (b.created_at ?? 0) - (a.created_at ?? 0));
   // Larger teams can narrow the list by name, role, project or status.
   const term = search.trim().toLowerCase();
   const keys = term ? all.filter(key => [key.name, key.role, key.project || 'all projects', state(key)].some(value => value.toLowerCase().includes(term))) : all;
   // A key from the gateway configuration is not in the managed list; still show who is signed in.
   const self = Boolean(session.keyId) && !all.some(key => key.key_id === session.keyId) && !term;
-  return <><PageHeader title="Members & keys" subtitle="Who can use this team, and with which role."><Refresh busy={result.loading && Boolean(result.data)} onClick={() => { setCreated(undefined); setRevision(value => value + 1); }}/></PageHeader>
+  return <><PageHeader title="Members & keys" subtitle="Who can use this team, and with which role."><Refresh busy={result.loading && Boolean(result.data)} onClick={() => setRevision(value => value + 1)}/></PageHeader>
     <p className="intro">{config.data?.enabled
       ? 'People who sign in with their company account get their team and role from it. Create keys here for anyone without company sign-in and for automation.'
       : 'Give each person and integration their own key, so you can revoke one without affecting anyone else.'}</p>
@@ -75,7 +78,7 @@ function KeyManagement({ session }: { session: Session }) {
         <div className="actions"><a href="/v1/auth/login">Test company sign-in</a><a href="https://ramazankara.github.io/agentworkflows/workflows/#sso-group-to-role-mapping">Company sign-in setup</a></div>
       </>}
     </section>}
-    <section aria-labelledby="access-title"><h2 id="access-title">Who has access</h2>
+    <section aria-labelledby="access-title"><h2 id="access-title" tabIndex={-1}>Who has access</h2>
     {all.length > 5 && <div className="key-search"><label htmlFor="key-search">Find a key</label><input id="key-search" type="search" placeholder="Name, role, project or status" value={search} onChange={event => setSearch(event.target.value)}/></div>}
     {!result.data && !result.error && <Loading text="Loading keys…"/>}
       {result.data && (keys.length || self ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Team API keys"><table className="stack keys-table"><thead><tr><th>Name</th><th>Role</th><th>Project</th><th>Last used</th><th>Expires</th><th>Status</th><th><span className="visually-hidden">Action</span></th></tr></thead><tbody>{self && <tr className="config-key"><th scope="row">{session.name || 'Your key'}<span className="badge you">You</span><small>From the gateway configuration</small></th><td data-label="Role">{label(session.team.role)}</td><td data-label="Project">{session.team.projects.length === 1 ? session.team.projects[0] : 'All projects'}</td><td data-label="Last used">Now</td><td data-label="Expires">Set by your operator</td><td data-label="Status"><span className="badge key-active">Active</span></td><td className="row-action"/></tr>}{keys.map(key => {
@@ -83,7 +86,7 @@ function KeyManagement({ session }: { session: Session }) {
         return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}{key.revoked_at != null && ` ${day(key.revoked_at)}`}</span></td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
           if (!window.confirm(`Revoke ${key.name}? It stops working immediately.`)) return;
           setBusy(true); setError(''); setCreated(undefined); setEditing(undefined);
-          try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); }
+          try { await api(session.csrfToken, `/v1/team/keys/${encodeURIComponent(key.key_id)}`, { method: 'DELETE' }); setMessage(`${key.name} revoked.`); setRevision(value => value + 1); focusList(); }
           catch (value) { setError((value as Error).message); }
           finally { setBusy(false); }
         }}>Revoke</button>}{key.revoked_at == null && key.key_id !== session.keyId && <button className="secondary" disabled={busy} aria-label={`Edit ${key.name}`} onClick={() => { setCreated(undefined); setEditing(key); setMessage(''); }}>Edit</button>}</td></tr>;
@@ -94,7 +97,7 @@ function KeyManagement({ session }: { session: Session }) {
     <Invitations session={session} onChanged={() => setRevision(value => value + 1)}/>
     <ErrorMessage message={error || result.error}/><p role="status" className="status">{message}</p>
     {editing && <KeyEditor key={editing.key_id} record={editing} session={session} onCancel={() => setEditing(undefined)} onSaved={name => {
-      setEditing(undefined); setMessage(`${name} updated. Access changes apply immediately.`); setRevision(value => value + 1);
+      setEditing(undefined); setMessage(`${name} updated. Access changes apply immediately.`); setRevision(value => value + 1); focusList();
     }}/>}
     <section className="panel form-panel key-form" aria-labelledby="create-key">
       {created ? <div className="new-key">

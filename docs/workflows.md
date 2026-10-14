@@ -32,7 +32,8 @@ After `make compose-up`, open <http://127.0.0.1:8080/console>:
    and select **Start run**. Optional inputs such as the model and budgets sit under
    **More options**. The run's detail page refreshes while the workflow is active.
 3. Open **Approvals**, read the draft, then **Approve** or **Reject**. Approval allows
-   the configured publish tool to run; rejection finishes without publishing.
+   the configured publish tool to run; rejection finishes without publishing, so the console
+   asks you to confirm it first.
 4. Open the run from **Workflow runs**. Model steps preview their answer; expand
    **Prompt and response** (model steps) or **Arguments and result** (tool steps) to read the
    captured content with redaction/truncation notes. **Receipt** and **Step logs** show

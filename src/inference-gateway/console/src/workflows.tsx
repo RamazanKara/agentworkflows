@@ -44,7 +44,7 @@ export function WorkflowRegistry({ session }: { session: Session }) {
   }));
   const form = draft && registry ? draft : undefined;
   return <section className="registry" aria-labelledby="registry-title">
-    <div className="section-heading"><h2 id="registry-title">Your workflows</h2><Refresh busy={result.loading && Boolean(registry)} onClick={() => setRevision(value => value + 1)}/></div>
+    <div className="section-heading"><h2 id="registry-title" tabIndex={-1}>Your workflows</h2><Refresh busy={result.loading && Boolean(registry)} onClick={() => setRevision(value => value + 1)}/></div>
     <p>Register a workflow your team wrote. It can use only the models and tools already approved for your team, and its egress follows from them. Run it from <a href="#new">Run workflow</a>.</p>
     <ErrorMessage message={error || result.error} retry={() => setRevision(value => value + 1)}/><p className="status" role="status">{notice}</p>
     {!registry && !result.error && <Loading text="Loading registered workflows…"/>}
@@ -65,7 +65,7 @@ export function WorkflowRegistry({ session }: { session: Session }) {
               setBusy(workflow.name); setError(''); setNotice('');
               try {
                 await api(session.csrfToken, `/v1/team/workflows/${encodeURIComponent(workflow.name)}`, { method: 'DELETE', headers: { 'If-Match': String(registry.revision) } });
-                setNotice(`${workflow.name} removed.`); setDraft(undefined); setRevision(value => value + 1);
+                setNotice(`${workflow.name} removed.`); setDraft(undefined); setRevision(value => value + 1); document.getElementById('registry-title')?.focus();
               } catch (failure) { setError((failure as Error).message); } finally { setBusy(''); }
             }}>Remove</button></td>
         </tr>)}</tbody></table></div></div>

@@ -6,7 +6,8 @@ Use an admin credential without a project restriction: this view covers the whol
 
 Filter by time, actor, event type, project or run ID, then choose **Apply filters**.
 Times in the form use your local timezone. Events appear newest first; **Older
-events** pages through the results. Run links open the existing run detail page.
+events** pages through the results and **Newer events** steps back one page. Run links
+open the existing run detail page.
 **Show JSON** expands the original, already redacted event as plain text.
 
 **Verify chain** checks every team event in the selected time range, including

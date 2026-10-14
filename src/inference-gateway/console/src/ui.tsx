@@ -86,20 +86,23 @@ export function CopyField({ value, label: name, onCopied }: { value: string; lab
   }}><Icon name="copy"/>Copy</button></div>;
 }
 
-// Unsaved edits survive a stray click: leaving the page, reloading, or switching account asks first.
-let unsaved: string | null = null;
+// Unsaved edits and one-time secrets survive a stray click: leaving the page, reloading,
+// or switching account asks first. Each part of a page that holds something registers itself.
+const unsaved = new Set<{ message: string }>();
 export function useUnsavedChanges(dirty: boolean, message = 'Discard your unsaved changes?') {
   useEffect(() => {
     if (!dirty) return;
-    unsaved = message;
+    const entry = { message };
+    unsaved.add(entry);
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
     window.addEventListener('beforeunload', warn);
-    return () => { if (unsaved === message) unsaved = null; window.removeEventListener('beforeunload', warn); };
+    return () => { unsaved.delete(entry); window.removeEventListener('beforeunload', warn); };
   }, [dirty, message]);
 }
-// True when nothing is unsaved or the person agrees to discard it.
+// True when nothing is held or the person agrees to let it go.
 export function confirmLeave() {
-  if (!unsaved || window.confirm(unsaved)) { unsaved = null; return true; }
+  const [first] = unsaved;
+  if (!first || window.confirm(first.message)) { unsaved.clear(); return true; }
   return false;
 }
 

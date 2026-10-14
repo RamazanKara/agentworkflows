@@ -46,7 +46,11 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
       if (trigger) query.set('trigger', trigger);
       const result = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
       if (!controller.signal.aborted) {
-        setRows(values => [...(reset ? [] : values), ...result.runs].filter((r, i, all) => all.findIndex(v => v.run_id === r.run_id) === i));
+        // Pages can overlap when new runs start between requests; each run is listed once.
+        setRows(values => {
+          const seen = new Set<string>();
+          return [...(reset ? [] : values), ...result.runs].filter(r => !seen.has(r.run_id) && Boolean(seen.add(r.run_id)));
+        });
         setCursor(result.next_cursor);
       }
     } catch (error) { if (!controller.signal.aborted) setError((error as Error).message); }
@@ -313,6 +317,8 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
   const refocus = useRef(false);
   useEffect(() => { if (!confirmCancel && refocus.current) { refocus.current = false; cancelButton.current?.focus(); } }, [confirmCancel]);
   const run = result.data;
+  // Several runs open in tabs stay distinguishable.
+  useEffect(() => { if (run) document.title = `${workflowName(run.workflow)} run ${shortId(run.run_id)} · AgentWorkflows Console`; }, [run?.workflow, run?.run_id]);
   // While the run is active the page follows it; a failed refresh keeps the last answer and tries again.
   usePolling(run?.status === 'running', () => setRevision(v => v + 1), result.settled);
   async function act(action: 'cancel' | 'retry') {

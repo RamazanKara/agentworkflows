@@ -1474,6 +1474,8 @@ test('revoking a key requires confirmation and updates its status', async ({ pag
   const revokedOn = await page.evaluate(() => new Date(1791316800 * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }));
   await expect(page.getByRole('cell', { name: /^Revoked/ })).toContainText(revokedOn);
   await expect(page.getByRole('button', { name: 'Revoke Alice' })).toHaveCount(0);
+  // The pressed button is gone, so focus returns to the list it changed.
+  await expect(page.getByRole('heading', { name: 'Who has access' })).toBeFocused();
   expect(deletes).toBe(1);
 });
 
@@ -1832,8 +1834,12 @@ test('admins create scoped invitations and recipients exchange them for a sessio
     expect(route.request().postDataJSON()).toEqual({ token: 'team.invitation.private-token' });
     return route.fulfill({ json: { key: 'approver' } });
   });
+  // The link is shown once, so leaving the page while it is on screen asks first.
+  const prompts: string[] = [];
+  page.once('dialog', dialog => { prompts.push(dialog.message()); void dialog.accept(); });
   await page.goto('/console/#invite/team.invitation.private-token');
   await page.getByRole('button', { name: 'Accept invitation', exact: true }).click();
+  expect(prompts).toEqual(['The invitation link will not be shown again. Leave without copying it?']);
   await expect(page).toHaveURL(/#start$/);
   await expect(page.getByRole('region', { name: 'Signed in as' })).toContainText('Approver');
   await expect(page.locator('body')).not.toContainText('private-token');
@@ -2365,6 +2371,23 @@ test('a new key takes focus so its one-time secret is announced', async ({ page 
   await page.getByLabel('Name', { exact: true }).fill('Alice');
   await page.getByRole('button', { name: 'Create key', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Key created for Alice' })).toBeFocused();
+  // Refreshing the list keeps the one-time key, and leaving the page asks first.
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByLabel('New API key')).toHaveText('aw_' + 'b'.repeat(40));
+  const prompts: string[] = [];
+  page.once('dialog', dialog => { prompts.push(dialog.message()); void dialog.dismiss(); });
+  await page.getByRole('link', { name: 'Costs', exact: true }).click();
+  await expect.poll(() => prompts).toEqual(['The new key will not be shown again. Leave without copying it?']);
+  await expect(page.getByLabel('New API key')).toBeVisible();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByRole('link', { name: 'Costs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Costs', level: 1 })).toBeVisible();
+  expect(prompts).toHaveLength(1);
+});
+
+test('a run page title names the workflow and run, so several open runs stay apart', async ({ page }) => {
+  await login(page, 'viewer', `/console/#run/${id}`);
+  await expect(page).toHaveTitle('Research run bbbbbbbb · AgentWorkflows Console');
 });
 
 test('audit pages step back one page at a time', async ({ page }) => {
