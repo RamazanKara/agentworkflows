@@ -351,6 +351,16 @@ for run in reviewer.review_queue(workflow="ReleaseNotesWorkflow"):
     print(run["run_id"], run["approval_access"]["via"], run["progress"]["draft"][:80])
 ```
 
+```typescript
+const listing = await client.approvalEscalations();
+await client.setApprovalEscalation('ReleaseNotesWorkflow', 4 * 3600, {
+  approver_role: 'approver', reviewers: ['maya@example.com'], channels: ['slack'],
+}, listing.revision);
+for await (const run of reviewer.reviewQueue({ workflow: 'ReleaseNotesWorkflow' })) {
+  console.log(run.run_id, run.approval_access?.via, run.progress?.draft?.slice(0, 80));
+}
+```
+
 `approval_access` (`ApprovalAccess` in `agentworkflows.types`) says whether the caller may vote
 now and why; `approval_escalation` (`RunEscalation`) gives the escalation's deadline and state.
 See [approval escalation](workflows.md#approval-escalation) for who becomes eligible and when.
@@ -367,7 +377,7 @@ See [approval escalation](workflows.md#approval-escalation) for who becomes elig
 | Prove an install | `first_approved_run(client, approvers=[...], deadline=300, allow_paid=False)` (`agentworkflows.acceptance`), CLI `agentworkflows check` | `firstApprovedRun(client, { approvers, deadlineSeconds, allowPaid })` | the console's first-run path: onboarding, template install, run, approval, audit verify |
 | Run insights | `workflow_insights(days=7, project=None, workflow=None)` | `workflowInsights({ days, project, workflow })` | `GET /v1/workflow-insights` |
 | Register your own workflow | `team_workflows()`, `register_workflow(cls_or_name, models=[...], **options)`, `remove_workflow(cls_or_name)` | `teamWorkflows()`, `registerWorkflow(name, models, options?, revision?)`, `removeWorkflow(name, revision?)` | `GET /v1/team/workflows`, `PUT/DELETE /v1/team/workflows/{name}` |
-| Approval escalation | `approval_escalations()`, `set_approval_escalation(workflow, after_seconds=..., **options)`, `remove_approval_escalation(workflow)`, `review_queue()` | not yet available | `GET /v1/team/approval-escalations`, `PUT/DELETE /v1/team/workflows/{name}/approval-escalation` |
+| Approval escalation | `approval_escalations()`, `set_approval_escalation(workflow, after_seconds=..., **options)`, `remove_approval_escalation(workflow)`, `review_queue()` | `approvalEscalations()`, `setApprovalEscalation(workflow, afterSeconds, options?, revision?)`, `removeApprovalEscalation(workflow, revision?)`, `reviewQueue({ project, workflow })` | `GET /v1/team/approval-escalations`, `PUT/DELETE /v1/team/workflows/{name}/approval-escalation` |
 | Deployment settings | `deployment()` | `deployment()` | `GET /v1/team/deployment` |
 
 Invitation creation and redemption run once per call, since the response holds the only

@@ -40,6 +40,24 @@ it.each([
 });
 
 it.each([
+  ['retryRun', () => client.retryRun('run')],
+  ['cancelRun', () => client.cancelRun('run')],
+  ['cancelBatch', () => client.cancelBatch('batch-1')],
+  ['pauseTrigger', () => client.pauseTrigger('Daily', 'daily', { paused: false })],
+  ['installTemplate', () => client.installTemplate('research', '0.9.0')],
+  ['deleteFile', () => client.deleteFile('file-1')],
+  ['deleteResponse', () => client.deleteResponse('resp_1')],
+  ['revokeInvitation', () => client.revokeInvitation('inv-1')],
+  ['deleteTeamData', () => client.deleteTeamData('demo')],
+] as const)('never repeats an ambiguous %s, as the Python client does', async (_name, change) => {
+  fetchMock.mockResolvedValueOnce(new Response('{}', { status: 502 })).mockRejectedValueOnce(reset());
+  await expect(change()).rejects.toMatchObject({ statusCode: 502 });
+  await expect(change()).rejects.toBeInstanceOf(GatewayTransportError);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(setTimeout).not.toHaveBeenCalled();
+});
+
+it.each([
   ['a reset connection', reset],
   ['a timeout', () => new DOMException('timed out', 'TimeoutError')],
 ])('does not repeat a key mutation after %s, but repeats a read', async (_name, failure) => {

@@ -9,6 +9,7 @@ import type {
   ModelList, DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, WorkflowRegistration, WorkflowInsights, InsightFilters, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
   ApiList, ApiObject, BatchOptions, ChatCompletion, ChatMessage, InferenceParams, MessagesParams, ReceiptAction,
   ResponseParams, SandboxUsage, TeamInfo, TriggerList, TriggerState,
+  ApprovalEscalationOptions, ApprovalEscalations, ApprovalEscalationSaved, ReviewQueueFilters,
 } from './types';
 
 export interface ClientOptions {
@@ -456,6 +457,35 @@ export class GatewayClient {
       { headers: { 'If-Match': String(reviewed) } });
   }
 
+  /** List per-workflow approval escalation and the channels it may notify (unrestricted admin only). */
+  approvalEscalations(): Promise<ApprovalEscalations> {
+    return this.request('GET', '/v1/team/approval-escalations');
+  }
+
+  /**
+   * Escalate reviews of `workflow` that still wait `afterSeconds` after the draft is ready. Escalation notifies the
+   * team's alert channels (or `channels`; `[]` sends nothing) and lets more reviewers vote: every approver with
+   * `approver_role: 'approver'`, and the identities in `reviewers` (OIDC subjects or managed key IDs holding an
+   * approver role). Runs keep the configuration they started with. Omit `revision` to use the current one; pass the
+   * value you reviewed to refuse a concurrent change. Unrestricted team admin only.
+   */
+  async setApprovalEscalation(
+    workflow: WorkflowReference, afterSeconds: number, options: ApprovalEscalationOptions = {}, revision?: number | string,
+  ): Promise<ApprovalEscalationSaved> {
+    const name = workflowName(workflow);
+    const reviewed = revision ?? (await this.approvalEscalations()).revision;
+    return this.request('PUT', `/v1/team/workflows/${encodeURIComponent(name)}/approval-escalation`,
+      { body: { after_seconds: afterSeconds, ...options }, headers: { 'If-Match': String(reviewed) } });
+  }
+
+  /** Stop escalating reviews of `workflow` for runs started afterwards. */
+  async removeApprovalEscalation(workflow: WorkflowReference, revision?: number | string): Promise<{ revision: number; removed: string }> {
+    const name = workflowName(workflow);
+    const reviewed = revision ?? (await this.approvalEscalations()).revision;
+    return this.request('DELETE', `/v1/team/workflows/${encodeURIComponent(name)}/approval-escalation`,
+      { headers: { 'If-Match': String(reviewed) } });
+  }
+
   /**
    * Summarize recent retained runs per workflow: outcomes, duration, review wait and cost. `days` is 1-30.
    * At most 200 recent runs are scanned; `truncated` says when the window held more.
@@ -598,6 +628,23 @@ export class GatewayClient {
 
   run(runId: string): Promise<WorkflowRun> {
     return this.request('GET', `/v1/workflow-runs/${encodeURIComponent(runId)}`);
+  }
+
+  /**
+   * Yield runs awaiting a review this credential may give now, newest first, following every cursor page. Each
+   * run's `approval_access` says whether you are eligible through your role or an approval escalation; a gateway
+   * that predates escalation sends none, and its waiting runs are yielded unfiltered.
+   */
+  async *reviewQueue(filters: ReviewQueueFilters = {}): AsyncGenerator<WorkflowRun> {
+    const query: RunFilters = { status: 'awaiting_approval', limit: filters.limit ?? 100, project: filters.project, workflow: filters.workflow };
+    for (;;) {
+      const page = await this.runs(query);
+      for (const run of page.runs) {
+        if (!run.approval_access || run.approval_access.eligible) yield run;
+      }
+      if (!page.next_cursor) return;
+      query.cursor = page.next_cursor;
+    }
   }
 
   /** Record your vote; inspect the run for quorum completion or a pending review. */

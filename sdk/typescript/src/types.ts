@@ -290,6 +290,70 @@ export interface WorkflowRun {
   timeline?: Receipt[];
   /** Elapsed time, model/tool time, review wait and cost by step; present on a single run's detail. */
   summary?: RunSummary;
+  /** The approval escalation the run started with and where it stands; absent without one. */
+  approval_escalation?: RunEscalation;
+  /** Whether the calling credential may review this waiting run now; present while it awaits approval. */
+  approval_access?: ApprovalAccess;
+}
+
+export type EscalationChannel = 'slack' | 'email' | 'webhook';
+
+export interface ApprovalEscalationOptions {
+  /** `approver` lets every approver review once escalated (for workflows that need an admin). */
+  approver_role?: 'approver' | null;
+  /** OIDC subjects or managed key IDs, holding an approver role, who may review once escalated. */
+  reviewers?: string[];
+  /** Channels to notify; null uses the team's alert channels and `[]` notifies nobody. */
+  channels?: EscalationChannel[] | null;
+}
+
+export interface ApprovalEscalation {
+  workflow: string;
+  after_seconds: number;
+  approver_role: 'approver' | null;
+  reviewers: string[];
+  channels: EscalationChannel[] | null;
+  effective: boolean;
+  updated_by: string | null;
+  updated_at: number | null;
+}
+
+export interface ApprovalEscalations {
+  revision: number;
+  escalations: ApprovalEscalation[];
+  available_channels: EscalationChannel[];
+}
+
+export interface ApprovalEscalationSaved {
+  revision: number;
+  escalation: ApprovalEscalation;
+}
+
+/** A run's `approval_escalation`: the configuration it started with and where it stands. */
+export interface RunEscalation {
+  after_seconds: number;
+  approver_role: 'approver' | null;
+  reviewers: string[];
+  channels: EscalationChannel[] | null;
+  waiting_since: number | null;
+  escalates_at: number | null;
+  escalated: boolean;
+  recorded_at: number | null;
+}
+
+/** A waiting run's `approval_access` for the calling credential. */
+export interface ApprovalAccess {
+  eligible: boolean;
+  via: 'role' | 'escalation' | null;
+  /** When escalation would admit the caller, in Unix seconds. */
+  eligible_at: number | null;
+}
+
+export interface ReviewQueueFilters {
+  project?: string;
+  workflow?: string;
+  /** Records scanned per page (1-100, default 100). */
+  limit?: number;
 }
 
 export interface RunFilters {
@@ -313,12 +377,17 @@ export interface TriggerRequest {
   trigger: string;
   firing_id?: string;
   run_id?: string;
+  /** Status reads already made by earlier executions of a continued trigger; sets the next poll delay. */
+  polls?: number;
 }
 
+/** What a trigger keeps in its Temporal history: only the target run's ID and state, never its content. */
 export interface TriggerResult {
   paused?: boolean;
   run_id?: string;
   status?: WorkflowRun['status'];
+  outcome?: string;
+  error?: { code: string; message: string };
 }
 
 export interface GovernedActivities {

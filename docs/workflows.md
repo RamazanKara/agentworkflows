@@ -1031,7 +1031,9 @@ team admin). PUT takes `after_seconds`, optional `approver_role` (`approver`), `
 `approval_escalation_removed`; removing a team-registered workflow removes its escalation.
 `GET /v1/workflow-policies` shows each workflow's `approvalEscalation`. Python:
 `approval_escalations()`, `set_approval_escalation(workflow, after_seconds=..., ...)`,
-`remove_approval_escalation(workflow)` and `review_queue()`.
+`remove_approval_escalation(workflow)` and `review_queue()`. TypeScript: `approvalEscalations()`,
+`setApprovalEscalation(workflow, afterSeconds, options?, revision?)`,
+`removeApprovalEscalation(workflow, revision?)` and `reviewQueue()`.
 
 ## Invite teammates without company sign-in
 

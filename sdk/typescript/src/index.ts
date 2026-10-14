@@ -15,4 +15,6 @@ export type {
   ModelList, DeploymentReadiness, AlertRules, TeamAlertRules, TeamWorkflows, RegisteredWorkflow, RunSummary, StepSummary, WorkflowInsight, WorkflowInsights, InsightFilters, WorkflowRegistration, WorkflowRegistrationOptions, Invitation, Onboarding, ProviderSetup, InstalledTemplate, WorkflowTemplate, WorkflowSecret, RetentionPolicy, TeamRetention, TeamDataStatus, TeamDataExport, TeamTelemetry,
   ApiList, ApiObject, BatchOptions, Call, ChatMessage, GovernedActivities, InferenceParams, MessagesParams, ReceiptAction,
   ResponseParams, SandboxUsage, TeamInfo, TriggerList, TriggerRequest, TriggerResult, TriggerState, WorkflowTrigger,
+  ApprovalAccess, ApprovalEscalation, ApprovalEscalationOptions, ApprovalEscalations, ApprovalEscalationSaved,
+  EscalationChannel, ReviewQueueFilters, RunEscalation,
 } from './types';
