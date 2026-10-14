@@ -634,6 +634,41 @@ def test_settings_errors_retain_details_without_retry(monkeypatch, operation, st
 )
 @pytest.mark.parametrize("failure", [502, "timeout"])
 def test_admin_mutations_do_not_repeat_ambiguous_failures(monkeypatch, operation, args, options, failure):
+    _assert_single_attempt(monkeypatch, operation, args, options, failure)
+
+
+RUN_ID = "4a5e3c5e-8f5e-4f8a-9c5e-0d4d1e2f3a4b"
+STATE_CHANGES = [
+    ("retry_run", (RUN_ID,), {}), ("cancel_run", (RUN_ID,), {}), ("cancel_batch", ("batch-1",), {}),
+    ("delete_file", ("file-1",), {}), ("delete_response", ("resp_1",), {}),
+    ("pause_trigger", ("Daily", "daily"), {}), ("install_template", ("research",), {"version": "0.9.0"}),
+]
+
+
+@pytest.mark.parametrize("operation,args,options", STATE_CHANGES)
+@pytest.mark.parametrize("failure", [502, 500, "timeout"])
+def test_run_and_resource_changes_do_not_repeat_ambiguous_failures(monkeypatch, operation, args, options, failure):
+    # A lost 502 after a retry was started must not start a second retry, or cancel and delete twice.
+    _assert_single_attempt(monkeypatch, operation, args, options, failure)
+
+
+@pytest.mark.parametrize("operation,args,options", STATE_CHANGES)
+def test_run_and_resource_changes_retry_when_the_gateway_did_not_act(monkeypatch, operation, args, options):
+    statuses = iter([503, 429, 200])
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(next(statuses), json={})
+
+    _mock_transport(monkeypatch, handler)
+    with GatewayClient("http://gateway.test", max_retries=2) as client:
+        monkeypatch.setattr(client, "_sleep", lambda _: None)
+        getattr(client, operation)(*args, **options)
+    assert len(calls) == 3
+
+
+def _assert_single_attempt(monkeypatch, operation, args, options, failure):
     calls = []
 
     def handler(request):

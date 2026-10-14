@@ -7,9 +7,11 @@ endpoint, agent-action receipts, and the sandbox usage/budget reads.
 
 Retries are bounded, use exponential backoff, and honor the gateway's ``Retry-After`` up
 to ``retry_after_cap`` seconds; a longer advertised delay fails fast with
-:class:`GatewayRetryAfterError`, because retrying sooner cannot succeed. Calls that create
-server-side state (file uploads, batches, stored responses, receipts) are retried only when
-the gateway provably did not process the request, so a retry never duplicates a resource.
+:class:`GatewayRetryAfterError`, because retrying sooner cannot succeed. Calls that change
+server-side state (uploads, batches, deletions, receipts, run operations, team administration)
+are retried only when the gateway provably did not process the request (a refused connection,
+429 or 503), so a retry never repeats an action. Starting a run is the exception: its
+``request_id`` makes every attempt start the same run.
 
 For the full OpenAI or Anthropic parameter surface, typed models, or async I/O, point the
 official ``openai`` / ``anthropic`` SDKs at the gateway instead (see docs/client-examples.md).
@@ -446,7 +448,7 @@ class GatewayClient:
 
     def delete_file(self, file_id: str) -> dict[str, Any]:
         """Delete a file by id."""
-        result: dict[str, Any] = self._request("DELETE", f"/v1/files/{file_id}").json()
+        result: dict[str, Any] = self._request("DELETE", f"/v1/files/{file_id}", creates_state=True).json()
         return result
 
     def create_batch(
@@ -472,7 +474,7 @@ class GatewayClient:
 
     def cancel_batch(self, batch_id: str) -> dict[str, Any]:
         """Request cancellation of an in-progress batch."""
-        return self._post(f"/v1/batches/{batch_id}/cancel", {})
+        return self._post(f"/v1/batches/{batch_id}/cancel", {}, creates_state=True)
 
     def list_batches(self, limit: int = 20, after: str | None = None) -> dict[str, Any]:
         """List batches for this sandbox, most recent first."""
@@ -512,7 +514,7 @@ class GatewayClient:
 
     def delete_response(self, response_id: str) -> dict[str, Any]:
         """Delete a stored response by id."""
-        result: dict[str, Any] = self._request("DELETE", f"/v1/responses/{response_id}").json()
+        result: dict[str, Any] = self._request("DELETE", f"/v1/responses/{response_id}", creates_state=True).json()
         return result
 
     def response_input_items(self, response_id: str) -> dict[str, Any]:
@@ -642,7 +644,9 @@ class GatewayClient:
         return self._request("GET", "/v1/workflow-templates").json()
 
     def install_template(self, template_id: str, *, version: str) -> dict[str, Any]:
-        return self._post(f"/v1/workflow-templates/{quote(template_id, safe='')}/install", {"version": version})
+        return self._post(
+            f"/v1/workflow-templates/{quote(template_id, safe='')}/install", {"version": version}, creates_state=True
+        )
 
     def team_workflows(self) -> TeamWorkflows:
         """List registered workflows, reserved names, and the models/tools/limits a registration may use."""
@@ -864,7 +868,8 @@ class GatewayClient:
 
     def pause_trigger(self, workflow: str, name: str, *, paused: bool = True) -> dict[str, Any]:
         response = self._request(
-            "PATCH", f"/v1/workflow-triggers/{quote(workflow, safe='')}/{quote(name, safe='')}", json={"paused": paused}
+            "PATCH", f"/v1/workflow-triggers/{quote(workflow, safe='')}/{quote(name, safe='')}",
+            json={"paused": paused}, creates_state=True,
         )
         return response.json()
 
@@ -907,10 +912,10 @@ class GatewayClient:
         return self._get(f"/v1/workflow-runs/{UUID(run_id)!s}")
 
     def cancel_run(self, run_id: str) -> dict[str, Any]:
-        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/cancel", {})
+        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/cancel", {}, creates_state=True)
 
     def retry_run(self, run_id: str) -> dict[str, Any]:
-        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/retry", {})
+        return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/retry", {}, creates_state=True)
 
     def approve_run(self, run_id: str, *, approved: bool = True) -> dict[str, Any]:
         """Record your vote; inspect the run for quorum completion or a pending review."""

@@ -271,6 +271,44 @@ def test_container_exec_uses_stdin_grant_and_always_finishes(monkeypatch, failur
     assert json.loads(options["data"])["api_key"] == "awf_short-lived"
 
 
+@pytest.mark.parametrize(("namespace", "sandbox"), [
+    ("--kubeconfig=/tmp/admin", "coder"), ("team-code", "--as=system:admin"), ("Team", "coder"),
+    ("team_code", "coder"), ("t" * 64, "coder"), ("team-code", "c" * 254), ("team-code", "coder."),
+    ("", "coder"), ("team-code", None), ("team-code\n", "coder"),
+])
+def test_container_refuses_names_that_are_not_kubernetes_names(monkeypatch, namespace, sandbox):
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        if request.url.path.endswith("/start"):
+            return httpx.Response(200, json={
+                "namespace": namespace, "sandbox": sandbox, "command": ["python"], "arguments": {},
+                "timeout_seconds": 120, "api_key": "awf_short-lived", "credential_id": "a" * 64, "expires_at": 1,
+            })
+        return httpx.Response(200, json={"result": "finished"})
+
+    monkeypatch.setattr("agentworkflows.containers._kubectl", AsyncMock(side_effect=AssertionError("kubectl ran")))
+
+    async def run():
+        async with httpx.AsyncClient(
+            base_url="http://gateway.inference.svc.cluster.local:8080", transport=httpx.MockTransport(respond)
+        ) as client:
+            return await run_container(client, Call("container", {"arguments": {}}, tool="coder"), {})
+
+    with pytest.raises(ApplicationError, match="invalid workspace") as error:
+        asyncio.run(run())
+    assert error.value.non_retryable
+    assert requests[-1].url.path.endswith("/finish") and json.loads(requests[-1].content)["exit_code"] == -1
+
+
+def test_kubernetes_names_accept_dotted_sandboxes():
+    from agentworkflows.containers import DNS_LABEL, DNS_SUBDOMAIN
+
+    assert DNS_LABEL.fullmatch("t" * 63) and DNS_LABEL.fullmatch("team-code-1")
+    assert DNS_SUBDOMAIN.fullmatch("coder.v2") and DNS_SUBDOMAIN.fullmatch("c" * 253)
+
+
 @pytest.mark.skipif(sys.platform != "linux", reason="The workspace runner executes in Linux containers")
 @pytest.mark.parametrize("behavior", ["success", "timeout", "output-limit"])
 def test_workspace_runner_limits_output_without_limiting_workspace_files(monkeypatch, tmp_path, capsys, behavior):

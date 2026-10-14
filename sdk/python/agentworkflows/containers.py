@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any
 from urllib.parse import quote, urlsplit
 
@@ -12,6 +13,10 @@ from temporalio.exceptions import ApplicationError
 
 from agentworkflows import _raise_for_status
 from agentworkflows.workflows import Call
+
+# Kubernetes names: a namespace is a DNS-1123 label, a Sandbox (and its Pod) a DNS-1123 subdomain.
+DNS_LABEL = re.compile(r"[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?")
+DNS_SUBDOMAIN = re.compile(r"(?=.{1,253}$)[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9](?:[-a-z0-9]*[a-z0-9])?)*")
 
 
 async def _kubectl(*args: str, data: bytes | None = None, timeout: float = 20) -> bytes:
@@ -136,6 +141,16 @@ async def run_container(client: httpx.AsyncClient, call: Call, headers: dict[str
     result = {"exit_code": -1, "output": ""}
     try:
         namespace, name = plan["namespace"], plan["sandbox"]
+        # Both become kubectl arguments: a name like "--kubeconfig=..." must never reach the command line.
+        if not (
+            isinstance(namespace, str) and DNS_LABEL.fullmatch(namespace)
+            and isinstance(name, str) and DNS_SUBDOMAIN.fullmatch(name)
+        ):
+            raise ApplicationError(
+                "The gateway returned an invalid workspace namespace or sandbox name; check the agent's "
+                "workspace configuration.",
+                non_retryable=True,
+            )
         sandbox = json.loads(await _kubectl("-n", namespace, "get", "sandbox", name, "-o", "json"))
         pod = json.loads(await _kubectl("-n", namespace, "get", "pod", name, "-o", "json"))
         policies = json.loads(await _kubectl("-n", namespace, "get", "networkpolicies", "-o", "json"))

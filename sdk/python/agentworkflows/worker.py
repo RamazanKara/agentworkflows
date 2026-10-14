@@ -18,6 +18,22 @@ from agentworkflows.activities import GatewayActivities
 from agentworkflows.adapters import AgentContext
 from agentworkflows.triggers import ScheduledTrigger
 
+HEALTH_ADDRESS = "0.0.0.0:8081"
+
+
+def health_address() -> tuple[str, int] | None:
+    """Where /healthz and /readyz listen: AGENTWORKFLOWS_HEALTH_ADDRESS as host:port, or off."""
+    value = os.getenv("AGENTWORKFLOWS_HEALTH_ADDRESS", HEALTH_ADDRESS).strip()
+    if value.lower() in {"", "off"}:
+        return None
+    host, separator, port = value.rpartition(":")
+    if not separator or not port.isdigit() or int(port) > 65535:
+        raise ValueError(
+            "Set AGENTWORKFLOWS_HEALTH_ADDRESS to host:port (for example 127.0.0.1:8081) or off; "
+            f"the default is {HEALTH_ADDRESS}."
+        )
+    return host.strip("[]") or "0.0.0.0", int(port)
+
 
 async def serve(
     workflows: Sequence[type],
@@ -27,6 +43,7 @@ async def serve(
     key = os.getenv("AGENTWORKFLOWS_API_KEY")
     if not key:
         raise ValueError("Set AGENTWORKFLOWS_API_KEY to your team's worker key (demo-worker for Compose).")
+    address = health_address()
     team = os.getenv("AGENTWORKFLOWS_TEAM", "demo")
     queue = os.getenv("TEMPORAL_TASK_QUEUE", f"{team}-workflows")
     client = await asyncio.wait_for(
@@ -67,7 +84,15 @@ async def serve(
             writer.close()
             await writer.wait_closed()
 
-    server = await asyncio.start_server(probe, "0.0.0.0", 8081)
+    server = None
+    if address:
+        try:
+            server = await asyncio.start_server(probe, *address)
+        except OSError as exc:
+            raise ValueError(
+                f"Cannot serve health checks on {address[0]}:{address[1]} ({exc.strerror or exc}). Stop the other "
+                "process or set AGENTWORKFLOWS_HEALTH_ADDRESS to a free host:port, or off for a local worker."
+            ) from None
     previous = {}
     try:
         for sig in (signal.SIGINT, signal.SIGTERM):
@@ -76,8 +101,9 @@ async def serve(
             print(f"Worker ready on {queue}. Start a run with agentworkflows runs start; stop with Ctrl+C.", flush=True)
             await stopping.wait()
     finally:
-        server.close()
-        await server.wait_closed()
+        if server is not None:
+            server.close()
+            await server.wait_closed()
         for sig, handler in previous.items():
             signal.signal(sig, handler)
 
