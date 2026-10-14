@@ -101,6 +101,25 @@ def test_malformed_vector_store_response_is_a_503_over_http(tmp_path, monkeypatc
 
     assert response.status_code == 503
     assert response.json()["detail"]["reason"] == "vector_store_unavailable"
+    assert response.headers["Retry-After"] == "5"
+
+
+def test_document_listing_matches_what_bootstrapped_retrieval_serves(tmp_path):
+    (tmp_path / "agents.md").write_text("# Coding Agents\nUse the gateway.", encoding="utf-8")
+    settings = Settings(
+        document_dir=tmp_path,
+        retrieval_backend="qdrant",
+        vector_store_url="http://qdrant.local:6333",
+        retrieval_tenant_isolation_enabled=True,
+    )
+    client = TestClient(create_app(settings))
+
+    platform = client.get("/v1/rag/documents", headers={"X-Sandbox-ID": "platform-team"}).json()["documents"]
+    other = client.get("/v1/rag/documents", headers={"X-Sandbox-ID": "team-a"}).json()["documents"]
+
+    # Bootstrapped points are owned by platform-team; the listing used to show them to nobody.
+    assert [document["id"] for document in platform] == ["agents"]
+    assert other == []
 
 
 class _WrongDimensionEmbedding:

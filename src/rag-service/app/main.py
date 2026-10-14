@@ -35,7 +35,13 @@ from app.body_limit import RequestBodyLimitMiddleware
 from app.embeddings import build_embedding_provider
 from app.jwt_auth import JwksUnavailableError, JwtAuthError, JwtVerifier
 from app.reranker import build_reranker_provider
-from app.retriever import LexicalRetriever, QdrantRetriever, VectorStoreError, build_context
+from app.retriever import (
+    BOOTSTRAP_RETRY_SECONDS,
+    LexicalRetriever,
+    QdrantRetriever,
+    VectorStoreError,
+    build_context,
+)
 from app.settings import Settings, validate_sandbox_id
 from app.tracing import configure_tracing, trace_request
 
@@ -890,6 +896,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "request_id": request.state.request_id,
                     "sandbox_id": request.state.sandbox_id,
                 },
+                # The knowledge bootstrap backs off this long after a failure; the JWKS 503
+                # already tells clients the same.
+                headers={"Retry-After": str(int(BOOTSTRAP_RETRY_SECONDS))},
             ) from exc
         except Exception as exc:
             # Record what the client actually receives. Without this arm an unexpected

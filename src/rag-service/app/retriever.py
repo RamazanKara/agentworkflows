@@ -31,6 +31,8 @@ from app.reranker import NoopReranker, RerankerProvider
 LOGGER = logging.getLogger("agentworkflows.rag")
 # How long a failed knowledge bootstrap waits before the next attempt.
 BOOTSTRAP_RETRY_SECONDS = 5.0
+# The tenant that owns knowledge bootstrapped into Qdrant (as in platform-knowledge.yaml).
+BOOTSTRAP_OWNER = "platform-team"
 # The same text formats the ingestion CLI reads (app.ingest.TEXT_SUFFIXES).
 DOCUMENT_SUFFIXES = frozenset({".md", ".markdown", ".txt"})
 # Points per Qdrant upsert request. A 384-dimension point with a 1,200-character chunk is
@@ -487,7 +489,9 @@ class QdrantRetriever:
     ) -> QdrantRetriever:
         """Build a Qdrant retriever seeded with documents loaded from a directory."""
         return cls(
-            documents=load_documents(document_dir),
+            # Stamped with the owner the bootstrap writes to Qdrant, so the tenant-scoped
+            # document listing shows the same documents tenant-scoped retrieval returns.
+            documents=load_documents(document_dir, owner=BOOTSTRAP_OWNER),
             base_url=base_url,
             collection=collection,
             collection_version=collection_version,
@@ -576,7 +580,7 @@ class QdrantRetriever:
                         # classification allowlist does not silently filter out every
                         # bootstrapped document.
                         "classification": "internal",
-                        "owner": "platform-team",
+                        "owner": BOOTSTRAP_OWNER,
                     },
                 }
             )
