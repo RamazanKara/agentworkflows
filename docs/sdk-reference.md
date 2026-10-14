@@ -292,6 +292,7 @@ before a start intent or Temporal execution is created, and the API validates in
 | `workflow_input_invalid` | Use the template's input.json and correct the named field before starting again |
 | `workflow_not_allowed`, `model_not_allowed`, `tool_not_allowed` | Discover approved models with `models`; review team workflow policy with the admin |
 | `prompt_secret_detected` | Remove credentials or sensitive personal data from the prompt/tool arguments |
+| `invalid_unicode` | Send valid Unicode text; an unpaired surrogate escape such as `\ud800` cannot be forwarded to a model |
 | `approval_not_waiting` | Inspect the run's stage and existing decision; read each draft before approving |
 | `workflow_start_conflict` | Use the original input for that request ID, or a new ID for a different run |
 | `team_settings_conflict` (409) | Reload with `settings show`, review and retry with its revision |
