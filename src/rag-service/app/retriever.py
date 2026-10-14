@@ -11,7 +11,7 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from time import monotonic
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
@@ -107,7 +107,8 @@ def _describe_error(exc: Exception) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
-def _title_from_content(path: Path, content: str) -> str:
+def title_from_content(path: Path, content: str) -> str:
+    """Return a document title: its first heading or first line, else the file name."""
     for line in content.splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
@@ -115,6 +116,26 @@ def _title_from_content(path: Path, content: str) -> str:
         if stripped:
             return stripped[:120]
     return path.stem
+
+
+def document_id_for(relative_path: str) -> str:
+    """Return the document id of a corpus-relative path: no extension, ``/`` as ``-``."""
+    return PurePosixPath(relative_path).with_suffix("").as_posix().replace("/", "-")
+
+
+def unique_document_id(base_id: str, seen: set[str]) -> str:
+    """Return ``base_id``, or it with the first free numeric suffix, and record it in ``seen``.
+
+    Paths can collide on an id (``a/b.md`` and ``a-b.md``, ``x.md`` and ``x.txt``); suffixes
+    are handed out in path order so every id names exactly one file.
+    """
+    doc_id = base_id
+    suffix = 2
+    while doc_id in seen:
+        doc_id = f"{base_id}-{suffix}"
+        suffix += 1
+    seen.add(doc_id)
+    return doc_id
 
 
 def _read_document(path: Path) -> str | None:
@@ -147,9 +168,7 @@ def load_documents(document_dir: Path, owner: str = "") -> list[KnowledgeDocumen
     can enforce the same per-tenant scoping as the Qdrant path. The local single-tenant lab
     passes its default sandbox id; an unscoped corpus leaves it empty.
 
-    A document's id is its relative path without the extension, with ``/`` turned into
-    ``-``. Paths that collide (``a/b.md`` and ``a-b.md``, or ``x.md`` and ``x.txt``) get a
-    numeric suffix in path order, so every result id names exactly one file.
+    Document ids come from :func:`document_id_for`, made unique by :func:`unique_document_id`.
     """
     if not document_dir.exists():
         return []
@@ -165,18 +184,14 @@ def load_documents(document_dir: Path, owner: str = "") -> list[KnowledgeDocumen
         if content is None:
             continue
         relative = relative_path.as_posix()
-        base_id = doc_id = relative.rsplit(".", 1)[0].replace("/", "-")
-        suffix = 2
-        while doc_id in seen_ids:
-            doc_id = f"{base_id}-{suffix}"
-            suffix += 1
+        base_id = document_id_for(relative)
+        doc_id = unique_document_id(base_id, seen_ids)
         if doc_id != base_id:
             LOGGER.warning("knowledge file %s shares the document id %r; serving it as %r", relative, base_id, doc_id)
-        seen_ids.add(doc_id)
         documents.append(
             KnowledgeDocument(
                 id=doc_id,
-                title=_title_from_content(path, content),
+                title=title_from_content(path, content),
                 source=relative,
                 content=content,
                 tokens=Counter(tokenize(content)),
@@ -709,8 +724,13 @@ class QdrantRetriever:
             if not isinstance(point_payload, dict):
                 point_payload = {}
             content = str(point_payload.get("content") or point_payload.get("text") or "")
-            source = str(point_payload.get("source") or "qdrant")
-            doc_id = str(point_payload.get("document_id") or point_payload.get("id") or point.get("id"))
+            # Chunks written by app.ingest carry the document's path under its source. Older
+            # chunks have no document_id, and their "source" is the manifest location (often
+            # an absolute path on the ingesting host), so derive both from the document path.
+            document_path = point_payload.get("document_path")
+            derived_id = document_id_for(str(document_path)) if document_path else None
+            source = str(document_path or point_payload.get("source") or "qdrant")
+            doc_id = str(point_payload.get("document_id") or derived_id or point_payload.get("id") or point.get("id"))
             title = str(point_payload.get("title") or doc_id)
             combined = self._hybrid_score(_finite_score(point.get("score")), terms, content)
             matches.append(

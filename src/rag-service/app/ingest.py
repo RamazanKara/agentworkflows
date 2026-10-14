@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,7 +16,8 @@ import httpx
 import yaml
 
 from app.embeddings import EmbeddingProvider, build_embedding_provider
-from app.retriever import UPSERT_BATCH_SIZE
+from app.retriever import UPSERT_BATCH_SIZE, document_id_for, title_from_content, unique_document_id
+from app.settings import SANDBOX_ID_PATTERN
 
 REQUIRED_SOURCE_FIELDS = {
     "id",
@@ -57,6 +60,10 @@ class ChunkRecord:
     chunk_index: int
     text: str
     collection_version: str
+    # The document this chunk came from, as retrieval results name it. Without these the
+    # service answered with the point UUID as both id and title.
+    document_id: str = ""
+    title: str = ""
 
     @property
     def point_id(self) -> str:
@@ -66,6 +73,7 @@ class ChunkRecord:
 
     def payload(self) -> dict[str, Any]:
         """Return the Qdrant point payload with content and governance metadata."""
+        document_path = self.document_path.as_posix()
         return {
             "collection_version": self.collection_version,
             "source_id": self.source.id,
@@ -74,7 +82,9 @@ class ChunkRecord:
             "retentionClass": self.source.retention_class,
             "owner": self.source.owner,
             "embeddingModel": self.source.embedding_model,
-            "document_path": self.document_path.as_posix(),
+            "document_path": document_path,
+            "document_id": self.document_id or document_id_for(document_path),
+            "title": self.title or self.document_path.stem,
             "chunk_index": self.chunk_index,
             "content": self.text,
         }
@@ -82,14 +92,20 @@ class ChunkRecord:
 
 def load_manifest(path: Path) -> list[SourceRecord]:
     """Load and validate a RagSourceManifest, returning its source records."""
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"RAG source manifest {path} is not valid YAML: {exc}") from exc
     if not isinstance(data, dict):
         raise ValueError("RAG source manifest must be a YAML mapping")
     if data.get("apiVersion") != "platform.ai/v1alpha1":
         raise ValueError("RAG source manifest apiVersion must be platform.ai/v1alpha1")
     if data.get("kind") != "RagSourceManifest":
         raise ValueError("RAG source manifest kind must be RagSourceManifest")
-    sources = data.get("spec", {}).get("sources")
+    spec = data.get("spec")
+    if not isinstance(spec, dict):
+        raise ValueError("RAG source manifest spec must be a mapping with a sources list")
+    sources = spec.get("sources")
     if not isinstance(sources, list) or not sources:
         raise ValueError("RAG source manifest spec.sources must be a non-empty list")
 
@@ -101,9 +117,13 @@ def load_manifest(path: Path) -> list[SourceRecord]:
         missing = sorted(REQUIRED_SOURCE_FIELDS - set(item))
         if missing:
             raise ValueError(f"spec.sources[{index}] missing fields: {missing}")
+        for field in sorted(REQUIRED_SOURCE_FIELDS):
+            value = item[field]
+            # A YAML null or list would otherwise be stored as the literal text "None" or
+            # "['a']", e.g. an owner no tenant can ever match.
+            if isinstance(value, bool) or not isinstance(value, str | int | float) or not str(value).strip():
+                raise ValueError(f"spec.sources[{index}].{field} must be a non-empty string")
         source_id = str(item["id"]).strip()
-        if not source_id:
-            raise ValueError(f"spec.sources[{index}].id must not be empty")
         if source_id in seen:
             raise ValueError(f"duplicate source id: {source_id}")
         seen.add(source_id)
@@ -119,6 +139,21 @@ def load_manifest(path: Path) -> list[SourceRecord]:
             )
         )
     return records
+
+
+def owner_warnings(sources: list[SourceRecord]) -> list[str]:
+    """Return a warning for each source whose owner can never match a tenant.
+
+    Tenant-isolated retrieval compares ``owner`` with the caller's sandbox id, which is
+    always 1-63 lowercase letters, digits or hyphens. Not an error: with isolation off the
+    owner is only governance metadata.
+    """
+    return [
+        f"source {source.id}: owner {source.owner!r} is not a sandbox id (lowercase letters, digits, hyphens); "
+        "tenant-isolated retrieval will never return its documents"
+        for source in sources
+        if not SANDBOX_ID_PATTERN.fullmatch(source.owner)
+    ]
 
 
 def iter_document_paths(source: SourceRecord) -> list[Path]:
@@ -137,26 +172,71 @@ def iter_document_paths(source: SourceRecord) -> list[Path]:
     ]
 
 
+# Where a chunk may end, best first: paragraph, line, sentence, word.
+_CHUNK_BREAKS = (("\n\n", 0), ("\n", 0), (". ", 1), (" ", 0))
+_WHITESPACE = re.compile(r"\s")
+
+
+def _chunk_end(text: str, start: int, end: int, chunk_chars: int) -> int:
+    """Return where a chunk starting at ``start`` should end, at most at ``end``.
+
+    The best break in the second half of the window wins; with none, the chunk is cut at
+    ``end`` (one long unbroken token). Cutting at the window edge used to split words.
+    """
+    floor = start + chunk_chars // 2
+    for separator, keep in _CHUNK_BREAKS:
+        position = text.rfind(separator, floor, end)
+        if position > floor:
+            return position + keep
+    return end
+
+
 def chunk_text(value: str, chunk_chars: int, overlap_chars: int) -> list[str]:
-    """Split text into overlapping chunks, preferring paragraph boundaries."""
+    """Split text into overlapping chunks that end on paragraph, line, sentence or word breaks.
+
+    The overlap carried into the next chunk starts on a word and is at most half of the
+    chunk it repeats, so every step advances by at least a quarter chunk. It used to be
+    able to step back to one character past the previous start, so an overlap above half
+    a chunk produced one chunk per character on paragraph-rich text.
+    """
     compact = "\n".join(line.rstrip() for line in value.splitlines()).strip()
     if not compact:
         return []
+    length = len(compact)
     chunks: list[str] = []
     start = 0
-    while start < len(compact):
-        end = min(start + chunk_chars, len(compact))
-        if end < len(compact):
-            boundary = compact.rfind("\n\n", start, end)
-            if boundary > start + chunk_chars // 2:
-                end = boundary
+    while start < length:
+        end = min(start + chunk_chars, length)
+        if end < length:
+            end = _chunk_end(compact, start, end, chunk_chars)
         chunk = compact[start:end].strip()
         if chunk:
             chunks.append(chunk)
-        if end >= len(compact):
+        if end >= length:
             break
-        start = max(end - overlap_chars, start + 1)
+        next_start = end - min(overlap_chars, (end - start) // 2)
+        if next_start < end:
+            # Begin the overlap on a word rather than inside one.
+            space = _WHITESPACE.search(compact, next_start, end)
+            if space is not None:
+                next_start = space.end()
+        start = max(next_start, start + 1)
     return chunks
+
+
+def _read_source_document(source: SourceRecord, path: Path) -> str:
+    """Read a source document as UTF-8 (a leading byte-order mark is dropped).
+
+    Ingestion is the governed write path, so an undecodable file fails the run with its
+    name instead of being written with replacement characters.
+    """
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            f"source {source.id}: {path} is not valid UTF-8 (first bad byte at offset {exc.start}); "
+            "re-encode it as UTF-8 or remove it from the source"
+        ) from exc
 
 
 def build_chunks(
@@ -165,13 +245,20 @@ def build_chunks(
     overlap_chars: int,
     collection_version: str = "v1",
 ) -> list[ChunkRecord]:
-    """Read every source document and return its chunk records for ingestion."""
+    """Read every source document and return its chunk records for ingestion.
+
+    Each chunk names its document (the id and title retrieval results show). Document ids
+    follow the knowledge-directory rule and are unique across the whole manifest.
+    """
     chunks: list[ChunkRecord] = []
+    seen_ids: set[str] = set()
     for source in sources:
         root = source.resolved_source
         for path in iter_document_paths(source):
             relative = path.relative_to(root) if root.is_dir() else Path(path.name)
-            text = path.read_text(encoding="utf-8")
+            text = _read_source_document(source, path)
+            document_id = unique_document_id(document_id_for(relative.as_posix()), seen_ids)
+            title = title_from_content(path, text)
             for index, chunk in enumerate(chunk_text(text, chunk_chars, overlap_chars)):
                 chunks.append(
                     ChunkRecord(
@@ -180,6 +267,8 @@ def build_chunks(
                         chunk_index=index,
                         text=chunk,
                         collection_version=collection_version,
+                        document_id=document_id,
+                        title=title,
                     )
                 )
     return chunks
@@ -225,6 +314,7 @@ def upsert_chunks(
     collection: str,
     timeout_seconds: float,
     batch_size: int = UPSERT_BATCH_SIZE,
+    ingested_at_time: datetime | None = None,
 ) -> dict[str, Any]:
     """Embed and upsert chunk points into Qdrant, returning an ingestion summary.
 
@@ -233,7 +323,7 @@ def upsert_chunks(
     Qdrant's 32 MB request limit at roughly 7,000 chunks, and one embedding request (on a
     fresh connection) per chunk dominated the run time.
     """
-    now = datetime.now(UTC)
+    now = ingested_at_time or datetime.now(UTC)
     ingested_at = now.isoformat()
     ingested_at_epoch = int(now.timestamp())
 
@@ -260,6 +350,37 @@ def upsert_chunks(
         "collection_status": collection_status,
         "upserted_chunks": len(chunks),
     }
+
+
+def prune_stale_chunks(
+    source_ids: list[str],
+    collection_version: str,
+    written_at_epoch: int,
+    base_url: str,
+    collection: str,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    """Delete the points of these sources that an ingestion at ``written_at_epoch`` did not write.
+
+    Chunk point ids are stable per document and position, so re-ingesting overwrites what
+    still exists, but the tail chunks of a document that got shorter, and every chunk of a
+    file removed from its source, stayed retrievable indefinitely. Points written by the run
+    carry its epoch; anything older for the same sources and version is stale. A run that
+    started later (a concurrent re-ingest) has a later epoch and is left alone.
+    """
+    must: list[dict[str, Any]] = [
+        {"key": "source_id", "match": {"any": source_ids}},
+        {"key": "collection_version", "match": {"value": collection_version}},
+        {"key": "ingestedAtEpoch", "range": {"lt": written_at_epoch}},
+    ]
+    with httpx.Client(timeout=timeout_seconds) as client:
+        response = client.post(
+            f"{base_url.rstrip('/')}/collections/{collection}/points/delete",
+            params={"wait": "true"},
+            json={"filter": {"must": must}},
+        )
+        response.raise_for_status()
+    return {"pruned_sources": source_ids, "pruned_before_epoch": written_at_epoch}
 
 
 def delete_older_than(
@@ -343,8 +464,23 @@ def main() -> int:
     parser.add_argument("--embedding-model", default="hash-text-v1")
     parser.add_argument("--chunk-chars", type=int, default=1200)
     parser.add_argument("--overlap-chars", type=int, default=120)
+    parser.add_argument(
+        "--no-prune",
+        action="store_true",
+        help="With --write, keep chunks of these sources that this run did not write "
+        "(from removed files or shortened documents).",
+    )
     args = parser.parse_args()
+    try:
+        return _run(args)
+    except (ValueError, OSError, httpx.HTTPError) as exc:
+        # A bad manifest, an unreadable document or an unreachable store is an operator
+        # error with a clear cause, not a crash: report it without a traceback.
+        raise SystemExit(f"error: {exc}") from None
 
+
+def _run(args: argparse.Namespace) -> int:
+    """Run the mode selected on the command line; raises SystemExit for invalid arguments."""
     if args.dimensions <= 0:
         raise SystemExit("--dimensions must be greater than zero")
     if not args.collection_version.strip():
@@ -390,6 +526,8 @@ def main() -> int:
         raise SystemExit("--overlap-chars must be zero or less than --chunk-chars")
 
     sources = load_manifest(args.source)
+    for warning in owner_warnings(sources):
+        print(f"warning: {warning}", file=sys.stderr)
     chunks = build_chunks(sources, args.chunk_chars, args.overlap_chars, args.collection_version)
     provider = build_embedding_provider(
         args.embedding_provider,
@@ -413,6 +551,7 @@ def main() -> int:
     if args.write:
         if not args.qdrant_url:
             raise SystemExit("--qdrant-url is required with --write")
+        written_at = datetime.now(UTC)
         summary.update(
             upsert_chunks(
                 chunks,
@@ -420,8 +559,21 @@ def main() -> int:
                 args.qdrant_url,
                 args.collection,
                 args.timeout_seconds,
+                ingested_at_time=written_at,
             )
         )
+        if not args.no_prune:
+            # Only after every batch landed: a failed run leaves the previous chunks in place.
+            summary.update(
+                prune_stale_chunks(
+                    [source.id for source in sources],
+                    args.collection_version,
+                    int(written_at.timestamp()),
+                    args.qdrant_url,
+                    args.collection,
+                    args.timeout_seconds,
+                )
+            )
         summary["status"] = "written"
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
