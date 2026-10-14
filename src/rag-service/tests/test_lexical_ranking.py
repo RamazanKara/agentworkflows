@@ -157,6 +157,23 @@ def test_a_verbatim_phrase_outranks_scattered_terms():
     assert _ids(retriever, "audit chain head hash")[0] == "phrase"
 
 
+def test_the_context_budget_is_shared_by_every_retrieved_document():
+    from app.retriever import RetrievalResult, build_context
+
+    results = [
+        RetrievalResult(document=_document(doc_id, body), score=1.0, excerpt=body)
+        for doc_id, body in (("long-a", "a" * 5000), ("short", "brief note"), ("long-b", "b" * 5000))
+    ]
+
+    context = build_context(results, 600)
+
+    # The first excerpt alone used to fill the budget, so the model never saw the others.
+    assert len(context) <= 600
+    assert all(f"[{doc_id}]" in context for doc_id in ("long-a", "short", "long-b"))
+    assert "brief note" in context
+    assert context.index("[long-a]") < context.index("[short]") < context.index("[long-b]")
+
+
 def test_hybrid_overlap_ignores_stopwords():
     import httpx
     from app.embeddings import HashEmbeddingProvider

@@ -783,22 +783,33 @@ class QdrantRetriever:
 def build_context(results: list[RetrievalResult], max_context_chars: int) -> str:
     """Concatenate retrieval excerpts into a context block within the char budget.
 
+    The budget is shared: a section shorter than an equal share keeps its length and what
+    it leaves is split among the longer ones. The first excerpt alone could fill the whole
+    budget before, so with long documents the model only ever saw the top result.
+
     The blank-line separators between sections count against the budget too, so the
     returned block is never longer than `max_context_chars`.
     """
     separator = "\n\n"
-    sections: list[str] = []
-    used = 0
-    for result in results:
-        header = f"[{result.document.id}] {result.document.title} ({result.document.source})"
-        section = f"{header}\n{result.excerpt}"
-        remaining = max_context_chars - used - (len(separator) if sections else 0)
-        if remaining <= 0:
-            break
-        if len(section) > remaining:
-            section = section[:remaining].rstrip()
-        if not section:
-            break
-        used += len(section) + (len(separator) if sections else 0)
-        sections.append(section)
-    return separator.join(sections)
+    sections = [
+        f"[{result.document.id}] {result.document.title} ({result.document.source})\n{result.excerpt}"
+        for result in results
+    ]
+    # Keep as many sections, best ranked first, as the separators leave room for.
+    while sections and len(separator) * (len(sections) - 1) >= max_context_chars:
+        sections.pop()
+    budget = max_context_chars - len(separator) * max(len(sections) - 1, 0)
+    shares = _fair_shares([len(section) for section in sections], budget)
+    trimmed = (section[:share].rstrip() for section, share in zip(sections, shares, strict=True))
+    return separator.join(section for section in trimmed if section)
+
+
+def _fair_shares(lengths: list[int], budget: int) -> list[int]:
+    """Split ``budget`` across items of these lengths: equal shares, unused share passed on."""
+    shares = [0] * len(lengths)
+    remaining = budget
+    by_length = sorted(range(len(lengths)), key=lambda index: lengths[index])
+    for position, index in enumerate(by_length):
+        shares[index] = min(lengths[index], remaining // (len(by_length) - position))
+        remaining -= shares[index]
+    return shares
