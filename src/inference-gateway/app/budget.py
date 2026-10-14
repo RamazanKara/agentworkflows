@@ -220,9 +220,16 @@ def budget_delta(settings: Settings, payload: dict[str, Any]) -> BudgetDelta:
 
 
 class InMemorySandboxBudgetTracker:
-    """Process-local budget tracker using a lock and a sliding time window."""
+    """Process-local budget tracker using a lock and a sliding time window.
+
+    Sandboxes whose window has ended are swept once the maps grow past
+    ``SWEEP_THRESHOLD``. Their next request would reset the counters anyway, and a
+    header-trusted caller can name any sandbox id, so keeping them grew memory without
+    bound. A Redis tracker gets the same effect from key expiry.
+    """
 
     backend = "memory"
+    SWEEP_THRESHOLD = 1024
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -230,6 +237,18 @@ class InMemorySandboxBudgetTracker:
         self._usage: dict[str, BudgetUsage] = {}
         self._window_started_at: dict[str, float] = {}
         self._providers: dict[str, dict[str, dict[str, Any]]] = {}
+        self._swept_at = 0.0
+
+    def _sweep(self, now: float) -> None:
+        window = self.settings.sandbox_budget_window_seconds
+        if window <= 0 or len(self._window_started_at) < self.SWEEP_THRESHOLD or now - self._swept_at < window:
+            return
+        self._swept_at = now
+        for sandbox_id, started in list(self._window_started_at.items()):
+            if now - started >= window:
+                del self._window_started_at[sandbox_id]
+                self._usage.pop(sandbox_id, None)
+                self._providers.pop(sandbox_id, None)
 
     def _limits(self, settings: Settings | None = None) -> dict[str, int]:
         resolved = settings or self.settings
@@ -241,6 +260,7 @@ class InMemorySandboxBudgetTracker:
 
     def _current_usage(self, sandbox_id: str) -> BudgetUsage:
         now = time()
+        self._sweep(now)
         started = self._window_started_at.get(sandbox_id)
         if started is None:
             self._window_started_at[sandbox_id] = now

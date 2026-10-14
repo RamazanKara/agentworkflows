@@ -40,14 +40,29 @@ def _limit_and_window(settings: Settings) -> tuple[int, int]:
 
 
 class InMemoryRateLimiter:
-    """Process-local fixed-window rate limiter guarded by a lock."""
+    """Process-local fixed-window rate limiter guarded by a lock.
+
+    Keys are sandbox ids, which a header-trusted caller chooses, and hashed peer
+    addresses on the sign-in routes, so the map is swept of finished windows once it
+    grows past ``SWEEP_THRESHOLD``; without that every distinct key was kept forever.
+    """
 
     backend = "memory"
+    SWEEP_THRESHOLD = 1024
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._lock = Lock()
         self._windows: dict[str, tuple[float, int]] = {}
+        self._swept_at = 0.0
+
+    def _sweep(self, now: float, window: int) -> None:
+        # At most once per window, which amortizes the pass over the map and still bounds
+        # it to the keys seen in the last two windows.
+        if len(self._windows) < self.SWEEP_THRESHOLD or now - self._swept_at < window:
+            return
+        self._swept_at = now
+        self._windows = {key: value for key, value in self._windows.items() if now - value[0] < window}
 
     def check(self, key: str, settings: Settings | None = None) -> tuple[bool, int]:
         """Return ``(allowed, retry_after_seconds)`` for one request against ``key``."""
@@ -57,6 +72,7 @@ class InMemoryRateLimiter:
             return True, 0
         now = time()
         with self._lock:
+            self._sweep(now, window)
             window_start, count = self._windows.get(key, (now, 0))
             if now - window_start >= window:
                 window_start, count = now, 0

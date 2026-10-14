@@ -637,3 +637,40 @@ def test_slow_redis_socket_times_out_and_fails_closed():
             release.set()
             server.shutdown()
             thread.join(timeout=2)
+
+
+def test_in_memory_limiter_and_budget_forget_finished_windows(monkeypatch):
+    # Sandbox ids are caller-chosen in header-trusted mode and sign-in throttling keys on
+    # peer addresses, so both maps used to keep every key they had ever seen.
+    from app import budget, ratelimit
+    from app.budget import InMemorySandboxBudgetTracker
+    from app.ratelimit import InMemoryRateLimiter
+
+    now = [1000.0]
+    monkeypatch.setattr(ratelimit, "time", lambda: now[0])
+    monkeypatch.setattr(budget, "time", lambda: now[0])
+    settings = _tool_settings(
+        rate_limit_enabled=True,
+        rate_limit_requests_per_window=1,
+        rate_limit_window_seconds=60,
+        sandbox_budget_enabled=True,
+        sandbox_request_budget=5,
+        sandbox_budget_window_seconds=60,
+    )
+    limiter = InMemoryRateLimiter(settings)
+    tracker = InMemorySandboxBudgetTracker(settings)
+    monkeypatch.setattr(InMemoryRateLimiter, "SWEEP_THRESHOLD", 3)
+    monkeypatch.setattr(InMemorySandboxBudgetTracker, "SWEEP_THRESHOLD", 3)
+    payload = {"messages": [{"role": "user", "content": "hi"}], "max_tokens": 1}
+    for index in range(5):
+        limiter.check(f"key-{index}")
+        tracker.reserve(f"sandbox-{index}", payload)
+    assert limiter.check("key-0") == (False, 60)
+    now[0] += 61
+    limiter.check("fresh")
+    tracker.reserve("fresh", payload)
+    assert set(limiter._windows) == {"fresh"}
+    assert set(tracker._usage) == set(tracker._window_started_at) == {"fresh"}
+    # A swept key starts a new window exactly as an expired one would have.
+    assert limiter.check("key-0") == (True, 0)
+    assert tracker.snapshot("sandbox-0")["usage"]["requests"] == 0
