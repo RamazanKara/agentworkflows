@@ -1272,10 +1272,23 @@ test('approval inbox follows empty filtered pages in every project and rejects s
   await page.getByRole('link', { name: 'Approvals', exact: true }).click();
   await expect(page.locator('.draft')).toContainText('<script>alert("untrusted")</script>');
   expect(await page.locator('.draft script').count()).toBe(0);
+  const decisions: unknown[] = [];
+  page.on('request', request => { if (request.url().endsWith('/approve')) decisions.push(request.postDataJSON()); });
+  // Rejecting asks first; backing out sends nothing and returns focus to Reject.
+  await page.getByRole('button', { name: 'Reject', exact: true }).click();
+  await expect(page.getByText('Reject this draft? The run ends and nothing is published.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Keep reviewing', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Reject', exact: true })).toBeFocused();
+  expect(decisions).toEqual([]);
   const decision = page.waitForRequest(request => request.url().endsWith('/approve'));
   await page.getByRole('button', { name: 'Reject', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm rejection', exact: true }).click();
   expect((await decision).postDataJSON()).toEqual({ approved: false });
   await expect(page.getByRole('heading', { name: 'You’re all caught up' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Research: Rejected. The publish step will not run.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Approvals', level: 1 })).toBeFocused();
+  expect(decisions).toEqual([{ approved: false }]);
 });
 
 test('conflicting approval is actionable, viewer cannot decide or configure', async ({ page }) => {
@@ -2094,3 +2107,353 @@ for (const width of [360, 393, 1440]) {
     expect(errors).toEqual([]);
   });
 }
+
+test('run detail keeps the run on screen through a failed refresh and pauses polling in a hidden tab', async ({ page }) => {
+  await page.clock.install();
+  let calls = 0;
+  let state: 'running' | 'failing' | 'done' = 'running';
+  await page.route(`**/v1/workflow-runs/${id}`, route => {
+    calls++;
+    if (state === 'failing') return route.fulfill({ status: 503, json: {} });
+    return route.fulfill({ json: run(state === 'done' ? { status: 'completed', progress: undefined, result: 'Finished briefing.' } : { progress: { stage: 'running' } }) });
+  });
+  await login(page, 'viewer', `/console/#run/${id}`);
+  await expect(page.getByText('This page updates automatically while the run is active.')).toBeVisible();
+  // From here on, time moves only when the test moves it.
+  await page.clock.pauseAt(new Date(Date.now() + 2000));
+  const first = calls;
+  state = 'failing';
+  await page.clock.fastForward(5000);
+  await expect(page.getByRole('alert')).toContainText('The gateway is unavailable right now. Try again in a moment');
+  // The last answer stays readable under the error.
+  await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
+  await expect(page.locator('.run-meta .badge')).toHaveText('Running');
+  expect(calls).toBe(first + 1);
+  // A hidden tab does not poll; showing it again catches up at once.
+  await page.evaluate(() => Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }));
+  state = 'done';
+  await page.clock.fastForward(30000);
+  await page.waitForTimeout(300);
+  expect(calls).toBe(first + 1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.locator('.run-meta .badge')).toHaveText('Completed');
+  await expect(page.getByText('Finished briefing.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  // A finished run stops polling.
+  const settled = calls;
+  await page.clock.fastForward(30000);
+  await page.waitForTimeout(300);
+  expect(calls).toBe(settled);
+});
+
+test('run filters stay in the address through reload and back navigation', async ({ page }) => {
+  const queries: URLSearchParams[] = [];
+  await page.route('**/v1/workflow-runs?*', route => {
+    const query = new URL(route.request().url()).searchParams;
+    queries.push(query);
+    return route.fulfill({ json: { runs: [run({ status: 'failed', progress: undefined })], next_cursor: null } });
+  });
+  await login(page, 'viewer', '/console/#runs');
+  await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('failed');
+  await page.getByRole('combobox', { name: 'Project', exact: true }).selectOption('engineering');
+  await expect(page).toHaveURL(/#runs\?project=engineering&status=failed$/);
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Status', exact: true })).toHaveValue('failed');
+  await expect(page.getByRole('combobox', { name: 'Project', exact: true })).toHaveValue('engineering');
+  await expect.poll(() => queries.at(-1)?.toString()).toBe('project=engineering&limit=20&status=failed');
+  await page.getByRole('link', { name: 'Research', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Step timeline' })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('combobox', { name: 'Status', exact: true })).toHaveValue('failed');
+  await expect(page.getByRole('combobox', { name: 'Project', exact: true })).toHaveValue('engineering');
+  // The navigation link always opens the unfiltered list.
+  await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
+  await expect(page).toHaveURL(/#runs$/);
+  await expect(page.getByRole('combobox', { name: 'Status', exact: true })).toHaveValue('');
+  await expect.poll(() => queries.at(-1)?.toString()).toBe('project=default&limit=20');
+});
+
+test('insights keep the period in the address and sort by any column', async ({ page }) => {
+  const queries: string[] = [];
+  await page.route('**/v1/workflow-insights*', route => {
+    queries.push(new URL(route.request().url()).search);
+    return route.fulfill({ json: insightsBody([insightRow(), insightRow({ workflow: 'CodeReviewWorkflow', runs: 3, average_cost_usd: 0.5, total_cost_usd: 1.5 })]) });
+  });
+  await login(page, 'viewer', '/console/#insights?days=30');
+  await expect(page.getByLabel('Period', { exact: true })).toHaveValue('30');
+  expect(queries).toEqual(['?days=30']);
+  const names = page.locator('.insights-table tbody th');
+  await expect(names).toHaveText([/^Research/, /^Code review/]);
+  await expect(page.getByRole('columnheader', { name: 'Outcomes' })).toHaveAttribute('aria-sort', 'descending');
+  await page.getByRole('button', { name: 'Cost per run', exact: true }).click();
+  await expect(page.getByRole('columnheader', { name: 'Cost per run' })).toHaveAttribute('aria-sort', 'descending');
+  await expect(names).toHaveText([/^Code review/, /^Research/]);
+  await page.getByRole('button', { name: 'Cost per run', exact: true }).click();
+  await expect(page.getByRole('columnheader', { name: 'Cost per run' })).toHaveAttribute('aria-sort', 'ascending');
+  await expect(names).toHaveText([/^Research/, /^Code review/]);
+  await page.getByRole('button', { name: 'Workflow', exact: true }).click();
+  await expect(names).toHaveText([/^Code review/, /^Research/]);
+  await page.getByLabel('Period', { exact: true }).selectOption('1');
+  await expect(page).toHaveURL(/#insights\?days=1$/);
+  await page.getByLabel('Period', { exact: true }).selectOption('7');
+  await expect(page).toHaveURL(/#insights$/);
+  // A new period shows no numbers from the previous one while it loads.
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/v1/workflow-insights*', async route => { await held; return route.fulfill({ json: insightsBody([]) }); });
+  await page.getByLabel('Period', { exact: true }).selectOption('30');
+  await expect(page.getByText('Summarizing recent runs…')).toBeVisible();
+  await expect(page.locator('.insights-table')).toHaveCount(0);
+  release();
+  await expect(page.getByText('No runs in this period', { exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Run a workflow' })).toHaveCount(0);
+});
+
+test('cost tables sort by calls, tokens or cost', async ({ page }) => {
+  await page.route('**/v1/usage', route => route.fulfill({ json: { estimated_cost: 1, spend: { project: null, window_start: 1791316800, window_seconds: 86400, cost_limit_usd: 50, reserved_and_spent_usd: 1,
+    providers: { openai: { calls: 9, tokens: 100, cost_usd: 0.2 }, anthropic: { calls: 2, tokens: 900, cost_usd: 0.8 } }, workflows: {}, accounting: '' } } }));
+  await login(page, 'viewer', '/console/#costs');
+  const table = page.getByRole('region', { name: 'By provider table' });
+  await expect(table.locator('tbody th')).toHaveText(['Anthropic', 'OpenAI']);
+  await table.getByRole('button', { name: 'Calls', exact: true }).click();
+  await expect(table.locator('tbody th')).toHaveText(['OpenAI', 'Anthropic']);
+  await expect(table.getByRole('columnheader', { name: 'Calls' })).toHaveAttribute('aria-sort', 'descending');
+  await expect(table.getByRole('columnheader', { name: 'Cost' })).not.toHaveAttribute('aria-sort');
+});
+
+test('unsaved settings ask before the page is left, and stay when the person cancels', async ({ page }) => {
+  await login(page, 'admin', '/console/#team');
+  const budget = page.getByLabel('Team monthly budget (USD)', { exact: true });
+  await budget.fill('125');
+  await expect(page.getByRole('status').filter({ hasText: '1 unsaved change' })).toBeVisible();
+  const prompts: string[] = [];
+  page.once('dialog', dialog => { prompts.push(dialog.message()); void dialog.dismiss(); });
+  await page.getByRole('link', { name: 'Costs', exact: true }).click();
+  await expect.poll(() => prompts).toEqual(['Discard your unsaved settings change?']);
+  await expect(page).toHaveURL(/#team$/);
+  await expect(budget).toHaveValue('125');
+  page.once('dialog', dialog => { prompts.push(dialog.message()); void dialog.dismiss(); });
+  await page.getByRole('button', { name: 'Switch account', exact: true }).click();
+  await expect.poll(() => prompts).toHaveLength(2);
+  await expect(page.getByLabel('API key', { exact: true })).toHaveCount(0);
+  await expect(budget).toHaveValue('125');
+  page.once('dialog', dialog => void dialog.accept());
+  await page.getByRole('link', { name: 'Costs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Costs', level: 1 })).toBeVisible();
+  // Nothing is unsaved after leaving, so moving on asks nothing.
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Team settings', exact: true }).click();
+  await expect(budget).toHaveValue('50');
+  await page.getByRole('link', { name: 'Costs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Costs', level: 1 })).toBeVisible();
+  expect(prompts).toHaveLength(2);
+});
+
+test('retention and alert numbers can be cleared and retyped without snapping to a minimum', async ({ page }) => {
+  let saved: unknown;
+  await page.route('**/v1/team/retention', route => {
+    if (route.request().method() === 'PUT') {
+      expect(route.request().headers()['if-match']).toBe('1');
+      saved = route.request().postDataJSON();
+    }
+    return route.fulfill({ json: { revision: 1, run_seconds: 2592000, content_seconds: 604800, audit_seconds: 7776000 } });
+  });
+  await page.route('**/v1/team/data', route => route.fulfill({ json: { team_id: 'demo', status: 'active', external_follow_up: [] } }));
+  await page.route('**/v1/team/telemetry', route => route.fulfill({ json: { traces_enabled: false, metrics_enabled: false, protocol: 'grpc', service_name: 'gateway' } }));
+  await login(page, 'admin', '/console/#data');
+  const history = page.getByLabel('Run history (days)');
+  await expect(history).toHaveValue('30');
+  await history.fill('');
+  await expect(history).toHaveValue('');
+  await history.pressSequentially('45');
+  await expect(history).toHaveValue('45');
+  await page.getByRole('button', { name: 'Save retention', exact: true }).click();
+  await expect.poll(() => saved).toEqual({ run_seconds: 45 * 86400, content_seconds: 604800, audit_seconds: 7776000 });
+  await page.goto('/console/#team');
+  const percent = page.getByLabel('Budget used (%)', { exact: true });
+  await percent.fill('');
+  await expect(percent).toHaveValue('');
+  await percent.pressSequentially('75');
+  await expect(percent).toHaveValue('75');
+});
+
+test('templates explain load failures and an empty catalog without an endless loading message', async ({ page }) => {
+  let failing = true;
+  await page.route('**/v1/workflow-templates', route => failing ? route.fulfill({ status: 500, json: {} }) : route.fulfill({ json: [] }));
+  await login(page, 'admin', '/console/#templates');
+  await expect(page.getByRole('alert')).toContainText('The gateway hit an unexpected error. Try again; if it keeps happening, ask your operator to check the gateway logs. (500)');
+  await expect(page.locator('main .loading')).toHaveCount(0);
+  failing = false;
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No templates available' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('deep links to missing pages, workflows and admin pages explain themselves', async ({ page }) => {
+  await login(page, 'builder', '/console/#new/MissingWorkflow');
+  await expect(page.getByText('Missing is not available to your team, so Research is selected instead.')).toBeVisible();
+  await page.getByLabel('Workflow', { exact: true }).selectOption('CustomWorkflow');
+  await expect(page.getByText('is not available to your team')).toHaveCount(0);
+  await page.goto('/console/#nowhere');
+  await expect(page.getByRole('heading', { name: 'Page not found', level: 1 })).toBeVisible();
+  await expect(page).toHaveTitle('Page not found · AgentWorkflows Console');
+  for (const [route, title] of [['secrets', 'Workflow secrets'], ['data', 'Data & privacy'], ['keys', 'Members & keys'], ['audit', 'Audit log']]) {
+    await page.goto(`/console/#${route}`);
+    await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Team admin access required' })).toBeVisible();
+    await expect(page).toHaveTitle(`${title} · AgentWorkflows Console`);
+  }
+  await page.goto('/console/#invite/some-token');
+  await expect(page.getByRole('heading', { name: 'Join your team' })).toBeVisible();
+  await expect(page).toHaveTitle('Join your team · AgentWorkflows Console');
+});
+
+test('workflow results link only to web addresses', async ({ page }) => {
+  let url = 'javascript:alert(document.cookie)';
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({ status: 'completed', progress: undefined, result: { status: 'published', publication: { url } } }) }));
+  await login(page, 'viewer', `/console/#run/${id}`);
+  await expect(page.locator('.result-summary')).toHaveText('Published at javascript:alert(document.cookie).');
+  await expect(page.locator('.result-summary a')).toHaveCount(0);
+  url = 'https://docs.example.com/briefing';
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'open the briefing' })).toHaveAttribute('href', url);
+  await expect(page.getByRole('link', { name: 'open the briefing' })).toHaveAttribute('rel', 'noopener noreferrer');
+});
+
+test('approving moves focus to the next draft, and the last required approval lets the run continue', async ({ page }) => {
+  const second = 'bbbbbbbb-1111-2222-3333-cccccccccccc';
+  const drafts = [
+    run({ progress: { stage: 'awaiting_approval', draft: '# First draft\n\nBody one.', required_approvals: 2, approved_by: ['another-reviewer'] } }),
+    run({ run_id: second, workflow: 'CodeReviewWorkflow', progress: { stage: 'awaiting_approval', draft: '# Second draft\n\nBody two.' } }),
+  ];
+  // The same run listed twice by the gateway still shows one card.
+  await page.route('**/v1/workflow-runs?*', route => route.fulfill({ json: { runs: [...drafts, drafts[1]], next_cursor: null } }));
+  await login(page, 'approver', '/console/#approvals');
+  await expect(page.locator('section.review')).toHaveCount(2);
+  await page.getByRole('region', { name: 'First draft' }).getByRole('button', { name: 'Approve', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Research: Approved. The workflow can continue.' })).toBeVisible();
+  await expect(page.locator('section.review')).toHaveCount(1);
+  await expect(page.getByRole('heading', { name: 'Second draft' })).toBeFocused();
+});
+
+test('admins find a key by name, role or status in a long list', async ({ page }) => {
+  const keys = ['Alice', 'Bob', 'Release bot', 'Carol', 'Dan', 'Erin'].map((name, i) => ({ key_id: `key-${i}`, name, role: i === 2 ? 'builder' : 'viewer',
+    project: null, created_at: 1791316800 - i, last_used_at: null, expires_at: null, revoked_at: i === 5 ? 1791316800 : null }));
+  await page.route('**/v1/team/keys', route => route.fulfill({ json: { keys } }));
+  await login(page, 'admin', '/console/#keys');
+  const rows = page.getByRole('region', { name: 'Team API keys' }).locator('tbody tr');
+  await expect(rows).toHaveCount(7);
+  await page.getByLabel('Find a key', { exact: true }).fill('builder');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Release bot');
+  await page.getByLabel('Find a key', { exact: true }).fill('revoked');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('Erin');
+  await page.getByLabel('Find a key', { exact: true }).fill('nobody');
+  await expect(page.getByRole('heading', { name: 'No matching keys' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show all keys', exact: true }).click();
+  await expect(rows).toHaveCount(7);
+});
+
+test('a new key takes focus so its one-time secret is announced', async ({ page }) => {
+  await page.route('**/v1/team/keys', route => route.request().method() === 'POST'
+    ? route.fulfill({ status: 201, json: { key_id: 'key-1', name: 'Alice', role: 'viewer', project: null, key: 'aw_' + 'b'.repeat(40) } })
+    : route.fulfill({ json: { keys: [] } }));
+  await login(page, 'admin', '/console/#keys');
+  await page.getByLabel('Name', { exact: true }).fill('Alice');
+  await page.getByRole('button', { name: 'Create key', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Key created for Alice' })).toBeFocused();
+});
+
+test('audit pages step back one page at a time', async ({ page }) => {
+  await page.route('**/v1/team/audit?*', route => {
+    const index = Number(new URL(route.request().url()).searchParams.get('cursor') || 0);
+    return route.fulfill({ json: { enabled: true, events: [auditEntry(10 - index)], next_cursor: index < 2 ? String(index + 1) : null } });
+  });
+  await login(page, 'admin', '/console/#audit');
+  const row = page.locator('.audit-table tbody tr[id]');
+  await expect(row).toHaveAttribute('id', 'row-1791316800000-10');
+  await page.getByRole('button', { name: 'Older events', exact: true }).click();
+  await expect(row).toHaveAttribute('id', 'row-1791316800000-9');
+  await page.getByRole('button', { name: 'Older events', exact: true }).click();
+  await expect(row).toHaveAttribute('id', 'row-1791316800000-8');
+  await expect(page.getByRole('button', { name: 'Older events', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Newer events', exact: true }).click();
+  await expect(row).toHaveAttribute('id', 'row-1791316800000-9');
+  await page.getByRole('button', { name: 'Newer events', exact: true }).click();
+  await expect(row).toHaveAttribute('id', 'row-1791316800000-10');
+  await expect(page.getByRole('button', { name: 'Newer events', exact: true })).toHaveCount(0);
+});
+
+test('keyboard focus stays in place when the menu or a confirmation closes', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: run({ progress: { stage: 'running' } }) }));
+  await login(page, 'builder', `/console/#run/${id}`);
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await page.getByRole('link', { name: 'Triggers', exact: true }).focus();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('navigation')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Open menu' })).toBeFocused();
+  await page.getByRole('button', { name: 'Cancel run', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Keep running', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Cancel run', exact: true })).toBeFocused();
+});
+
+test('signing in downloads only the console shell; each page loads its code when opened', async ({ page }) => {
+  const scripts: string[] = [];
+  page.on('request', request => { if (request.url().endsWith('.js')) scripts.push(new URL(request.url()).pathname.split('/').pop()!); });
+  const fonts: string[] = [];
+  page.on('request', request => { if (request.url().endsWith('.woff2')) fonts.push(new URL(request.url()).pathname.split('/').pop()!); });
+  await page.goto('/console/');
+  await expect(page.getByLabel('API key', { exact: true })).toBeVisible();
+  expect(scripts).toEqual([expect.stringMatching(/^index-[\w-]+\.js$/)]);
+  // The Latin font is preloaded from the page itself, before the stylesheet asks for it.
+  expect(fonts).toEqual([expect.stringMatching(/^inter-latin-wght-normal-[\w-]+\.woff2$/)]);
+  await page.getByLabel('API key', { exact: true }).fill('viewer');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Workflow runs', level: 1 })).toBeVisible();
+  expect(scripts.some(name => name.startsWith('runs-'))).toBe(true);
+  expect(scripts.some(name => /^(audit|keys|lifecycle|settings)-/.test(name))).toBe(false);
+  await page.getByRole('link', { name: 'Insights', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Insights', level: 1 })).toBeVisible();
+});
+
+test('a page whose code cannot load offers a reload and keeps the navigation', async ({ page }) => {
+  await login(page, 'admin', '/console/#start');
+  await page.route('**/console/assets/audit-*.js', route => route.abort());
+  await page.goto('/console/#audit');
+  await expect(page.getByRole('heading', { name: 'This page could not load' })).toBeVisible();
+  await expect(page.getByText('The console was updated or the connection dropped. Reload to get the latest version.')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+  await page.unroute('**/console/assets/audit-*.js');
+  await page.getByRole('button', { name: 'Reload the console', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Audit log', level: 1 })).toBeVisible();
+});
+
+test('workflow policies are read once while moving between pages, and again after a change', async ({ page }) => {
+  let reads = 0;
+  page.on('request', request => { if (request.url().endsWith('/v1/workflow-policies')) reads++; });
+  await login(page, 'admin', '/console/#start');
+  await expect(page.getByRole('heading', { name: 'Your first governed workflow' })).toBeVisible();
+  await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Workflow runs', level: 1 })).toBeVisible();
+  await page.goto('/console/#new');
+  await expect(page.getByRole('button', { name: 'Start run' })).toBeVisible();
+  expect(reads).toBe(1);
+  // Saving settings may change a policy, so the next page asks again.
+  await page.getByRole('link', { name: 'Team settings', exact: true }).click();
+  await page.getByLabel('Team monthly budget (USD)', { exact: true }).fill('60');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Settings saved.' })).toBeVisible();
+  await page.getByRole('link', { name: 'Workflow runs', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Workflow runs', level: 1 })).toBeVisible();
+  await expect.poll(() => reads).toBe(2);
+  // Refresh always asks the gateway.
+  await page.getByRole('link', { name: 'Providers & budgets', exact: true }).click();
+  await expect(page.getByText('Key present', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect.poll(() => reads).toBe(3);
+});
