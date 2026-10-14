@@ -17,7 +17,7 @@ The Makefile provides defaults and puts managed tools from `.tools/bin` on
 | Generated contracts and documentation | [api-contract.py](api-contract.py), [config-contract.py](config-contract.py), [chart-docs.py](chart-docs.py), [dashboard-check.py](dashboard-check.py), [docs-build.sh](docs-build.sh) |
 | Tenant and customer configuration | [tenant-onboard.py](tenant-onboard.py), [tenant-offboard.py](tenant-offboard.py), [configure-customer-overlay.py](configure-customer-overlay.py) |
 | Evaluation and load tests | [eval-local.sh](eval-local.sh), [eval-suite.py](eval-suite.py), [rag-eval.py](rag-eval.py), [loadtest-local.sh](loadtest-local.sh) |
-| Evidence and releases | [evidence-pack.py](evidence-pack.py), [release-gate.py](release-gate.py), [supply-chain-evidence.py](supply-chain-evidence.py) |
+| Evidence and releases | [release-prep.py](release-prep.py) (`make release-prep`, `make release-check`), [package-release-charts.py](package-release-charts.py), [evidence-pack.py](evidence-pack.py), [release-gate.py](release-gate.py), [supply-chain-evidence.py](supply-chain-evidence.py) |
 | Audit verification | [audit-verify.py](audit-verify.py), [audit-anchor.py](audit-anchor.py) |
 | Model inventories and provenance | [model_artifacts.py](model_artifacts.py), [model-provenance.py](model-provenance.py), [model-catalog.py](model-catalog.py) |
 | Tool installation and diagnosis | [install-validation-tools.sh](install-validation-tools.sh), [toolchain-doctor.py](toolchain-doctor.py) |

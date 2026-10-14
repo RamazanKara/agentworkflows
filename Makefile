@@ -9,6 +9,7 @@ TENANT_SPEC ?= tenants/onboarding/coding-agents.yaml
 TENANT_OUTPUT ?= .out/tenants
 TOOLCHAIN_PROFILE ?= validate
 RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS ?= 24
+RELEASE_VERSION ?=
 CUSTOMER_REPO_URL ?= https://github.com/RamazanKara/agentworkflows.git
 CUSTOMER_REVISION ?= v0.9.1
 CUSTOMER_GPU_PROFILE ?= nvidia
@@ -77,6 +78,10 @@ help:
 		'  make loadtest-local        Run k6 against an ephemeral local gateway' \
 		'  make clean                 Remove generated output and service test environments' \
 		'  make clean-all             Also remove downloaded tools and tooling environments' \
+		'' \
+		'Releases:' \
+		'  make release-prep RELEASE_VERSION=X.Y.Z  Move every version reference to X.Y.Z (needs helm)' \
+		'  make release-check         Check that every version reference names the same release' \
 		'' \
 		'Evidence and governance:' \
 		'  make evidence              Generate customer evidence pack' \
@@ -265,6 +270,14 @@ release-report: python-env
 
 release-report-strict: python-env
 	$(PYTHON) scripts/release-gate.py --check --report --require-current-evidence --max-evidence-age-hours "$(RELEASE_GATE_MAX_EVIDENCE_AGE_HOURS)"
+
+.PHONY: release-prep release-check
+release-prep:
+	@[[ -n "$(RELEASE_VERSION)" ]] || { echo "usage: make release-prep RELEASE_VERSION=X.Y.Z" >&2; exit 2; }
+	python3 scripts/release-prep.py "$(RELEASE_VERSION)"
+
+release-check:
+	python3 scripts/release-prep.py --check $(RELEASE_VERSION)
 
 slo-check: python-env
 	$(PYTHON) scripts/slo-report.py --check

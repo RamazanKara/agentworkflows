@@ -5,6 +5,24 @@ revision through four channels. Commands below target v0.9.1. Images are built f
 tagged commit and signed by digest, Helm charts embed those image digests, the Python and
 TypeScript SDKs are attached to the GitHub release, and versioned documentation is retained by `mike`.
 
+## Cut a release
+
+One command moves every version reference (SDK and console manifests, chart versions and
+image tags, Compose and GitOps revisions, `CUSTOMER_REVISION`, API contracts and the guides
+that quote the release) and refreshes the umbrella chart's `Chart.lock`:
+
+```bash
+make release-prep RELEASE_VERSION=1.2.3   # needs helm on PATH
+make release-check                        # every reference agrees; also run by CI on each push
+```
+
+Add a `## v1.2.3 - YYYY-MM-DD` section to `CHANGELOG.md` (its text becomes the GitHub release
+notes), review `git diff`, commit, and push the `v1.2.3` tag. The release workflow first runs
+`scripts/release-prep.py --check` against the tag and stops before publishing anything if a
+reference disagrees. It then builds and signs the three images in parallel, attaches the SDKs,
+and packages the charts with the new image digests. Each packaged chart is rendered to prove it
+uses those digests, and its `values.yaml` keeps the comments shown by `helm show values`.
+
 ## Helm OCI
 
 The umbrella chart is the recommended public entry point:
