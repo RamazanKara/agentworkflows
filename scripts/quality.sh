@@ -48,16 +48,22 @@ run_format_fix() {
 
 run_typecheck() {
   # Each service exposes a top-level `app` package, so mypy must run once per service
-  # from the service root rather than in a single invocation.
+  # from the service root rather than in a single invocation. Every target runs even when an
+  # earlier one fails, so one pass reports all type errors.
+  local failed=()
   for service in inference-gateway rag-service; do
     echo "[quality] mypy (${service})"
     (
       cd "src/${service}"
       MYPYPATH="$PWD" "$PYBIN" -m mypy app --config-file "$ROOT/pyproject.toml"
-    )
+    ) || failed+=("$service")
   done
   echo "[quality] mypy (python SDK)"
-  "$PYBIN" -m mypy sdk/python/agentworkflows --config-file "$ROOT/pyproject.toml"
+  "$PYBIN" -m mypy sdk/python/agentworkflows --config-file "$ROOT/pyproject.toml" || failed+=("python SDK")
+  if [[ ${#failed[@]} -gt 0 ]]; then
+    echo "[quality] mypy failed for: ${failed[*]}" >&2
+    return 1
+  fi
 }
 
 ensure_tools
