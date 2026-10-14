@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { AlertSettings } from './alerts';
-import { api, date, label as titleCase, money, number, providerName, useData, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
-import { DotList, ErrorMessage, Loading, NumberInput, PageHeader } from './ui';
+import { api, date, label as titleCase, money, number, policyCache, providerName, useData, workflowName, type ApiError, type Models, type Policy, type Session, type SettingField, type SettingValue, type Team, type TeamSettings } from './api';
+import { DotList, ErrorMessage, Loading, NumberInput, PageHeader, useUnsavedChanges } from './ui';
 
 // Field keys: cost_limit_usd, project_budgets.<project>, workflows.<Workflow>.<field>, model_routes.<alias>.
 type Kind = 'usd' | 'tokens' | 'count' | 'minutes' | 'flag' | 'role' | 'route' | 'providers' | 'capture';
@@ -66,7 +66,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
   const [revision, setRevision] = useState(0);
   const result = useData<TeamSettings>(session.csrfToken, '/v1/team/settings', revision);
   // Route options name their provider, so "research" on a fresh install reads "research · OpenAI".
-  const models = useData<Models>(session.csrfToken, '/v1/models');
+  const models = useData<Models>(session.csrfToken, '/v1/models', 0, policyCache);
   const owners = Object.fromEntries((models.data?.data || []).map(model => [model.id, providerName(model.owned_by)]));
   const [saved, setSaved] = useState<TeamSettings>();
   const settings = saved || result.data;
@@ -87,6 +87,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
   const ordered = groups ? [...groups.team, ...groups.capture, ...groups.workflows.flatMap(([, names]) => names), ...groups.routes] : [];
   const pending = ordered.filter(name => name in draft || resets.includes(name));
   const changes = pending.length;
+  useUnsavedChanges(changes > 0, `Discard ${changes === 1 ? 'your unsaved settings change' : `${changes} unsaved settings changes`}?`);
   const discard = () => { setDraft({}); setResets([]); setErrors({}); setError(''); };
   const reload = () => { discard(); setSaved(undefined); setConflict(false); setJustSaved(false); setRevision(v => v + 1); };
   const current = (name: string) => name in draft ? draft[name] : resets.includes(name) ? settings!.fields[name].policy_default : settings!.fields[name]?.value;
@@ -149,7 +150,7 @@ function SettingsEditor({ session, budgetsOnly, onSaved }: { session: Session; b
     {budgetsOnly && <h2 id="budgets-heading">Budgets</h2>}
     <ErrorMessage message={result.error}/>
     {result.error && <button className="secondary" type="button" onClick={reload}>Reload settings</button>}
-    {!settings && !result.error && <Loading/>}
+    {!settings && !result.error && <Loading text="Loading team settings…"/>}
     {settings && groups && <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <fieldset className="plain" disabled={busy || conflict}>
         {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">
@@ -250,7 +251,7 @@ function SettingControl({ field, state, value, pending, resetting, error, provid
 
 function ReadOnlySettings({ session, budgetsOnly }: { session: Session; budgetsOnly: boolean }) {
   const team = useData<Team>(session.csrfToken, '/v1/team');
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', 0, policyCache);
   const fields: Record<string, SettingValue> = {};
   if (team.data) {
     fields.cost_limit_usd = team.data.cost_limit_usd;
@@ -272,7 +273,7 @@ function ReadOnlySettings({ session, budgetsOnly }: { session: Session; budgetsO
     {budgetsOnly && <h2>Budgets</h2>}
     <p className="callout">Read-only. Your team admin can change these settings.</p>
     <ErrorMessage message={team.error || policies.error}/>
-    {!team.data && !team.error && <Loading/>}
+    {!team.data && !team.error && <Loading text="Loading team settings…"/>}
     {groups.team.length > 0 && <SettingsGroup nested={budgetsOnly} title={budgetsOnly ? 'Team and projects' : 'Budgets'} note="Team and project budgets reset at the start of each UTC month.">{list(groups.team)}</SettingsGroup>}
     {groups.capture.length > 0 && <SettingsGroup nested={false} title="Step content" note="Capture applies to future steps; workflow overrides take precedence.">{list(groups.capture)}</SettingsGroup>}
     {groups.workflows.length > 0 && (budgetsOnly

@@ -14,7 +14,7 @@ export function DeploymentChecklist({ session }: { session: Session }) {
     <div className="section-heading"><h2>Deployment checklist</h2><Refresh onClick={() => setRevision(v => v + 1)}/></div>
     <p>Review these settings with your operator before opening access to your team.</p>
     <ErrorMessage message={result.error}/>
-    {!result.data ? <Loading/> : <>
+    {!result.data ? !result.error && <Loading text="Loading deployment checks…"/> : <>
       <dl className="data-facts">{result.data.checks.map(check => <div key={check.id}><dt>{check.name}</dt><dd><Badge value={check.configured ? 'completed' : 'pending'} text={check.configured ? 'Configured' : 'Needs setup'}/></dd></div>)}</dl>
       {result.data.checks.filter(check => !check.configured).map(check => <p key={check.id}><strong>{check.name}:</strong> {check.action}</p>)}
       <h3>Verify in your environment</h3><ul>{result.data.verification_required.map(item => <li key={item}>{item}</li>)}</ul>

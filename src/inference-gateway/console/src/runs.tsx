@@ -1,15 +1,17 @@
 import { createElement, useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, date, label, missingKeys, money, noProviderKeys, number, providerList, providerName, shortId, status, useData, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { api, date, label, missingKeys, money, noProviderKeys, number, policyCache, providerList, providerName, shortId, status, useData, usePolling, webUrl, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
 import { RunSummaryPanel } from './insights';
 import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, Metrics, NumberInput, PageHeader, Refresh } from './ui';
 
 const canBuild = (session: Session) => ['admin', 'builder'].includes(session.team.role);
 const canApprove = (session: Session) => ['admin', 'approver'].includes(session.team.role);
+const statuses = ['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'];
 
 export function Runs({ session, initial = '' }: { session: Session; initial?: string }) {
   const query = new URLSearchParams(initial);
-  const [project, setProject] = useState(query.get('project') || session.team.projects[0] || '');
-  const [filter, setFilter] = useState('');
+  const home = session.team.projects[0] || '';
+  const [project, setProject] = useState(session.team.projects.includes(query.get('project') || '') ? query.get('project')! : home);
+  const [filter, setFilter] = useState(statuses.includes(query.get('status') || '') ? query.get('status')! : '');
   const [workflow, setWorkflow] = useState(query.get('workflow') || '');
   const [trigger, setTrigger] = useState(query.get('trigger') || '');
   const [revision, setRevision] = useState(0);
@@ -19,7 +21,18 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
   const [busy, setBusy] = useState(true);
   const [filters, setFilters] = useState(false);
   const current = useRef<AbortController | null>(null);
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', 0, policyCache);
+  // The address keeps the filters, so reloading, sharing the link or coming back from a run shows the same list.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (project !== home) params.set('project', project);
+    if (filter) params.set('status', filter);
+    if (workflow) params.set('workflow', workflow);
+    if (trigger) params.set('trigger', trigger);
+    const text = params.toString();
+    const hash = `#runs${text ? `?${text}` : ''}`;
+    if (location.hash !== hash) history.replaceState(history.state, '', hash);
+  }, [home, project, filter, workflow, trigger]);
   async function load(after: string | null, reset = false) {
     current.current?.abort();
     const controller = new AbortController(); current.current = controller;
@@ -51,7 +64,7 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
       {filters ? 'Hide filters' : <DotList items={['Filters', project, filter && label(filter), workflow && workflowName(workflow)]}/>}</button>
     <div id="run-filters" className={filters ? 'filters panel' : 'filters panel collapsed'}>
       <label>Project<select value={project} onChange={e => { setProject(e.target.value); setTrigger(''); }}>{session.team.projects.map(p => <option key={p}>{p}</option>)}</select></label>
-      <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{['awaiting_approval', 'running', 'completed', 'failed', 'canceled', 'timed_out', 'terminated'].map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
+      <label>Status<select value={filter} onChange={e => setFilter(e.target.value)}><option value="">All statuses</option>{statuses.map(s => <option key={s} value={s}>{label(s)}</option>)}</select></label>
       <label>Workflow<select value={workflow} onChange={e => { setWorkflow(e.target.value); setTrigger(''); }}><option value="">All workflows</option>{Object.keys(policies.data?.workflows || {}).map(w => <option key={w} value={w}>{workflowName(w)}</option>)}</select></label>
     </div>
     <ErrorMessage message={error || policies.error} retry={() => void load(cursor)}/>
@@ -60,7 +73,7 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
         <thead><tr>{['Workflow', 'Run', 'Status', 'Started', 'Tokens', 'Cost'].map(h => <th key={h} className={['Tokens', 'Cost'].includes(h) ? 'num' : undefined}>{h}</th>)}</tr></thead>
         <tbody>{rows.map(run => <tr key={run.run_id}><td><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a><small>{run.project}</small></td><td data-label="Run"><code title={run.run_id}>{shortId(run.run_id)}</code></td><td data-label="Status"><Badge value={status(run)}/></td><td data-label="Started">{date(run.created_at)}</td><td data-label="Tokens">{number(run.budget.tokens)}</td><td data-label="Cost">{money(run.budget.cost_usd)}</td></tr>)}</tbody>
       </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs' : 'Your first workflow starts here'}><p>{cursor !== null ? 'Load more to continue searching older runs.' : filter || workflow ? 'No run in this project matches these filters.' : 'Runs appear here with their status, cost and receipts.'}</p>{canBuild(session) && !filter && !workflow && <a className="tap" href="#new">Run a workflow</a>}</Empty>}
-      {busy && <Loading/>}
+      {busy && <Loading text={rows.length ? 'Loading older runs…' : 'Loading workflow runs…'}/>}
       {cursor !== null && !busy && <div className="table-footer"><button className="secondary" onClick={() => void load(cursor)}>Load more</button></div>}
     </div>
     <p className="muted">Costs are estimates from configured prices. Open a run to see each step and its receipt.</p>
@@ -68,7 +81,7 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
 }
 
 export function StartRun({ session, initial = '' }: { session: Session; initial?: string }) {
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', 0, policyCache);
   const [workflow, setWorkflow] = useState(initial);
   const [project, setProject] = useState(session.team.projects[0] || '');
   const [input, setInput] = useState('{}');
@@ -85,8 +98,9 @@ export function StartRun({ session, initial = '' }: { session: Session; initial?
   return <><PageHeader title="Run workflow" subtitle="Start with an approved workflow. Every call stays within your team’s policy."/>
     {noProviderKeys(session.team) && <p className="note-warn form-width">No provider key yet, so model calls in this run will fail. <a href="#providers">Add a provider key</a> first.</p>}
     {keyless.length > 0 && <p className="note-warn form-width">{providerList(keyless)} {keyless.length > 1 ? 'have' : 'has'} no key yet, so this workflow’s calls there fail. <a className="nowrap" href="#providers">Add the key</a> first.</p>}
+    {workflow && names.length > 0 && !names.includes(workflow) && <p className="note-warn form-width">{workflowName(workflow)} is not available to your team, so {workflowName(selected)} is selected instead. Choose the workflow to run below.</p>}
     <ErrorMessage message={error || policies.error}/>
-    {!policies.data ? <Loading/> : !names.length ? <Empty title="No workflows configured"><p>Ask your team admin to register a workflow and start its worker.</p>{session.team.role === 'admin' && <a href="#providers">Open provider and budget setup</a>}</Empty> :
+    {!policies.data ? !policies.error && <Loading text="Loading workflows…"/> : !names.length ? <Empty title="No workflows configured"><p>Ask your team admin to register a workflow and start its worker.</p>{session.team.role === 'admin' && <a href="#providers">Open provider and budget setup</a>}</Empty> :
       <form className="panel form-panel" onSubmit={async event => {
         event.preventDefault(); setError(''); setBusy(true);
         try {
@@ -189,62 +203,99 @@ function Prose({ text }: { text: string }) {
   })}</>;
 }
 
-function Review({ session, run, onDone, title = 'Review the draft', eyebrow, meta, draft = run.progress?.draft }: { session: Session; run: Run; onDone: () => void; title?: string; eyebrow?: string; meta?: ReactNode; draft?: string }) {
+function Review({ session, run, onDone, title = 'Review the draft', eyebrow, meta, draft = run.progress?.draft }: {
+  session: Session; run: Run; onDone: (final: boolean, message: string) => void; title?: string; eyebrow?: string; meta?: ReactNode; draft?: string;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [confirmReject, setConfirmReject] = useState(false);
+  const rejectButton = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => { if (!confirmReject && refocus.current) { refocus.current = false; rejectButton.current?.focus(); } }, [confirmReject]);
   const progress = run.progress;
   const reviewed = progress?.approved_by?.includes(session.reviewerId || '');
   const expired = progress?.expires_at ? Date.parse(progress.expires_at) <= Date.now() : false;
   const allowed = canApprove(session) && (progress?.approver_role !== 'admin' || session.team.role === 'admin');
+  // Approvals still needed after this one; the last required approval lets the workflow continue.
+  const remaining = (progress?.required_approvals || 1) - (progress?.approved_by?.length || 0) - 1;
   async function decide(approved: boolean) {
     setBusy(true); setError('');
     try {
       await api(session.csrfToken, `/v1/workflow-runs/${run.run_id}/approve`, { method: 'POST', body: JSON.stringify({ approved }) });
-      setNotice(approved ? (progress?.required_approvals || 1) > 1 ? 'Approval recorded. Waiting for the required reviewers.' : 'Approved. The workflow can continue.' : 'Rejected. The publish step will not run.'); onDone();
+      const final = !approved || remaining <= 0;
+      const message = !approved ? 'Rejected. The publish step will not run.' : final ? 'Approved. The workflow can continue.'
+        : `Approval recorded. Waiting for ${remaining} more ${remaining === 1 ? 'reviewer' : 'reviewers'}.`;
+      setNotice(message); setConfirmReject(false); onDone(final, message);
     } catch (error) { setError((error as Error).message); }
     finally { setBusy(false); }
   }
-  return <section className="review panel">{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2>{title}</h2>{meta}
+  const decided = busy || !!notice || reviewed || expired;
+  return <section className="review panel" aria-labelledby={`review-${run.run_id}`}>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2 id={`review-${run.run_id}`} tabIndex={-1}>{title}</h2>{meta}
     {progress?.required_approvals !== undefined && <p className="callout">{progress.approved_by?.length || 0} of {progress.required_approvals} approvals received.{progress.expires_at && <> Expires {date(Date.parse(progress.expires_at) / 1000)}.</>} Any rejection stops approval.</p>}
     {reviewed && <p>You have already approved this draft. Another reviewer must approve.</p>}
     {expired && <p>The approval deadline has passed. Refresh to see the final run status.</p>}
     <div className="draft prose"><Prose text={draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}/></div>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
-    {allowed ? <div className="actions"><button disabled={busy || !!notice || reviewed || expired || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button className="danger" disabled={busy || !!notice || reviewed || expired} onClick={() => void decide(false)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div> : <p className="callout">{progress?.approver_role === 'admin' ? 'An admin' : 'An approver or admin'} must review this draft. Use Switch account to sign in as one.</p>}
+    {!allowed ? <p className="callout">{progress?.approver_role === 'admin' ? 'An admin' : 'An approver or admin'} must review this draft. Use Switch account to sign in as one.</p>
+      : confirmReject && !decided ? <div className="confirm callout"><p>Reject this draft? The run ends and nothing is published. This cannot be undone.</p>
+        <div className="actions"><button className="danger" disabled={busy} onClick={() => void decide(false)}>Confirm rejection</button>
+          <button className="secondary" autoFocus onClick={() => { refocus.current = true; setConfirmReject(false); }}>Keep reviewing</button></div></div>
+      : <div className="actions"><button disabled={decided || !run.progress?.draft} onClick={() => void decide(true)}>Approve</button><button ref={rejectButton} className="danger" disabled={decided} onClick={() => setConfirmReject(true)}>Reject</button><span className="muted">{session.name ? `Your decision is recorded as ${session.name}.` : 'Your decision is recorded with your sign-in.'}</span></div>}
   </section>;
 }
 
 export function Approvals({ session }: { session: Session }) {
   const [revision, setRevision] = useState(0);
-  const [rows, setRows] = useState<Run[]>([]);
+  const [rows, setRows] = useState<Run[]>();
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  // After a decision removes a card, focus moves to the card that took its place.
+  const focusAt = useRef<number | null>(null);
   useEffect(() => {
-    const controller = new AbortController(); setBusy(true); setRows([]); setError('');
-    async function load() {
-      try {
-        // Walk every authorized project and page, including empty filtered pages.
-        for (const project of session.team.projects) {
-          let cursor: string | null = null;
-          do {
-            const query = new URLSearchParams({ project, status: 'awaiting_approval', limit: '100' });
-            if (cursor) query.set('cursor', cursor);
-            const page: RunPage = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
-            if (controller.signal.aborted) return;
-            setRows(values => [...values, ...page.runs]); cursor = page.next_cursor;
-          } while (cursor !== null);
-        }
-      } catch (error) { if (!controller.signal.aborted) setError((error as Error).message); }
-      finally { if (!controller.signal.aborted) setBusy(false); }
-    }
-    void load(); return () => controller.abort();
+    const controller = new AbortController(); setBusy(true); setError('');
+    // Walk every authorized project's pages, including empty filtered pages; projects load side by side.
+    const project = async (name: string) => {
+      const found: Run[] = [];
+      let cursor: string | null = null;
+      do {
+        const query = new URLSearchParams({ project: name, status: 'awaiting_approval', limit: '100' });
+        if (cursor) query.set('cursor', cursor);
+        const page: RunPage = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
+        found.push(...page.runs); cursor = page.next_cursor;
+      } while (cursor !== null);
+      return found;
+    };
+    // A refresh keeps the cards on screen, so a reviewer's place and any decision notes survive it.
+    Promise.all(session.team.projects.map(project)).then(
+      pages => {
+        if (controller.signal.aborted) return;
+        const seen = new Set<string>();
+        setRows(pages.flat().filter(run => !seen.has(run.run_id) && Boolean(seen.add(run.run_id)))); setBusy(false);
+      },
+      failure => { if (!controller.signal.aborted) { setError((failure as Error).message); setBusy(false); } },
+    );
+    return () => controller.abort();
   }, [session, revision]);
-  return <><PageHeader title="Approvals" subtitle="Drafts waiting for a decision, across your projects."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
+  useEffect(() => {
+    if (focusAt.current === null) return;
+    const headings = document.querySelectorAll<HTMLElement>('main .review h2');
+    (headings[Math.min(focusAt.current, headings.length - 1)] ?? document.querySelector<HTMLElement>('main h1'))?.focus();
+    focusAt.current = null;
+  }, [rows]);
+  const decided = (run: Run, final: boolean, message: string) => {
+    if (!final) { setRevision(v => v + 1); return; }
+    focusAt.current = rows?.findIndex(r => r.run_id === run.run_id) ?? null;
+    setRows(values => values?.filter(r => r.run_id !== run.run_id));
+    setNotice(`${workflowName(run.workflow)}: ${message}`);
+  };
+  return <><PageHeader title="Approvals" subtitle="Drafts waiting for a decision, across your projects."><Refresh busy={busy && Boolean(rows)} onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={error} retry={() => setRevision(v => v + 1)}/>
-    {busy && <Loading/>}
-    {!busy && !error && !rows.length && <div className="panel"><Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a className="tap" href="#runs">Explore workflow runs</a></Empty></div>}
-    {rows.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={() => (run.progress?.required_approvals || 1) > 1 ? setRevision(v => v + 1) : setRows(values => values.filter(r => r.run_id !== run.run_id))}
+    <p role="status" className="status">{notice}</p>
+    {busy && !rows && <Loading text="Loading drafts waiting for review…"/>}
+    {rows && !rows.length && !error && <div className="panel"><Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a className="tap" href="#runs">Explore workflow runs</a></Empty></div>}
+    {rows?.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={(final, message) => decided(run, final, message)}
       eyebrow={workflowName(run.workflow)} title={heading || 'Review the draft'} draft={body}
       meta={<p className="muted review-meta"><DotList items={[`Project ${run.project}`, `Started ${date(run.created_at)}`, `${money(run.budget.cost_usd)} so far`, <a className="tap" href={`#run/${run.run_id}`}>Open run</a>]}/></p>}/>; })}
   </>;
@@ -258,34 +309,34 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [copied, setCopied] = useState('');
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => { if (!confirmCancel && refocus.current) { refocus.current = false; cancelButton.current?.focus(); } }, [confirmCancel]);
   const run = result.data;
-  useEffect(() => {
-    if (run?.status !== 'running') return;
-    const timer = window.setInterval(() => setRevision(v => v + 1), 5000);
-    return () => window.clearInterval(timer);
-  }, [run?.status]);
+  // While the run is active the page follows it; a failed refresh keeps the last answer and tries again.
+  usePolling(run?.status === 'running', () => setRevision(v => v + 1), result.settled);
   async function act(action: 'cancel' | 'retry') {
     setBusy(true); setActionError('');
     try {
       const response = await api<{ run_id: string }>(session.csrfToken, `/v1/workflow-runs/${runId}/${action}`, { method: 'POST' });
       if (action === 'retry') location.hash = `run/${response.run_id}`;
-      else { setNotice('Cancellation requested. Refresh to see the latest status.'); setConfirmCancel(false); setRevision(v => v + 1); }
+      else { setNotice('Cancellation requested. This page updates when the run stops.'); setConfirmCancel(false); setRevision(v => v + 1); }
     } catch (error) { setActionError((error as Error).message); }
     finally { setBusy(false); }
   }
   const running = run?.status === 'running';
   return <><a className="back tap" href="#runs">Back to workflow runs</a><PageHeader title={run ? workflowName(run.workflow) : 'Run detail'}>
-      {running && canBuild(session) && !confirmCancel && <button className="danger" onClick={() => setConfirmCancel(true)}>Cancel run</button>}
+      {running && canBuild(session) && !confirmCancel && <button ref={cancelButton} className="danger" onClick={() => setConfirmCancel(true)}>Cancel run</button>}
     </PageHeader>
     <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status" className="status">{notice || copied}</p>
-    {!run && !result.error && <Loading/>}
+    {!run && !result.error && <Loading text="Loading run…"/>}
     {run && <><div className="run-meta"><Badge value={status(run)}/><span>Project {run.project}</span><span>Started {date(run.created_at)}</span>
         {run.template && <span>Template {run.template.id} · v{run.template.version}</span>}
         {run.trigger && <a href={`#runs?${new URLSearchParams({ project: run.project, workflow: run.workflow, trigger: run.trigger.name })}`}>{run.trigger.kind === 'cron' ? 'Schedule' : 'Webhook'}: {run.trigger.name}</a>}
         <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="copy-id" aria-label="Copy run ID" onClick={async () => {
           try { await navigator.clipboard.writeText(run.run_id); setCopied('Run ID copied.'); } catch { setCopied(`Run ID: ${run.run_id}`); }
         }}><Icon name="copy"/>Copy ID</button></span></div>
-      {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" onClick={() => setConfirmCancel(false)}>Keep running</button></div></div>}
+      {confirmCancel && running && <div className="callout"><p>Cancel this run? Model or tool calls already sent cannot be undone.</p><div className="actions"><button className="danger" disabled={busy} onClick={() => void act('cancel')}>Confirm cancellation</button><button className="secondary" autoFocus onClick={() => { refocus.current = true; setConfirmCancel(false); }}>Keep running</button></div></div>}
       {status(run) === 'awaiting_approval' && <Review session={session} run={run} onDone={() => setRevision(v => v + 1)}/>}
       <Metrics items={[[ 'Tokens', `${number(run.budget.tokens)} of ${number(run.budget.token_limit)}` ], ['Cost', `${money(run.budget.cost_usd)} of ${money(run.budget.cost_limit_usd)}`], ['Receipts', number(run.timeline?.length)]]}/>
       {run.summary && <RunSummaryPanel summary={run.summary}/>}
@@ -423,8 +474,10 @@ function Notifications({ steps }: { steps: Step[] }) {
 
 function Result({ value }: { value: unknown }) {
   const result = (value && typeof value === 'object' ? value : {}) as { status?: string; reviewer?: string; publication?: { url?: string } };
+  // The URL comes from workflow output, so only a web address becomes a link.
+  const link = webUrl(result.publication?.url);
   const summary = result.status === 'rejected' ? <p>Rejected by <strong>{result.reviewer || 'a reviewer'}</strong>. Nothing was published.</p>
-    : result.status === 'published' ? <p>Published{result.publication?.url && <>: <a href={result.publication.url}>open the briefing</a></>}.</p> : null;
+    : result.status === 'published' ? <p>Published{link ? <>: <a href={link} target="_blank" rel="noopener noreferrer">open the briefing</a></> : result.publication?.url && <> at <code>{String(result.publication.url)}</code></>}.</p> : null;
   const raw = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
   return <section className="panel result"><h2>Result</h2>
     {summary ? <><div className="result-summary">{summary}</div><details><summary>Raw result</summary><pre>{raw}</pre></details></>

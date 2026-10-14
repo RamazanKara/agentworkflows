@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Invitations } from './invitations';
 import { api, label, useData, type Session, type Team, type TeamSSO } from './api';
-import { Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh } from './ui';
+import { AdminOnly, Empty, ErrorMessage, Icon, Loading, PageHeader, Refresh } from './ui';
 
 type Key = {
   key_id: string; name: string; role: Team['role']; project: string | null; created_at: number;
@@ -28,7 +28,7 @@ const state = (key: Key) => key.revoked_at != null ? 'revoked'
   : key.expires_at != null && key.expires_at <= Date.now() / 1000 ? 'expired' : 'active';
 
 export function Keys({ session }: { session: Session }) {
-  if (session.team.role !== 'admin') return <div className="panel"><Empty title="Team admin access required"><p>Ask your team admin to manage membership and API keys.</p><a className="tap" href="#runs">View workflow runs</a></Empty></div>;
+  if (session.team.role !== 'admin') return <AdminOnly title="Members & keys"><p>Ask your team admin to manage membership and API keys.</p></AdminOnly>;
   return <KeyManagement session={session}/>;
 }
 
@@ -45,10 +45,17 @@ function KeyManagement({ session }: { session: Session }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const keys = [...result.data?.keys ?? []].sort((a, b) => Number(state(a) !== 'active') - Number(state(b) !== 'active') || (b.created_at ?? 0) - (a.created_at ?? 0));
+  const [search, setSearch] = useState('');
+  // The one-time key is announced and focused as soon as it appears; the form that made it is gone.
+  const createdHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { if (created) createdHeading.current?.focus(); }, [created]);
+  const all = [...result.data?.keys ?? []].sort((a, b) => Number(state(a) !== 'active') - Number(state(b) !== 'active') || (b.created_at ?? 0) - (a.created_at ?? 0));
+  // Larger teams can narrow the list by name, role, project or status.
+  const term = search.trim().toLowerCase();
+  const keys = term ? all.filter(key => [key.name, key.role, key.project || 'all projects', state(key)].some(value => value.toLowerCase().includes(term))) : all;
   // A key from the gateway configuration is not in the managed list; still show who is signed in.
-  const self = Boolean(session.keyId) && !keys.some(key => key.key_id === session.keyId);
-  return <><PageHeader title="Members & keys" subtitle="Who can use this team, and with which role."><Refresh onClick={() => { setCreated(undefined); setRevision(value => value + 1); }}/></PageHeader>
+  const self = Boolean(session.keyId) && !all.some(key => key.key_id === session.keyId) && !term;
+  return <><PageHeader title="Members & keys" subtitle="Who can use this team, and with which role."><Refresh busy={result.loading && Boolean(result.data)} onClick={() => { setCreated(undefined); setRevision(value => value + 1); }}/></PageHeader>
     <p className="intro">{config.data?.enabled
       ? 'People who sign in with their company account get their team and role from it. Create keys here for anyone without company sign-in and for automation.'
       : 'Give each person and integration their own key, so you can revoke one without affecting anyone else.'}</p>
@@ -69,7 +76,8 @@ function KeyManagement({ session }: { session: Session }) {
       </>}
     </section>}
     <section aria-labelledby="access-title"><h2 id="access-title">Who has access</h2>
-    {!result.data && !result.error && <Loading/>}
+    {all.length > 5 && <div className="key-search"><label htmlFor="key-search">Find a key</label><input id="key-search" type="search" placeholder="Name, role, project or status" value={search} onChange={event => setSearch(event.target.value)}/></div>}
+    {!result.data && !result.error && <Loading text="Loading keys…"/>}
       {result.data && (keys.length || self ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Team API keys"><table className="stack keys-table"><thead><tr><th>Name</th><th>Role</th><th>Project</th><th>Last used</th><th>Expires</th><th>Status</th><th><span className="visually-hidden">Action</span></th></tr></thead><tbody>{self && <tr className="config-key"><th scope="row">{session.name || 'Your key'}<span className="badge you">You</span><small>From the gateway configuration</small></th><td data-label="Role">{label(session.team.role)}</td><td data-label="Project">{session.team.projects.length === 1 ? session.team.projects[0] : 'All projects'}</td><td data-label="Last used">Now</td><td data-label="Expires">Set by your operator</td><td data-label="Status"><span className="badge key-active">Active</span></td><td className="row-action"/></tr>}{keys.map(key => {
         const current = state(key);
         return <tr key={key.key_id} className={[current === 'active' ? '' : 'inactive', key.key_id === created?.id ? 'new' : ''].join(' ').trim() || undefined}><th scope="row">{key.name}{key.key_id === session.keyId && <span className="badge you">You</span>}</th><td data-label="Role">{label(key.role)}</td><td data-label="Project">{key.project || 'All projects'}</td><td data-label="Last used">{key.last_used_at == null ? 'Never' : ago(key.last_used_at)}</td><td data-label="Expires">{key.expires_at == null ? 'Never' : day(key.expires_at)}</td><td data-label="Status"><span className={`badge key-${current}`}>{label(current)}{key.revoked_at != null && ` ${day(key.revoked_at)}`}</span></td><td className="row-action">{key.revoked_at == null && key.key_id !== session.keyId && <button className="danger" disabled={busy} aria-label={`Revoke ${key.name}`} onClick={async () => {
@@ -79,7 +87,8 @@ function KeyManagement({ session }: { session: Session }) {
           catch (value) { setError((value as Error).message); }
           finally { setBusy(false); }
         }}>Revoke</button>}{key.revoked_at == null && key.key_id !== session.keyId && <button className="secondary" disabled={busy} aria-label={`Edit ${key.name}`} onClick={() => { setCreated(undefined); setEditing(key); setMessage(''); }}>Edit</button>}</td></tr>;
-      })}</tbody></table></div></div> : <div className="panel"><Empty title="No keys yet"><p>Invite a teammate or create a key below. Keys from your gateway configuration keep working.</p></Empty></div>)}
+      })}</tbody></table></div></div> : term ? <div className="panel"><Empty title="No matching keys"><p>No key matches “{search.trim()}”.</p><button className="link" onClick={() => setSearch('')}>Show all keys</button></Empty></div>
+        : <div className="panel"><Empty title="No keys yet"><p>Invite a teammate or create a key below. Keys from your gateway configuration keep working.</p></Empty></div>)}
       {result.data && self && <p className="muted">Other keys from the gateway configuration are managed by your operator and are not listed.</p>}
     </section>
     <Invitations session={session} onChanged={() => setRevision(value => value + 1)}/>
@@ -89,7 +98,7 @@ function KeyManagement({ session }: { session: Session }) {
     }}/>}
     <section className="panel form-panel key-form" aria-labelledby="create-key">
       {created ? <div className="new-key">
-        <h2 id="create-key">Key created for {created.name}</h2>
+        <h2 id="create-key" ref={createdHeading} tabIndex={-1}>Key created for {created.name}</h2>
         <p>Copy it now and share it securely with its owner. You won’t be able to see it again.</p>
         <code aria-label="New API key">{created.key}</code>
         <div className="actions">

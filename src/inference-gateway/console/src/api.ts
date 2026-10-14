@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export type Team = {
   team_id: string;
@@ -98,11 +98,19 @@ export type TeamSettings = {
 };
 export type ApiError = Error & { status: number; fields?: { field: string; message: string }[] };
 
+// Short-lived answers for reads that rarely change (workflow policies, models), keyed by session.
+// Any change made through api() clears it, so this tab never shows a policy older than its own edits.
+const cache = new Map<string, { at: number; value: Promise<unknown> }>();
+
 export async function api<T>(csrfToken: string, path: string, init: RequestInit = {}): Promise<T> {
   const csrf = csrfToken || document.cookie.split('; ').find(value => value.startsWith('aw_csrf='))?.slice(8) || '';
   let response: Response;
   const headers = new Headers(init.headers);
-  if (csrf && init.method && init.method !== 'GET') headers.set('X-CSRF-Token', csrf);
+  const change = Boolean(init.method && init.method !== 'GET');
+  if (change) {
+    cache.clear();
+    if (csrf) headers.set('X-CSRF-Token', csrf);
+  }
   if (init.body) headers.set('Content-Type', 'application/json');
   try {
     response = await fetch(path, {
@@ -112,39 +120,85 @@ export async function api<T>(csrfToken: string, path: string, init: RequestInit 
   } catch (error) {
     if (init.signal?.aborted) throw error;
     throw new Error('Cannot reach the gateway. Check your connection, then try again.');
+  } finally {
+    // A read cached while this change was in flight may predate it.
+    if (change) cache.clear();
   }
   if (response.ok && headers.get('Accept') === 'text/csv') return await response.text() as T;
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401 && !path.startsWith('/v1/auth/')) window.dispatchEvent(new Event('aw:expired'));
     const detail = body.error?.message || body.detail?.message || (typeof body.detail === 'string' ? body.detail : '');
-    const advice: Record<number, string> = {
-      401: 'Credential expired or invalid. Sign in with a valid team API key or JWT.',
-      403: 'Your role cannot perform this action. Ask your team admin for the required access.',
-      404: 'Not found in this team or project. The run may be outside Temporal retention.',
-      409: 'This run changed. Refresh and review its current state before trying again.',
-      422: 'Check the workflow input and selected project, then try again.',
-      429: 'The spend or request limit was reached. Review Costs or ask your team admin to update the limit.',
-      503: 'The service is unavailable. Check the gateway, Redis, and Temporal, then retry.',
-    };
-    throw Object.assign(new Error(`${detail || advice[response.status] || 'The request failed.'} (${response.status})`), { status: response.status, fields: body.detail?.fields });
+    const fallback = advice[response.status] || (response.status >= 502 ? advice[503] : response.status >= 500 ? advice[500] : 'The request failed. Try again.');
+    throw Object.assign(new Error(`${detail || fallback} (${response.status})`), { status: response.status, fields: body.detail?.fields });
   }
   return body as T;
 }
 
-export function useData<T>(csrfToken: string, path: string, revision = 0) {
-  const [state, setState] = useState<{ data?: T; error?: string }>({});
+// Used when the gateway sends no message of its own.
+const advice: Record<number, string> = {
+  401: 'Your sign-in expired or the credential is invalid. Sign in again with a valid team API key.',
+  403: 'Your role cannot do this. Ask your team admin for the access you need.',
+  404: 'Not found in this team or project. It may have been removed or be past its retention period.',
+  409: 'This changed since you loaded it. Refresh, review the latest version, then try again.',
+  422: 'Some values were not accepted. Check them, then try again.',
+  429: 'A spend or request limit was reached. Review Costs, or ask your team admin to raise the limit.',
+  500: 'The gateway hit an unexpected error. Try again; if it keeps happening, ask your operator to check the gateway logs.',
+  503: 'The gateway is unavailable right now. Try again in a moment; if it persists, ask your operator to check the gateway, Redis and Temporal.',
+};
+
+// Policies and models change rarely; pages that only read them share one answer for a minute.
+export const policyCache = 60000;
+
+// A read that later pages render; refreshes keep the last answer on screen until the new one arrives.
+export type DataState<T> = { data?: T; error?: string; loading: boolean; settled: number };
+
+export function useData<T>(csrfToken: string, path: string, revision = 0, cacheMs = 0): DataState<T> {
+  const [state, setState] = useState<DataState<T> & { path: string }>({ path, loading: true, settled: 0 });
   useEffect(() => {
     const controller = new AbortController();
-    setState(previous => ({ data: previous.data }));
-    api<T>(csrfToken, path, { signal: controller.signal }).then(
-      data => { if (!controller.signal.aborted) setState({ data }); },
-      error => { if (!controller.signal.aborted) setState({ error: error.message }); },
+    // A different path never shows the previous path's answer; a refresh of the same path keeps it.
+    setState(previous => ({ path, data: previous.path === path ? previous.data : undefined, loading: true, settled: previous.settled }));
+    const key = `${csrfToken}\n${path}`;
+    const hit = cache.get(key);
+    let request: Promise<T>;
+    if (cacheMs && revision === 0 && hit && Date.now() - hit.at < cacheMs) request = hit.value as Promise<T>;
+    else if (cacheMs) {
+      // Shared answers are not tied to one page's lifetime, so leaving a page does not cancel them for another.
+      request = api<T>(csrfToken, path);
+      cache.set(key, { at: Date.now(), value: request });
+      request.catch(() => { if (cache.get(key)?.value === request) cache.delete(key); });
+    } else request = api<T>(csrfToken, path, { signal: controller.signal });
+    request.then(
+      data => { if (!controller.signal.aborted) setState(previous => ({ path, data, loading: false, settled: previous.settled + 1 })); },
+      error => {
+        if (!controller.signal.aborted) setState(previous => ({ path, data: previous.path === path ? previous.data : undefined, error: error.message, loading: false, settled: previous.settled + 1 }));
+      },
     );
     return () => controller.abort();
-  }, [csrfToken, path, revision]);
-  return state;
+  }, [csrfToken, path, revision, cacheMs]);
+  return state.path === path ? state : { loading: true, settled: state.settled };
 }
+
+// Refreshes while a condition holds: the next refresh waits for the previous answer, never runs in a
+// hidden tab, and catches up as soon as the tab is visible again.
+export function usePolling(active: boolean, refresh: () => void, settled: number, delay = 5000) {
+  const latest = useRef(refresh);
+  useEffect(() => { latest.current = refresh; });
+  useEffect(() => {
+    if (!active) return;
+    const timer = window.setTimeout(() => { if (!document.hidden) latest.current(); }, delay);
+    const visible = () => { if (!document.hidden) { window.clearTimeout(timer); latest.current(); } };
+    document.addEventListener('visibilitychange', visible);
+    return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
+  }, [active, settled, delay]);
+}
+
+// Links from workflow results and receipts open only as web pages.
+export const webUrl = (value: unknown) => {
+  if (typeof value !== 'string') return undefined;
+  try { return ['http:', 'https:'].includes(new URL(value).protocol) ? value : undefined; } catch { return undefined; }
+};
 
 export const money = (value: number | null | undefined) => value == null ? '—' : value > 0 && value < 0.005 ? '<$0.01' : `$${value.toFixed(2)}`;
 // ResearchWorkflow → Research, DocumentQAWorkflow → Document Q&A, GitHubIssueTriageWorkflow → GitHub issue triage.

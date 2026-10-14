@@ -22,7 +22,7 @@ export function Invitations({ session, onChanged }: { session: Session; onChange
       <button onClick={async () => { try { await navigator.clipboard.writeText(link); setMessage('Invitation link copied.'); } catch { setError('Select the invitation link and copy it manually.'); } }}>Copy invitation link</button>
       <button className="secondary" onClick={() => { setLink(''); setMessage(''); }}>Done with invitation</button>
     </div></> : <form onSubmit={async event => {
-      event.preventDefault(); setBusy(true); setError('');
+      event.preventDefault(); setBusy(true); setError(''); setMessage('');
       try {
         const invite = await api<Invitation & { token: string }>(session.csrfToken, '/v1/team/invitations', { method: 'POST', body: JSON.stringify({ name: name.trim(), role, project: project || null, expires_at: new Date(Date.now() + 90 * 86400000).toISOString() }) });
         setLink(`${location.origin}${location.pathname}#invite/${encodeURIComponent(invite.token)}`); setName(''); setRevision(value => value + 1); onChanged();
@@ -34,13 +34,13 @@ export function Invitations({ session, onChanged }: { session: Session; onChange
       <p className="muted">Access lasts 90 days. You can edit or revoke it on this page.</p>
       <button disabled={busy}>{busy ? 'Creating…' : 'Create invitation'}</button>
     </form>}
-    {!result.data && !result.error && <Loading/>}
+    {!result.data && !result.error && <Loading text="Loading invitations…"/>}
     {result.data?.map(invite => <div className="secret-row" key={invite.invitation_id}>
       <div><strong>{invite.name}</strong><p>{label(invite.role)} · {invite.project || 'All projects'} · {invite.revoked_at ? 'Revoked' : invite.accepted_at ? 'Accepted' : invite.expires_at <= Date.now() / 1000 ? 'Expired' : `Pending until ${date(invite.expires_at)}`}</p></div>
-      {!invite.revoked_at && <button className="danger" disabled={busy} onClick={async () => {
+      {!invite.revoked_at && <button className="danger" disabled={busy} aria-label={`Revoke invitation for ${invite.name}`} onClick={async () => {
         if (!window.confirm(`Revoke access for ${invite.name}?`)) return;
-        setBusy(true); setError('');
-        try { await api(session.csrfToken, `/v1/team/invitations/${invite.invitation_id}`, { method: 'DELETE' }); setRevision(value => value + 1); onChanged(); }
+        setBusy(true); setError(''); setMessage('');
+        try { await api(session.csrfToken, `/v1/team/invitations/${encodeURIComponent(invite.invitation_id)}`, { method: 'DELETE' }); setMessage(`Invitation for ${invite.name} revoked.`); setRevision(value => value + 1); onChanged(); }
         catch (failure) { setError((failure as Error).message); } finally { setBusy(false); }
       }}>Revoke invitation</button>}
     </div>)}

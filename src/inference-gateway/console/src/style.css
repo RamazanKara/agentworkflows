@@ -664,3 +664,28 @@ pre.json.hanging > span { display: block; overflow-wrap: anywhere; }
   .sidebar .identity { order: 2; }
   .sidebar .app-menu { order: 1; }
 }
+
+/* Sortable columns: the header is a button; the arrow marks the active order. */
+thead th.sortable { padding: 0; }
+button.sort { display: flex; width: 100%; align-items: center; justify-content: flex-start; gap: 6px; min-height: 0; padding: 11px 18px; border: 0; border-radius: 0; background: none; box-shadow: none; color: inherit; font: inherit; font-weight: 600; text-align: inherit; }
+th.num button.sort { justify-content: flex-end; }
+@media (hover: hover) { button.sort:hover { background: var(--surface-3); border: 0; color: var(--text); } }
+button.sort:focus-visible { outline-offset: -2px; }
+th[aria-sort] button.sort { color: var(--text); }
+.sort-mark { display: inline-block; width: 9px; font-size: 9px; color: var(--accent-text); }
+.sort-text { display: none; }
+@media (max-width: 760px) {
+  .stack thead button.sort { visibility: hidden; }
+  .stack thead .sort-text { display: inline; }
+}
+/* A refresh in flight turns its icon; the button keeps focus and stays usable. */
+.refresh[aria-busy] svg { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refresh[aria-busy] svg { animation: none; opacity: .5; } }
+/* Rejecting a draft asks once, inside its card. */
+.review .confirm { margin: 16px 0 0; }
+.review .confirm p { margin-bottom: 12px; }
+.key-search { max-width: 380px; margin: 0 0 14px; }
+.key-search label { margin-bottom: 7px; }
+/* Initials sit on the solid accent, which keeps them readable in both themes. */
+.avatar { background: var(--accent); color: var(--on-accent); }

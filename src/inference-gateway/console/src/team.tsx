@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, date, isDemo, missingKeys, money, noProviderKeys, number, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
-import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { api, date, isDemo, missingKeys, money, noProviderKeys, number, policyCache, providerList, providerName, useData, workflowName, type Budget, type CostRow, type Models, type Policy, type RunPage, type Session, type Team, type TeamSpend, type Usage } from './api';
+import { DotList, Empty, ErrorMessage, Icon, Loading, Metrics, PageHeader, Refresh, SortHeader, sortRows, type SortState } from './ui';
 import { SettingsPanel } from './settings';
 import { ProviderKeyForm, SampleButton, useSetup } from './onboarding';
 
@@ -8,7 +8,7 @@ const guide = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/work
 const routes = 'https://github.com/RamazanKara/agentworkflows/blob/main/docs/model-selection.md#cloud-routes-milestone-1';
 
 export function GetStarted({ session }: { session: Session }) {
-  const models = useData<Models>(session.csrfToken, '/v1/models');
+  const models = useData<Models>(session.csrfToken, '/v1/models', 0, policyCache);
   const runs = useData<RunPage>(session.csrfToken, `/v1/workflow-runs?${new URLSearchParams({ project: session.team.projects[0] || '', limit: '1' })}`);
   const setup = useSetup(session);
   const last = runs.data?.runs[0];
@@ -17,7 +17,7 @@ export function GetStarted({ session }: { session: Session }) {
   const keyMissing = (provider: string) => session.team.provider_configuration?.[provider]?.configured === false;
   const missing = missingKeys(session.team);
   // Step 02 describes the Research example; warn when a provider it uses has no key.
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', 0, policyCache);
   const example = policies.data?.workflows.ResearchWorkflow;
   const start = example ? '#new/ResearchWorkflow' : '#new';
   const exampleMissing = blocked ? [] : (example?.allowedProviders || []).filter(provider => missing.includes(provider));
@@ -57,9 +57,14 @@ function DemoNote() {
 }
 
 function CostTable({ title, rows }: { title: string; rows: Record<string, CostRow> }) {
+  const [sort, setSort] = useState<SortState>({ column: 'cost', direction: 'descending' });
+  const providers = title === 'By provider';
+  const name = (key: string) => providers ? key === 'tool' ? 'Tool calls' : providerName(key) : workflowName(key);
+  const value = ([key, row]: [string, CostRow], column: string) => column === 'name' ? name(key) : column === 'calls' ? row.calls ?? 0 : column === 'tokens' ? row.tokens ?? 0 : row.cost_usd ?? 0;
+  const header = (column: string, text: string) => <SortHeader column={column} text={text} sort={sort} onSort={setSort} numeric={column !== 'name'} first={column === 'name' ? 'ascending' : 'descending'}/>;
   return <section><h2>{title}</h2><div className="panel">
-    {Object.keys(rows).length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}><table className="stack numeric"><thead><tr><th>{title === 'By provider' ? 'Provider' : 'Workflow'}</th><th className="num">Calls</th><th className="num">Tokens</th><th className="num">Cost</th></tr></thead>
-      <tbody>{Object.entries(rows).sort((a, b) => (b[1].cost_usd || 0) - (a[1].cost_usd || 0)).map(([name, row]) => <tr key={name}><th scope="row">{title === 'By provider' ? name === 'tool' ? 'Tool calls' : providerName(name) : workflowName(name)}</th><td data-label="Calls">{number(row.calls)}</td><td data-label="Tokens">{number(row.tokens)}</td><td data-label="Cost">{money(row.cost_usd)}</td></tr>)}</tbody></table></div> :
+    {Object.keys(rows).length ? <div className="table-scroll" tabIndex={0} role="region" aria-label={`${title} table`}><table className="stack numeric"><thead><tr>{header('name', providers ? 'Provider' : 'Workflow')}{header('calls', 'Calls')}{header('tokens', 'Tokens')}{header('cost', 'Cost')}</tr></thead>
+      <tbody>{sortRows(Object.entries(rows), sort, value).map(([key, row]) => <tr key={key}><th scope="row">{name(key)}</th><td data-label="Calls">{number(row.calls)}</td><td data-label="Tokens">{number(row.tokens)}</td><td data-label="Cost">{money(row.cost_usd)}</td></tr>)}</tbody></table></div> :
       <Empty title={`No ${title === 'By provider' ? 'provider' : 'workflow'} spend yet`}><p>{title === 'By provider' ? 'Costs appear here as governed calls finish.' : 'Calls made outside a workflow appear only under By provider.'}</p></Empty>}
   </div></section>;
 }
@@ -110,9 +115,9 @@ export function Costs({ session }: { session: Session }) {
     } catch (error) { if (!controller.signal.aborted) setExportError((error as Error).message); }
     finally { setExporting(false); }
   }
-  return <><PageHeader title="Costs" subtitle="Where your team’s spend goes, by provider and workflow."><Refresh onClick={() => setRevision(v => v + 1)}/><button className="secondary" disabled={!spend || exporting} onClick={() => void exportUsage()}>{exporting ? 'Exporting…' : 'Export CSV'}</button></PageHeader>
+  return <><PageHeader title="Costs" subtitle="Where your team’s spend goes, by provider and workflow."><Refresh busy={result.loading && Boolean(result.data)} onClick={() => setRevision(v => v + 1)}/><button className="secondary" disabled={!spend || exporting} onClick={() => void exportUsage()}>{exporting ? 'Exporting…' : 'Export CSV'}</button></PageHeader>
     <ErrorMessage message={exportError || result.error} retry={() => setRevision(v => v + 1)}/>
-    {!result.data && !result.error && <Loading/>}
+    {!result.data && !result.error && <Loading text="Loading spend…"/>}
     {spend && <>
       <SpendTiles usage={result.data} budget={budget.data}/>
       <p className="muted">CSV exports the current UTC month’s totals and provider/workflow breakdowns, including reservations. These are overlapping views; don’t add the rows together.</p>
@@ -122,7 +127,7 @@ export function Costs({ session }: { session: Session }) {
         <CostTable title="By provider" rows={spend.providers}/>
         <CostTable title="By workflow" rows={spend.workflows || {}}/>
         <p className="muted">Estimates from configured prices, not a provider invoice. A provider’s row includes budget reserved for failed calls the provider didn’t report. Calls made outside a workflow appear only under By provider.</p>
-      </> : <div className="panel"><Empty title="No recorded spend yet"><p>Costs show up here by provider and workflow after your first run.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
+      </> : <div className="panel"><Empty title="No recorded spend yet"><p>Costs show up here by provider and workflow after your first run.</p>{['admin', 'builder'].includes(session.team.role) && <a className="tap" href="#new">Run a workflow</a>}</Empty></div>}
     </>}
     <p className="muted">Manage budgets in <a href="#team">Team settings</a>.</p>
   </>;
@@ -156,8 +161,8 @@ function ProviderSettings({ session }: { session: Session }) {
   const team = useData<Team>(session.csrfToken, '/v1/team', revision);
   const budget = useData<Budget>(session.csrfToken, '/v1/sandbox/budget', revision);
   const usage = useData<Usage>(session.csrfToken, '/v1/usage', revision);
-  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', revision);
-  const models = useData<Models>(session.csrfToken, '/v1/models');
+  const policies = useData<{ workflows: Record<string, Policy> }>(session.csrfToken, '/v1/workflow-policies', revision, policyCache);
+  const models = useData<Models>(session.csrfToken, '/v1/models', revision, policyCache);
   const settings = team.data;
   const providers = Object.entries(settings?.provider_configuration || {});
   const workflows = Object.entries(policies.data?.workflows || {});
@@ -187,7 +192,7 @@ function ProviderSettings({ session }: { session: Session }) {
     try { await navigator.clipboard.writeText(text); setCopied(done); }
     catch { setCopied('Clipboard unavailable. Select the text above and copy it.'); }
   };
-  return <><PageHeader title="Providers & budgets" subtitle="Your team’s provider keys and spending limits."><Refresh onClick={() => setRevision(v => v + 1)}/></PageHeader>
+  return <><PageHeader title="Providers & budgets" subtitle="Your team’s provider keys and spending limits."><Refresh busy={team.loading && Boolean(settings)} onClick={() => setRevision(v => v + 1)}/></PageHeader>
     <ErrorMessage message={team.error || budget.error || usage.error || policies.error} retry={() => setRevision(v => v + 1)}/>
     {!settings && !team.error && <Loading/>}
     {isDemo(models.data) && <DemoNote/>}

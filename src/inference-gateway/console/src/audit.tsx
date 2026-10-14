@@ -100,6 +100,8 @@ function AuditViewer({ session }: { session: Session }) {
   const [filters, setFilters] = useState(initialFilters);
   const [query, setQuery] = useState(snapshot);
   const [cursor, setCursor] = useState('');
+  // Cursors of the newer pages already read, so a reader can step back one page at a time.
+  const [trail, setTrail] = useState<string[]>([]);
   const [page, setPage] = useState<AuditPage>();
   const [expanded, setExpanded] = useState<string>();
   const [verification, setVerification] = useState<Verification>();
@@ -126,7 +128,7 @@ function AuditViewer({ session }: { session: Session }) {
     }
     if (!params.has('to')) params.set('to', String(Date.now() / 1000));
     setApplied(Object.values(filters).filter(Boolean).length);
-    setQuery(params.toString()); setCursor(''); setVerification(undefined);
+    setQuery(params.toString()); setCursor(''); setTrail([]); setVerification(undefined);
   };
   const verify = async () => {
     setBusy('verify'); setError(''); setVerification(undefined);
@@ -165,7 +167,10 @@ function AuditViewer({ session }: { session: Session }) {
     } catch (value) { if (!controller.signal.aborted) setError((value as Error).message); }
     finally { setBusy(''); }
   };
-  const clear = () => { setFilters(initialFilters); setApplied(0); setQuery(snapshot()); setCursor(''); setVerification(undefined); };
+  const clear = () => { setFilters(initialFilters); setApplied(0); setQuery(snapshot()); setCursor(''); setTrail([]); setVerification(undefined); };
+  const older = (next: string) => { setTrail(previous => [...previous, cursor]); setCursor(next); };
+  const newer = () => { setCursor(trail.at(-1) ?? ''); setTrail(previous => previous.slice(0, -1)); };
+  const newest = () => { setCursor(''); setTrail([]); };
   const off = page && !page.enabled;
   const nothing = page?.enabled && !page.events.length && !applied && !cursor;
   const broken = verification?.first_break;
@@ -199,7 +204,7 @@ function AuditViewer({ session }: { session: Session }) {
       </form>
     </>}
     <ErrorMessage message={error}/>
-    {!page && !error && <Loading/>}
+    {!page && !error && <Loading text="Loading audit events…"/>}
     {off && <section className="setup panel"><h2>Audit log is turned off</h2>
       <p className="muted">Ask your gateway operator to add these settings and turn on Redis persistence, then refresh this page.</p>
       <Lines text={enableSettings}/>
@@ -238,8 +243,9 @@ function AuditViewer({ session }: { session: Session }) {
         </Fragment>; })}</tbody>
       </table></div><div className="table-footer">
         <span className="muted">Showing {page.events.length} {page.events.length === 1 ? 'event' : 'events'}{cursor ? ' from an older page' : ''}</span>
-        {cursor && <button className="secondary" disabled={Boolean(busy)} onClick={() => setCursor('')}>Newest events</button>}
-        {page.next_cursor && <button className="secondary" disabled={Boolean(busy)} onClick={() => setCursor(page.next_cursor!)}>Older events</button>}
+        {trail.length > 1 && <button className="secondary" disabled={Boolean(busy)} onClick={newest}>Newest events</button>}
+        {cursor && <button className="secondary" disabled={Boolean(busy)} onClick={newer}>Newer events</button>}
+        {page.next_cursor && <button className="secondary" disabled={Boolean(busy)} onClick={() => older(page.next_cursor!)}>Older events</button>}
       </div></section>
         : <div className="panel"><Empty title={nothing ? 'No audit events yet' : 'No matching events'}><p>{nothing ? 'Model calls, approvals, and key and settings changes appear here as your team works.' : 'No retained events match these filters.'}</p>
           {nothing ? <a className="tap" href="#new">Run a workflow</a> : applied > 0 && <button className="link" onClick={clear}>Clear filters</button>}</Empty></div>}

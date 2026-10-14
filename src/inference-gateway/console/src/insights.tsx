@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { duration, label, milliseconds, money, number, useData, workflowName, type RunSummary, type Session, type WorkflowInsight, type WorkflowInsights } from './api';
-import { Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh } from './ui';
+import { Empty, ErrorMessage, Loading, Metrics, PageHeader, Refresh, SortHeader, sortRows, type SortState } from './ui';
 
 const outcomes: [keyof WorkflowInsight['outcomes'], string][] = [
   ['completed', 'completed'], ['rejected', 'rejected'], ['failed', 'failed'], ['canceled', 'canceled'],
@@ -25,27 +25,39 @@ function OutcomeBar({ row }: { row: WorkflowInsight }) {
     <small>{summary}</small></>;
 }
 
-export function Insights({ session }: { session: Session }) {
-  const [days, setDays] = useState(7);
-  const [project, setProject] = useState('');
+// Columns a reader can order the table by; runs and cost read largest first.
+const sortValue = (row: WorkflowInsight, column: string) => column === 'workflow' ? workflowName(row.workflow) : column === 'runs' ? row.runs
+  : column === 'duration' ? row.median_seconds : column === 'review' ? row.median_review_seconds : row.average_cost_usd;
+
+export function Insights({ session, initial = '' }: { session: Session; initial?: string }) {
+  const params = new URLSearchParams(initial);
+  const projects = session.team.projects;
+  const [days, setDays] = useState(() => windows.some(([value]) => String(value) === params.get('days')) ? Number(params.get('days')) : 7);
+  const [project, setProject] = useState(() => projects.includes(params.get('project') || '') ? params.get('project')! : '');
   const [revision, setRevision] = useState(0);
+  const [sort, setSort] = useState<SortState>({ column: 'runs', direction: 'descending' });
   const query = new URLSearchParams({ days: String(days), ...(project ? { project } : {}) });
+  // The address keeps the period and project, so a reload or a shared link shows the same view.
+  useEffect(() => {
+    const hash = days === 7 && !project ? '#insights' : `#insights?${query}`;
+    if (location.hash !== hash) history.replaceState(history.state, '', hash);
+  }, [days, project]);
   const result = useData<WorkflowInsights>(session.csrfToken, `/v1/workflow-insights?${query}`, revision);
   const data = result.data;
   const runs = data?.workflows.reduce((sum, row) => sum + row.runs, 0) ?? 0;
   const finished = data?.workflows.reduce((sum, row) => sum + row.outcomes.completed + row.outcomes.rejected + row.outcomes.failed + row.outcomes.canceled, 0) ?? 0;
   const completed = data?.workflows.reduce((sum, row) => sum + row.outcomes.completed, 0) ?? 0;
   const spend = data?.workflows.reduce((sum, row) => sum + row.total_cost_usd, 0) ?? 0;
-  const projects = session.team.projects;
+  const header = (column: string, text: string, first: SortState['direction'] = 'descending') => <SortHeader column={column} text={text} sort={sort} onSort={setSort} first={first}/>;
   return <><PageHeader title="Insights" subtitle="How each workflow is doing across recent runs.">
-      <Refresh onClick={() => setRevision(value => value + 1)}/></PageHeader>
+      <Refresh busy={result.loading && Boolean(data)} onClick={() => setRevision(value => value + 1)}/></PageHeader>
     <div className="filters panel insight-filters" role="group" aria-label="Insight filters">
       <label>Period<select aria-label="Period" value={days} onChange={event => setDays(Number(event.target.value))}>{windows.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
       {projects.length > 1 && <label>Project<select aria-label="Project" value={project} onChange={event => setProject(event.target.value)}>
         <option value="">All projects</option>{projects.map(name => <option key={name} value={name}>{name}</option>)}</select></label>}
     </div>
     <ErrorMessage message={result.error} retry={() => setRevision(value => value + 1)}/>
-    {!data && !result.error && <Loading/>}
+    {!data && !result.error && <Loading text="Summarizing recent runs…"/>}
     {data && <>
       <Metrics items={[
         ['Runs', number(runs)],
@@ -54,8 +66,8 @@ export function Insights({ session }: { session: Session }) {
       ]}/>
       {data.truncated && <p className="note-warn">This period has more runs than the {number(data.scanned)} most recent ones summarized here. Choose a shorter period for the full picture.</p>}
       {data.workflows.length ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow insights table"><table className="stack insights-table">
-        <thead><tr><th>Workflow</th><th>Outcomes</th><th>Typical run</th><th>Review wait</th><th>Cost per run</th><th>Slowest step</th></tr></thead>
-        <tbody>{data.workflows.map(row => <tr key={row.workflow}>
+        <thead><tr>{header('workflow', 'Workflow', 'ascending')}{header('runs', 'Outcomes')}{header('duration', 'Typical run')}{header('review', 'Review wait')}{header('cost', 'Cost per run')}<th>Slowest step</th></tr></thead>
+        <tbody>{sortRows(data.workflows, sort, sortValue).map(row => <tr key={row.workflow}>
           <th scope="row">{workflowName(row.workflow)}<small>{number(row.runs)} {row.runs === 1 ? 'run' : 'runs'}</small></th>
           <td data-label="Outcomes"><OutcomeBar row={row}/></td>
           <td data-label="Typical run">{duration(row.median_seconds)}<small>{row.p95_seconds == null ? 'No finished runs' : `95% finish within ${duration(row.p95_seconds)}`}</small></td>
@@ -63,7 +75,7 @@ export function Insights({ session }: { session: Session }) {
           <td data-label="Cost per run">{money(row.average_cost_usd)}<small>{money(row.total_cost_usd)} in total{row.costliest_step ? `, most on ${stepLabel(row.costliest_step)}` : ''}</small></td>
           <td data-label="Slowest step">{row.slowest_step ? stepLabel(row.slowest_step) : '—'}{row.slowest_step && <small>median {milliseconds(row.slowest_step.median_ms)}</small>}</td>
         </tr>)}</tbody></table></div></div>
-        : <div className="panel"><Empty title="No runs in this period"><p>Start a workflow, or choose a longer period. Insights use the runs and receipts your team still retains.</p><a className="tap" href="#new">Run a workflow</a></Empty></div>}
+        : <div className="panel"><Empty title="No runs in this period"><p>{['admin', 'builder'].includes(session.team.role) ? 'Start a workflow, or choose a longer period.' : 'Choose a longer period, or check back after your team runs a workflow.'} Insights use the runs and receipts your team still retains.</p>{['admin', 'builder'].includes(session.team.role) && <a className="tap" href="#new">Run a workflow</a>}</Empty></div>}
       <p className="muted">Durations come from gateway receipts. Review wait is the time from the last step before a decision to that decision. Costs are estimates from configured prices, not an invoice.</p>
     </>}
   </>;

@@ -43,10 +43,10 @@ export function Triggers({ session }: { session: Session }) {
     } catch (value) { setError((value as Error).message); }
     finally { setBusy(''); }
   }
-  return <><PageHeader title="Triggers" subtitle="Start workflows on a schedule or from a signed webhook."><Refresh onClick={() => setRevision(value => value + 1)}/></PageHeader>
+  return <><PageHeader title="Triggers" subtitle="Start workflows on a schedule or from a signed webhook."><Refresh busy={result.loading && Boolean(result.data)} onClick={() => setRevision(value => value + 1)}/></PageHeader>
     <ErrorMessage message={error || result.error} retry={() => setRevision(value => value + 1)}/>
     <p role="status">{message}</p>
-    {!result.data && !result.error && <Loading/>}
+    {!result.data && !result.error && <Loading text="Loading triggers…"/>}
     {result.data && (result.data.triggers.length ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow triggers"><table className="stack">
       <thead><tr><th>Workflow</th><th>Project</th><th>Starts</th><th>State</th><th><span className="visually-hidden">Action</span></th></tr></thead>
       <tbody>{result.data.triggers.map(trigger => <tr key={`${trigger.workflow}/${trigger.name}`}>

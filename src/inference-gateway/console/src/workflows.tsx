@@ -44,10 +44,10 @@ export function WorkflowRegistry({ session }: { session: Session }) {
   }));
   const form = draft && registry ? draft : undefined;
   return <section className="registry" aria-labelledby="registry-title">
-    <div className="section-heading"><h2 id="registry-title">Your workflows</h2><Refresh onClick={() => setRevision(value => value + 1)}/></div>
+    <div className="section-heading"><h2 id="registry-title">Your workflows</h2><Refresh busy={result.loading && Boolean(registry)} onClick={() => setRevision(value => value + 1)}/></div>
     <p>Register a workflow your team wrote. It can use only the models and tools already approved for your team, and its egress follows from them. Run it from <a href="#new">Run workflow</a>.</p>
     <ErrorMessage message={error || result.error} retry={() => setRevision(value => value + 1)}/><p className="status" role="status">{notice}</p>
-    {!registry && !result.error && <Loading/>}
+    {!registry && !result.error && <Loading text="Loading registered workflows…"/>}
     {registry && !registry.enabled && <p className="callout">Your operator keeps workflow types in reviewed policy. Ask them to add a workflow to your team’s policy.</p>}
     {registry && registry.enabled && <>
       {registry.workflows.length ? <div className="panel"><div className="table-scroll" tabIndex={0} role="region" aria-label="Registered workflows table"><table className="stack registry-table"><thead><tr>
