@@ -688,5 +688,29 @@ th[aria-sort] button.sort { color: var(--text); }
 .review .confirm { margin: 16px 0 0; }
 .key-search { max-width: 380px; margin: 0 0 14px; }
 .key-search label { margin-bottom: 7px; }
+/* Approval escalation: the review queue switch, run marks, and the per-workflow editor. */
+.segmented { display: inline-flex; margin: 0 0 18px; padding: 3px; gap: 3px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-3); }
+.segmented button { min-height: 36px; padding: 6px 14px; border: 0; background: transparent; box-shadow: none; color: var(--text-2); font-weight: 600; }
+@media (hover: hover) { .segmented button:hover { background: var(--surface); border: 0; color: var(--text); } }
+.segmented button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.segmented .count { margin-left: 8px; padding: 0 7px; border-radius: 999px; background: var(--neutral-soft); color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.badge.escalated { margin-left: 6px; color: var(--warning); background: var(--surface); box-shadow: inset 0 0 0 1px var(--warning-border); }
+.run-meta .badge.escalated { margin-left: 0; }
+small.escalates { color: var(--text-2); }
+.escalation-note { color: var(--text-2); font-size: 14px; }
+.escalation-list { list-style: none; padding: 0; margin: 0 0 8px; }
+.escalation-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 20px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid var(--border); }
+.escalation-list li > div:first-child { flex: 1 1 280px; min-width: 0; }
+.escalation-list .note-warn { margin: 8px 0 0; }
+.escalations.form-panel { max-width: none; }
+.escalation-form { margin-top: 12px; padding-top: 18px; border-top: 1px solid var(--border); max-width: 640px; }
+.escalation-form h3 { margin-bottom: 14px; }
+.duration-input { display: grid; grid-template-columns: minmax(0, 160px) minmax(0, 160px); gap: 10px; }
+.nested-choices { padding-left: 28px; }
+@media (max-width: 760px) {
+  .segmented { display: flex; }
+  .segmented button { flex: 1; min-height: 44px; }
+  .duration-input { grid-template-columns: 1fr 1fr; }
+}
 /* Initials sit on the solid accent, which keeps them readable in both themes. */
 .avatar { background: var(--accent); color: var(--on-accent); }

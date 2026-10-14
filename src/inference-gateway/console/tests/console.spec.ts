@@ -489,6 +489,7 @@ test.beforeEach(async ({ page }) => {
     let body: unknown;
     if (url.pathname === '/v1/team') body = { team_id: team, role, projects: ['default', 'engineering'], providers: ['openai'], cost_limit_usd: 50, ...(role === 'admin' ? { provider_configuration: { openai: { configured: true, environment_variable: 'TEAM_OPENAI_KEY' } } } : {}) };
     else if (url.pathname === '/v1/team/deployment') body = { checks: [{ id: 'authentication', name: 'Team authentication', configured: true, action: 'Enable team-bound authentication.' }, { id: 'cookies', name: 'Secure session cookies', configured: true, action: 'Enable HTTPS.' }], verification_required: ['Restore PostgreSQL, Redis, Temporal and encryption keys in an isolated environment.', 'Run agentworkflows check after every install and upgrade to prove a governed run completes.'] };
+    else if (url.pathname === '/v1/team/approval-escalations') body = { revision: currentSettings.revision, escalations: [], available_channels: ['slack', 'email', 'webhook'] };
     else if (url.pathname === '/v1/team/alert-rules') body = { revision: 0, events: ['awaiting_approval', 'failed', 'budget_threshold'], channels: ['slack', 'email', 'webhook'], available_channels: ['slack', 'email', 'webhook'], budget_threshold: 0.8, slow_step_ms: 30000 };
     else if (url.pathname === '/v1/team/workflows') body = registryFixture();
     else if (url.pathname === '/v1/team/invitations') body = [];
@@ -2481,6 +2482,152 @@ test('workflow policies are read once while moving between pages, and again afte
   await expect.poll(() => reads).toBe(3);
 });
 
+const laterRun = 'bbbbbbbb-1111-2222-3333-cccccccccccc';
+// Waiting since Oct 6, 8:00 PM UTC; the escalation is due four hours later, Oct 7, 12:00 AM.
+const escalationState = (overrides: Record<string, unknown> = {}) => ({ after_seconds: 14400, approver_role: 'approver', reviewers: ['maya@example.com'], channels: null,
+  waiting_since: 1791316800, escalates_at: 1791331200, escalated: false, recorded_at: null, ...overrides });
+const escalatedRun = () => run({ progress: { stage: 'awaiting_approval', draft: '# Escalated draft\n\nBody one.', approver_role: 'admin' },
+  approval_escalation: escalationState({ escalated: true, recorded_at: 1791331260 }), approval_access: { eligible: true, via: 'escalation', eligible_at: null } });
+const laterDraft = () => run({ run_id: laterRun, workflow: 'CodeReviewWorkflow', progress: { stage: 'awaiting_approval', draft: '# Later draft\n\nBody two.', approver_role: 'admin' },
+  approval_escalation: escalationState(), approval_access: { eligible: false, via: null, eligible_at: 1791331200 } });
+
+test('approvals open on the drafts ready for you; the rest say when they open to you', async ({ page }) => {
+  await page.route('**/v1/workflow-runs?*', route => {
+    const query = new URL(route.request().url()).searchParams;
+    return route.fulfill({ json: { runs: query.get('project') === 'default' ? [escalatedRun(), laterDraft()] : [], next_cursor: null } });
+  });
+  await login(page, 'approver', '/console/#approvals');
+  await expect(page.getByRole('button', { name: /^Ready for you/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: /^Ready for you/ })).toContainText('1');
+  await expect(page.getByRole('button', { name: /^All waiting/ })).toContainText('2');
+  await expect(page.locator('section.review')).toHaveCount(1);
+  const ready = page.getByRole('region', { name: 'Escalated draft' });
+  await expect(ready).toContainText('You can review this draft because its review escalated.');
+  await expect(ready).toContainText('Escalated Oct 7, 12:01 AM: every approver and one named reviewer may now review.');
+  await expect(ready.getByRole('button', { name: 'Approve', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: /^All waiting/ }).click();
+  await expect(page).toHaveURL(/#approvals\?view=all$/);
+  const later = page.getByRole('region', { name: 'Later draft' });
+  await expect(later).toContainText('This review opens to you Oct 7, 12:00 AM if it is still waiting then. Until then an admin decides.');
+  await expect(later).toContainText('Escalates Oct 7, 12:00 AM if nobody decides first: every approver and one named reviewer may review then.');
+  await expect(later.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
+  // The choice survives a reload; the run list marks both runs.
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^All waiting/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/console/#runs');
+  await expect(page.getByRole('row').filter({ hasText: 'Code review' })).toContainText('Escalates Oct 7, 12:00 AM');
+  await expect(page.getByRole('row').filter({ hasText: 'Research' }).locator('.badge.escalated')).toHaveText('Escalated');
+});
+
+test('a reviewer with nothing ready sees why, and the console does not land on Approvals', async ({ page }) => {
+  await page.route('**/v1/workflow-runs?*', route => {
+    const query = new URL(route.request().url()).searchParams;
+    const waiting = query.get('status') === 'awaiting_approval';
+    return route.fulfill({ json: { runs: query.get('project') !== 'default' ? [] : waiting ? [laterDraft()] : [laterDraft(), run({ status: 'completed', progress: undefined })], next_cursor: null } });
+  });
+  await login(page, 'approver', '/console/');
+  await expect(page).toHaveURL(/#runs$/);
+  await page.getByRole('link', { name: 'Approvals', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Nothing is ready for you' })).toBeVisible();
+  await expect(page.getByText('One draft waits for other reviewers.')).toBeVisible();
+  await page.getByRole('button', { name: 'Show all waiting drafts', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Later draft' })).toBeVisible();
+});
+
+test('run detail shows the escalation and reads its receipts plainly', async ({ page }) => {
+  const base = run();
+  const step = (action: string, receipt: Record<string, unknown>, seconds: number) => ({ ...base.timeline[0], step_id: action, action, provider: '', model: '', tool: '',
+    tokens: 0, cost_usd: 0, duration_ms: 0, attempts: [], timestamp: 1791331200 + seconds, receipt_id: action.padEnd(64, '0'), receipt });
+  await page.route(`**/v1/workflow-runs/${id}`, route => route.fulfill({ json: { ...escalatedRun(), timeline: [...base.timeline,
+    step('approval_escalated', { principal: { auth: 'policy', key_id: 'approval-escalation' }, after_seconds: 14400, approver_role: 'approver', reviewers: ['maya@example.com'] }, 60),
+    step('approval', { approved: true, eligibility: 'escalation', principal: { key_id: 'approver', name: 'Priya Shah' } }, 120),
+    step('notification', { channel: 'slack', notification_event: 'approval_escalated', outcome: 'delivered' }, 180),
+  ] } }));
+  await login(page, 'approver', `/console/#run/${id}`);
+  await expect(page.locator('.run-meta .badge.escalated')).toHaveText('Escalated');
+  const escalated = page.locator('.step').filter({ has: page.getByRole('heading', { name: 'Review escalated' }) });
+  await expect(escalated).toContainText('No decision after 4 h, so every approver and one named reviewer may now review. Recorded by the team’s escalation policy.');
+  await expect(page.getByText('Approved by Priya Shah, who could review because the review escalated')).toBeVisible();
+  await expect(page.locator('.notifications')).toContainText('Review escalated');
+});
+
+test('the audit log names escalation events and escalated votes', async ({ page }) => {
+  const entry = (sequence: number, event: Record<string, unknown>) => ({ ...auditEntry(sequence), event: { ts: 1791331200, ...event } });
+  await page.route('**/v1/team/audit?*', route => route.fulfill({ json: { enabled: true, next_cursor: null, events: [
+    entry(3, { event: 'workflow_operation', action_type: 'approval_escalated', principal: { auth: 'policy', key_id: 'approval-escalation' }, after_seconds: 14400, approver_role: 'approver', reviewers: [], workflow_run_id: id }),
+    entry(2, { event: 'workflow_operation', action_type: 'approval', approved: true, eligibility: 'escalation', principal: { key_id: 'approver' }, workflow_run_id: id }),
+    entry(1, { event: 'approval_escalation_changed', action_type: 'approval_escalation_changed', workflow: 'ResearchWorkflow', principal: { key_id: 'admin' },
+      escalation: { after_seconds: 7200, approver_role: null, reviewers: [], channels: [] } }),
+  ] } }));
+  await login(page, 'admin', '/console/#audit');
+  const rows = page.locator('.audit-table tbody tr');
+  await expect(rows.nth(0)).toContainText('Review escalated');
+  await expect(rows.nth(0).locator('small').first()).toHaveText('After 4 hevery approver');
+  await expect(rows.nth(0).locator('td[data-label="Actor"]')).toHaveText('Escalation policy');
+  await expect(rows.nth(1)).toContainText('Approval decision');
+  await expect(rows.nth(1).locator('small').first()).toHaveText('Approvedthrough escalation');
+  await expect(rows.nth(2)).toContainText('Escalation change');
+  await expect(rows.nth(2).locator('small').first()).toHaveText('ResearchAfter 2 hNotice only');
+  await expect(page.getByLabel('Event type', { exact: true }).locator('option', { hasText: 'Escalation change' })).toHaveCount(1);
+});
+
+test('admins set up, edit and remove approval escalation per workflow', async ({ page }) => {
+  let revision = 0;
+  let rows: Record<string, unknown>[] = [];
+  const puts: unknown[] = [];
+  await page.route('**/v1/workflow-policies', route => route.fulfill({ json: { workflows: {
+    ResearchWorkflow: { ...policies.workflows.ResearchWorkflow, approverRole: 'admin', approvalTimeoutSeconds: 86400 },
+    CustomWorkflow: { ...policies.workflows.CustomWorkflow, approvalRequired: false },
+  } } }));
+  await page.route('**/v1/team/approval-escalations', route => route.fulfill({ json: { revision, escalations: rows, available_channels: ['slack', 'email'] } }));
+  await page.route('**/v1/team/workflows/*/approval-escalation', route => {
+    expect(route.request().headers()['if-match']).toBe(String(revision));
+    const name = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[4]);
+    revision++;
+    if (route.request().method() === 'DELETE') { rows = rows.filter(row => row.workflow !== name); return route.fulfill({ json: { revision, removed: name } }); }
+    const body = route.request().postDataJSON();
+    puts.push(body);
+    const row = { workflow: name, ...body, effective: true, updated_by: 'admin', updated_at: 1791316800 };
+    rows = [...rows.filter(item => item.workflow !== name), row];
+    return route.fulfill({ json: { revision, escalation: row } });
+  });
+  await login(page, 'admin', '/console/#team');
+  const section = page.getByRole('region', { name: 'Approval escalation' });
+  await expect(section).toContainText('Notices can go to Slack, Email.');
+  await expect(section.getByRole('listitem')).toHaveCount(1);
+  await expect(section.getByRole('listitem')).toContainText('ResearchOff');
+  await section.getByRole('button', { name: 'Set up escalation for Research', exact: true }).click();
+  const after = section.getByLabel('Escalate a review still waiting after', { exact: true });
+  await expect(after).toHaveValue('4');
+  await expect(section.getByLabel('Unit', { exact: true })).toHaveValue('3600');
+  await expect(section.getByLabel('Let every approver review once escalated')).toBeChecked();
+  // Escalating after the review expires would never happen, so the form says so before sending anything.
+  await after.fill('2');
+  await section.getByLabel('Unit', { exact: true }).selectOption('86400');
+  await section.getByRole('button', { name: 'Save escalation', exact: true }).click();
+  await expect(section).toContainText('Escalate before reviews of this workflow expire, after 24 h.');
+  expect(puts).toEqual([]);
+  await section.getByLabel('Unit', { exact: true }).selectOption('3600');
+  await section.getByLabel('Named reviewers (optional)').fill('maya@example.com\n\n key-7 ');
+  await section.getByLabel('Choose destinations').check();
+  await section.getByLabel('Email', { exact: true }).check();
+  await section.getByRole('button', { name: 'Save escalation', exact: true }).click();
+  await expect(section.getByRole('status')).toHaveText('Escalation for Research saved. It applies to runs started from now on.');
+  expect(puts).toEqual([{ after_seconds: 7200, approver_role: 'approver', reviewers: ['maya@example.com', 'key-7'], channels: ['slack', 'email'] }]);
+  await expect(section.getByRole('heading', { name: 'Approval escalation' })).toBeFocused();
+  await expect(section.getByRole('listitem')).toContainText('After 2 h');
+  await expect(section.getByRole('listitem')).toContainText('every approver and 2 named reviewers');
+  await expect(section.getByRole('listitem')).toContainText('Slack, Email');
+  // An escalation the approval expiry overtakes is flagged with what to change.
+  rows = [{ ...rows[0], after_seconds: 90000, effective: false }];
+  await section.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(section.locator('.note-warn')).toHaveText('Not in effect: reviews of Research expire after 24 h, before the 25 h escalation. Shorten the escalation, or lengthen the workflow’s approval expiry above.');
+  page.once('dialog', dialog => void dialog.accept());
+  await section.getByRole('button', { name: 'Remove escalation for Research', exact: true }).click();
+  await expect(section.getByRole('status')).toHaveText('Escalation for Research removed. Runs already started keep theirs.');
+  await expect(section.getByRole('listitem')).toContainText('ResearchOff');
+});
+
 test('saving one part of team settings keeps the next save on the page from conflicting', async ({ page }) => {
   let revision = 3;
   const document = settings();
@@ -2501,6 +2648,7 @@ test('saving one part of team settings keeps the next save on the page from conf
     }
     return route.fulfill({ json: { ...document, revision } });
   });
+  await page.route('**/v1/team/approval-escalations', route => route.fulfill({ json: { revision, escalations: [], available_channels: [] } }));
   await login(page, 'admin', '/console/#team');
   await page.getByLabel('Budget used (%)', { exact: true }).fill('90');
   await page.getByRole('button', { name: 'Save alert rules', exact: true }).click();

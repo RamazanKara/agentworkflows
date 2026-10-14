@@ -33,12 +33,20 @@ export type InputProperty = {
 export type InputSchema = {
   type: 'object'; properties: Record<string, InputProperty>; required?: string[]; description?: string;
 };
+export type Channel = 'slack' | 'email' | 'webhook';
+// A workflow's escalation: after a review waits this long, more reviewers may vote and a notice goes out.
+export type Escalation = { after_seconds: number; approver_role: 'approver' | null; reviewers: string[]; channels: Channel[] | null };
 export type Policy = {
   allowedModels: string[]; allowedProviders: string[]; tokenLimit: number; costLimitUsd: number;
   approvalRequired?: boolean; approvalThresholdUsd?: number; approverRole?: string;
   requiredApprovals?: number; approvalTimeoutSeconds?: number;
   inputSchema?: InputSchema | null; captureContent?: 'none' | 'redacted' | 'full';
+  approvalEscalation?: Escalation | null;
 };
+// The escalation a run started with, and where its review stands.
+export type RunEscalation = Escalation & { waiting_since: number | null; escalates_at: number | null; escalated: boolean; recorded_at: number | null };
+// Whether the signed-in reviewer may decide this waiting run now, and when escalation would let them.
+export type ApprovalAccess = { eligible: boolean; via: 'role' | 'escalation' | null; eligible_at: number | null };
 export type Step = {
   step_id: string; action: string; provider: string; model: string; tool: string;
   tokens: number; cost_usd: number; duration_ms: number; timestamp: number;
@@ -70,6 +78,8 @@ export type Run = {
   result?: unknown;
   outcome?: string;
   error?: { code: string; message: string };
+  approval_escalation?: RunEscalation;
+  approval_access?: ApprovalAccess;
 };
 export type RunPage = { runs: Run[]; next_cursor: string | null };
 export type CostRow = { calls?: number; tokens?: number; cost_usd?: number };
@@ -257,6 +267,20 @@ export const missingKeys = (team: Team) => Object.entries(team.provider_configur
 export const noProviderKeys = (team: Team) => Object.keys(team.provider_configuration || {}).length > 0 && missingKeys(team).length === Object.keys(team.provider_configuration || {}).length;
 // The gateway flags routes served by local fakes (the Compose demo); demo guidance appears only then.
 export const isDemo = (models?: Models) => Boolean(models?.data.some(model => model.simulated));
+// A gateway older than approval escalation sends no access; its waiting runs count as reviewable, like the SDK's review queue.
+export const reviewable = (run: Run) => !run.approval_access || run.approval_access.eligible;
+// Who an escalation lets review: "every approver and 2 named reviewers", or nobody new.
+export const escalationWho = (escalation: Pick<Escalation, 'approver_role' | 'reviewers'>) => {
+  const named = escalation.reviewers.length;
+  return [escalation.approver_role === 'approver' && 'every approver', named > 0 && (named === 1 ? 'one named reviewer' : `${named} named reviewers`)].filter(Boolean).join(' and ');
+};
+// "every approver may now review." An escalation that widens nobody only notifies.
+export function escalationReach(escalation: Pick<Escalation, 'approver_role' | 'reviewers'>, done: boolean) {
+  const who = escalationWho(escalation);
+  if (who) return `${who} ${done ? 'may now review' : 'may review then'}.`;
+  return done ? 'a notice went out; who may review is unchanged.' : 'a notice goes out; who may review stays the same.';
+}
+export const channelNames: Record<string, string> = { slack: 'Slack', email: 'Email', webhook: 'Webhook' };
 export const status = (run: Run) => run.progress?.stage === 'awaiting_approval' ? 'awaiting_approval'
   : run.status === 'completed' && (run.outcome ?? (run.result as { status?: string } | undefined)?.status) === 'rejected' ? 'rejected' : run.status;
 export const label = (value: string) => value.replaceAll('_', ' ').replace(/^./, char => char.toUpperCase());

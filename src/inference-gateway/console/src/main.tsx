@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { api, label, type AuthConfig, type BrowserSession, type RunPage, type Session, type Team } from './api';
+import { api, label, reviewable, type AuthConfig, type BrowserSession, type RunPage, type Session, type Team } from './api';
 import { confirmLeave, DotList, ErrorMessage, Icon, Loading, PageHeader } from './ui';
 import './fonts.css';
 import './style.css';
@@ -103,12 +103,13 @@ function SignIn({ onSignIn, cancel, message, config, csrfToken }: {
 function Landing({ session }: { session: Session }) {
   useEffect(() => {
     const controller = new AbortController();
+    // A waiting run counts only if this reviewer may decide it now (or the gateway predates escalation).
     const first = async (project: string, status?: string) => {
       const query = new URLSearchParams({ project, limit: '100', ...(status ? { status } : {}) });
       try {
         for (;;) {
           const page = await api<RunPage>(session.csrfToken, `/v1/workflow-runs?${query}`, { signal: controller.signal });
-          if (page.runs.length) return true;
+          if (status ? page.runs.some(reviewable) : page.runs.length) return true;
           if (page.next_cursor === null) return false;
           query.set('cursor', page.next_cursor);
         }
@@ -145,7 +146,7 @@ class PageBoundary extends Component<{ children: ReactNode }, { error?: Error }>
 function Page({ route, session }: { route: string; session: Session }) {
   const [path, query] = split(route);
   return path === 'home' ? <Landing session={session}/> : path === 'start' ? <GetStarted session={session}/> : path === 'runs' ? <Runs session={session} initial={query}/> :
-    path === 'new' || path.startsWith('new/') ? <StartRun session={session} initial={decodeURIComponent(path.slice(4))}/> : path === 'approvals' ? <Approvals session={session}/> :
+    path === 'new' || path.startsWith('new/') ? <StartRun session={session} initial={decodeURIComponent(path.slice(4))}/> : path === 'approvals' ? <Approvals session={session} initial={query}/> :
     path === 'keys' ? <Keys session={session}/> :
     path === 'audit' ? <AuditLog session={session}/> :
     path === 'templates' ? <Templates session={session}/> :

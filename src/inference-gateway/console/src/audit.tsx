@@ -1,13 +1,15 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, date, label, money, providerName, shortId, useData, workflowName, type Session } from './api';
+import { api, date, duration, escalationWho, label, money, providerName, shortId, useData, workflowName, type Escalation, type Session } from './api';
 import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, PageHeader } from './ui';
 
 type SettingSnapshot = { value?: unknown } | unknown;
 type AuditEvent = {
-  event: string; ts: number; actor?: string; principal?: { sub?: string; key_id?: string; name?: string };
+  event: string; ts: number; actor?: string; principal?: { sub?: string; key_id?: string; name?: string; auth?: string };
   action_type?: string; decision?: string; provider?: string; project?: string; workflow_run_id?: string;
   before?: Record<string, SettingSnapshot>; after?: Record<string, SettingSnapshot>; key?: { name?: string };
   tool?: string; model?: string; channel?: string; notification_event?: string; outcome?: string; paused?: boolean; trigger?: string; workflow?: string;
+  approved?: boolean; eligibility?: string; automatic?: boolean;
+  after_seconds?: number; approver_role?: string | null; reviewers?: string[]; escalation?: Escalation; replaced?: boolean;
 };
 type Entry = { id: string; chain_id: string; sequence: number; event: AuditEvent };
 type AuditPage = { enabled: boolean; message?: string; events: Entry[]; next_cursor: string | null };
@@ -19,6 +21,7 @@ const enableSettings = 'SANDBOX_BUDGET_BACKEND=redis\nSANDBOX_BUDGET_REDIS_URL=r
 const eventNames: Record<string, string> = {
   inference_request: 'Model call', batch_request: 'Batch model call', agent_action: 'Agent action', workflow_operation: 'Workflow operation',
   team_key: 'API key change', team_settings_changed: 'Settings change',
+  approval_escalation_changed: 'Escalation change', approval_escalation_removed: 'Escalation removed',
 };
 const eventName = (type: string) => eventNames[type] || label(type);
 const channels: Record<string, string> = { slack: 'Slack', email: 'Email', webhook: 'Webhook' };
@@ -30,6 +33,7 @@ const eventTitle = (event: AuditEvent) => {
   if (action === 'notification') return `${channels[event.channel || ''] || 'Notification'} ${event.channel ? 'notification' : 'sent'}`;
   if (action === 'trigger_pause') return event.paused === false ? 'Trigger resumed' : 'Trigger paused';
   if (action === 'approval') return 'Approval decision';
+  if (action === 'approval_escalated') return 'Review escalated';
   return action ? label(action) : eventName(event.event);
 };
 // Plain words for the verifier's reason codes; the code itself stays visible for runbooks.
@@ -43,6 +47,8 @@ const reasons: Record<string, string> = {
 const reason = (code: string) => reasons[code] || label(code);
 // The actor filter matches the event's actor or the principal's subject or key ID; a managed key also carries its name.
 const actor = (event: AuditEvent, names: Record<string, string>) => {
+  // Escalation receipts are written by the team's policy, not by whoever's request noticed the deadline.
+  if (event.principal?.auth === 'policy') return { name: 'Escalation policy', key: false };
   const id = event.actor || event.principal?.sub || event.principal?.key_id;
   const key = event.principal?.key_id || (id && names[id] ? id : undefined);
   // Managed keys have random hex IDs, so a deleted one shows as unnamed; configuration keys have readable IDs such as demo-key.
@@ -68,6 +74,12 @@ const details = (event: AuditEvent): ReactNode => {
       : `${fields.length} settings changed`;
   }
   if (event.event === 'team_key') return <DotList items={[event.action_type && label(event.action_type), event.key?.name]}/>;
+  if (event.action_type === 'approval') return <DotList items={[event.approved === true ? 'Approved' : event.approved === false ? 'Rejected' : undefined,
+    event.eligibility === 'escalation' && 'through escalation', event.automatic && 'by team policy']}/>;
+  if (event.action_type === 'approval_escalated') return <DotList items={[event.after_seconds && `After ${duration(event.after_seconds)}`,
+    escalationWho({ approver_role: event.approver_role === 'approver' ? 'approver' : null, reviewers: event.reviewers || [] }) || 'Notice only']}/>;
+  if (event.event === 'approval_escalation_changed' || event.event === 'approval_escalation_removed') return <DotList items={[event.workflow && workflowName(event.workflow),
+    event.escalation && `After ${duration(event.escalation.after_seconds)}`, event.escalation && (escalationWho(event.escalation) || 'Notice only')]}/>;
   if (event.action_type === 'notification') return <DotList items={[event.notification_event && label(event.notification_event), event.workflow && workflowName(event.workflow), event.outcome && label(event.outcome)]}/>;
   if (event.action_type === 'trigger_pause') return <DotList items={[event.trigger, event.workflow && workflowName(event.workflow)]}/>;
   if (['tool_exec', 'tool_call'].includes(event.action_type || '')) return <DotList items={[event.tool && label(event.tool)]}/>;

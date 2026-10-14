@@ -1,5 +1,5 @@
 import { createElement, useEffect, useRef, useState, type ReactNode } from 'react';
-import { api, date, label, missingKeys, money, noProviderKeys, number, policyCache, providerList, providerName, shortId, status, useData, usePolling, webUrl, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
+import { api, date, duration, label, missingKeys, money, noProviderKeys, number, escalationReach, policyCache, providerList, providerName, reviewable, shortId, status, useData, usePolling, webUrl, workflowName, type InputProperty, type InputSchema, type Policy, type Run, type RunPage, type Session, type Step } from './api';
 import { RunSummaryPanel } from './insights';
 import { Badge, DotList, Empty, ErrorMessage, Icon, Loading, Metrics, NumberInput, PageHeader, Refresh } from './ui';
 
@@ -75,7 +75,7 @@ export function Runs({ session, initial = '' }: { session: Session; initial?: st
     <div className="panel">
       {rows.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="Workflow runs table"><table className="stack runs-stack">
         <thead><tr>{['Workflow', 'Run', 'Status', 'Started', 'Tokens', 'Cost'].map(h => <th key={h} className={['Tokens', 'Cost'].includes(h) ? 'num' : undefined}>{h}</th>)}</tr></thead>
-        <tbody>{rows.map(run => <tr key={run.run_id}><td><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a><small>{run.project}</small></td><td data-label="Run"><code title={run.run_id}>{shortId(run.run_id)}</code></td><td data-label="Status"><Badge value={status(run)}/></td><td data-label="Started">{date(run.created_at)}</td><td data-label="Tokens">{number(run.budget.tokens)}</td><td data-label="Cost">{money(run.budget.cost_usd)}</td></tr>)}</tbody>
+        <tbody>{rows.map(run => <tr key={run.run_id}><td><a href={`#run/${run.run_id}`}>{workflowName(run.workflow)}</a><small>{run.project}</small></td><td data-label="Run"><code title={run.run_id}>{shortId(run.run_id)}</code></td><td data-label="Status"><Badge value={status(run)}/><EscalationMark run={run}/></td><td data-label="Started">{date(run.created_at)}</td><td data-label="Tokens">{number(run.budget.tokens)}</td><td data-label="Cost">{money(run.budget.cost_usd)}</td></tr>)}</tbody>
       </table></div> : !busy && !error && <Empty title={filter || workflow ? 'No matching runs' : 'Your first workflow starts here'}><p>{cursor !== null ? 'Load more to continue searching older runs.' : filter || workflow ? 'No run in this project matches these filters.' : 'Runs appear here with their status, cost and receipts.'}</p>{canBuild(session) && !filter && !workflow && <a className="tap" href="#new">Run a workflow</a>}</Empty>}
       {busy && <Loading text={rows.length ? 'Loading older runs…' : 'Loading workflow runs…'}/>}
       {cursor !== null && !busy && <div className="table-footer"><button className="secondary" onClick={() => void load(cursor)}>Load more</button></div>}
@@ -220,7 +220,10 @@ function Review({ session, run, onDone, title = 'Review the draft', eyebrow, met
   const progress = run.progress;
   const reviewed = progress?.approved_by?.includes(session.reviewerId || '');
   const expired = progress?.expires_at ? Date.parse(progress.expires_at) <= Date.now() : false;
-  const allowed = canApprove(session) && (progress?.approver_role !== 'admin' || session.team.role === 'admin');
+  // The gateway says whether this reviewer may decide now; an older gateway leaves it to the role.
+  const access = run.approval_access;
+  const allowed = access ? access.eligible : canApprove(session) && (progress?.approver_role !== 'admin' || session.team.role === 'admin');
+  const escalation = run.approval_escalation;
   // Approvals still needed after this one; the last required approval lets the workflow continue.
   const remaining = (progress?.required_approvals || 1) - (progress?.approved_by?.length || 0) - 1;
   async function decide(approved: boolean) {
@@ -237,11 +240,17 @@ function Review({ session, run, onDone, title = 'Review the draft', eyebrow, met
   const decided = busy || !!notice || reviewed || expired;
   return <section className="review panel" aria-labelledby={`review-${run.run_id}`}>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h2 id={`review-${run.run_id}`} tabIndex={-1}>{title}</h2>{meta}
     {progress?.required_approvals !== undefined && <p className="callout">{progress.approved_by?.length || 0} of {progress.required_approvals} approvals received.{progress.expires_at && <> Expires {date(Date.parse(progress.expires_at) / 1000)}.</>} Any rejection stops approval.</p>}
+    {escalation && <p className="escalation-note">{escalation.escalated
+      ? <>Escalated{escalation.recorded_at ? ` ${date(escalation.recorded_at)}` : ''}: {escalationReach(escalation, true)}</>
+      : escalation.escalates_at ? <>Escalates {date(escalation.escalates_at)} if nobody decides first: {escalationReach(escalation, false)}</>
+      : <>Escalates {duration(escalation.after_seconds)} after reaching review: {escalationReach(escalation, false)}</>}</p>}
+    {allowed && access?.via === 'escalation' && <p className="callout">You can review this draft because its review escalated.</p>}
     {reviewed && <p>You have already approved this draft. Another reviewer must approve.</p>}
     {expired && <p>The approval deadline has passed. Refresh to see the final run status.</p>}
     <div className="draft prose"><Prose text={draft || 'This workflow did not provide a reviewable draft. Ask its builder to inspect the step before deciding.'}/></div>
     <ErrorMessage message={error}/><p role="status">{notice}</p>
-    {!allowed ? <p className="callout">{progress?.approver_role === 'admin' ? 'An admin' : 'An approver or admin'} must review this draft. Use Switch account to sign in as one.</p>
+    {!allowed ? access?.eligible_at ? <p className="callout">This review opens to you {date(access.eligible_at)} if it is still waiting then. Until then {progress?.approver_role === 'admin' ? 'an admin' : 'an approver or admin'} decides.</p>
+      : <p className="callout">{progress?.approver_role === 'admin' ? 'An admin' : 'An approver or admin'} must review this draft. Use Switch account to sign in as one.</p>
       : confirmReject && !decided ? <div className="confirm callout"><p>Reject this draft? The run ends and nothing is published. This cannot be undone.</p>
         <div className="actions"><button className="danger" disabled={busy} onClick={() => void decide(false)}>Confirm rejection</button>
           <button className="secondary" autoFocus onClick={() => { refocus.current = true; setConfirmReject(false); }}>Keep reviewing</button></div></div>
@@ -249,7 +258,14 @@ function Review({ session, run, onDone, title = 'Review the draft', eyebrow, met
   </section>;
 }
 
-export function Approvals({ session }: { session: Session }) {
+export function Approvals({ session, initial = '' }: { session: Session; initial?: string }) {
+  const reviewer = canApprove(session);
+  // Reviewers start with the drafts they may decide now; everyone can see every waiting draft.
+  const [view, setView] = useState<'mine' | 'all'>(() => reviewer && new URLSearchParams(initial).get('view') !== 'all' ? 'mine' : 'all');
+  useEffect(() => {
+    const hash = view === 'all' && reviewer ? '#approvals?view=all' : '#approvals';
+    if (location.hash !== hash) history.replaceState(history.state, '', hash);
+  }, [view, reviewer]);
   const [revision, setRevision] = useState(0);
   const [rows, setRows] = useState<Run[]>();
   const [busy, setBusy] = useState(true);
@@ -290,16 +306,23 @@ export function Approvals({ session }: { session: Session }) {
   }, [rows]);
   const decided = (run: Run, final: boolean, message: string) => {
     if (!final) { setRevision(v => v + 1); return; }
-    focusAt.current = rows?.findIndex(r => r.run_id === run.run_id) ?? null;
+    focusAt.current = shown?.findIndex(r => r.run_id === run.run_id) ?? null;
     setRows(values => values?.filter(r => r.run_id !== run.run_id));
     setNotice(`${workflowName(run.workflow)}: ${message}`);
   };
-  return <><PageHeader title="Approvals" subtitle="Drafts waiting for a decision, across your projects."><Refresh busy={busy && Boolean(rows)} onClick={() => setRevision(v => v + 1)}/></PageHeader>
+  const ready = rows?.filter(reviewable);
+  const shown = view === 'mine' ? ready : rows;
+  return <><PageHeader title="Approvals" subtitle={view === 'mine' ? 'Drafts you can decide now, across your projects.' : 'Drafts waiting for a decision, across your projects.'}><Refresh busy={busy && Boolean(rows)} onClick={() => setRevision(v => v + 1)}/></PageHeader>
+    {reviewer && rows && <div className="segmented" role="group" aria-label="Which drafts to show">
+      <button type="button" aria-pressed={view === 'mine'} onClick={() => setView('mine')}>Ready for you<span className="count">{ready?.length}</span></button>
+      <button type="button" aria-pressed={view === 'all'} onClick={() => setView('all')}>All waiting<span className="count">{rows.length}</span></button>
+    </div>}
     <ErrorMessage message={error} retry={() => setRevision(v => v + 1)}/>
     <p role="status" className="status">{notice}</p>
     {busy && !rows && <Loading text="Loading drafts waiting for review…"/>}
     {rows && !rows.length && !error && <div className="panel"><Empty title="You’re all caught up"><p>No steps are waiting for review in your projects.</p><a className="tap" href="#runs">Explore workflow runs</a></Empty></div>}
-    {rows?.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={(final, message) => decided(run, final, message)}
+    {rows && rows.length > 0 && shown && !shown.length && <div className="panel"><Empty title="Nothing is ready for you"><p>{rows.length === 1 ? 'One draft waits' : `${rows.length} drafts wait`} for other reviewers. Escalated reviews appear here once they open to you.</p><button className="link" onClick={() => setView('all')}>Show all waiting drafts</button></Empty></div>}
+    {shown?.map(run => { const [heading, body] = splitDraft(run.progress?.draft); return <Review key={run.run_id} session={session} run={run} onDone={(final, message) => decided(run, final, message)}
       eyebrow={workflowName(run.workflow)} title={heading || 'Review the draft'} draft={body}
       meta={<p className="muted review-meta"><DotList items={[`Project ${run.project}`, `Started ${date(run.created_at)}`, `${money(run.budget.cost_usd)} so far`, <a className="tap" href={`#run/${run.run_id}`}>Open run</a>]}/></p>}/>; })}
   </>;
@@ -336,7 +359,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
     </PageHeader>
     <ErrorMessage message={result.error || actionError} retry={() => setRevision(v => v + 1)}/><p role="status" className="status">{notice || copied}</p>
     {!run && !result.error && <Loading text="Loading run…"/>}
-    {run && <><div className="run-meta"><Badge value={status(run)}/><span>Project {run.project}</span><span>Started {date(run.created_at)}</span>
+    {run && <><div className="run-meta"><Badge value={status(run)}/><EscalationMark run={run}/><span>Project {run.project}</span><span>Started {date(run.created_at)}</span>
         {run.template && <span>Template {run.template.id} · v{run.template.version}</span>}
         {run.trigger && <a href={`#runs?${new URLSearchParams({ project: run.project, workflow: run.workflow, trigger: run.trigger.name })}`}>{run.trigger.kind === 'cron' ? 'Schedule' : 'Webhook'}: {run.trigger.name}</a>}
         <span className="run-id">Run <code title={run.run_id}>{shortId(run.run_id)}</code><button type="button" className="copy-id" aria-label="Copy run ID" onClick={async () => {
@@ -353,7 +376,7 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
       <section><h2>Step timeline</h2>
         {!run.timeline?.length ? <Empty title="Waiting for the first step"><p>Refresh in a moment. If the run stays queued, check its team worker and Temporal task queue.</p></Empty> :
           <ol className="timeline">{timelineGroups(run.timeline).map((group, i) => <li key={group[0].receipt_id}>
-            <span className="step-number">{String(i + 1).padStart(2, '0')}</span>{group[0].action === 'notification' ? <Notifications steps={group}/> : group[0].action === 'approval' ? <ApprovalStep step={group[0]}/> : ['cancel', 'retry', 'workflow_secret_accessed'].includes(group[0].action) ? <OperationStep step={group[0]}/> : <StepCard step={group[0]}/>}</li>)}</ol>}
+            <span className="step-number">{String(i + 1).padStart(2, '0')}</span>{group[0].action === 'notification' ? <Notifications steps={group}/> : group[0].action === 'approval' ? <ApprovalStep step={group[0]}/> : ['cancel', 'retry', 'workflow_secret_accessed', 'approval_escalated'].includes(group[0].action) ? <OperationStep step={group[0]}/> : <StepCard step={group[0]}/>}</li>)}</ol>}
         <p className="muted">Each step links to a gateway receipt. To prove nothing was changed, <a href="https://github.com/RamazanKara/agentworkflows/blob/main/runbooks/audit-chain.md">verify an audit export</a>.</p>
       </section>
       {canBuild(session) && ['failed', 'canceled', 'terminated', 'timed_out'].includes(run.status) && <div className="run-actions">
@@ -361,6 +384,14 @@ export function RunDetail({ session, runId }: { session: Session; runId: string 
       </div>}
     </>}
   </>;
+}
+
+// Waiting runs show when their review escalates, and an Escalated mark once it has.
+function EscalationMark({ run }: { run: Run }) {
+  const escalation = run.approval_escalation;
+  if (!escalation || status(run) !== 'awaiting_approval') return null;
+  if (escalation.escalated) return <Badge value="escalated" text="Escalated"/>;
+  return escalation.escalates_at ? <small className="escalates">Escalates {date(escalation.escalates_at)}</small> : null;
 }
 
 // A draft's first line ("# Briefing: …") becomes the card title and leaves the preview; a long one stays in it.
@@ -375,9 +406,13 @@ function splitDraft(text?: string): [string, string | undefined] {
 const who = (principal: Record<string, unknown> | undefined) => String(principal?.name || principal?.sub || principal?.key_id || 'a reviewer');
 
 function OperationStep({ step }: { step: Step }) {
-  const title = step.action === 'cancel' ? 'Cancellation requested' : step.action === 'retry' ? 'Retry started' : 'Secret accessed';
+  const title = step.action === 'cancel' ? 'Cancellation requested' : step.action === 'retry' ? 'Retry started'
+    : step.action === 'approval_escalated' ? 'Review escalated' : 'Secret accessed';
+  const receipt = step.receipt as Record<string, unknown>;
   return <article className="panel step"><h3>{title}</h3><p className="muted">{date(step.timestamp)}</p>
-    <p>Recorded for <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong>.</p>
+    {step.action === 'approval_escalated'
+      ? <p>No decision after {duration(Number(receipt.after_seconds))}, so {escalationReach({ approver_role: receipt.approver_role === 'approver' ? 'approver' : null, reviewers: Array.isArray(receipt.reviewers) ? receipt.reviewers.map(String) : [] }, true)} Recorded by the team’s escalation policy.</p>
+      : <p>Recorded for <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong>.</p>}
     {typeof step.receipt.retry_run_id === 'string' && <a href={`#run/${encodeURIComponent(step.receipt.retry_run_id)}`}>Open retry run</a>}
     {step.action === 'workflow_secret_accessed' && <p>{String(step.receipt.secret_name)} · Version {String(step.receipt.secret_version)}</p>}
     <Receipt step={step}/>
@@ -388,7 +423,7 @@ function ApprovalStep({ step }: { step: Step }) {
   const approved = step.receipt.approved === true;
   return <article className="panel step"><div className="section-heading"><h3>Approval</h3><Badge value={approved ? 'succeeded' : 'failed'} text={approved ? 'Approved' : 'Rejected'}/></div>
     <p className="muted">{date(step.timestamp)}</p>
-    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong></p>
+    <p>{approved ? 'Approved' : 'Rejected'} by <strong>{who(step.receipt.principal as Record<string, unknown>)}</strong>{step.receipt.eligibility === 'escalation' && ', who could review because the review escalated'}</p>
     <Receipt step={step}/>
   </article>;
 }
@@ -461,7 +496,7 @@ function Content({ text, empty }: { text: string | null; empty: string }) {
 }
 
 const channelName: Record<string, string> = { slack: 'Slack', webhook: 'Webhook', email: 'Email' };
-const notificationEvent: Record<string, string> = { awaiting_approval: 'Approval requested', failed: 'Run failed', budget_threshold: 'Budget threshold reached' };
+const notificationEvent: Record<string, string> = { awaiting_approval: 'Approval requested', failed: 'Run failed', budget_threshold: 'Budget threshold reached', approval_escalated: 'Review escalated' };
 
 function Notifications({ steps }: { steps: Step[] }) {
   // Each delivery writes an "attempted" receipt, then its outcome; show the latest per channel and event.

@@ -1025,6 +1025,13 @@ run they also show the caller's `approval_access`: `eligible`, `via` (`role` or 
 `eligible_at` when escalation will admit the caller later. A vote before that time returns `403`
 with the time it opens.
 
+In the console, **Approvals** opens on **Ready for you**: the waiting drafts you may decide now,
+including escalated ones. **All waiting** lists every draft; one that escalation will open to you
+says when. Waiting runs show when their review escalates, and an **Escalated** mark once it has;
+run timelines and the audit log name escalation receipts and votes made through escalation. Team
+admins set, edit and remove escalation per workflow in **Team settings → Approval escalation**,
+which flags an escalation the approval expiry would overtake.
+
 API: `GET /v1/team/approval-escalations`; `PUT` and `DELETE
 /v1/team/workflows/{name}/approval-escalation` with the current `If-Match` revision (unrestricted
 team admin). PUT takes `after_seconds`, optional `approver_role` (`approver`), `reviewers` (up to
