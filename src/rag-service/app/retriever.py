@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import heapq
 import logging
 import math
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,7 +18,14 @@ from uuid import NAMESPACE_URL, uuid5
 
 import httpx
 
-from app.embeddings import EmbeddingProvider, HashEmbeddingProvider, tokenize
+from app.embeddings import (
+    TOKEN_PATTERN,
+    EmbeddingProvider,
+    HashEmbeddingProvider,
+    content_terms,
+    stem,
+    tokenize,
+)
 from app.reranker import NoopReranker, RerankerProvider
 
 LOGGER = logging.getLogger("agentworkflows.rag")
@@ -174,22 +183,149 @@ def load_documents(document_dir: Path, owner: str = "") -> list[KnowledgeDocumen
     return documents
 
 
-def _excerpt(content: str, terms: set[str], max_chars: int = 700) -> str:
+def _compact(content: str) -> tuple[str, str]:
+    """Return the content with whitespace runs collapsed, and its lowercase twin.
+
+    Positions found in the lowercase text index the compact text, so the two must have
+    the same length. ``str.lower`` keeps it for nearly every character; the few that grow
+    (``İ`` lowers to two code points) are left as they are.
+    """
     compact = " ".join(content.split())
     lowered = compact.lower()
-    first_match = min(
-        (lowered.find(term) for term in terms if lowered.find(term) >= 0),
-        default=0,
-    )
-    start = max(first_match - 160, 0)
+    if len(lowered) != len(compact):
+        lowered = "".join(char if len(char.lower()) != 1 else char.lower() for char in compact)
+    return compact, lowered
+
+
+def _window(compact: str, match: int, max_chars: int) -> str:
+    """Return up to ``max_chars`` of text starting shortly before position ``match``.
+
+    The lead-in is at most a quarter of the window: a fixed 160 characters used to push
+    the match itself out of any window shorter than that.
+    """
+    start = max(match - min(160, max_chars // 4), 0)
     end = min(start + max_chars, len(compact))
     prefix = "..." if start > 0 else ""
     suffix = "..." if end < len(compact) else ""
     return f"{prefix}{compact[start:end]}{suffix}"
 
 
+def _excerpt(content: str, terms: Iterable[str], max_chars: int = 700) -> str:
+    """Return an excerpt anchored on the earliest occurrence of any of the terms."""
+    compact, lowered = _compact(content)
+    positions = [position for position in (lowered.find(term) for term in terms) if position >= 0]
+    return _window(compact, min(positions, default=0), max_chars)
+
+
+# BM25 parameters: the usual Lucene/Elasticsearch defaults.
+BM25_K1 = 1.2
+BM25_B = 0.75
+# A query term in a document's title counts as this many extra IDF-weighted matches.
+TITLE_WEIGHT = 1.0
+# Bonus, in IDF-weighted matches per query term, for a document containing the query verbatim.
+PHRASE_WEIGHT = 0.5
+
+
+def _idf(document_count: int, document_frequency: int) -> float:
+    """Return the BM25 inverse document frequency (the always-positive Lucene variant)."""
+    return math.log(1.0 + (document_count - document_frequency + 0.5) / (document_frequency + 0.5))
+
+
+class _LexicalIndex:
+    """An inverted BM25 index over one tenant's documents.
+
+    Built once, when the retriever is created: a query then touches only the postings of
+    its own terms instead of rescanning and lowercasing every document, and ranking uses
+    term rarity and document length, so long documents full of common words no longer win
+    every query. Terms are indexed by their plural-folded stem; a document's title field
+    is its title plus its file name, which in a curated corpus usually names the topic.
+    """
+
+    def __init__(self, documents: list[KnowledgeDocument]) -> None:
+        self.documents = documents
+        self.postings: dict[str, list[tuple[int, int]]] = {}
+        self.title_postings: dict[str, list[int]] = {}
+        lengths: list[int] = []
+        stem_of: dict[str, str] = {}
+        for index, document in enumerate(documents):
+            lengths.append(sum(document.tokens.values()))
+            stems: dict[str, int] = {}
+            for term, count in document.tokens.items():
+                key = stem_of.get(term)
+                if key is None:
+                    key = stem_of[term] = stem(term)
+                stems[key] = stems.get(key, 0) + count
+            for key, count in stems.items():
+                self.postings.setdefault(key, []).append((index, count))
+            title_field = f"{document.title} {Path(document.source).stem}"
+            for key in {stem(term) for term in tokenize(title_field)}:
+                self.title_postings.setdefault(key, []).append(index)
+        average = sum(lengths) / len(lengths) if lengths else 0.0
+        self.length_norms = [
+            BM25_K1 * (1.0 - BM25_B + BM25_B * length / average) if average else BM25_K1 for length in lengths
+        ]
+        count = len(documents)
+        self.idf = {term: _idf(count, len(postings)) for term, postings in self.postings.items()}
+        for term, titles in self.title_postings.items():
+            self.idf.setdefault(term, _idf(count, len(titles)))
+        self.texts = [_compact(document.content) for document in documents]
+
+    def score(self, query: str, terms: list[str]) -> dict[int, float]:
+        """Return BM25 (plus title and phrase bonus) scores of the documents matching any term.
+
+        Stopwords are left out of the query unless it has nothing else.
+        """
+        scores: dict[int, float] = {}
+        unique_terms = list(dict.fromkeys(stem(term) for term in content_terms(terms)))
+        for term in unique_terms:
+            idf = self.idf.get(term)
+            if idf is None:
+                continue
+            for index, count in self.postings.get(term, ()):
+                saturation = count * (BM25_K1 + 1.0) / (count + self.length_norms[index])
+                scores[index] = scores.get(index, 0.0) + idf * saturation
+            for index in self.title_postings.get(term, ()):
+                scores[index] = scores.get(index, 0.0) + TITLE_WEIGHT * idf
+        words = TOKEN_PATTERN.findall(query.lower())
+        if len(words) > 1:
+            self._add_phrase_bonus(" ".join(words), unique_terms, scores)
+        return scores
+
+    def _add_phrase_bonus(self, phrase: str, terms: list[str], scores: dict[int, float]) -> None:
+        """Reward documents that contain the multi-word query verbatim.
+
+        Only documents holding every query term can contain the phrase, so the substring
+        search runs over that intersection, rarest term first, not the whole corpus.
+        """
+        postings = sorted((self.postings.get(term, []) for term in terms), key=len)
+        if not postings or not postings[0]:
+            return
+        candidates = {index for index, _ in postings[0]}
+        for posting in postings[1:]:
+            candidates &= {index for index, _ in posting}
+            if not candidates:
+                return
+        bonus = PHRASE_WEIGHT * sum(self.idf[term] for term in terms)
+        for index in candidates:
+            if phrase in self.texts[index][1]:
+                scores[index] += bonus
+
+    def excerpt(self, index: int, anchors: list[str], max_chars: int) -> str:
+        """Return an excerpt of a document anchored on the first of ``anchors`` it contains.
+
+        Anchors come in order of preference (rarest query term first), so the window lands
+        on the most telling term rather than on wherever "the" first appears.
+        """
+        compact, lowered = self.texts[index]
+        for term in anchors:
+            position = lowered.find(term)
+            if position >= 0:
+                return _window(compact, position, max_chars)
+        return _window(compact, 0, max_chars)
+
+
 class LexicalRetriever:
-    """In-memory retriever ranking documents by token overlap with the query."""
+    """In-memory BM25 retriever over the local knowledge corpus."""
 
     def __init__(
         self,
@@ -202,6 +338,17 @@ class LexicalRetriever:
         # Accepted for parity with the Qdrant retriever; the lexical corpus only carries the
         # ``owner`` attribute, so a non-``owner`` field simply matches no document (fail closed).
         self.tenant_field = tenant_field
+        # Under isolation every tenant gets its own index, so corpus statistics (term
+        # rarity, average length) and hence the scores a caller sees never depend on what
+        # another tenant's documents contain.
+        self._indexes: dict[str | None, _LexicalIndex] = {}
+        if not tenant_isolation_enabled:
+            self._indexes[None] = _LexicalIndex(documents)
+        elif tenant_field == "owner":
+            by_owner: dict[str, list[KnowledgeDocument]] = {}
+            for document in documents:
+                by_owner.setdefault(document.owner, []).append(document)
+            self._indexes.update((owner, _LexicalIndex(owned)) for owner, owned in by_owner.items())
 
     @classmethod
     def from_directory(
@@ -222,18 +369,18 @@ class LexicalRetriever:
             tenant_field=tenant_field,
         )
 
-    def _document_owner(self, document: KnowledgeDocument) -> str:
-        """Return the tenant-owner attribute the isolation filter matches against."""
-        if self.tenant_field == "owner":
-            return document.owner
-        # No other per-document tenant attribute exists on the lexical corpus, so any other
-        # configured field can never match: isolation then excludes every document (fail closed).
-        return ""
+    def _index_for(self, tenant: str | None) -> _LexicalIndex | None:
+        """Return the index a caller may search, or None when isolation leaves it nothing."""
+        if not self.tenant_isolation_enabled:
+            return self._indexes[None]
+        if not tenant:
+            return None
+        return self._indexes.get(tenant)
 
     async def query(
         self, query: str, top_k: int, max_context_chars: int, tenant: str | None = None
     ) -> list[RetrievalResult]:
-        """Return the top-k documents scored by term, phrase, and title matches.
+        """Return the top-k documents ranked by BM25 with title and phrase bonuses.
 
         When ``tenant_isolation_enabled``, only documents whose owner equals ``tenant`` are
         eligible, mirroring the Qdrant path's ``owner`` payload filter. Isolation fails closed:
@@ -241,35 +388,24 @@ class LexicalRetriever:
         nothing rather than the whole corpus. With isolation off the lexical backend serves its
         single local corpus to every caller (local-lab default).
         """
-        if self.tenant_isolation_enabled and not tenant:
+        index = self._index_for(tenant)
+        if index is None:
             return []
         terms = tokenize(query)
         if not terms:
             return []
-        unique_terms = set(terms)
-        query_lower = query.lower()
-        ranked: list[RetrievalResult] = []
-        for document in self.documents:
-            if self.tenant_isolation_enabled and self._document_owner(document) != tenant:
-                continue
-            score = 0.0
-            for term in unique_terms:
-                score += document.tokens.get(term, 0)
-            content_lower = document.content.lower()
-            if query_lower and query_lower in content_lower:
-                score += 5.0
-            if any(term in document.title.lower() for term in unique_terms):
-                score += 2.0
-            if score <= 0:
-                continue
-            ranked.append(
-                RetrievalResult(
-                    document=document,
-                    score=score,
-                    excerpt=_excerpt(document.content, unique_terms, max_context_chars),
-                )
+        scores = index.score(query, terms)
+        top = heapq.nsmallest(top_k, scores.items(), key=lambda item: (-item[1], index.documents[item[0]].id))
+        # Anchor each excerpt on the rarest query term the document holds.
+        anchors = sorted(set(content_terms(terms)), key=lambda term: -index.idf.get(stem(term), 0.0))
+        return [
+            RetrievalResult(
+                document=index.documents[position],
+                score=score,
+                excerpt=index.excerpt(position, anchors, max_context_chars),
             )
-        return sorted(ranked, key=lambda result: (-result.score, result.document.id))[:top_k]
+            for position, score in top
+        ]
 
 
 class QdrantRetriever:

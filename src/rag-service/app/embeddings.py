@@ -10,7 +10,54 @@ from typing import Protocol
 
 import httpx
 
-TOKEN_PATTERN = re.compile(r"[a-z0-9][a-z0-9_.:/-]*")
+# Hash embeddings hash ASCII word tokens. This pattern is part of the hash-text-v1 vector
+# contract: changing it would move every stored vector without a model-name change, so it
+# stays frozen even though the retrieval tokenizer below has moved on.
+HASH_TOKEN_PATTERN = re.compile(r"[a-z0-9][a-z0-9_.:/-]*")
+# Retrieval terms: words of any script. ".", ":", "/" and "-" may join a compound token
+# (nvidia.com/gpu, x-request-id, v0.9.1) but never end one, so "gateway." at the end of a
+# sentence is the term "gateway".
+TOKEN_PATTERN = re.compile(r"[^\W_](?:[\w.:/-]*[^\W_])?")
+_COMPOUND_SEPARATORS = re.compile(r"[._:/-]+")
+# Scripts written without spaces between words. A run of them is one regex token, so it
+# also contributes overlapping character bigrams, the usual lexical unit for CJK search.
+_UNSPACED_RUN = re.compile(r"[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]{2,}")
+
+
+# English function and question words. In technical documentation "how", "do" and "i" are
+# rare enough to look significant, so without this list a FAQ full of "How do I ..." wins
+# every question. Only query-side weighting uses it; nothing is dropped from the index.
+_STOPWORD_TEXT = (
+    "a about all an and any are as at be been but by can could did do does for from had has have how i "
+    "if in into is it its me much my no not of on or our should so some such than that the their them "
+    "then there these they this to was we were what when where which who whom whose why will with would "
+    "you your"
+)
+STOPWORDS = frozenset(_STOPWORD_TEXT.split())
+
+
+def content_terms(terms: list[str]) -> list[str]:
+    """Return the terms without stopwords, or all of them when nothing else would remain."""
+    kept = [term for term in terms if term not in STOPWORDS]
+    return kept or terms
+
+
+def stem(term: str) -> str:
+    """Conflate English plurals ("models" -> "model", "policies" -> "policy").
+
+    The rules of Lucene's EnglishMinimalStemmer, applied to ASCII words only. Being
+    minimal, they rarely conflate words that mean different things.
+    """
+    if len(term) < 3 or term[-1] != "s" or not term.isascii() or not term.isalpha():
+        return term
+    if term[-2] in "us":
+        return term
+    if term[-2] == "e":
+        if len(term) > 3 and term[-3] == "i" and term[-4] not in "ae":
+            return term[:-3] + "y"
+        if term[-3] in "iaoe":
+            return term
+    return term[:-1]
 
 
 class EmbeddingProvider(Protocol):
@@ -29,13 +76,27 @@ class EmbeddingProvider(Protocol):
 
 
 def tokenize(value: str) -> list[str]:
-    """Lowercase the text and return its alphanumeric token sequence."""
-    return TOKEN_PATTERN.findall(value.lower())
+    """Lowercase the text and return its retrieval terms, in order.
+
+    A compound token is kept whole and also contributes its parts, so a query for "gpu"
+    matches ``nvidia.com/gpu``; a run of CJK characters also contributes its bigrams.
+    """
+    lowered = value.lower()
+    tokens = TOKEN_PATTERN.findall(lowered)
+    terms = list(tokens)
+    for token in [token for token in tokens if not token.isalnum()]:
+        terms.extend(part for part in _COMPOUND_SEPARATORS.split(token) if part)
+    if not lowered.isascii() and _UNSPACED_RUN.search(lowered):
+        for token in [token for token in tokens if not token.isascii()]:
+            for run in _UNSPACED_RUN.findall(token):
+                if run != token or len(run) > 2:
+                    terms.extend(run[index : index + 2] for index in range(len(run) - 1))
+    return terms
 
 
 def hashed_text_embedding(value: str, dimensions: int) -> list[float]:
     """Return a deterministic, L2-normalized hashed bag-of-words embedding."""
-    terms = tokenize(value)
+    terms = HASH_TOKEN_PATTERN.findall(value.lower())
     if not terms:
         return [0.0] * dimensions
     vector = [0.0] * dimensions
