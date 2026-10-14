@@ -660,13 +660,14 @@ class QdrantRetriever:
 
         Lexical overlap (the fraction of query terms present in the document) complements
         the dense signal, which materially improves ranking under the default hashed-vector
-        embedding. ``lexical_weight`` of 0 reproduces pure dense ranking.
+        embedding. ``lexical_weight`` of 0 reproduces pure dense ranking. ``query_terms``
+        should exclude stopwords: "what", "is" and "the" are in every English chunk and
+        used to flatten the overlap of every candidate toward the same value.
         """
         dense = max(0.0, dense_score)
         if not query_terms:
             return dense
-        # Substring match (not exact token-set intersection): the tokenizer keeps trailing
-        # punctuation, so "gateway." would otherwise miss the query term "gateway".
+        # Substring match, so inflected forms still count ("model" in "models").
         content_lower = content.lower()
         hits = sum(1 for term in query_terms if term in content_lower)
         overlap = hits / len(query_terms)
@@ -686,9 +687,10 @@ class QdrantRetriever:
         """
         if self.tenant_isolation_enabled and not tenant:
             return []
-        terms = set(tokenize(query))
-        if not terms:
+        all_terms = tokenize(query)
+        if not all_terms:
             return []
+        terms = set(content_terms(all_terms))
         # Bootstrap copies the local corpus into the collection; it is not a precondition
         # for searching it. A store that is really down still fails the search below (503),
         # while a store that only rejected the sync keeps serving what it holds.

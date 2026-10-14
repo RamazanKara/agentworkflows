@@ -157,6 +157,26 @@ def test_a_verbatim_phrase_outranks_scattered_terms():
     assert _ids(retriever, "audit chain head hash")[0] == "phrase"
 
 
+def test_hybrid_overlap_ignores_stopwords():
+    import httpx
+    from app.embeddings import HashEmbeddingProvider
+    from app.retriever import QdrantRetriever
+
+    chatty = {"document_id": "chatty", "content": "What is the plan? It is the best."}
+    kyverno = {"document_id": "kyverno", "content": "Kyverno enforces admission policy."}
+    points = [{"id": "a", "score": 0.8, "payload": chatty}, {"id": "b", "score": 0.8, "payload": kyverno}]
+    retriever = QdrantRetriever([], "http://q:6333", "kb", "v1", 1.0, 8, False, HashEmbeddingProvider(8))
+    retriever._client = lambda: httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"result": {"points": points}}))
+    )
+
+    results = asyncio.run(retriever.query("What is the Kyverno policy?", 2, 200))
+
+    # Counting "what", "is" and "the" gave the chatty chunk 3/5 overlap against 2/5.
+    assert [result.document.id for result in results] == ["kyverno", "chatty"]
+    assert results[1].score == pytest.approx(0.4)
+
+
 def test_hash_embeddings_are_unchanged_by_the_retrieval_tokenizer():
     # hash-text-v1 vectors are stored in Qdrant; the retrieval tokenizer moving on must
     # not move them. Pinned from the implementation before the tokenizer changed.
