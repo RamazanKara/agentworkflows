@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import time
@@ -31,6 +32,7 @@ from app.settings import Settings, message_prompt_chars
 
 AUDIT_GENESIS = hashlib.sha256(b"genesis").hexdigest()
 AUDIT_LOGGER = logging.getLogger("agentworkflows.audit")
+_HEAD_SAVE_LOCK = threading.Lock()
 
 
 def chain_audit_event(request: Request, event: dict[str, Any]) -> None:
@@ -268,29 +270,44 @@ def write_audit_log(
     emit_audit_record(event)
 
 
-def persist_audit_head(app: FastAPI) -> None:
-    """Write the current chain head to the durable store, best effort.
+def audit_head_snapshot(app: FastAPI) -> ChainHead:
+    """Return the current chain head.
+
+    Call it on the event loop, where receipts are chained, so the head hash and the record
+    count describe the same record. Read from a worker thread they could straddle a
+    receipt and pair record N's hash with count N+1, a head the verifier then reports as a
+    broken link between this chain and the next.
+    """
+    state = app.state
+    return ChainHead(chain_id=state.audit_chain_id, head=state.audit_prev_hash, count=state.audit_chain_count)
+
+
+def persist_audit_head(app: FastAPI, head: ChainHead | None = None) -> None:
+    """Write a chain head snapshot to the durable store, best effort.
+
+    Safe on a worker thread when ``head`` was snapshotted on the event loop. Saves are
+    serialized and never move the stored head of this chain backwards, so a slow periodic
+    save that finishes after the shutdown save cannot overwrite it with an older head.
 
     A head that cannot be persisted costs continuity for the *next* process, not this
     one, so a failure is counted and logged rather than raised: refusing to serve because
     a head store is unreachable would trade an evidentiary nicety for an outage.
     """
     state = app.state
-    if state.audit_chain_count == getattr(state, "audit_head_persisted_count", None):
-        return
-    try:
-        state.chain_store.save(
-            ChainHead(
-                chain_id=state.audit_chain_id,
-                head=state.audit_prev_hash,
-                count=state.audit_chain_count,
-            )
-        )
-    except Exception:
-        AUDIT_CHAIN_PERSIST.labels("error").inc()
-        logging.getLogger("uvicorn.error").error("audit chain head could not be persisted")
-        return
-    state.audit_head_persisted_count = state.audit_chain_count
+    snapshot = head or audit_head_snapshot(app)
+    with _HEAD_SAVE_LOCK:
+        persisted = getattr(state, "audit_head_persisted", None)
+        if persisted is not None and persisted[0] == snapshot.chain_id and snapshot.count <= persisted[1]:
+            return
+        try:
+            state.chain_store.save(snapshot)
+        except Exception:
+            AUDIT_CHAIN_PERSIST.labels("error").inc()
+            logging.getLogger("uvicorn.error").error("audit chain head could not be persisted")
+            return
+        # The snapshot's count, not the live one: a receipt chained while this save was in
+        # flight must still be persisted by the next tick.
+        state.audit_head_persisted = (snapshot.chain_id, snapshot.count)
     AUDIT_CHAIN_PERSIST.labels("ok").inc()
 
 

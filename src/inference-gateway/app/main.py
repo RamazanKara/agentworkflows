@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.audit import (
     AUDIT_GENESIS,
+    audit_head_snapshot,
     build_chain_store,
     open_audit_chain,
     persist_audit_head,
@@ -138,7 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # appears in the predecessor rather than requiring it to be the last record.
             while True:
                 await asyncio.sleep(resolved.audit_chain_persist_interval_seconds)
-                await asyncio.to_thread(persist_audit_head, app)
+                await asyncio.to_thread(persist_audit_head, app, audit_head_snapshot(app))
 
         task = asyncio.ensure_future(_persist_loop())
         app.state.audit_persist_task = task
@@ -150,7 +151,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if task is not None:
             task.cancel()
         await flush_audit_view()
-        await asyncio.to_thread(persist_audit_head, app)
+        await asyncio.to_thread(persist_audit_head, app, audit_head_snapshot(app))
 
     app.router.add_event_handler("startup", _audit_chain_startup)
     app.router.add_event_handler("shutdown", _audit_chain_shutdown)

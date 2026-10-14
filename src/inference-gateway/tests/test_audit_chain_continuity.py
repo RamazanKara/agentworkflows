@@ -347,3 +347,59 @@ def test_the_head_is_persisted_on_shutdown(tmp_path, caplog):
     stored = json.loads(path.read_text(encoding="utf-8"))
     assert stored["count"] == len(lines)
     assert stored["head"] == json.loads(lines[-1])["record_hash"]
+
+
+def test_a_receipt_chained_during_a_head_save_is_persisted_by_the_next_save():
+    # The periodic save ran on a worker thread and read the hash and the count as two
+    # attributes while receipts kept chaining, so it could store record N with count N+1
+    # and mark the live count as saved, skipping the in-flight receipt.
+    from types import SimpleNamespace
+
+    from app.audit import audit_head_snapshot, chain_audit_event, persist_audit_head
+
+    app = create_app(_settings())
+    open_audit_chain(app)
+    request = SimpleNamespace(app=app, state=SimpleNamespace(), url=SimpleNamespace(path="/v1/test"))
+    records = []
+
+    def chain_receipt():
+        event = {"event": "agent_action", "n": len(records)}
+        chain_audit_event(request, event)
+        records.append(event)
+
+    saved = []
+
+    class SlowStore:
+        def load(self):
+            return None
+
+        def save(self, head):
+            saved.append(head)
+            if len(saved) == 1:
+                chain_receipt()  # chained on the event loop while this save is in flight
+
+    app.state.chain_store = SlowStore()
+    chain_receipt()
+    persist_audit_head(app, audit_head_snapshot(app))
+    persist_audit_head(app, audit_head_snapshot(app))
+
+    assert [head.count for head in saved] == [2, 3]
+    assert saved[0].head == records[0]["record_hash"]
+    assert saved[1].head == records[1]["record_hash"]
+
+
+def test_an_older_head_snapshot_never_overwrites_a_newer_stored_head():
+    from app.audit import audit_head_snapshot, persist_audit_head
+
+    app = create_app(_settings())
+    open_audit_chain(app)
+    stale = audit_head_snapshot(app)
+    newer = ChainHead(chain_id=stale.chain_id, head="f" * 64, count=stale.count + 1)
+    saved = []
+    app.state.chain_store.save = saved.append
+    app.state.audit_head_persisted = None
+
+    persist_audit_head(app, newer)
+    persist_audit_head(app, stale)  # a slow periodic save finishing after the shutdown save
+
+    assert saved == [newer]
