@@ -7,6 +7,7 @@ export {
 } from './errors';
 export type { AgentContext, AnthropicClientOptions, OpenAIClientOptions } from './adapters';
 export type { AgentHandler, GatewayActivitiesOptions } from './activities';
+export type { WorkerOptions } from './worker';
 export type {
   ApprovalProgress, AuditEntry, AuditFilters, AuditPage, AuditPosition, AuditRange, AuditVerification, ChatCompletion,
   CreatedKey, KeyList, KeyOptions, KeyUpdate, ManagedKey, Receipt, Role, RunBudget, RunFilters, RunPage, StartedRun,
