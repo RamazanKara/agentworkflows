@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 
 from app.audit import AUDIT_LOGGER
-from app.governance import governed, record_stream_end, reserve_budget, resolve_chat_routes
+from app.governance import governed, interrupted_status, record_stream_end, reserve_budget, resolve_chat_routes
 from app.guardrails import _apply_output_guardrail, _apply_prompt_secret_mode
 from app.messages import (
     AnthropicStreamTranslator,
@@ -134,6 +134,10 @@ def register_messages_routes(app: FastAPI, settings: Settings) -> None:
                             request_id=request.state.request_id,
                             sandbox_id=request.state.sandbox_id,
                         )
+                    except BaseException as exc:
+                        stream_status_code, stream_error = interrupted_status(exc)
+                        stream_status = str(stream_status_code)
+                        raise
                     finally:
                         # True end of stream. The translator kept the decoded assistant text,
                         # so the guardrail scan sees real text rather than its JSON escaping.

@@ -44,25 +44,36 @@ def get_storage(request: Request) -> Storage:
     return request.app.state.storage
 
 
-async def storage_call(request: Request, method: str, *args: Any) -> Any:
-    try:
-        return await asyncio.to_thread(getattr(get_storage(request), method), *args)
-    except (RedisError, PostgresError, OSError) as exc:
-        if get_storage(request).backend == "redis":
-            raise HTTPException(
-                503,
-                detail={
-                    "reason": "workflow_store_unavailable",
-                    "message": "Workflow budget Redis is unavailable; retry later.",
-                },
-            ) from exc
-        raise HTTPException(
+STORAGE_ERRORS = (RedisError, PostgresError, OSError)
+
+
+def storage_unavailable(storage: Any) -> HTTPException:
+    """The retryable 503 for a storage outage, never the driver error (it can carry DSNs)."""
+    if storage.backend == "redis":
+        return HTTPException(
             503,
             detail={
-                "reason": "storage_unavailable",
-                "message": "Gateway storage is unavailable. Retry after recovery.",
+                "reason": "workflow_store_unavailable",
+                "message": "Workflow budget Redis is unavailable; retry later.",
             },
-        ) from exc
+            headers={"Retry-After": "5"},
+        )
+    return HTTPException(
+        503,
+        detail={
+            "reason": "storage_unavailable",
+            "message": "Gateway storage is unavailable. Retry after recovery.",
+        },
+        headers={"Retry-After": "5"},
+    )
+
+
+async def storage_call(request: Request, method: str, *args: Any) -> Any:
+    storage = get_storage(request)
+    try:
+        return await asyncio.to_thread(getattr(storage, method), *args)
+    except STORAGE_ERRORS as exc:
+        raise storage_unavailable(storage) from exc
 
 
 class RedisStorage:

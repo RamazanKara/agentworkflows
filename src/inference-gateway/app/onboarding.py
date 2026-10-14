@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from app.policy import CLOUD_BACKENDS
 from app.settings import AdmissionPolicyError
+from app.storage import STORAGE_ERRORS, storage_unavailable
 from app.team_settings import effective_team_settings, require_settings_admin, save_team_document
 from app.teams import require_role
 from app.workflow_secrets import cipher, metadata
@@ -47,7 +48,12 @@ class Onboarding(BaseModel):
 
 
 async def saved_provider_key(storage: Any, settings: Any, team_id: str, provider: str) -> str | None:
-    document = await asyncio.to_thread(storage.get_settings, team_id)
+    try:
+        document = await asyncio.to_thread(storage.get_settings, team_id)
+    except STORAGE_ERRORS as exc:
+        # Raised from inside the runtime client, where no request-level mapping applies:
+        # without this a Redis or Postgres outage surfaced as an unhandled 500.
+        raise storage_unavailable(storage) from exc
     record = (document or {}).get("provider_keys", {}).get(provider)
     if not record:
         return None

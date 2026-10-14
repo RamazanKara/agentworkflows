@@ -84,3 +84,31 @@ def test_provider_provisioning_fails_closed_and_validates_input(team_gateway, mo
     app.state.settings = replace(app.state.settings, workflow_secrets_key="")
     assert client.put(path, headers=auth("admin"), json={"value": "secret", "expected_version": 0}).status_code == 503
     assert app.state.storage.get_settings("team") is None
+
+
+def test_saved_provider_key_store_outage_is_a_retryable_503(team_gateway, monkeypatch):
+    # The lookup runs inside the runtime client, below the request-level storage mapping,
+    # so a Redis outage there used to escape as an unhandled 500.
+    from fastapi import HTTPException
+    from redis.exceptions import ConnectionError
+
+    _client, app = team_gateway
+    prepare(app, monkeypatch)
+
+    def offline(team):
+        raise ConnectionError("redis://user:private-password@internal")
+
+    monkeypatch.setattr(app.state.storage, "get_settings", offline)
+    runtime = RuntimeClient(app.state.settings)
+    runtime.storage = app.state.storage
+    runtime.sandbox_policies = app.state.sandbox_policy_set
+    runtime.policy = app.state.model_routing_policy
+    with pytest.raises(HTTPException) as raised:
+        asyncio.run(
+            runtime._request_parts(
+                {"model": "primary", "messages": []}, "openai", "chat/completions", {"X-Sandbox-ID": "team"}
+            )
+        )
+    assert raised.value.status_code == 503
+    assert raised.value.detail["reason"] == "workflow_store_unavailable"
+    assert "private-password" not in str(raised.value.detail)

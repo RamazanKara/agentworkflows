@@ -28,6 +28,7 @@ from app.governance import (
     admission_status,
     effective_settings,
     governed,
+    interrupted_status,
     record_stream_end,
     request_classification,
     reserve_budget,
@@ -224,6 +225,10 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                         stream_error = "runtime stream failed"
                         AUDIT_LOGGER.debug("runtime stream error: %s", type(exc).__name__)
                         yield _terminal_stream_error_event(stream_backend, request)
+                    except BaseException as exc:
+                        stream_status_code, stream_error = interrupted_status(exc)
+                        stream_status = str(stream_status_code)
+                        raise
                     finally:
                         # True end of stream: release the runtime connection and record
                         # metrics, token usage, and audit. Shielded because a client

@@ -14,6 +14,7 @@ from tests.gateway_support import (
     FakeRuntimeClient,
     _tool_settings,
 )
+from tests.test_teams import asgi_post
 
 
 class _BackendAwareFake:
@@ -741,3 +742,31 @@ def test_chat_completion_rejects_invalid_sandbox_id():
 
     assert response.status_code == 400
     assert "sandbox id" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("path", ["/v1/chat/completions", "/v1/messages"])
+def test_stream_that_loses_its_client_is_receipted_as_client_closed(caplog, path):
+    # A stream cut off by the client used to be receipted as a 200, as if it had finished.
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
+    app = create_app(_tool_settings(allow_streaming=True))
+    app.state.runtime_client = FakeRuntimeClient(
+        stream_chunks=[
+            b'data: {"choices":[{"delta":{"content":"hel"}}]}\n\n',
+            b'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+            b"data: [DONE]\n\n",
+        ]
+    )
+
+    async def disconnected_after_headers(message):
+        if message["type"] == "http.response.body":
+            raise OSError("client disconnected")
+
+    body = {"stream": True, "max_tokens": 10, "messages": [{"role": "user", "content": "hello"}]}
+    asgi_post(app, path, body, {"X-Request-ID": "gone-mid-stream"}, disconnected_after_headers)
+    receipt = next(
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentworkflows.audit" and '"gone-mid-stream"' in record.getMessage()
+    )
+    assert receipt["status_code"] == 499
+    assert receipt["error"] == "client closed request"

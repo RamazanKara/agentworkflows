@@ -231,15 +231,9 @@ class governed:
             if isinstance(exc, StarletteHTTPException):
                 call.status = str(exc.status_code)
                 call.status_code = exc.status_code
-            elif isinstance(exc, asyncio.CancelledError):
-                # The client went away before a response; 499 is the de facto convention.
-                call.status = "499"
-                call.status_code = 499
-                call.error = "client closed request"
             else:
-                call.status = "500"
-                call.status_code = 500
-                call.error = f"internal error: {type(exc).__name__}"
+                call.status_code, call.error = interrupted_status(exc)
+                call.status = str(call.status_code)
             return False
         finally:
             # Streaming responses record at true end-of-stream inside their body; the
@@ -268,6 +262,18 @@ class governed:
             runtime_status_code=call.runtime_status_code,
             error=call.error,
         )
+
+
+def interrupted_status(exc: BaseException) -> tuple[int, str]:
+    """Status and receipt error for a call that ended in an exception the rail does not map.
+
+    A client that went away is recorded as 499, the de facto "client closed request"
+    status; anything else is a gateway fault, 500. Streams use it too: a body cancelled or
+    closed mid-stream used to be recorded as a 200 for a call that never finished.
+    """
+    if isinstance(exc, (asyncio.CancelledError, GeneratorExit)):
+        return 499, "client closed request"
+    return 500, f"internal error: {type(exc).__name__}"
 
 
 async def record_stream_end(
