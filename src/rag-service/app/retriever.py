@@ -22,6 +22,8 @@ from app.reranker import NoopReranker, RerankerProvider
 LOGGER = logging.getLogger("agentworkflows.rag")
 # How long a failed knowledge bootstrap waits before the next attempt.
 BOOTSTRAP_RETRY_SECONDS = 5.0
+# The same text formats the ingestion CLI reads (app.ingest.TEXT_SUFFIXES).
+DOCUMENT_SUFFIXES = frozenset({".md", ".markdown", ".txt"})
 
 
 @dataclass(frozen=True)
@@ -103,25 +105,62 @@ def _title_from_content(path: Path, content: str) -> str:
     return path.stem
 
 
+def _read_document(path: Path) -> str | None:
+    """Read a knowledge file as UTF-8, dropping a leading byte-order mark.
+
+    The corpus is read at startup, so one bad file used to stop the service from starting.
+    A file that is not valid UTF-8 is now decoded with replacement characters, and one
+    that cannot be read is skipped; both are logged with the file name.
+    """
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        LOGGER.warning("skipping knowledge file %s: %s", path, exc)
+        return None
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        LOGGER.warning(
+            "knowledge file %s is not valid UTF-8 (first bad byte at offset %d); undecodable bytes were replaced",
+            path,
+            exc.start,
+        )
+        return raw.decode("utf-8-sig", errors="replace")
+
+
 def load_documents(document_dir: Path, owner: str = "") -> list[KnowledgeDocument]:
     """Load markdown and text files under the directory into knowledge documents.
 
     ``owner`` stamps every loaded document with the corpus tenant so the lexical retriever
     can enforce the same per-tenant scoping as the Qdrant path. The local single-tenant lab
     passes its default sandbox id; an unscoped corpus leaves it empty.
+
+    A document's id is its relative path without the extension, with ``/`` turned into
+    ``-``. Paths that collide (``a/b.md`` and ``a-b.md``, or ``x.md`` and ``x.txt``) get a
+    numeric suffix in path order, so every result id names exactly one file.
     """
     if not document_dir.exists():
         return []
     documents: list[KnowledgeDocument] = []
+    seen_ids: set[str] = set()
     for path in sorted(document_dir.rglob("*")):
         relative_path = path.relative_to(document_dir)
         if any(part.startswith(".") for part in relative_path.parts):
             continue
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
+        if not path.is_file() or path.suffix.lower() not in DOCUMENT_SUFFIXES:
             continue
-        content = path.read_text(encoding="utf-8")
+        content = _read_document(path)
+        if content is None:
+            continue
         relative = relative_path.as_posix()
-        doc_id = relative.rsplit(".", 1)[0].replace("/", "-")
+        base_id = doc_id = relative.rsplit(".", 1)[0].replace("/", "-")
+        suffix = 2
+        while doc_id in seen_ids:
+            doc_id = f"{base_id}-{suffix}"
+            suffix += 1
+        if doc_id != base_id:
+            LOGGER.warning("knowledge file %s shares the document id %r; serving it as %r", relative, base_id, doc_id)
+        seen_ids.add(doc_id)
         documents.append(
             KnowledgeDocument(
                 id=doc_id,
