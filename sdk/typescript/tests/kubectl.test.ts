@@ -46,14 +46,14 @@ describe.skipIf(process.platform === 'win32')('kubectl runner', () => {
 
   it('kills a command that outlives its timeout', async () => {
     const started = performance.now();
-    await expect(kubectl(['hang'], { timeoutMs: 300 })).rejects.toMatchObject({ type: 'WorkspaceTimeout' });
+    await expect(kubectl(['hang'], { timeoutMs: 100 })).rejects.toMatchObject({ type: 'WorkspaceTimeout' });
     expect(performance.now() - started).toBeLessThan(5_000);
   });
 
   it('kills a command when the activity is canceled', async () => {
     const controller = new AbortController();
     const running = kubectl(['hang'], { timeoutMs: 10_000, signal: controller.signal });
-    setTimeout(() => controller.abort(), 200);
+    setTimeout(() => controller.abort(), 50);
     await expect(running).rejects.toMatchObject({ type: 'WorkspaceCanceled' });
   });
 
