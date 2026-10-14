@@ -34,6 +34,8 @@ misconfigurations:
   - id: KSV-0109
     paths:
       - "deploy/charts/workflows/charts/temporal/templates/server-configmap.yaml"
+      # The same Temporal chart, vendored again inside the umbrella chart's workflows subchart.
+      - "deploy/charts/agentworkflows/charts/workflows/charts/temporal/templates/server-configmap.yaml"
     statement: >-
       False positive in the Temporal 1.7.0 chart's config_template.yaml. The password
       fields contain only runtime template expressions referencing

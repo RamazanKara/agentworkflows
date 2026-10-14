@@ -37,4 +37,5 @@ exec trivy fs \
   --skip-dirs deploy/vendor \
   --skip-dirs src/inference-gateway/.venv \
   --skip-dirs src/rag-service/.venv \
+  --skip-dirs '**/node_modules' \
   .
