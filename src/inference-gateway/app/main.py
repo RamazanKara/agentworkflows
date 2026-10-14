@@ -10,6 +10,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, start_http_server
@@ -410,12 +411,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.router.add_event_handler("shutdown", _storage_shutdown)
 
     _install_openapi_contract(app, resolved)
-    # Outermost: webhook authentication reads the body before dispatching to a route.
+    # Webhook authentication reads the body before dispatching to a route.
     app.add_middleware(
         RequestBodyLimitMiddleware,
         max_bytes=resolved.max_request_body_bytes,
         path_limits={"/v1/files": resolved.batch_max_file_bytes + 65536},
     )
+    # Outermost: compress what is worth it for clients that ask. Event streams, images,
+    # fonts, archives and bodies that already carry a Content-Encoding pass through
+    # untouched (Starlette's exclusions), so SSE keeps streaming chunk by chunk. The
+    # console's 370 kB script bundle goes out at about a quarter of that.
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
     return app
 
 

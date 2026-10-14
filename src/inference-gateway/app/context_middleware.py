@@ -53,6 +53,7 @@ CONSOLE_CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
     "img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 )
+CONSOLE_ASSETS = "/console/assets/"
 # Paths a workflow-step identity may reach; everything else is refused before routing.
 WORKFLOW_STEP_PATHS = frozenset({"/v1/chat/completions", "/v1/messages", "/v1/tools"})
 
@@ -260,13 +261,13 @@ class RequestContextMiddleware:
 
         async def send_with_context(message: Message) -> None:
             if message["type"] == "http.response.start":
-                _stamp_headers(request, MutableHeaders(scope=message))
+                _stamp_headers(request, MutableHeaders(scope=message), message["status"])
             await send(message)
 
         return send_with_context
 
 
-def _stamp_headers(request: Request, headers: MutableHeaders) -> None:
+def _stamp_headers(request: Request, headers: MutableHeaders, status: int) -> None:
     state = request.state
     if getattr(state, "browser_session", None) is not None:
         # refresh_cookies speaks Starlette's Response API; render the cookies on a scratch
@@ -280,7 +281,12 @@ def _stamp_headers(request: Request, headers: MutableHeaders) -> None:
     if path.startswith("/console"):
         headers["Content-Security-Policy"] = CONSOLE_CSP
         headers["X-Content-Type-Options"] = "nosniff"
-    if path.startswith(("/v1/", "/console")):
+    if path.startswith(CONSOLE_ASSETS) and status in (200, 304):
+        # The console build content-hashes every file under assets/, so a cached copy can
+        # never be stale and a repeat visit needs no request at all. index.html, which
+        # names the current hashes, stays no-store.
+        headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path.startswith(("/v1/", "/console")):
         headers["Cache-Control"] = "no-store"
     headers["X-Request-ID"] = state.request_id
     headers["X-Sandbox-ID"] = state.sandbox_id
