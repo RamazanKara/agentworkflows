@@ -61,10 +61,15 @@ async def capture_field(request: Request, settings: Settings, field: str, value:
         logging.getLogger("uvicorn.error").warning("Step content write failed; check workflow Redis.")
 
 
-async def step_content(request: Request, run_id: str, step_id: str) -> dict[str, Any]:
+async def step_contents(request: Request, run_id: str, step_ids: list[str]) -> list[dict[str, Any]]:
+    """Each step's retained content, or why it has none, in two Redis reads for the whole timeline."""
+    if not step_ids:
+        return []
     base = run_key(request, run_id)
-    raw = await redis_call(request, "get", content_key(base, step_id))
-    if raw:
-        return {"content": json.loads(raw)}
-    mode = await redis_call(request, "hget", base + ":capture", step_id)
-    return {"content": None, "content_reason": "expired" if mode else "capture_off"}
+    rows = await redis_call(request, "mget", [content_key(base, step_id) for step_id in step_ids])
+    modes = await redis_call(request, "hgetall", base + ":capture") if None in rows else {}
+    return [
+        {"content": json.loads(raw)} if raw
+        else {"content": None, "content_reason": "expired" if modes.get(step_id) else "capture_off"}
+        for step_id, raw in zip(step_ids, rows, strict=True)
+    ]

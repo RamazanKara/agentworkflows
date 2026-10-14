@@ -42,6 +42,9 @@ class RunRedis(FakeRedisBudgetStore):
     def hget(self, key, field):
         return self.hgetall(key).get(field)
 
+    def mget(self, keys):
+        return [self.get(key) for key in keys]
+
     def ttl(self, key):
         if self.get(key) is None:
             return -2

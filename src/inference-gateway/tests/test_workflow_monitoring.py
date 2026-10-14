@@ -68,6 +68,42 @@ def test_running_runs_are_never_served_from_a_snapshot(team_gateway, monkeypatch
     assert calls.count("describe") == 2
 
 
+def test_timeline_content_is_read_in_one_batch(team_gateway, monkeypatch):
+    from app.workflow_content import content_key
+
+    client, app = team_gateway
+    run = start(client).json()
+    store = app.state.budget_tracker.client
+    base = f"{app.state.settings.sandbox_budget_key_prefix}:workflow:team:{run['run_id']}"
+    for index in range(12):
+        store.rpush(base + ":timeline", json.dumps({
+            "action_type": "model_call", "workflow_step_id": f"step-{index}", "ts": time() + index,
+            "record_hash": f"receipt-{index}", "chain_id": "chain",
+        }))
+    store.setex(content_key(base, "step-0"), 60, json.dumps({"input": "kept", "output": None}))
+    store.hset(base + ":capture", "step-1", "redacted")
+    reads = []
+    nested = []
+    for name in ("get", "mget", "hget", "hgetall"):
+        original = getattr(store, name)
+
+        def counted(*args, _original=original, _name=name):
+            # The fake's mget and hgetall call its own get; count only the gateway's reads.
+            if not nested and (":content:" in str(args[0]) or str(args[0]).endswith(":capture")):
+                reads.append(_name)
+            nested.append(_name)
+            try:
+                return _original(*args)
+            finally:
+                nested.pop()
+
+        monkeypatch.setattr(store, name, counted)
+    timeline = client.get(f"/v1/workflow-runs/{run['run_id']}", headers=auth("viewer")).json()["timeline"]
+    assert reads == ["mget", "hgetall"]
+    assert timeline[0]["content"] == {"input": "kept", "output": None}
+    assert timeline[1]["content_reason"] == "expired" and timeline[2]["content_reason"] == "capture_off"
+
+
 def test_run_listing_describes_concurrently_and_keeps_order(team_gateway, monkeypatch):
     client, app = team_gateway
     runs = [start(client).json() for _ in range(12)]

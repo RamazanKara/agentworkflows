@@ -27,7 +27,7 @@ from app.storage import storage_call
 from app.team_settings import effective_team_settings
 from app.teams import project_access, require_role
 from app.workflow_budget import effective_run_limits, redis_call, run_key
-from app.workflow_content import step_content
+from app.workflow_content import step_contents
 from app.workflow_escalation import (
     configuration,
     escalate_if_due,
@@ -265,8 +265,9 @@ async def describe_run(
         result.pop("result", None)
     if timeline:
         rows = await storage_call(request, "run_steps", request.state.sandbox_id, run_id)
+        contents = await step_contents(request, run_id, [event.get("workflow_step_id") or "" for event in rows])
         result["timeline"] = []
-        for event in rows:
+        for event, content in zip(rows, contents, strict=True):
             charge = event_charge(event)
             result["timeline"].append(
                 {
@@ -285,7 +286,7 @@ async def describe_run(
                     "attempts": event.get("routing_attempts", []),
                     "principal": event.get("principal"),
                     "receipt": event,
-                    **await step_content(request, run_id, event.get("workflow_step_id") or ""),
+                    **content,
                 }
             )
         result["summary"] = summarize(
