@@ -2752,6 +2752,10 @@ before a start intent or Temporal execution is created, and the API validates in
 <td>Remove credentials or sensitive personal data from the prompt/tool arguments</td>
 </tr>
 <tr>
+<td><code>invalid_unicode</code></td>
+<td>Send valid Unicode text; an unpaired surrogate escape such as <code>\ud800</code> cannot be forwarded to a model</td>
+</tr>
+<tr>
 <td><code>approval_not_waiting</code></td>
 <td>Inspect the run's stage and existing decision; read each draft before approving</td>
 </tr>
