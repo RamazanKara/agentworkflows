@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from math import isfinite
 from pathlib import Path
 from typing import Any, Literal
@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 import yaml
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 
-from app.settings import Settings, validate_sandbox_id
+from app.settings import Settings, derive_settings, validate_sandbox_id
 from app.workflow_schema import InputSchema
 
 LOCAL_BACKENDS = {"ollama", "vllm"}
@@ -591,7 +591,7 @@ class SandboxPolicySet:
             updates["sandbox_prompt_char_budget"] = policy.prompt_char_budget
         if policy.estimated_token_budget is not None:
             updates["sandbox_estimated_token_budget"] = policy.estimated_token_budget
-        return replace(settings, **updates) if updates else settings
+        return derive_settings(settings, **updates)
 
 
 def model_prices(pricing: Any) -> tuple[float | None, float | None]:

@@ -731,3 +731,17 @@ def test_pii_email_rejected_when_enabled():
 
     assert response.status_code == 400
     assert response.json()["detail"]["reason"] == "prompt_secret_detected"
+
+
+def test_derived_settings_are_validated_once_and_reused():
+    from app.settings import derive_settings
+
+    base = _tool_settings()
+    assert derive_settings(base, max_messages=base.max_messages) is base
+    derived = derive_settings(base, max_messages=3, allowed_models=("a", "b"))
+    assert (derived.max_messages, derived.allowed_models) == (3, ("a", "b"))
+    assert derive_settings(base, allowed_models=("a", "b"), max_messages=3) is derived
+    # A different base never reuses another base's derivation, even with equal fields.
+    assert derive_settings(_tool_settings(), max_messages=3) is not derived
+    with pytest.raises(ValueError, match="budget_estimated_chars_per_token"):
+        derive_settings(base, budget_estimated_chars_per_token=0)

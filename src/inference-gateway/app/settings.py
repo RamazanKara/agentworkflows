@@ -6,8 +6,10 @@ import dataclasses
 import json
 import os
 import re
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -73,6 +75,9 @@ from app.env_config import (
 )
 
 AUDIT_CHAIN_STORE_BACKENDS = frozenset({"memory", "file", "redis"})
+_DERIVED_LIMIT = 256
+_derived: OrderedDict[tuple[int, frozenset[tuple[str, Any]]], tuple[Settings, Settings]] = OrderedDict()
+_derived_lock = Lock()
 
 
 @dataclass(frozen=True)
@@ -916,6 +921,35 @@ class Settings:
                     "tools_too_large",
                     f"{field} serialize to {serialized_chars} characters; limit is {self.max_tool_chars}",
                 )
+
+
+def derive_settings(settings: Settings, **changes: Any) -> Settings:
+    """Return ``settings`` with ``changes`` applied, validating each distinct combination once.
+
+    The request path derives per-sandbox, per-key, and per-route settings on every call.
+    ``dataclasses.replace`` re-runs the whole ``__post_init__`` validation, about 75us, and
+    a governed call used to pay that several times. The inputs are a handful of reviewed
+    policy values, so the derived objects are cached by the identity of the base settings
+    and the exact overrides; the identity check on a hit guards against a reused ``id``.
+    """
+    changes = {name: value for name, value in changes.items() if getattr(settings, name) != value}
+    if not changes:
+        return settings
+    try:
+        key = (id(settings), frozenset(changes.items()))
+    except TypeError:  # an unhashable override value: derive without caching
+        return dataclasses.replace(settings, **changes)
+    with _derived_lock:
+        hit = _derived.get(key)
+        if hit is not None and hit[0] is settings:
+            _derived.move_to_end(key)
+            return hit[1]
+    derived = dataclasses.replace(settings, **changes)
+    with _derived_lock:
+        _derived[key] = (settings, derived)
+        while len(_derived) > _DERIVED_LIMIT:
+            _derived.popitem(last=False)
+    return derived
 
 
 def moderate_text(text: str, settings: Settings) -> dict[str, Any]:

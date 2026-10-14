@@ -25,7 +25,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any, Literal
 
@@ -36,7 +36,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.audit import write_audit_log
 from app.batchstore import BatchStoreError
-from app.budget import BudgetBackendError, BudgetReservation, SandboxBudgetTracker, actual_total_tokens
+from app.budget import BudgetBackendError, BudgetReservation, SandboxBudgetTracker, actual_total_tokens, backend_call
 from app.metrics import (
     ADMISSION_REJECTIONS,
     BUDGET_SETTLED_TOKENS,
@@ -55,7 +55,7 @@ from app.metrics import (
 )
 from app.policy import DATA_CLASSIFICATIONS, LOCAL_BACKENDS, ModelRoute, SandboxPolicySet
 from app.response_store import ResponseStoreError
-from app.settings import AdmissionPolicyError, Settings
+from app.settings import AdmissionPolicyError, Settings, derive_settings
 from app.team_settings import effective_team_settings
 
 # Outages of the opt-in state stores (stored responses, batch metadata). They are the
@@ -435,7 +435,7 @@ async def resolve_chat_routes(
         payload["max_completion_tokens"] = effective.max_completion_tokens
     # Reserve for the largest prompt estimate among every eligible fallback.
     divisor = min(route.estimated_chars_per_token or effective.budget_estimated_chars_per_token for route in chain)
-    return replace(effective, budget_estimated_chars_per_token=divisor), chain, shadow
+    return derive_settings(effective, budget_estimated_chars_per_token=divisor), chain, shadow
 
 
 async def reserve_budget(request: Request, effective: Settings, budget_payload: dict[str, Any]) -> None:
@@ -449,7 +449,11 @@ async def reserve_budget(request: Request, effective: Settings, budget_payload: 
     tracker: SandboxBudgetTracker = request.app.state.budget_tracker
     from app.team_budget import reserve_team_cost
 
-    reservation = await asyncio.to_thread(tracker.reserve, request.state.sandbox_id, budget_payload, effective)
+    reservation = (
+        await backend_call(tracker, tracker.reserve, request.state.sandbox_id, budget_payload, effective)
+        if effective.sandbox_budget_enabled
+        else None
+    )
     request.state.budget_reservation = reservation.audit_dict() if reservation is not None else None
     request.state.budget_reservation_object = reservation
     record_budget_reservation(reservation, effective)
@@ -481,7 +485,7 @@ def effective_settings(request: Request, policy_set: SandboxPolicySet, settings:
                 and policy_set.policies[request.state.sandbox_id].projects
             ):
                 key_updates[field] = min(limit or team_limit, team_limit)
-        effective = replace(effective, **key_updates)
+        effective = derive_settings(effective, **key_updates)
     return effective
 
 
@@ -493,9 +497,9 @@ def route_settings(settings: Settings, model_route: Any) -> Settings:
     every tenant is charged.
     """
     per_token = getattr(model_route, "estimated_chars_per_token", 0)
-    if not per_token or per_token == settings.budget_estimated_chars_per_token:
+    if not per_token:
         return settings
-    return replace(settings, budget_estimated_chars_per_token=per_token)
+    return derive_settings(settings, budget_estimated_chars_per_token=per_token)
 
 
 def admission_status(reason: str, settings: Settings) -> tuple[int, dict[str, str] | None]:
@@ -626,7 +630,7 @@ async def settle_budget(request: Request, runtime_response: dict[str, Any] | Non
     request.state.budget_settled = True
     tracker: SandboxBudgetTracker = request.app.state.budget_tracker
     try:
-        settlement = await asyncio.to_thread(tracker.settle, reservation, (runtime_response or {}).get("usage"))
+        settlement = await backend_call(tracker, tracker.settle, reservation, (runtime_response or {}).get("usage"))
     except BudgetBackendError:
         BUDGET_SETTLEMENTS.labels("backend_unavailable").inc()
         return
@@ -684,7 +688,7 @@ async def settle_and_audit(
         request.state.usage_cost = cost
         tracker: SandboxBudgetTracker = request.app.state.budget_tracker
         try:
-            await asyncio.to_thread(tracker.record_usage, request.state.sandbox_id, backend, usage, cost)
+            await backend_call(tracker, tracker.record_usage, request.state.sandbox_id, backend, usage, cost)
         except BudgetBackendError:
             request.state.usage_accounting = "backend_unavailable"
     from app.team_budget import settle_team_cost

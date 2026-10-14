@@ -8,7 +8,6 @@ sandbox, which the auth middleware pinned before any handler runs.
 
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 from datetime import UTC, datetime
@@ -19,7 +18,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
 from app.audit import chain_audit_event, emit_audit_record
-from app.budget import BudgetBackendError, SandboxBudgetTracker
+from app.budget import BudgetBackendError, SandboxBudgetTracker, backend_call
 from app.governance import effective_settings, route_permitted
 from app.metrics import AGENT_RECEIPTS, REQUESTS
 from app.policy import ModelRoutingPolicy, SandboxPolicySet
@@ -125,7 +124,7 @@ def register_sandbox_routes(app: FastAPI, settings: Settings) -> None:
         policy_set: SandboxPolicySet = request.app.state.sandbox_policy_set
         effective = effective_settings(request, policy_set, settings)
         try:
-            return await asyncio.to_thread(tracker.snapshot, request.state.sandbox_id, effective)
+            return await backend_call(tracker, tracker.snapshot, request.state.sandbox_id, effective)
         except BudgetBackendError as exc:
             raise HTTPException(
                 status_code=503,
@@ -176,7 +175,7 @@ def register_sandbox_routes(app: FastAPI, settings: Settings) -> None:
         policy_set: SandboxPolicySet = request.app.state.sandbox_policy_set
         effective = effective_settings(request, policy_set, settings)
         try:
-            snapshot = await asyncio.to_thread(tracker.snapshot, request.state.sandbox_id, effective)
+            snapshot = await backend_call(tracker, tracker.snapshot, request.state.sandbox_id, effective)
         except BudgetBackendError as exc:
             raise HTTPException(
                 status_code=503,

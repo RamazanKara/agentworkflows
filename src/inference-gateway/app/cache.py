@@ -55,9 +55,11 @@ class ResponseCache:
     scale-out the effective hit rate degrades. Use the Redis backend
     (RESPONSE_CACHE_BACKEND=redis) for a cache shared across replicas.
 
-    Handlers call it through `asyncio.to_thread`, so concurrent worker threads share
-    the store; the lock keeps an eviction from racing a `move_to_end` into a KeyError.
+    The lock keeps an eviction from racing a `move_to_end` into a KeyError should a
+    caller ever use it from worker threads.
     """
+
+    backend = "memory"
 
     def __init__(self, max_entries: int, ttl_seconds: int) -> None:
         self.max_entries = max_entries
@@ -93,6 +95,8 @@ class RedisResponseCache:
     Stores the JSON-serialized runtime response under a prefixed, sandbox-scoped key so
     every replica observes the same cache, keeping the hit rate stable under scale-out.
     """
+
+    backend = "redis"
 
     def __init__(self, settings: Settings, client: Any | None = None) -> None:
         self.ttl_seconds = settings.response_cache_ttl_seconds

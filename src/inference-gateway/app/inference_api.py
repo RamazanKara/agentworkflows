@@ -22,6 +22,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.audit import AUDIT_LOGGER, chain_audit_event, payload_fingerprint
+from app.budget import backend_call
 from app.cache import cache_key
 from app.governance import (
     admission_status,
@@ -116,7 +117,8 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                         "routes": [route.model_id for route in chain],
                     },
                 )
-                cached = await asyncio.to_thread(request.app.state.response_cache.get, cache_id)
+                cache = request.app.state.response_cache
+                cached = await backend_call(cache, cache.get, cache_id)
                 if cached is not None:
                     CACHE_LOOKUPS.labels("hit").inc()
                     request.state.cache_status = "HIT"
@@ -265,7 +267,8 @@ def register_inference_routes(app: FastAPI, settings: Settings) -> None:
                 )
                 await capture_field(request, effective, "output", output)
             if cache_enabled:
-                await asyncio.to_thread(request.app.state.response_cache.set, cache_id, call.runtime_response)
+                cache = request.app.state.response_cache
+                await backend_call(cache, cache.set, cache_id, call.runtime_response)
             if shadow_route is not None:
                 _schedule_shadow(client, shadow_route, payload_dict, request)
             return call.runtime_response
