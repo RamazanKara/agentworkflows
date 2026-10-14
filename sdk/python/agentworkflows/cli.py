@@ -45,6 +45,36 @@ def workflow_input(value: str) -> object:
         ) from None
 
 
+DURATION_UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+
+
+def duration(value: str) -> int:
+    """Seconds from 90, 90s, 45m, 2h or 1d."""
+    text = value.strip().lower()
+    unit = DURATION_UNITS.get(text[-1:])
+    number = text[:-1] if unit else text
+    if not number.isdigit():
+        raise argparse.ArgumentTypeError("Use whole seconds or a number with s, m, h or d, e.g. 90, 45m, 2h or 1d.")
+    return int(number) * (unit or 1)
+
+
+def review_row(run: dict[str, Any]) -> dict[str, Any]:
+    """What a reviewer needs to pick a run; inspect it for the draft and receipts."""
+    progress = run.get("progress") or {}
+    escalation = run.get("approval_escalation") or {}
+    return {
+        "run_id": run["run_id"],
+        "workflow": run.get("workflow"),
+        "project": run.get("project"),
+        "created_at": run.get("created_at"),
+        "approved_by": progress.get("approved_by", []),
+        "required_approvals": progress.get("required_approvals", 1),
+        "expires_at": progress.get("expires_at"),
+        "eligible_via": (run.get("approval_access") or {}).get("via"),
+        "escalated": escalation.get("escalated", False),
+    }
+
+
 def settings_fields(value: str) -> dict[str, TeamSettingValue]:
     try:
         parsed = workflow_input(value)
@@ -160,12 +190,48 @@ def main(argv: list[str] | None = None) -> int:
     register.add_argument("--token-limit", type=int, help="Tokens per run (default 10000).")
     register.add_argument("--cost-limit", type=float, help="USD per run (default 5).")
     register.add_argument("--reviewers", type=int, help="Distinct approvals required (1-10; default 1).")
+    register.add_argument(
+        "--approver-role", choices=("admin", "approver"), help="Role whose members may approve (default: approver)."
+    )
+    register.add_argument(
+        "--approval-timeout", type=duration, help="How long a draft may wait for review, e.g. 2d (60s-7d; default 7d)."
+    )
     register.add_argument("--no-approval", action="store_true", help="Skip the human approval gate.")
     register.add_argument("--input-schema", type=workflow_input, help="Flat JSON Schema or @file for the run form.")
     register.add_argument("--revision", type=int, help="Reviewed revision from 'workflows list' (default: current).")
     remove = workflow_operations.add_parser("remove", help="Remove a registered workflow; new calls are denied.")
     remove.add_argument("name")
     remove.add_argument("--revision", type=int, help="Reviewed revision from 'workflows list' (default: current).")
+    escalation = workflow_operations.add_parser(
+        "escalation", help="Escalate reviews that wait too long: notify and let more reviewers approve."
+    )
+    escalation_operations = escalation.add_subparsers(dest="escalation_operation", required=True)
+    escalation_operations.add_parser("list", help="Show each workflow's escalation and the channels it may notify.")
+    configure = escalation_operations.add_parser(
+        "set", help="Escalate reviews of a workflow; runs started afterwards use the new setting."
+    )
+    configure.add_argument("name", help="Workflow type name, e.g. CodeReviewWorkflow.")
+    configure.add_argument(
+        "--after", required=True, type=duration,
+        help="Wait before escalating, e.g. 4h; shorter than the approval timeout.",
+    )
+    configure.add_argument(
+        "--all-approvers", action="store_true", help="Let every approver vote once escalated (for admin-only reviews)."
+    )
+    configure.add_argument(
+        "--reviewer", dest="reviewers", action="append", default=[], metavar="IDENTITY",
+        help="OIDC subject or managed key ID with an approver role who may vote once escalated; repeatable.",
+    )
+    notify = configure.add_mutually_exclusive_group()
+    notify.add_argument(
+        "--channel", dest="channels", action="append", choices=("slack", "email", "webhook"),
+        help="Send the notice here instead of the team's alert channels; repeatable.",
+    )
+    notify.add_argument("--no-notify", action="store_true", help="Escalate without sending a notice.")
+    configure.add_argument("--revision", type=int, help="Reviewed revision from 'escalation list' (default: current).")
+    unset = escalation_operations.add_parser("remove", help="Stop escalating reviews of a workflow.")
+    unset.add_argument("name")
+    unset.add_argument("--revision", type=int, help="Reviewed revision from 'escalation list' (default: current).")
     settings = commands.add_parser("settings", help="Inspect or change team settings (unrestricted admin only).")
     setting_operations = settings.add_subparsers(dest="operation", required=True)
     setting_operations.add_parser("show", help="Show effective values, policy defaults and the current revision.")
@@ -222,6 +288,11 @@ def main(argv: list[str] | None = None) -> int:
         paging.add_argument("--offset", type=int, help="Legacy next_offset; prefer --cursor while runs change.")
         if operation == "export":
             sub.add_argument("--output", default="-", help="JSON Lines file; '-' or omitted writes to stdout.")
+    pending = operations.add_parser(
+        "pending", help="List runs waiting for a review you may give now, including escalated reviews."
+    )
+    pending.add_argument("--project", help="Project from agentworkflows team; default: your credential's project.")
+    pending.add_argument("--workflow", help="Exact workflow name.")
     for operation in ("inspect", "cancel", "retry", "approve"):
         sub = operations.add_parser(
             operation,
@@ -305,6 +376,8 @@ def main(argv: list[str] | None = None) -> int:
                             "token_limit": args.token_limit,
                             "cost_limit_usd": args.cost_limit,
                             "required_approvals": args.reviewers,
+                            "approver_role": args.approver_role,
+                            "approval_timeout_seconds": args.approval_timeout,
                             "approval_required": False if args.no_approval else None,
                             "input_schema": args.input_schema,
                         }.items()
@@ -313,6 +386,22 @@ def main(argv: list[str] | None = None) -> int:
                     registry_result = gateway.register_workflow(
                         args.name, models=args.models, revision=args.revision, **registration
                     )
+                elif args.operation == "escalation":
+                    if args.escalation_operation == "list":
+                        registry_result = gateway.approval_escalations()
+                    elif args.escalation_operation == "set":
+                        options: dict[str, Any] = {"reviewers": args.reviewers}
+                        if args.all_approvers:
+                            options["approver_role"] = "approver"
+                        if args.no_notify:
+                            options["channels"] = []
+                        elif args.channels:
+                            options["channels"] = args.channels
+                        registry_result = gateway.set_approval_escalation(
+                            args.name, after_seconds=args.after, revision=args.revision, **options
+                        )
+                    else:
+                        registry_result = gateway.remove_approval_escalation(args.name, revision=args.revision)
                 else:
                     registry_result = gateway.remove_workflow(args.name, revision=args.revision)
                 print(json.dumps(registry_result, indent=2))
@@ -382,6 +471,10 @@ def main(argv: list[str] | None = None) -> int:
                             return 1
                         return 0
                     result = gateway.runs(**run_filters)
+                elif args.operation == "pending":
+                    result = [
+                        review_row(run) for run in gateway.review_queue(project=args.project, workflow=args.workflow)
+                    ]
                 elif args.operation == "inspect":
                     result = gateway.run(str(args.run_id))
                 elif args.operation == "cancel":
@@ -423,6 +516,12 @@ def main(argv: list[str] | None = None) -> int:
             hint = "Run 'agentworkflows workflows list', review the changes, then retry."
         elif exc.reason == "team_workflows_disabled":
             hint = "Your operator keeps workflow types in reviewed policy; ask them to add this one."
+        elif exc.reason == "approval_escalation_conflict":
+            hint = "Run 'agentworkflows workflows escalation list', review the changes, then retry."
+        elif exc.reason == "approval_escalation_invalid":
+            hint = "Escalate before the workflow's approval timeout, using channels shown by 'escalation list'."
+        elif args.command == "runs" and args.operation == "approve" and exc.status_code == 403:
+            hint = "Check your role and the run's approval_escalation with 'agentworkflows runs inspect'."
         elif args.command == "workflows" and exc.status_code == 422:
             hint = "Use only models and tools shown by 'agentworkflows workflows list', within its limits."
         elif args.command == "settings" and exc.status_code == 422:

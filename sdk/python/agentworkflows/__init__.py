@@ -35,6 +35,9 @@ from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from agentworkflows.types import (
+    ApprovalEscalationOptions,
+    ApprovalEscalations,
+    ApprovalEscalationSaved,
     AuditFilters,
     AuditPage,
     AuditVerification,
@@ -684,6 +687,44 @@ class GatewayClient:
             headers={"If-Match": str(revision)}, creates_state=True,
         ).json()
 
+    def approval_escalations(self) -> ApprovalEscalations:
+        """List per-workflow approval escalation and the channels it may notify (unrestricted admin only)."""
+        return self._request("GET", "/v1/team/approval-escalations").json()
+
+    def set_approval_escalation(
+        self,
+        workflow: str | type,
+        *,
+        after_seconds: int,
+        revision: int | str | None = None,
+        **options: Unpack[ApprovalEscalationOptions],
+    ) -> ApprovalEscalationSaved:
+        """Escalate reviews of ``workflow`` that still wait ``after_seconds`` after the draft is ready.
+
+        Escalation notifies the team's alert channels (or ``channels``; ``[]`` sends nothing) and lets
+        more reviewers vote: every approver with ``approver_role="approver"``, and the identities in
+        ``reviewers`` (OIDC subjects or managed key IDs that hold an approver role). Runs keep the
+        configuration they started with. ``revision`` defaults to the current one; pass the value you
+        reviewed to refuse a concurrent change. Unrestricted team admin only.
+        """
+        name = workflow if isinstance(workflow, str) else _workflow_name(workflow)
+        if revision is None:
+            revision = self.approval_escalations()["revision"]
+        return self._request(
+            "PUT", f"/v1/team/workflows/{quote(name, safe='')}/approval-escalation",
+            json={"after_seconds": after_seconds, **options}, headers={"If-Match": str(revision)}, creates_state=True,
+        ).json()
+
+    def remove_approval_escalation(self, workflow: str | type, *, revision: int | str | None = None) -> dict[str, Any]:
+        """Stop escalating reviews of ``workflow`` for runs started afterwards."""
+        name = workflow if isinstance(workflow, str) else _workflow_name(workflow)
+        if revision is None:
+            revision = self.approval_escalations()["revision"]
+        return self._request(
+            "DELETE", f"/v1/team/workflows/{quote(name, safe='')}/approval-escalation",
+            headers={"If-Match": str(revision)}, creates_state=True,
+        ).json()
+
     def workflow_insights(
         self, *, days: int = 7, project: str | None = None, workflow: str | None = None
     ) -> WorkflowInsights:
@@ -874,6 +915,26 @@ class GatewayClient:
     def approve_run(self, run_id: str, *, approved: bool = True) -> dict[str, Any]:
         """Record your vote; inspect the run for quorum completion or a pending review."""
         return self._post(f"/v1/workflow-runs/{UUID(run_id)!s}/approve", {"approved": approved}, creates_state=True)
+
+    def review_queue(
+        self, *, project: str | None = None, workflow: str | None = None, limit: int = 100
+    ) -> Iterator[dict[str, Any]]:
+        """Yield runs awaiting a review this credential may give now, newest first.
+
+        Follows every cursor page of ``status="awaiting_approval"``. Each run's ``approval_access``
+        says whether you are eligible through your role or an approval escalation. A gateway that
+        predates escalation sends no ``approval_access``; its waiting runs are yielded unfiltered.
+        """
+        filters: RunFilters = {"status": "awaiting_approval", "limit": limit, "project": project, "workflow": workflow}
+        while True:
+            page = self.runs(**filters)
+            for run in page["runs"]:
+                access = run.get("approval_access")
+                if access is None or access.get("eligible"):
+                    yield run
+            if not page.get("next_cursor"):
+                return
+            filters["cursor"] = page["next_cursor"]
 
     def sandbox_budget(self) -> dict[str, Any]:
         """Return this sandbox's budget usage, limits, and window TTL."""

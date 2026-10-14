@@ -183,6 +183,58 @@ class RegisteredWorkflow(TypedDict):
     registered_at: float | None
 
 
+EscalationChannel = Literal["slack", "email", "webhook"]
+
+
+class ApprovalEscalationOptions(TypedDict, total=False):
+    approver_role: Literal["approver"] | None
+    reviewers: list[str]
+    channels: list[EscalationChannel] | None
+
+
+class ApprovalEscalation(TypedDict):
+    workflow: str
+    after_seconds: int
+    approver_role: Literal["approver"] | None
+    reviewers: list[str]
+    channels: list[EscalationChannel] | None
+    effective: bool
+    updated_by: str | None
+    updated_at: float | None
+
+
+class ApprovalEscalations(TypedDict):
+    revision: int
+    escalations: list[ApprovalEscalation]
+    available_channels: list[EscalationChannel]
+
+
+class ApprovalEscalationSaved(TypedDict):
+    revision: int
+    escalation: ApprovalEscalation
+
+
+class RunEscalation(TypedDict):
+    """A run's ``approval_escalation``: the configuration it started with and where it stands."""
+
+    after_seconds: int
+    approver_role: Literal["approver"] | None
+    reviewers: list[str]
+    channels: list[EscalationChannel] | None
+    waiting_since: float | None
+    escalates_at: float | None
+    escalated: bool
+    recorded_at: float | None
+
+
+class ApprovalAccess(TypedDict):
+    """A waiting run's ``approval_access`` for the calling credential."""
+
+    eligible: bool
+    via: Literal["role", "escalation"] | None
+    eligible_at: float | None
+
+
 class WorkflowModelOption(TypedDict):
     id: str
     provider: str
