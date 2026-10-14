@@ -60,6 +60,15 @@ def stem(term: str) -> str:
     return term[:-1]
 
 
+# Inputs per embeddings request. TEI, a common self-hosted server, rejects batches above its
+# default --max-client-batch-size of 32; vLLM, Ollama and hosted APIs accept at least that.
+EMBEDDING_BATCH_SIZE = 32
+
+
+def _batches(values: list[str], size: int) -> list[list[str]]:
+    return [values[start : start + size] for start in range(0, len(values), size)]
+
+
 class EmbeddingProvider(Protocol):
     """Protocol for embedding providers that map text to a fixed-size vector."""
 
@@ -70,6 +79,10 @@ class EmbeddingProvider(Protocol):
     def embed(self, value: str) -> list[float]: ...
 
     async def embed_async(self, value: str) -> list[float]: ...
+
+    def embed_many(self, values: list[str]) -> list[list[float]]: ...
+
+    async def embed_many_async(self, values: list[str]) -> list[list[float]]: ...
 
     async def ready(self) -> bool:
         raise NotImplementedError
@@ -128,6 +141,14 @@ class HashEmbeddingProvider:
         """Async wrapper around :meth:`embed`; hashing is CPU-bound and non-blocking."""
         return self.embed(value)
 
+    def embed_many(self, values: list[str]) -> list[list[float]]:
+        """Return the hashed embedding of each text, in order."""
+        return [self.embed(value) for value in values]
+
+    async def embed_many_async(self, values: list[str]) -> list[list[float]]:
+        """Async wrapper around :meth:`embed_many`."""
+        return self.embed_many(values)
+
     async def ready(self) -> bool:
         """The in-process deterministic provider has no external dependency."""
         return True
@@ -163,9 +184,8 @@ class OpenAICompatibleEmbeddingProvider:
             await self._async_client.aclose()
             self._async_client = None
 
-    def _parse(self, payload: object) -> list[float]:
-        data = payload.get("data") if isinstance(payload, dict) else None
-        embedding = data[0].get("embedding") if isinstance(data, list) and data and isinstance(data[0], dict) else None
+    def _vector(self, embedding: object) -> list[float]:
+        """Validate one returned embedding: finite numbers of the configured dimensionality."""
         if not isinstance(embedding, list):
             raise ValueError("embedding response did not contain data[0].embedding")
         try:
@@ -177,6 +197,26 @@ class OpenAICompatibleEmbeddingProvider:
         if len(vector) != self.dimensions:
             raise ValueError(f"embedding returned {len(vector)} dimensions; expected {self.dimensions}")
         return vector
+
+    def _parse(self, payload: object) -> list[float]:
+        data = payload.get("data") if isinstance(payload, dict) else None
+        embedding = data[0].get("embedding") if isinstance(data, list) and data and isinstance(data[0], dict) else None
+        return self._vector(embedding)
+
+    def _parse_many(self, payload: object, count: int) -> list[list[float]]:
+        """Return the ``count`` embeddings of a batch response in input order.
+
+        Items are ordered by their ``index`` when the server reports one, as the OpenAI API
+        does; a response with the wrong number of items is rejected rather than misaligned.
+        """
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, list) or len(data) != count or not all(isinstance(item, dict) for item in data):
+            raise ValueError(f"embedding response must contain {count} data items")
+        if all(isinstance(item.get("index"), int) for item in data):
+            data = sorted(data, key=lambda item: item["index"])
+            if [item["index"] for item in data] != list(range(count)):
+                raise ValueError("embedding response indexes do not match the request")
+        return [self._vector(item.get("embedding")) for item in data]
 
     def embed(self, value: str) -> list[float]:
         """Request an embedding from the API and validate its dimensionality."""
@@ -197,6 +237,27 @@ class OpenAICompatibleEmbeddingProvider:
         )
         response.raise_for_status()
         return self._parse(response.json())
+
+    def embed_many(self, values: list[str]) -> list[list[float]]:
+        """Embed many texts over one connection, ``EMBEDDING_BATCH_SIZE`` inputs per request."""
+        vectors: list[list[float]] = []
+        with httpx.Client(timeout=self.timeout_seconds) as client:
+            for batch in _batches(values, EMBEDDING_BATCH_SIZE):
+                response = client.post(f"{self.base_url}/v1/embeddings", json={"model": self.model, "input": batch})
+                response.raise_for_status()
+                vectors.extend(self._parse_many(response.json(), len(batch)))
+        return vectors
+
+    async def embed_many_async(self, values: list[str]) -> list[list[float]]:
+        """Embed many texts, ``EMBEDDING_BATCH_SIZE`` inputs per request."""
+        vectors: list[list[float]] = []
+        for batch in _batches(values, EMBEDDING_BATCH_SIZE):
+            response = await self._client().post(
+                f"{self.base_url}/v1/embeddings", json={"model": self.model, "input": batch}
+            )
+            response.raise_for_status()
+            vectors.extend(self._parse_many(response.json(), len(batch)))
+        return vectors
 
     async def ready(self) -> bool:
         """Probe the provider's standard runtime health endpoint without running inference."""

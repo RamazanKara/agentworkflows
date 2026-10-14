@@ -33,6 +33,9 @@ LOGGER = logging.getLogger("agentworkflows.rag")
 BOOTSTRAP_RETRY_SECONDS = 5.0
 # The same text formats the ingestion CLI reads (app.ingest.TEXT_SUFFIXES).
 DOCUMENT_SUFFIXES = frozenset({".md", ".markdown", ".txt"})
+# Points per Qdrant upsert request. A 384-dimension point with a 1,200-character chunk is
+# about 4 KB of JSON, so a batch stays near 1 MB, far below Qdrant's 32 MB request limit.
+UPSERT_BATCH_SIZE = 256
 
 
 @dataclass(frozen=True)
@@ -537,12 +540,14 @@ class QdrantRetriever:
         now = datetime.now(UTC)
         ingested_at = now.isoformat()
         ingested_at_epoch = int(now.timestamp())
+        # One batched embedding call per EMBEDDING_BATCH_SIZE documents, not one per document.
+        vectors = await self.embedding_provider.embed_many_async([document.content for document in self.documents])
         points = []
-        for document in self.documents:
+        for document, vector in zip(self.documents, vectors, strict=True):
             points.append(
                 {
                     "id": str(uuid5(NAMESPACE_URL, f"{self.collection_version}:{document.source}:{document.id}")),
-                    "vector": await self.embedding_provider.embed_async(document.content),
+                    "vector": vector,
                     "payload": {
                         "collection_version": self.collection_version,
                         "document_id": document.id,
@@ -560,12 +565,14 @@ class QdrantRetriever:
                     },
                 }
             )
-        response = await client.put(
-            f"{self.base_url}/collections/{self.collection}/points",
-            params={"wait": "true"},
-            json={"points": points},
-        )
-        response.raise_for_status()
+        # Bounded requests: Qdrant rejects bodies over its max_request_size_mb (32 MB default).
+        for start in range(0, len(points), UPSERT_BATCH_SIZE):
+            response = await client.put(
+                f"{self.base_url}/collections/{self.collection}/points",
+                params={"wait": "true"},
+                json={"points": points[start : start + UPSERT_BATCH_SIZE]},
+            )
+            response.raise_for_status()
         self.last_sync_status = "synced"
         self.last_sync_error = ""
 

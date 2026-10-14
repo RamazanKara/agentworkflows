@@ -14,6 +14,7 @@ import httpx
 import yaml
 
 from app.embeddings import EmbeddingProvider, build_embedding_provider
+from app.retriever import UPSERT_BATCH_SIZE
 
 REQUIRED_SOURCE_FIELDS = {
     "id",
@@ -223,26 +224,35 @@ def upsert_chunks(
     base_url: str,
     collection: str,
     timeout_seconds: float,
+    batch_size: int = UPSERT_BATCH_SIZE,
 ) -> dict[str, Any]:
-    """Embed and upsert chunk points into Qdrant, returning an ingestion summary."""
+    """Embed and upsert chunk points into Qdrant, returning an ingestion summary.
+
+    Chunks go in batches of ``batch_size``: each batch is embedded with batched requests
+    and written with one upsert. A single upsert of the whole corpus used to exceed
+    Qdrant's 32 MB request limit at roughly 7,000 chunks, and one embedding request (on a
+    fresh connection) per chunk dominated the run time.
+    """
     now = datetime.now(UTC)
     ingested_at = now.isoformat()
     ingested_at_epoch = int(now.timestamp())
 
-    def _point(chunk: ChunkRecord) -> dict[str, Any]:
+    def _point(chunk: ChunkRecord, vector: list[float]) -> dict[str, Any]:
         payload = chunk.payload()
         # Stamp ingestion time so age-based retention purge can range-filter on ingestedAtEpoch.
         payload["ingestedAt"] = ingested_at
         payload["ingestedAtEpoch"] = ingested_at_epoch
-        return {"id": chunk.point_id, "vector": provider.embed(chunk.text), "payload": payload}
+        return {"id": chunk.point_id, "vector": vector, "payload": payload}
 
     with httpx.Client(timeout=timeout_seconds) as client:
         collection_status = ensure_collection(client, base_url, collection, provider.dimensions)
-        if chunks:
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start : start + batch_size]
+            vectors = provider.embed_many([chunk.text for chunk in batch])
             response = client.put(
                 f"{base_url.rstrip('/')}/collections/{collection}/points",
                 params={"wait": "true"},
-                json={"points": [_point(chunk) for chunk in chunks]},
+                json={"points": [_point(chunk, vector) for chunk, vector in zip(batch, vectors, strict=True)]},
             )
             response.raise_for_status()
     return {
