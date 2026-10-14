@@ -6,7 +6,9 @@ import { requestJson } from './http';
 export type Kubectl = (args: string[], options: { input?: string; timeoutMs: number; signal?: AbortSignal }) => Promise<Buffer>;
 
 const OUTPUT_LIMIT = 1_048_576;
-const NAME = /^[a-z0-9]([-a-z0-9.]{0,251}[a-z0-9])?$/;
+// Kubernetes names: a namespace is a DNS-1123 label, a Sandbox (and its Pod) a DNS-1123 subdomain.
+const DNS_LABEL = /^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?$/;
+const DNS_SUBDOMAIN = /^(?=.{1,253}$)[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9](?:[-a-z0-9]*[a-z0-9])?)*$/;
 
 export const kubectl: Kubectl = (args, { input, timeoutMs, signal }) => new Promise((resolve, reject) => {
   const child = spawn('kubectl', args, { stdio: ['pipe', 'pipe', 'ignore'] });
@@ -170,7 +172,8 @@ export async function runContainer(step: ContainerStep): Promise<Record<string, 
   try {
     const { namespace, sandbox: name } = plan;
     const seconds = Number(plan.timeout_seconds);
-    if (typeof namespace !== 'string' || typeof name !== 'string' || !NAME.test(namespace) || !NAME.test(name) ||
+    // Both become kubectl arguments: a name like "--kubeconfig=..." must never reach the command line.
+    if (typeof namespace !== 'string' || typeof name !== 'string' || !DNS_LABEL.test(namespace) || !DNS_SUBDOMAIN.test(name) ||
         !Number.isFinite(seconds) || seconds <= 0) {
       throw ApplicationFailure.nonRetryable('The gateway returned an invalid workspace plan; check the agent policy.', 'WorkspaceInvalid');
     }

@@ -1,7 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { runWorker, serveHealth } from '../src/worker';
+import { healthAddress, runWorker, serveHealth } from '../src/worker';
 
 const mocks = vi.hoisted(() => ({
   connection: { close: vi.fn(async () => undefined) },
@@ -16,7 +16,7 @@ const environment = { ...process.env };
 beforeEach(() => {
   vi.clearAllMocks();
   process.env = { ...environment, AGENTWORKFLOWS_API_KEY: 'fixture-worker' };
-  for (const name of ['AGENTWORKFLOWS_URL', 'AGENTWORKFLOWS_TEAM', 'TEMPORAL_ADDRESS', 'TEMPORAL_NAMESPACE', 'TEMPORAL_TASK_QUEUE']) {
+  for (const name of ['AGENTWORKFLOWS_URL', 'AGENTWORKFLOWS_TEAM', 'TEMPORAL_ADDRESS', 'TEMPORAL_NAMESPACE', 'TEMPORAL_TASK_QUEUE', 'AGENTWORKFLOWS_HEALTH_ADDRESS']) {
     delete process.env[name];
   }
 });
@@ -83,5 +83,38 @@ it('refuses to start when the health port is taken', async () => {
     await expect(serveHealth(port, async () => true)).rejects.toMatchObject({ code: 'EADDRINUSE' });
   } finally {
     await new Promise(resolve => first.close(resolve));
+  }
+});
+
+it.each([
+  [undefined, undefined, undefined],
+  [undefined, 'off', undefined],
+  [undefined, ' OFF ', undefined],
+  [undefined, '0.0.0.0:8081', { host: '0.0.0.0', port: 8081 }],
+  [undefined, '127.0.0.1:9000', { host: '127.0.0.1', port: 9000 }],
+  [undefined, '[::1]:9000', { host: '::1', port: 9000 }],
+  [undefined, ':9000', { host: '0.0.0.0', port: 9000 }],
+  [8081, 'off', { host: '0.0.0.0', port: 8081 }],
+] as const)('reads the health address from healthPort %s and AGENTWORKFLOWS_HEALTH_ADDRESS %s', (port, setting, expected) => {
+  expect(healthAddress(port, setting)).toEqual(expected);
+});
+
+it.each(['8081', 'localhost', 'host:http', 'host:70000'])('rejects the health address %s with the expected form', (setting) => {
+  expect(() => healthAddress(undefined, setting)).toThrow('AGENTWORKFLOWS_HEALTH_ADDRESS to host:port');
+});
+
+it('serves health from the environment and names the setting when its port is taken', async () => {
+  const taken = await serveHealth(0, async () => true, '127.0.0.1');
+  const { port } = taken.address() as AddressInfo;
+  try {
+    process.env.AGENTWORKFLOWS_HEALTH_ADDRESS = `127.0.0.1:${port}`;
+    await expect(runWorker('/workflows.js')).rejects.toThrow(`Cannot serve health checks on 127.0.0.1:${port} (EADDRINUSE)`);
+    expect(Worker.create).not.toHaveBeenCalled();
+    expect(mocks.connection.close).toHaveBeenCalledTimes(1);
+    process.env.AGENTWORKFLOWS_HEALTH_ADDRESS = 'nonsense';
+    await expect(runWorker('/workflows.js')).rejects.toThrow('AGENTWORKFLOWS_HEALTH_ADDRESS');
+    expect(NativeConnection.connect).toHaveBeenCalledTimes(1);
+  } finally {
+    await new Promise(resolve => taken.close(resolve));
   }
 });

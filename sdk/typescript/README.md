@@ -35,7 +35,8 @@ try {
 }
 ```
 
-The client covers runs, approvals, triggers, run and audit export, keys, invitations, settings, spend, retention,
+The client covers runs, approvals, approval escalation and the review queue, triggers, run and audit export, keys,
+invitations, settings, spend, retention,
 secrets, workflow registration, insights and usage, plus `chat`, `chatStream`, `messages`, `embeddings`, the
 Files/Batch and Responses APIs and agent-action receipts. Response fields keep the API's snake_case names.
 
@@ -114,8 +115,9 @@ await runWorker(require.resolve('./workflows'), {
 `TEMPORAL_NAMESPACE` and `TEMPORAL_TASK_QUEUE`, like the Python worker. An agent's `context` sends every request to
 the gateway with the run's headers and its own step receipt: `openaiOptions()` and `anthropicOptions()` configure
 the official SDKs (and clients that accept `baseURL`, `apiKey` and `fetch`), `context.fetch` is a governed fetch,
-and `context.tool(name, args)` calls an approved tool. Requests to any other host fail the step. `healthPort` serves
-`/healthz` and `/readyz` for the workflows Helm chart's probes.
+and `context.tool(name, args)` calls an approved tool. Requests to any other host fail the step. `healthPort` (or
+`AGENTWORKFLOWS_HEALTH_ADDRESS=host:port`) serves `/healthz` and `/readyz` for the workflows Helm chart's probes; with
+neither set, the worker opens no port.
 
 ## Documentation
 

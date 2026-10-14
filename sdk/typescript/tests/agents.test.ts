@@ -258,6 +258,8 @@ describe('container workspaces', () => {
     ['a failed command', { exec: async () => { throw new Error('fixture failed'); } }, 'fixture failed'],
     ['unreadable runner output', { exec: async () => Buffer.from('not json') }, 'invalid output'],
     ['an unsafe workspace name', { plan: { sandbox: '--kubeconfig=/tmp/x' } }, 'invalid workspace plan'],
+    ['a namespace that is not a DNS label', { plan: { namespace: 'team.code' } }, 'invalid workspace plan'],
+    ['an overlong namespace', { plan: { namespace: 'a'.repeat(64) } }, 'invalid workspace plan'],
     ['a missing timeout', { plan: { timeout_seconds: undefined } }, 'invalid workspace plan'],
   ] as const)('always revokes the grant after %s and reports the original failure', async (_name, failure, message) => {
     const start = { ...plan, ...('plan' in failure ? failure.plan : {}) };
@@ -268,6 +270,14 @@ describe('container workspaces', () => {
     expect(String(fetchMock.mock.calls.at(-1)?.[0])).toMatch(/\/finish$/);
     expect(JSON.parse(String(fetchMock.mock.calls.at(-1)?.[1]?.body))).toEqual({ credential_id: plan.credential_id, exit_code: -1, output: '' });
     if ('plan' in failure) expect(calls).toEqual([]);
+  });
+
+  it('accepts a dotted Sandbox name, as Kubernetes subdomain names allow', async () => {
+    fetchMock.mockImplementation(async url => ok(String(url).endsWith('/start') ? { ...plan, sandbox: 'coder.v2' } : { result: 'ok' }));
+    const { calls, kubectl } = cluster(async () => Buffer.from(JSON.stringify({ exit_code: 0, output: '' })));
+    await expect(runContainer({ baseUrl: gatewayUrl, apiKey: 'team-key', agent: 'coder', payload: {}, headers: {}, kubectl }))
+      .resolves.toEqual({ result: 'ok' });
+    expect(calls[3].args).toContain('coder.v2');
   });
 
   it('runs container calls from the activity after initializing the run budget', async () => {

@@ -141,9 +141,11 @@ from `@agentworkflows/sdk/worker` and calls
 The helper reads the same `AGENTWORKFLOWS_API_KEY`, `AGENTWORKFLOWS_URL`,
 `AGENTWORKFLOWS_TEAM`, `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, and
 `TEMPORAL_TASK_QUEUE` variables as the Python worker. Its second argument takes
-`agents` (below) and `healthPort`: set `healthPort: 8081` to serve the `/healthz` and
-`/readyz` probes the workflows Helm chart expects. A failed Temporal connection names
-the address it tried.
+`agents` (below) and `healthPort`. The `/healthz` and `/readyz` probes the workflows
+Helm chart expects listen on `healthPort`, or on `AGENTWORKFLOWS_HEALTH_ADDRESS`
+(`host:port`, such as `0.0.0.0:8081`). Unlike the Python worker, the TypeScript worker
+opens no port when neither is set, so a local trial needs no firewall exception. A
+failed Temporal connection or a taken health port names the setting to change.
 
 | Helper | Behavior |
 | --- | --- |
@@ -154,7 +156,15 @@ the address it tried.
 | `gateway.agent(name, arguments)` | Result of a framework agent registered on the worker |
 | `gateway.container(name, arguments)` | Output of an approved command in an agent-sandbox workspace; runs once per call |
 | `approval.approval(draft)` | Policy-driven reviewer quorum and expiry, exposed through `status`, `approve`, and `review` handlers |
-| `AgentWorkflowsTrigger` | Export alongside your workflows for governed Temporal schedule delivery |
+| `AgentWorkflowsTrigger` | Export alongside your workflows for governed Temporal schedule delivery; it reads the target run's status after 30 seconds, backs off to every five minutes, keeps only the run's ID and status in history, and continues as new when Temporal suggests it |
+
+To widen who may review a run that waits too long, an admin calls
+`setApprovalEscalation(workflow, afterSeconds, { approver_role, reviewers, channels })`
+(revision-checked like the other team settings; `approvalEscalations()` lists them and
+`removeApprovalEscalation(workflow)` stops new runs escalating). Reviewers iterate
+`for await (const run of client.reviewQueue())` over the waiting runs they may review now;
+each run's `approval_access` and `approval_escalation` say why and when. See
+[approval escalation](workflows.md#approval-escalation).
 
 Activity defaults match Python: three minutes per attempt, fifteen minutes overall,
 five attempts with exponential backoff. `WorkflowGateway` accepts a second options
