@@ -720,6 +720,10 @@ durable once the agent function returns; recovery from a crash mid-loop reruns t
 finer-grained recovery. Workflow steps use non-streaming Chat Completions or Anthropic
 Messages. The optional frameworks are pinned in the worker/test locks.
 
+TypeScript workers register agents with `runWorker(path, { agents })` and build clients with
+`new OpenAI(context.openaiOptions())` or `new Anthropic(context.anthropicOptions())`; see
+[framework agents](quickstart-typescript.md#framework-agents).
+
 Framework callbacks run as trusted worker code. Route every side-effecting tool through
 `context.tool` so the gateway governs and records it.
 Use [container steps](agent-sandbox-integration.md#container-workflow-steps) for code execution.
@@ -789,8 +793,9 @@ with GatewayClient(url, api_key=admin_key) as gateway:
     gateway.register_workflow(TicketTriage, models=["gpt-4.1-mini"], allowed_tools=["team.search"], cost_limit_usd=2)
 ```
 
-TypeScript uses `registerWorkflow(name, models, options?, revision?)`, `teamWorkflows()` and
-`removeWorkflow(name, revision?)`. The API is `GET /v1/team/workflows` (registrations, reserved
+TypeScript uses `registerWorkflow(nameOrFunction, models, options?, revision?)`, `teamWorkflows()` and
+`removeWorkflow(nameOrFunction, revision?)`; a workflow function declared with `withInputSchema` also
+supplies its schema. The API is `GET /v1/team/workflows` (registrations, reserved
 names, the models/tools you may choose, and your limits), `PUT /v1/team/workflows/{name}` and
 `DELETE /v1/team/workflows/{name}`. Writes need the current `If-Match` revision, which is shared with
 team settings and alert rules; a stale revision returns 409 and leaves everything unchanged. Repeating

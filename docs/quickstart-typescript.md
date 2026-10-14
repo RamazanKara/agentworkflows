@@ -134,11 +134,16 @@ export async function MyReview(request: { diff: string }) {
 ```
 
 Register `MyReview` in the team's gateway workflow policy before starting it through
-the API. Worker code imports `runWorker` from `@agentworkflows/sdk/worker` and calls
+the API, or with `registerWorkflow(MyReview, models)` from an admin client (a function
+declared with `withInputSchema` also sends its schema). Worker code imports `runWorker`
+from `@agentworkflows/sdk/worker` and calls
 `await runWorker(require.resolve('./workflows'))` with the compiled workflow module.
 The helper reads the same `AGENTWORKFLOWS_API_KEY`, `AGENTWORKFLOWS_URL`,
 `AGENTWORKFLOWS_TEAM`, `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, and
-`TEMPORAL_TASK_QUEUE` variables as the Python worker.
+`TEMPORAL_TASK_QUEUE` variables as the Python worker. Its second argument takes
+`agents` (below) and `healthPort`: set `healthPort: 8081` to serve the `/healthz` and
+`/readyz` probes the workflows Helm chart expects. A failed Temporal connection names
+the address it tried.
 
 | Helper | Behavior |
 | --- | --- |
@@ -146,6 +151,8 @@ The helper reads the same `AGENTWORKFLOWS_API_KEY`, `AGENTWORKFLOWS_URL`,
 | `gateway.text(prompt, { model, maxTokens })` | Governed text answer; omitted model uses the gateway default |
 | `gateway.model(messages, { model, maxTokens })` | Full chat completion, including usage |
 | `gateway.tool(name, arguments)` | Approved HTTP/MCP tool result through the gateway |
+| `gateway.agent(name, arguments)` | Result of a framework agent registered on the worker |
+| `gateway.container(name, arguments)` | Output of an approved command in an agent-sandbox workspace; runs once per call |
 | `approval.approval(draft)` | Policy-driven reviewer quorum and expiry, exposed through `status`, `approve`, and `review` handlers |
 | `AgentWorkflowsTrigger` | Export alongside your workflows for governed Temporal schedule delivery |
 
@@ -161,18 +168,85 @@ Keep worker credentials and HTTP clients out of workflow modules.
 The workflow client methods are `startRun`, `runs`, `run`, `approveRun`, `cancelRun`,
 `retryRun`, `triggers`, and `pauseTrigger`. Use `{ paused: false }` to resume a
 trigger and `{ project, cursor }` to page through runs. JSON response fields retain
-the API's snake_case names. This SDK covers governed model/tool workflows and the
-workflow and team administration APIs; framework adapters and the container runner are in the Python SDK.
+the API's snake_case names. The client also mirrors the Python client's inference
+calls: `chat`, `chatStream`, `completions`, `embeddings`, `moderations`, `batch`
+and `messages`; the Files/Batch API (`uploadBatchFile`, `createBatch`, `getBatch`,
+`getFileContent`, ...); the Responses API (`createResponse`, `getResponse`, ...);
+`recordReceipt`; and `team`, `usage`, `sandboxBudget` and `ready`. Request fields
+beyond the messages pass through with the API's names, for example
+`client.chat(messages, { model: 'demo-openai', max_tokens: 64 })`.
 
 `GatewayError` exposes `statusCode`, `reason`, `requestId`, and `detail`.
-`GatewayTransportError` gives a redacted connection failure.
+`GatewayTransportError` gives a redacted connection failure with the system `code`
+(such as `ECONNREFUSED`); its subclass `GatewayTimeoutError` reports an attempt that
+exceeded `timeoutMs` (120 seconds by default). `GatewayStreamError` means a stream
+ended with a gateway error event, so its text is incomplete.
 `GatewayRetryAfterError.retryAfter` is a delay in seconds above the client's retry
-cap (30 seconds by default). Read requests and idempotent starts retry twice;
-approval, cancel, retry-run, trigger, key and settings mutations run once per call.
+cap (30 seconds by default). Read requests, idempotent starts and inference retry
+twice. Approval, cancel, retry-run, trigger, key, settings and other mutations
+retry only when the gateway provably did not act: the connection was refused or
+the gateway answered 429 or 503. Invitation creation and redemption run once.
 Keep a `requestId` and reuse it with identical input after an ambiguous start.
 Inside workflows, gateway failures arrive as Temporal `ActivityFailure` with an
 `ApplicationFailure` cause whose `type` is the gateway reason. See the Python
 [error recovery table](sdk-reference.md#gateway-client-and-errors) for the shared reasons.
+
+Client options also take `sandboxId`, default `headers` (for example `traceparent`),
+`retryBackoffMs`, a custom `fetch`, and a `signal`. `withOptions` returns a copy for
+one call; aborting its signal rejects with the signal's reason and skips retries:
+
+```typescript
+const reply = await client.withOptions({ signal: AbortSignal.timeout(10_000) })
+  .chat([{ role: 'user', content: 'Summarize the incident' }]);
+```
+
+## Framework agents
+
+Run an OpenAI, Anthropic or other framework agent as one governed workflow step.
+Register it on the worker and call it from the workflow with
+`await new WorkflowGateway().agent('briefing', { topic })`:
+
+```typescript
+import OpenAI from 'openai';
+import { runWorker } from '@agentworkflows/sdk/worker';
+
+await runWorker(require.resolve('./workflows'), {
+  agents: {
+    async briefing(context, args) {
+      const sources = await context.tool('team.search', { query: args.topic });
+      const openai = new OpenAI(context.openaiOptions());
+      const reply = await openai.chat.completions.create({
+        model: 'demo-openai', max_tokens: 128,
+        messages: [{ role: 'user', content: `Summarize: ${JSON.stringify(sources)}` }],
+      });
+      return reply.choices[0].message.content;
+    },
+  },
+});
+```
+
+Install the framework packages in your worker project; the SDK does not depend on
+them. `context.openaiOptions()` and `context.anthropicOptions()` return `baseURL`,
+`apiKey`, a governed `fetch` and `maxRetries: 0` for the official SDKs and for
+clients that accept the same options. `context.fetch` is that governed fetch and
+`context.tool(name, args)` calls an approved tool. Every request carries the run,
+classification and its own step ID (`<step>/<n>`), so each gets a receipt. Requests
+to any host other than the gateway fail the step with `AgentEgressDenied`. A policy
+or budget denial fails the step without retries, even when the framework wraps the
+error. Custom workers pass the same `agents` map to
+`new GatewayActivities(url, key, { agents })`. As in Python, a crash mid-agent reruns
+the whole agent function; see [Bring your agent](workflows.md#bring-your-agent).
+
+## Container steps
+
+`await new WorkflowGateway().container('coder', { task })` runs the command the team
+policy approved for that agent in its existing agent-sandbox workspace and returns the
+output. It runs once per call. The worker checks the Sandbox pod and network policies
+exactly as the Python worker does, passes the short-lived grant to the workspace runner
+on stdin only, and always revokes the grant. The worker needs `kubectl` with access to
+that workspace; the workspace image needs the Python runner from `sdk/python/Dockerfile`.
+See [container workflow steps](agent-sandbox-integration.md#container-workflow-steps)
+for the policy, chart and RBAC setup.
 
 ## Team administration
 
@@ -297,7 +371,10 @@ reservations. See the [column and scope reference](sdk-reference.md#trigger-hist
 
 From `sdk/typescript`, run `npm run build`, `npm run lint`, and `npm test`. Vitest
 uses at most two workers. The equivalent repository target is `make test-typescript`,
-which runs locally to keep the CI job short.
+which runs locally to keep the CI job short. `npm run check:package` (also run by
+`npm pack`) installs the packed tarball into a scratch project and checks its
+contents, CommonJS and ESM imports of every entry point, and TypeScript resolution
+under `node16`, `bundler` and legacy `node` module settings.
 
 For the integration check, stop the example worker with Ctrl+C, then run `npm run
 smoke` in that terminal. This starts and stops its own workers against the fake
