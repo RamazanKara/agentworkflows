@@ -2401,6 +2401,18 @@ data export/erasure and telemetry status, including access rules and version hea
 <td>Approve as your authenticated identity; <code>--reject</code> rejects instead</td>
 </tr>
 <tr>
+<td><code>runs pending --workflow WORKFLOW</code></td>
+<td>Waiting runs you may review now, through your role or an approval escalation</td>
+</tr>
+<tr>
+<td><code>workflows escalation set WORKFLOW --after 4h --all-approvers --reviewer ID</code></td>
+<td>Escalate reviews that wait too long; <code>--channel</code> picks the notice's destination, <code>--no-notify</code> sends none</td>
+</tr>
+<tr>
+<td><code>workflows escalation list</code> / <code>workflows escalation remove WORKFLOW</code></td>
+<td>Inspect or stop approval escalation (unrestricted admin only)</td>
+</tr>
+<tr>
 <td><code>runs cancel RUN_ID</code></td>
 <td>Request cancellation; the run stops from its current step onward</td>
 </tr>
@@ -2563,6 +2575,10 @@ Export errors propagate through each SDK's existing error and read-retry handlin
 <td><code>TEMPORAL_TASK_QUEUE</code></td>
 <td>Optional existing override; must match the gateway's team queue</td>
 </tr>
+<tr>
+<td><code>AGENTWORKFLOWS_HEALTH_ADDRESS</code></td>
+<td><code>0.0.0.0:8081</code>; where the worker serves <code>/healthz</code> and <code>/readyz</code> as <code>host:port</code>, or <code>off</code> for a local worker</td>
+</tr>
 </tbody>
 </table>
 <h2 id="workflow-sdk">Workflow SDK<a class="headerlink" href="#workflow-sdk" title="Permanent link">&para;</a></h2>
@@ -2699,7 +2715,10 @@ are optional; <code>limit</code> defaults to 50 on the gateway, with a maximum o
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"audit-log.jsonl"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">output</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">gateway</span><span class="o">.</span><span class="n">export_audit</span><span class="p">(</span><span class="n">event_type</span><span class="o">=</span><span class="s2">"team_settings_changed"</span><span class="p">))</span>
 </code></pre></div>
-<p>Admin mutations surface ambiguous HTTP failures and read timeouts to the caller for review. Settings
+<p>Calls that change state (admin changes, uploads, deletions, receipts, votes, and run
+cancel/retry) retry only when the gateway provably did not act: a refused connection, 429 or
+503. Other failures and read timeouts surface to the caller for review. <code>start_run</code> retries
+broadly, because its <code>request_id</code> makes every attempt start the same run. Settings
 conflicts and validation failures surface as <code>GatewayError</code> with the original
 status and structured detail; settings field errors are in <code>detail["fields"]</code>.</p>
 <p><code>GatewayError</code> exposes <code>status_code</code>, <code>reason</code>, <code>request_id</code>, and <code>detail</code>. Validation errors
@@ -2797,6 +2816,18 @@ Python exposes the same fields in the status query and <code>GatewayClient.run()
 vote can leave the run waiting for other reviewers; inspect the run to see its current state.
 Each reviewer counts once, no matter how many times they vote. See <a href="../workflows/#approval-policies">approval policies</a>
 for identity, replay, automatic decisions and upgrade boundaries.</p>
+<p>Escalate reviews that wait too long, then work through your review queue:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">listing</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">approval_escalations</span><span class="p">()</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">client</span><span class="o">.</span><span class="n">set_approval_escalation</span><span class="p">(</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="s2">"ReleaseNotesWorkflow"</span><span class="p">,</span> <span class="n">after_seconds</span><span class="o">=</span><span class="mi">4</span> <span class="o">*</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">approver_role</span><span class="o">=</span><span class="s2">"approver"</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">reviewers</span><span class="o">=</span><span class="p">[</span><span class="s2">"maya@example.com"</span><span class="p">],</span> <span class="n">channels</span><span class="o">=</span><span class="p">[</span><span class="s2">"slack"</span><span class="p">],</span> <span class="n">revision</span><span class="o">=</span><span class="n">listing</span><span class="p">[</span><span class="s2">"revision"</span><span class="p">],</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">review_queue</span><span class="p">(</span><span class="n">workflow</span><span class="o">=</span><span class="s2">"ReleaseNotesWorkflow"</span><span class="p">):</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">run</span><span class="p">[</span><span class="s2">"run_id"</span><span class="p">],</span> <span class="n">run</span><span class="p">[</span><span class="s2">"approval_access"</span><span class="p">][</span><span class="s2">"via"</span><span class="p">],</span> <span class="n">run</span><span class="p">[</span><span class="s2">"progress"</span><span class="p">][</span><span class="s2">"draft"</span><span class="p">][:</span><span class="mi">80</span><span class="p">])</span>
+</code></pre></div>
+<p><code>approval_access</code> (<code>ApprovalAccess</code> in <code>agentworkflows.types</code>) says whether the caller may vote
+now and why; <code>approval_escalation</code> (<code>RunEscalation</code>) gives the escalation's deadline and state.
+See <a href="../workflows/#approval-escalation">approval escalation</a> for who becomes eligible and when.</p>
 <h2 id="team-adoption-apis">Team adoption APIs<a class="headerlink" href="#team-adoption-apis" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2855,6 +2886,12 @@ for identity, replay, automatic decisions and upgrade boundaries.</p>
 <td><code>team_workflows()</code>, <code>register_workflow(cls_or_name, models=[...], **options)</code>, <code>remove_workflow(cls_or_name)</code></td>
 <td><code>teamWorkflows()</code>, <code>registerWorkflow(name, models, options?, revision?)</code>, <code>removeWorkflow(name, revision?)</code></td>
 <td><code>GET /v1/team/workflows</code>, <code>PUT/DELETE /v1/team/workflows/{name}</code></td>
+</tr>
+<tr>
+<td>Approval escalation</td>
+<td><code>approval_escalations()</code>, <code>set_approval_escalation(workflow, after_seconds=..., **options)</code>, <code>remove_approval_escalation(workflow)</code>, <code>review_queue()</code></td>
+<td>not yet available</td>
+<td><code>GET /v1/team/approval-escalations</code>, <code>PUT/DELETE /v1/team/workflows/{name}/approval-escalation</code></td>
 </tr>
 <tr>
 <td>Deployment settings</td>

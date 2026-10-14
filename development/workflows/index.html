@@ -1179,6 +1179,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Approval policies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approval-escalation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval escalation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2550,6 +2567,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Approval policies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approval-escalation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Approval escalation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2983,11 +3017,11 @@ Temporal access and worker keys only to operators and workers.</p>
 </tr>
 <tr>
 <td><code>GET /v1/workflow-runs/{run_id}</code></td>
-<td>Status, draft, budget, step timeline with receipt IDs</td>
+<td>Status, draft, budget, step timeline with receipt IDs; <code>?timeline=false</code> returns status only</td>
 </tr>
 <tr>
 <td><code>POST /v1/workflow-runs/{run_id}/cancel</code></td>
-<td>Request cancellation of this exact execution</td>
+<td>Request cancellation of this exact execution; a finished run returns <code>409 workflow_not_cancellable</code></td>
 </tr>
 <tr>
 <td><code>POST /v1/workflow-runs/{run_id}/retry</code></td>
@@ -3091,8 +3125,10 @@ Notification links open the console, where recipients sign in normally.</p>
 <a href="https://docs.temporal.io/develop/python/workflows/schedules">Temporal Schedules</a>.
 Expressions use UTC, overlap policy is <strong>SKIP</strong>, and the catch-up window is
 five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
-the schedule action open until the target run ends. Each launch goes through the same
-governed start API. Redis persists interactive pauses across restarts; <code>paused: true</code> in
+the schedule action open until the target run ends, reading the run's status after 30 seconds
+and then backing off to every five minutes, and continues as new when Temporal suggests it, so
+a run that waits days for review never outgrows its schedule's history. It records only the
+run's ID and status, never its content. Each launch goes through the same governed start API. Redis persists interactive pauses across restarts; <code>paused: true</code> in
 configuration keeps a trigger paused, and only a configuration change by the admin resumes it.
 Removing a cron trigger removes its managed schedule on the next reconciliation. Schedule
 errors appear in the console; check Temporal and the gateway log for invalid expressions.</p>
@@ -3123,7 +3159,8 @@ the gateway persists the signed body fingerprint across the team, so an accepted
 is accepted once regardless of delivery ID or destination.
 Identical GitHub payload bytes are treated as retries. The triage example needs only the
 webhook secret.</p>
-<p>Completed delivery IDs return <code>409 webhook_replayed</code>; concurrent delivery and ambiguous
+<p>Completed delivery IDs return <code>409 webhook_replayed</code> for eight days; afterwards a resent
+delivery returns its original run. Concurrent delivery and ambiguous
 Temporal failures use the same deterministic run ID. After a <code>503</code>, retry with the same
 delivery ID/body and a fresh timestamp/signature. Each delivery ID accepts only its original input.
 Keep Redis trigger state, run start intents and Temporal history together in backups;
@@ -3379,8 +3416,9 @@ Registration narrows what your operator already approved for the team:</p>
 </table>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>list
 <a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>register<span class="w"> </span>TicketTriageWorkflow<span class="w">   </span>--model<span class="w"> </span>gpt-4.1-mini<span class="w"> </span>--tool<span class="w"> </span>team.search<span class="w"> </span>--cost-limit<span class="w"> </span><span class="m">2</span><span class="w"> </span>--reviewers<span class="w"> </span><span class="m">1</span><span class="w">   </span>--input-schema<span class="w"> </span>@ticket-schema.json
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>TicketTriageWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'{"ticket": "Password reset blocks sign-in."}'</span>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>remove<span class="w"> </span>TicketTriageWorkflow
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>register<span class="w"> </span>ReleaseWorkflow<span class="w"> </span>--model<span class="w"> </span>gpt-4.1-mini<span class="w"> </span>--approver-role<span class="w"> </span>admin<span class="w"> </span>--approval-timeout<span class="w"> </span>2d
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>start<span class="w"> </span>TicketTriageWorkflow<span class="w"> </span>--input<span class="w"> </span><span class="s1">'{"ticket": "Password reset blocks sign-in."}'</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>remove<span class="w"> </span>TicketTriageWorkflow
 </code></pre></div>
 <p>From Python, pass the <code>@workflow.defn</code> class; its name and <code>@input_schema</code> are used:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">with</span> <span class="n">GatewayClient</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="n">admin_key</span><span class="p">)</span> <span class="k">as</span> <span class="n">gateway</span><span class="p">:</span>
@@ -3572,6 +3610,53 @@ policies require the upgraded workers. Temporal patch
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
 <a href="../quickstart/#try-a-two-reviewer-policy">two-reviewer Quickstart</a>.</p>
+<h3 id="approval-escalation">Approval escalation<a class="headerlink" href="#approval-escalation" title="Permanent link">&para;</a></h3>
+<p>A review that waits too long can escalate. Escalation is off until a team admin configures it
+for a workflow; it then applies to runs started afterwards. When a run's draft is still waiting
+<code>after_seconds</code> after the run reached its approval gate, the gateway:</p>
+<ul>
+<li>lets more reviewers vote: every approver (<code>approver_role: approver</code>, for workflows whose
+  <code>approverRole</code> is <code>admin</code>) and the identities in <code>reviewers</code> (OIDC subjects or managed key IDs
+  that hold the approver role). Admins and the workflow's own approver role keep their access.</li>
+<li>writes one <code>approval_escalated</code> receipt to the run timeline, signed by the policy principal
+  <code>approval-escalation</code>. A vote that escalation made possible carries <code>eligibility: escalation</code>
+  in its <code>approval</code> receipt.</li>
+<li>sends an <code>approval_escalated</code> notice that names who may now review, through the team's
+  alert-rule channels or the escalation's own <code>channels</code>. <code>channels: []</code> escalates silently.
+  The notice is delivered like other notifications, with retries and receipts, even when the
+  team's alert rules do not list the event.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>escalation<span class="w"> </span><span class="nb">set</span><span class="w"> </span>ReleaseNotesWorkflow<span class="w"> </span>--after<span class="w"> </span>4h<span class="w"> </span>--all-approvers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>--reviewer<span class="w"> </span>maya@example.com<span class="w"> </span>--channel<span class="w"> </span>slack
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>escalation<span class="w"> </span>list
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>agentworkflows<span class="w"> </span>workflows<span class="w"> </span>escalation<span class="w"> </span>remove<span class="w"> </span>ReleaseNotesWorkflow
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>agentworkflows<span class="w"> </span>runs<span class="w"> </span>pending<span class="w">          </span><span class="c1"># waiting runs you may review now, including escalated ones</span>
+</code></pre></div>
+<p><code>after_seconds</code> is 60 to 604740 and must be shorter than the workflow's approval timeout;
+<code>escalation list</code> marks an escalation <code>effective: false</code> if a later timeout change ends reviews
+first. Quorum, expiry, and the one-vote-per-identity rule are unchanged: an escalated reviewer's
+vote counts toward <code>requiredApprovals</code> like any other, and the review still expires at
+<code>expires_at</code>.</p>
+<p>The run's start saves the escalation with its other approval fields, and the gateway records the
+moment the run reached its gate. Eligibility follows from those two durable values at the
+deadline itself, so a busy monitor or an offline worker cannot delay it, and gateway replicas
+agree. Escalation needs no worker change: workflow histories are unchanged, and runs already
+waiting on existing workers escalate if they were started with an escalation configured. The
+monitor (about every 30 seconds) or the first escalated vote, whichever comes first, writes the
+receipt and queues the notice exactly once.</p>
+<p>Run inspection and listings show <code>approval_escalation</code> with the configuration and
+<code>waiting_since</code>, <code>escalates_at</code>, <code>escalated</code> and <code>recorded_at</code> (the receipt time). For a waiting
+run they also show the caller's <code>approval_access</code>: <code>eligible</code>, <code>via</code> (<code>role</code> or <code>escalation</code>), and
+<code>eligible_at</code> when escalation will admit the caller later. A vote before that time returns <code>403</code>
+with the time it opens.</p>
+<p>API: <code>GET /v1/team/approval-escalations</code>; <code>PUT</code> and <code>DELETE
+/v1/team/workflows/{name}/approval-escalation</code> with the current <code>If-Match</code> revision (unrestricted
+team admin). PUT takes <code>after_seconds</code>, optional <code>approver_role</code> (<code>approver</code>), <code>reviewers</code> (up to
+20) and <code>channels</code>. Changes are audited as <code>approval_escalation_changed</code> and
+<code>approval_escalation_removed</code>; removing a team-registered workflow removes its escalation.
+<code>GET /v1/workflow-policies</code> shows each workflow's <code>approvalEscalation</code>. Python:
+<code>approval_escalations()</code>, <code>set_approval_escalation(workflow, after_seconds=..., ...)</code>,
+<code>remove_approval_escalation(workflow)</code> and <code>review_queue()</code>.</p>
 <h2 id="invite-teammates-without-company-sign-in">Invite teammates without company sign-in<a class="headerlink" href="#invite-teammates-without-company-sign-in" title="Permanent link">&para;</a></h2>
 <p>In <strong>Members &amp; keys → Invite a teammate</strong>, choose a name, role, and project. Create and
 copy the invitation link, then share it privately. The recipient opens it and chooses
