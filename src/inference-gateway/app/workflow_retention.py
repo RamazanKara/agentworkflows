@@ -25,7 +25,7 @@ async def retain_run(request: Request, run_id: str, data: dict[str, Any], closed
     keys = [
         base, f"{settings.sandbox_budget_key_prefix}:start:{data['workflow_id']}",
         *(base + suffix for suffix in (":metadata", ":timeline", ":capture", ":retention", ":notifications",
-                                       ":snapshot")),
+                                       ":snapshot", ":approvals", ":approval-opened", ":escalated")),
     ]
     modes = await redis_call(request, "hgetall", base + ":capture")
     keys.extend(content_key(base, step_id) for step_id in modes)

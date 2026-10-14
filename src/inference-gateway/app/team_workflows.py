@@ -362,10 +362,15 @@ def register_team_workflow_routes(app: FastAPI) -> None:
         del registrations[name]
         prefix = f"workflows.{name}."
         overrides = {key: value for key, value in settings.document["overrides"].items() if not key.startswith(prefix)}
+        changes: dict[str, Any] = {"team_workflows": registrations, "overrides": overrides}
+        escalations = settings.document.get("approval_escalations") or {}
+        if name in escalations:
+            # A later registration under this name starts without the old escalation.
+            changes["approval_escalations"] = {key: value for key, value in escalations.items() if key != name}
         saved = await save_team_document(
             request,
             settings.document,
-            {"team_workflows": registrations, "overrides": overrides},
+            changes,
             "team_workflow_removed",
             workflow=name,
         )

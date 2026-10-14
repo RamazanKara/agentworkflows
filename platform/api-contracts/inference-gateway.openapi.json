@@ -90,6 +90,67 @@
         "title": "Approval",
         "type": "object"
       },
+      "ApprovalEscalation": {
+        "additionalProperties": false,
+        "properties": {
+          "after_seconds": {
+            "description": "Seconds a review may wait before it escalates; shorter than the approval timeout.",
+            "maximum": 604740.0,
+            "minimum": 60.0,
+            "title": "After Seconds",
+            "type": "integer"
+          },
+          "approver_role": {
+            "anyOf": [
+              {
+                "const": "approver",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Let every approver review once escalated (for workflows that need an admin).",
+            "title": "Approver Role"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "slack",
+                    "email",
+                    "webhook"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where to send the escalation notice; omit for the team's alert channels, [] for none.",
+            "title": "Channels"
+          },
+          "reviewers": {
+            "description": "Identities (OIDC subject or managed key ID) with an approver role who may review once escalated.",
+            "items": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Reviewers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "after_seconds"
+        ],
+        "title": "ApprovalEscalation",
+        "type": "object"
+      },
       "ApprovalGate": {
         "properties": {
           "approval_required": {
@@ -894,6 +955,41 @@
           "input"
         ],
         "title": "EmbeddingsRequest",
+        "type": "object"
+      },
+      "EscalationRemoved": {
+        "properties": {
+          "removed": {
+            "title": "Removed",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "removed"
+        ],
+        "title": "EscalationRemoved",
+        "type": "object"
+      },
+      "EscalationSaved": {
+        "properties": {
+          "escalation": {
+            "$ref": "#/components/schemas/TeamEscalation"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "escalation"
+        ],
+        "title": "EscalationSaved",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2583,6 +2679,136 @@
           "external_follow_up"
         ],
         "title": "TeamDataStatus",
+        "type": "object"
+      },
+      "TeamEscalation": {
+        "additionalProperties": false,
+        "properties": {
+          "after_seconds": {
+            "description": "Seconds a review may wait before it escalates; shorter than the approval timeout.",
+            "maximum": 604740.0,
+            "minimum": 60.0,
+            "title": "After Seconds",
+            "type": "integer"
+          },
+          "approver_role": {
+            "anyOf": [
+              {
+                "const": "approver",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Let every approver review once escalated (for workflows that need an admin).",
+            "title": "Approver Role"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "slack",
+                    "email",
+                    "webhook"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where to send the escalation notice; omit for the team's alert channels, [] for none.",
+            "title": "Channels"
+          },
+          "effective": {
+            "description": "False when the workflow's approval timeout ends the review first.",
+            "title": "Effective",
+            "type": "boolean"
+          },
+          "reviewers": {
+            "description": "Identities (OIDC subject or managed key ID) with an approver role who may review once escalated.",
+            "items": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Reviewers",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          },
+          "workflow": {
+            "title": "Workflow",
+            "type": "string"
+          }
+        },
+        "required": [
+          "after_seconds",
+          "workflow",
+          "effective",
+          "updated_by",
+          "updated_at"
+        ],
+        "title": "TeamEscalation",
+        "type": "object"
+      },
+      "TeamEscalations": {
+        "properties": {
+          "available_channels": {
+            "items": {
+              "enum": [
+                "slack",
+                "email",
+                "webhook"
+              ],
+              "type": "string"
+            },
+            "title": "Available Channels",
+            "type": "array"
+          },
+          "escalations": {
+            "items": {
+              "$ref": "#/components/schemas/TeamEscalation"
+            },
+            "title": "Escalations",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "escalations",
+          "available_channels"
+        ],
+        "title": "TeamEscalations",
         "type": "object"
       },
       "TeamRetention": {
@@ -5163,6 +5389,38 @@
         ]
       }
     },
+    "/v1/team/approval-escalations": {
+      "get": {
+        "operationId": "list_escalations_v1_team_approval_escalations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamEscalations"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "List per-workflow approval escalation (team admin)",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/v1/team/audit": {
       "get": {
         "operationId": "audit_list_v1_team_audit_get",
@@ -6548,6 +6806,140 @@
         ]
       }
     },
+    "/v1/team/workflows/{name}/approval-escalation": {
+      "delete": {
+        "operationId": "delete_escalation_v1_team_workflows__name__approval_escalation_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationRemoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Stop escalating reviews of this workflow for runs started afterwards",
+        "tags": [
+          "workflows"
+        ]
+      },
+      "put": {
+        "operationId": "put_escalation_v1_team_workflows__name__approval_escalation_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalEscalation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "CsrfToken": [],
+            "SessionCookieAuth": []
+          }
+        ],
+        "summary": "Escalate reviews of this workflow that wait too long; applies to runs started afterwards",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/v1/tools": {
       "get": {
         "operationId": "tools_v1_tools_get",
@@ -7069,6 +7461,18 @@
               "format": "uuid",
               "title": "Run Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Include the step timeline, step content and the run's result.",
+            "in": "query",
+            "name": "timeline",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include the step timeline, step content and the run's result.",
+              "title": "Timeline",
+              "type": "boolean"
             }
           }
         ],

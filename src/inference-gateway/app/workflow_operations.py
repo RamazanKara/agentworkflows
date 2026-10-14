@@ -28,6 +28,14 @@ from app.team_settings import effective_team_settings
 from app.teams import project_access, require_role
 from app.workflow_budget import effective_run_limits, redis_call, run_key
 from app.workflow_content import step_content
+from app.workflow_escalation import (
+    configuration,
+    escalate_if_due,
+    escalation_admits,
+    escalation_state,
+    review_access,
+    review_denied,
+)
 from app.workflow_insights import event_charge, summarize
 from app.workflow_retention import TERMINAL_STATES, retain_run
 
@@ -242,6 +250,15 @@ async def describe_run(
             "cost_usd": int(raw.get("cost", 0)) / 1_000_000_000,
             **effective_run_limits(raw, policy),
         }
+        approval_policy = data.get("approval_policy") or {}
+        waiting = (result.get("progress") or {}).get("stage") == "awaiting_approval"
+        escalation = await escalation_state(request, run_id, approval_policy, waiting=waiting)
+        if escalation:
+            result["approval_escalation"] = escalation
+        if waiting:
+            # Per caller, so only on live runs: finished runs are kept as shared snapshots.
+            role = approval_policy.get("approver_role") or (policy.approver_role if policy else "approver")
+            result["approval_access"] = review_access(request.state.principal or {}, role, escalation)
         if result["status"] in TERMINAL_STATES:
             await keep_snapshot(request, run_id, result, deadline)
     if not timeline:
@@ -305,6 +322,7 @@ async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str]
     origin = {"trigger": trigger} if trigger else {}
     canonical = json.dumps({"workflow": body.workflow, "input": body.input}, sort_keys=True)
     fingerprint = hashlib.sha256(canonical.encode()).hexdigest()
+    escalation = configuration(settings.document, body.workflow)
     data = {
         "workflow_id": workflow_id,
         "workflow": body.workflow,
@@ -315,11 +333,14 @@ async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str]
         "created_at": time(),
         "submitted_by": principal,
         "approval_policy": {
-            field: getattr(team.workflows[body.workflow], field)
-            for field in (
-                "approval_required", "approval_threshold_usd", "approver_role",
-                "required_approvals", "approval_timeout_seconds",
-            )
+            **{
+                field: getattr(team.workflows[body.workflow], field)
+                for field in (
+                    "approval_required", "approval_threshold_usd", "approver_role",
+                    "required_approvals", "approval_timeout_seconds",
+                )
+            },
+            **({"approval_escalation": escalation} if escalation else {}),
         },
         **origin,
         **next(({"template": template} for template in settings.document.get("templates", {}).values()
@@ -373,7 +394,7 @@ RUN_STATUSES = ("running", "completed", "failed", "canceled", "timed_out", "term
 
 
 async def refresh_team_runs(request: Request, projects: Iterable[str]) -> dict[str, int]:
-    """Describe a team's retained runs, deliver their notifications, and count them by status."""
+    """Describe a team's retained runs, escalate overdue reviews, deliver notifications, count runs by status."""
     from app.workflow_notifications import notify_run
 
     team_id = request.state.sandbox_id
@@ -398,6 +419,9 @@ async def refresh_team_runs(request: Request, projects: Iterable[str]) -> dict[s
             for (run_id, _), row in zip(ids, rows, strict=True):
                 if not isinstance(row, Exception):
                     try:
+                        waiting = row.get("progress", {}).get("stage") == "awaiting_approval"
+                        state = row.get("approval_escalation")
+                        await escalate_if_due(request, run_id, row["workflow"], state, waiting=waiting)
                         await notify_run(request, row)
                     except (HTTPException, RPCError, OSError) as exc:
                         row = exc
@@ -658,9 +682,13 @@ def register_operation_routes(app: FastAPI) -> None:
         team = (await effective_team_settings(request)).team
         policy = team.workflows.get(data["workflow"]) if team else None
         approval_policy = data.get("approval_policy", {})
-        if principal["role"] != "admin":
-            require_role(request, approval_policy.get("approver_role", policy.approver_role if policy else "approver"))
+        role = approval_policy.get("approver_role", policy.approver_role if policy else "approver")
         reviewer = principal.get("sub") or principal.get("key_id")
+        escalation = None
+        if principal["role"] not in {"admin", role}:
+            escalation = await escalation_state(request, str(run_id), approval_policy, waiting=True)
+            if not escalation_admits(escalation, principal, reviewer):
+                raise HTTPException(403, detail=review_denied(role, escalation))
         update_id = hashlib.sha256(json.dumps([str(run_id), reviewer, body.approved]).encode()).hexdigest()
         try:
             try:
@@ -680,6 +708,8 @@ def register_operation_routes(app: FastAPI) -> None:
                             409, detail="Upgrade the worker SDK to 0.9.0 for this approval policy."
                         ) from None
                     if progress.get("stage") == "awaiting_approval":
+                        # The escalation receipt precedes the vote it made possible.
+                        await escalate_if_due(request, str(run_id), data["workflow"], escalation, waiting=True)
                         accepted = await handle.execute_update(
                             "review", args=[body.approved, reviewer], id=update_id, rpc_timeout=RPC_TIMEOUT
                         )
@@ -702,7 +732,14 @@ def register_operation_routes(app: FastAPI) -> None:
                     "message": "This run has no undecided draft. Inspect its current status before reviewing.",
                 },
             )
-        await operation_receipt(request, str(run_id), "approval", approved=body.approved, update_id=update_id)
+        # A retried vote replays its Temporal update; write its receipt only once.
+        votes = run_key(request, str(run_id)) + ":approvals"
+        if not await redis_call(request, "hget", votes, update_id):
+            await redis_call(request, "hset", votes, update_id, "1")
+            await operation_receipt(
+                request, str(run_id), "approval", approved=body.approved, update_id=update_id,
+                **({"eligibility": "escalation"} if escalation else {}),
+            )
         return {"run_id": str(run_id), "approved": body.approved, "reviewer": reviewer}
 
     async def startup() -> None:

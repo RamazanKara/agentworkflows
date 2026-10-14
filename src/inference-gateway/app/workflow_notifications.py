@@ -21,6 +21,8 @@ from app.policy import SMTPNotification, TeamNotifications
 from app.team_settings import effective_team_settings
 from app.teams import require_role
 from app.workflow_budget import redis_call, run_key
+from app.workflow_escalation import EVENT as ESCALATION_EVENT
+from app.workflow_escalation import open_gate
 from app.workflow_operations import RPC_TIMEOUT, execution, operation_receipt, run_metadata
 
 CLAIM = "return redis.call('SET', KEYS[1], ARGV[1], 'NX', 'EX', 120)"
@@ -80,6 +82,11 @@ async def send_notification(config: TeamNotifications, channel: str, payload: di
         f"AgentWorkflows · {payload['team_id']} / {payload['project']} · {payload['workflow']}: "
         f"{payload['event'].replace('_', ' ')}. Review in the console: {payload['console_url']}"
     )
+    escalation = payload.get("escalation")
+    if escalation:
+        audience = (["every approver"] if escalation["approver_role"] else []) + escalation["reviewers"]
+        if audience:
+            text += f" Now open to: {', '.join(audience)}."
     if channel == "email":
         assert config.smtp is not None
         await asyncio.to_thread(send_email, config.smtp, text, payload["id"])
@@ -147,11 +154,18 @@ async def notify_run(request: Request, row: dict[str, Any]) -> None:
         if events.get(event) != "1":
             await queue_event(request, run_id, event)
             events[event] = "1"
+    escalation = row.get("approval_escalation") or {}
     for event, queued in events.items():
-        if queued != "1" or event not in rules.events:
+        targets = rules.channels
+        if event == ESCALATION_EVENT:
+            # Configuring escalation opts in to its notice; it may name its own destinations.
+            targets = escalation["channels"] if escalation.get("channels") is not None else rules.channels
+        elif event not in rules.events:
+            continue
+        if queued != "1":
             continue
         for channel in channels(config):
-            if channel not in rules.channels:
+            if channel not in targets:
                 continue
             key = run_key(request, run_id) + f":notification:{event}:{channel}"
             # Most retained runs are long settled; read before taking the delivery lock.
@@ -174,6 +188,9 @@ async def notify_run(request: Request, row: dict[str, Any]) -> None:
                     "workflow": row["workflow"],
                     "run_id": run_id,
                     "console_url": f"{str(config.console_url).rstrip('/')}#run/{run_id}",
+                    **({"escalation": {
+                        field: escalation.get(field) for field in ("approver_role", "reviewers", "escalates_at")
+                    }} if event == ESCALATION_EVENT else {}),
                 }
                 state = {
                     "attempts": attempt,
@@ -257,5 +274,7 @@ def register_notification_routes(app: FastAPI) -> None:
             await operation_receipt(request, str(run_id), "approval", approved=True, automatic=True,
                                     approval_threshold_usd=approval["approval_threshold_usd"], cost_usd=spent)
             return result
+        if approval.get("approval_escalation"):
+            await open_gate(request, str(run_id))
         await queue_event(request, str(run_id), "awaiting_approval")
         return result

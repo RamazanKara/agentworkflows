@@ -54,11 +54,13 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
     register_secret_routes(app)
     register_template_routes(app)
     register_insight_routes(app)
+    from app.workflow_escalation import configuration, register_escalation_routes
     from app.workflow_notifications import register_notification_routes
     from app.workflow_triggers import register_trigger_routes
 
     register_trigger_routes(app)
     register_notification_routes(app)
+    register_escalation_routes(app)
 
     @app.put("/v1/workflow-runs/{run_id}", tags=["workflows"], summary="Initialize an immutable per-run budget")
     async def initialize_run(request: Request, run_id: UUID, budget: RunBudget) -> dict[str, Any]:
@@ -146,12 +148,14 @@ def register_workflow_routes(app: FastAPI, settings: Settings) -> None:
 
     @app.get("/v1/workflow-policies", tags=["workflows"], summary="Discover this team's workflow policies")
     async def workflow_policies(request: Request) -> dict[str, Any]:
-        team = (await effective_team_settings(request)).team
+        settings = await effective_team_settings(request)
+        team = settings.team
         return {
             "workflows": {
                 name: {
                     **policy.model_dump(by_alias=True),
                     "captureContent": capture_mode(team, policy),
+                    "approvalEscalation": configuration(settings.document, name),
                 }
                 for name, policy in team.workflows.items()
             }
