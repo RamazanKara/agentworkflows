@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 import httpx
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from app.governance import effective_settings, governed, reserve_budget, route_settings, workflow_route_permitted
 from app.metrics import RUNTIME_FALLBACKS, SHADOW_REQUESTS
@@ -14,7 +15,15 @@ from app.request_context import _runtime_headers
 from app.runtime_client import RuntimeClient
 from app.settings import AdmissionPolicyError
 from app.team_settings import forget_team_settings
-from app.workflow_budget import load_run_policy, model_charge, reserve_run, settle_run_model
+from app.workflow_budget import (
+    SETTLE,
+    load_run_policy,
+    model_charge,
+    redis_call,
+    reserve_run,
+    run_key,
+    settle_run_model,
+)
 
 
 def _schedule_shadow(client: RuntimeClient, shadow_route: Any, payload_dict: dict[str, Any], request: Request) -> None:
@@ -112,16 +121,56 @@ async def _chat_with_fallback(
             if workflow_call:
                 attempt["charged"] = request.state.workflow_charge
             return result
+        except AdmissionPolicyError:
+            # The provider adapter refused the call before sending it.
+            await _release_run_reservation(request, reservation, attempt)
+            raise
         except httpx.HTTPError as exc:
             attempt["status"] = "failed"
             if isinstance(exc, httpx.HTTPStatusError):
                 attempt["status_code"] = exc.response.status_code
+            if not provider_processed(exc):
+                await _release_run_reservation(request, reservation, attempt)
             if _is_failover_worthy(exc) and index + 1 < len(chain):
                 RUNTIME_FALLBACKS.labels(candidate.backend, chain[index + 1].backend).inc()
                 continue
             _refuse_cloud_fallback(request, exc)
             raise
     raise RuntimeError("no runtime route available")
+
+
+def provider_processed(exc: httpx.HTTPError) -> bool:
+    """Whether a failed call may have consumed provider capacity, so its charge stands.
+
+    Only failures that prove the provider did no work count as unprocessed: no connection
+    (including an open circuit, a connect timeout, or no free pool connection) and an
+    explicit refusal to take the request (429, 503). A read timeout, a dropped connection,
+    or any other 5xx is ambiguous - the provider may have generated - so it keeps the
+    conservative charge.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code not in {429, 503}
+    return not isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout))
+
+
+async def _release_run_reservation(
+    request: Request, reservation: tuple[int, int] | None, attempt: dict[str, Any]
+) -> None:
+    """Return a workflow attempt's run-budget reservation for a call no provider processed.
+
+    Without it, each failed attempt kept its worst-case reservation: a provider outage
+    across activity retries and fallback routes could exhaust a run's budget with no
+    real spend. A refund that cannot be written keeps the charge, which only over-counts.
+    """
+    if reservation is None:
+        return
+    try:
+        await redis_call(request, "eval", SETTLE, 1, run_key(request), -reservation[0], -reservation[1])
+    except HTTPException:
+        logging.getLogger("uvicorn.error").warning("Run budget refund failed; the reservation stands.")
+        return
+    attempt["refunded"] = True
+    request.state.workflow_charge = None
 
 
 def _refuse_cloud_fallback(request: Request, exc: httpx.HTTPError) -> None:

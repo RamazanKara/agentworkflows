@@ -394,3 +394,38 @@ def test_a_governed_call_reads_team_settings_once(settings_gateway, monkeypatch)
     reads.clear()
     assert update(client, {"cost_limit_usd": 0.5}).status_code == 200
     assert client.get(PATH, headers=auth("admin")).json()["fields"]["cost_limit_usd"]["value"] == 0.5
+
+
+@pytest.mark.parametrize(
+    ("error", "refunded"),
+    [
+        (httpx.ConnectError("provider unreachable"), True),
+        (httpx.HTTPStatusError("busy", request=None, response=httpx.Response(429)), True),
+        (httpx.HTTPStatusError("busy", request=None, response=httpx.Response(503)), True),
+        # The provider may have generated before these failed: the reservation stands.
+        (httpx.ReadTimeout("no reply"), False),
+        (httpx.HTTPStatusError("boom", request=None, response=httpx.Response(500)), False),
+    ],
+)
+def test_failed_attempts_the_provider_never_processed_return_the_run_budget(settings_gateway, error, refunded):
+    # Every failed attempt used to keep its worst-case run reservation, so an outage across
+    # activity retries and fallback routes exhausted a run's budget with no real spend.
+    client, app = settings_gateway
+    primary, backup = app.state.model_routing_policy.routes
+    app.state.model_routing_policy = replace(
+        app.state.model_routing_policy, routes=(replace(primary, fallbacks=("backup",)), backup),
+    )
+    run, _, _ = initialized_run(client)
+
+    async def unavailable(payload, **kwargs):
+        raise error
+
+    app.state.runtime_client.chat_completions = unavailable
+    headers = {**auth("worker"), "X-Workflow-Run-ID": run["run_id"], "X-Workflow-Step-ID": "draft"}
+    assert chat(client, headers).status_code >= 500
+    prefix = app.state.settings.sandbox_budget_key_prefix
+    budget = app.state.budget_tracker.client.data[f"{prefix}:workflow:team:{run['run_id']}"]
+    if refunded:
+        assert (budget["tokens"], budget["cost"]) == (0, 0)
+    else:
+        assert budget["tokens"] > 0 and budget["cost"] > 0

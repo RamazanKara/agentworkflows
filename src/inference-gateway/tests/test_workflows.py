@@ -181,12 +181,13 @@ def gateway():
     class Runtime:
         calls = 0
         fail = False
+        error = None
 
         async def chat_completions(self, payload, headers=None, backend=None, retry=True):
             assert retry is False
             self.calls += 1
             if self.fail and backend == "openai":
-                raise httpx.ConnectError("fixture failure")
+                raise self.error or httpx.ConnectError("fixture failure")
             return {
                 "choices": [{"message": {"content": "ok"}}],
                 "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
@@ -235,19 +236,33 @@ def test_budget_denied_before_provider(gateway, limits, reason):
     assert runtime.calls == 0
 
 
-def test_fallback_is_charged_and_receipts_link_run_and_step(gateway, caplog):
+@pytest.mark.parametrize(
+    ("error", "refunded"),
+    [
+        # The provider never received the call: its reservation is returned.
+        (httpx.ConnectError("fixture failure"), True),
+        # The request was sent and the provider may have generated: the reservation stands.
+        (httpx.ReadTimeout("fixture timeout"), False),
+        (httpx.HTTPStatusError("bad gateway", request=None, response=httpx.Response(502)), False),
+    ],
+)
+def test_fallback_is_charged_and_receipts_link_run_and_step(gateway, caplog, error, refunded):
     client, runtime, run_id, headers = gateway
     runtime.fail = True
+    runtime.error = error
     client.put(f"/v1/workflow-runs/{run_id}", json={})
     with caplog.at_level(logging.INFO, logger="agentworkflows.audit"):
         assert chat(client, headers).status_code == 200
     budget = client.get(f"/v1/workflow-runs/{run_id}").json()
-    assert budget["tokens"] == 22 + 7
-    assert budget["cost_usd"] == pytest.approx(0.066 + 0.018)
+    # The served fallback is charged its measured usage (7 tokens, $0.018) either way; the
+    # failed primary keeps its 22-token, $0.066 reservation only when it may have run.
+    assert budget["tokens"] == (7 if refunded else 22 + 7)
+    assert budget["cost_usd"] == pytest.approx(0.018 if refunded else 0.066 + 0.018)
     event = next(json.loads(record.message) for record in caplog.records if record.name == "agentworkflows.audit")
     assert event["workflow_run_id"] == run_id
     assert event["workflow_step_id"] == "1"
     assert [attempt["status"] for attempt in event["routing_attempts"]] == ["failed", "served"]
+    assert event["routing_attempts"][0].get("refunded", False) is refunded
     assert runtime.calls == 2
 
 
