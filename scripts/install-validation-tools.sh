@@ -122,7 +122,10 @@ download_github_asset() {
   release_json="$(mktemp)"
 
   log "resolving ${owner_repo} ${tag} asset ${asset_name}"
-  curl "${CURL_ARGS[@]}" "https://api.github.com/repos/${owner_repo}/releases/tags/${tag}" -o "$release_json"
+  # Anonymous API calls share a 60/hour budget per IP, which CI runners exhaust quickly.
+  local auth=()
+  [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  curl "${CURL_ARGS[@]}" "${auth[@]}" "https://api.github.com/repos/${owner_repo}/releases/tags/${tag}" -o "$release_json"
   mapfile -t asset < <(python_release_asset "$release_json" "$asset_name")
   rm -f "$release_json"
   local api_url="${asset[0]:-}"

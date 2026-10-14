@@ -25,7 +25,7 @@ a gateway on port 8080; Vite proxies `/v1` to it.
 
 `make test-console` builds and runs headless Chromium checks against local API fixtures
 with at most two workers. `make test` and `make validate` include them. On Linux, install
-browser libraries once with `cd src/inference-gateway/console && npm ci && npx playwright install --with-deps chromium`.
+browser libraries once with `make test-console PLAYWRIGHT_WITH_DEPS=1` (uses sudo).
 `make compose-smoke` additionally tests the real gateway, Temporal worker, and local provider
 fakes from the browser, entirely on local fakes. Keep the API contract snapshot
 current with `make api-contract-update` when changing filters or other endpoint parameters.
@@ -37,8 +37,8 @@ make test
 make quality
 ```
 
-`make test` runs repository tooling tests, gateway tests, first-party SDK tests, and
-RAG tests. The service test scripts create their own environments under
+`make test` runs repository tooling tests, gateway tests, both first-party SDKs' tests,
+RAG tests and the console checks. The service test scripts create their own environments under
 `src/inference-gateway/.venv` and `src/rag-service/.venv`.
 
 `make quality` installs Ruff and mypy into `.venv-quality`. It lints the repository's
@@ -63,15 +63,17 @@ The build writes the site to `site/`. Use `make docs-serve` to preview it locall
 | RAG behavior | `make test-rag`, `make rag-eval-check`, `make quality` | API or configuration contracts when the public surface changes |
 | First-party SDK | `make test-gateway` includes its suite; see the focused command below | Package version for a release |
 | Repository automation | `make test-scripts`, `make repo-hygiene`, `make quality` | Reports only when intentionally updating sample formats |
-| Helm charts or cluster values | `make chart-docs`, `make config-contract`, `make production-check` | Chart value tables and configuration contracts |
+| Helm charts or cluster values | `make static-checks`, `make test-scripts` | Chart value tables and configuration contracts |
 | Documentation or runbooks | `make repo-hygiene`, `make docs-build` | Site output stays local (generated, uncommitted) |
 | Runtime dependencies or Dockerfiles | `make dependency-lock-check`, `make image-scan`, `make repo-security-scan` | Hashed lockfiles and image scan evidence |
 
 After focused checks, run `make validate` for the default repository gate. It also
 requires Helm and uses available optional tools for schema, policy, and security
-checks. CI runs `make validate-full`, which requires the strict toolchain, then
-`make eval-local` and `make coverage`. The documentation site has its own strict
-build workflow.
+checks. `make static-checks` runs just its test-free part (Helm lint and renders,
+YAML, contracts, chart docs and governance checks) in about a minute. CI runs the
+static checks and the tooling, gateway, SDK, RAG and console suites on every push and
+pull request; `make validate-full`, `make eval-local` and `make coverage` stay local.
+The documentation site has its own strict build workflow.
 
 See [getting started](getting-started.md) for toolchain profiles and
 [evidence and validation](proof.md) for release evidence requirements.

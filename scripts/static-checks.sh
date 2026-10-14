@@ -1,0 +1,256 @@
+#!/usr/bin/env bash
+# Static repository gate: Helm lint and renders, YAML, generated contracts and docs,
+# governance and evidence configuration, and optional strict-toolchain validators.
+# Needs Helm, Python 3 and the gateway environment (created on demand); no cluster or
+# running services. Called by scripts/validate.sh, `make static-checks` and CI.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/common.sh"
+cd "$ROOT"
+
+require_cmd python3 "Python 3 is required for YAML and contract checks."
+require_cmd helm "Helm is required to lint and render local charts."
+ensure_service_venv "$ROOT/src/inference-gateway"
+
+log "checking RAG retrieval-eval metrics and golden suite"
+src/inference-gateway/.venv/bin/python scripts/rag-eval.py --selftest
+src/inference-gateway/.venv/bin/python scripts/rag-eval.py --check-config --suite platform/evals/rag-retrieval-suite.yaml
+
+log "checking audit-chain verifier self-test and the checked-in sample log"
+python3 scripts/audit-verify.py --selftest
+python3 scripts/audit-verify.py results/sample-gateway-audit.log
+
+log "linting and rendering local Helm charts"
+# Renders go to a private directory so parallel runs (other checkouts, CI legs) cannot mix.
+RENDER_DIR="$(mktemp -d "${TMPDIR:-/tmp}/agentworkflows-render.XXXXXX")"
+trap 'rm -rf "$RENDER_DIR"' EXIT
+export RENDER_DIR
+helm dependency update deploy/charts/workflows
+# build, not update: it fails when the committed umbrella Chart.lock is out of sync.
+helm dependency build deploy/charts/agentworkflows
+rendered_manifests=()
+for chart in deploy/charts/agentworkflows deploy/charts/agent-workspace deploy/charts/budget-redis deploy/charts/inference-gateway deploy/charts/ollama deploy/charts/qdrant-vector-store deploy/charts/rag-service deploy/charts/vllm deploy/charts/workflows; do
+  helm lint --strict "$chart"
+  rendered="$RENDER_DIR/$(basename "$chart")-rendered.yaml"
+  helm template "validate-$(basename "$chart")" "$chart" >"$rendered"
+  rendered_manifests+=("$rendered")
+  for environment in local customer; do
+    values="deploy/clusters/${environment}/values/$(basename "$chart").yaml"
+    if [[ -f "$values" ]]; then
+      rendered="$RENDER_DIR/${environment}-$(basename "$chart")-rendered.yaml"
+      helm template "validate-${environment}-$(basename "$chart")" "$chart" --values "$values" >"$rendered"
+      rendered_manifests+=("$rendered")
+    fi
+    if [[ "$(basename "$chart")" == "vllm" ]]; then
+      for profile in "deploy/clusters/${environment}/values/vllm-"*.yaml; do
+        if [[ -f "$profile" ]]; then
+          rendered="$RENDER_DIR/${environment}-$(basename "$profile" .yaml)-rendered.yaml"
+          helm template "validate-${environment}-$(basename "$profile" .yaml)" "$chart" --values "$profile" >"$rendered"
+          rendered_manifests+=("$rendered")
+        fi
+      done
+    fi
+  done
+done
+
+for scenario in providers.openai.existingSecret=openai-api-key workflows.enabled=false; do
+  rendered="$RENDER_DIR/agentworkflows-${scenario%%=*}-rendered.yaml"
+  helm template aw deploy/charts/agentworkflows --namespace aw --set "$scenario" >"$rendered"
+  rendered_manifests+=("$rendered")
+done
+
+if has_cmd docker && docker compose version >/dev/null 2>&1; then
+  log "checking the Compose file"
+  docker compose -f deploy/compose/compose.yaml --profile ui --profile self-hosted config --quiet
+fi
+
+log "checking YAML syntax with Python"
+src/inference-gateway/.venv/bin/python - <<'PY'
+import base64
+import hashlib
+import json
+import os
+import subprocess
+from pathlib import Path
+
+import yaml
+
+render_dir = Path(os.environ["RENDER_DIR"])
+# Tracked and new, unignored files only: dependency trees and virtualenvs are not ours to parse.
+listed = subprocess.run(
+    ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.yaml", "*.yml"],
+    check=True,
+    capture_output=True,
+).stdout
+errors = []
+for path in sorted({Path(os.fsdecode(name)) for name in listed.split(b"\0") if name}):
+    if "templates" in path.parts or not path.is_file():
+        continue
+    # mkdocs.yml legitimately uses Material's !!python/name: tags that safe_load cannot
+    # construct; it is validated separately by `mkdocs --strict` in the docs build.
+    if path.name == "mkdocs.yml":
+        continue
+    try:
+        docs = list(yaml.safe_load_all(path.read_text()))
+        if not docs and path.stat().st_size:
+            errors.append(f"{path}: no YAML documents parsed")
+    except Exception as exc:
+        errors.append(f"{path}: {exc}")
+if errors:
+    raise SystemExit("\n".join(errors))
+
+for scenario in ("agentworkflows", "agentworkflows-providers.openai.existingSecret", "agentworkflows-workflows.enabled"):
+    resources = {
+        (doc["kind"], doc["metadata"]["name"]): doc
+        for doc in yaml.safe_load_all((render_dir / f"{scenario}-rendered.yaml").read_text())
+        if doc
+    }
+    gateway = resources[("Deployment", "inference-gateway")]
+    env = {item["name"]: item for item in gateway["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert not any(kind in {"Namespace", "ServiceMonitor", "ScaledObject"} for kind, _ in resources)
+    for component in ("ollama", "vllm", "rag-service", "qdrant-vector-store"):
+        assert ("Service", component) not in resources
+    workflows = scenario != "agentworkflows-workflows.enabled"
+    assert (("Deployment", "workflow-worker") in resources) == workflows
+    assert (("StatefulSet", "temporal-postgres") in resources) == workflows
+    assert ("TEMPORAL_ADDRESS" in env) == workflows
+    if workflows:
+        assert env["TEMPORAL_ADDRESS"]["value"] == "temporal-frontend:7233"
+    if "providers.openai" in scenario:
+        assert env["OPENAI_API_KEY"]["valueFrom"]["secretKeyRef"] == {"name": "openai-api-key", "key": "api-key"}
+    else:
+        assert "OPENAI_API_KEY" not in env
+    records = json.loads(resources[("Secret", "agentworkflows-key-records")]["stringData"]["key-records.json"])["records"]
+    assert len(records) == (2 if workflows else 1)
+    for record, name in zip(records, ("agentworkflows-admin", "workflow-gateway-key")[:len(records)], strict=True):
+        key = base64.b64decode(resources[("Secret", name)]["data"]["api-key"])
+        assert record["sha256"] == hashlib.sha256(key).hexdigest()
+        assert record["sandbox"] == "default"
+    assert records[0]["role"] == "admin"
+    if workflows:
+        assert records[1]["role"] == "builder" and "workflows:execute" in records[1]["scopes"]
+        assert records[0]["sha256"] != records[1]["sha256"]
+print("umbrella chart wiring ok (3 renders)")
+print("yaml ok")
+PY
+
+log "checking repository hygiene"
+python3 scripts/repo-hygiene.py --check
+
+log "checking generated chart docs"
+src/inference-gateway/.venv/bin/python scripts/chart-docs.py --check
+
+log "checking API contracts"
+src/inference-gateway/.venv/bin/python scripts/api-contract.py --check
+
+log "checking configuration contracts"
+src/inference-gateway/.venv/bin/python scripts/config-contract.py --check
+
+log "checking observability dashboards"
+src/inference-gateway/.venv/bin/python scripts/dashboard-check.py --check
+
+log "checking production readiness controls"
+src/inference-gateway/.venv/bin/python scripts/production-check.py
+
+log "checking evidence pack inputs"
+src/inference-gateway/.venv/bin/python scripts/evidence-pack.py --check
+
+log "checking egress governance"
+src/inference-gateway/.venv/bin/python scripts/egress-governance.py --check
+
+log "checking data retention governance"
+src/inference-gateway/.venv/bin/python scripts/retention-check.py --check
+
+log "checking SLO and error budget governance"
+src/inference-gateway/.venv/bin/python scripts/slo-report.py --check
+
+log "checking quota and chargeback governance"
+src/inference-gateway/.venv/bin/python scripts/quota-check.py --check
+
+log "checking release gates"
+src/inference-gateway/.venv/bin/python scripts/release-gate.py --check
+
+log "checking tenant onboarding spec"
+src/inference-gateway/.venv/bin/python scripts/tenant-onboard.py --check
+src/inference-gateway/.venv/bin/python scripts/tenant-onboard.py --check --spec tenants/onboarding/regulated-offline-coding-agents.yaml
+src/inference-gateway/.venv/bin/python scripts/tenant-onboard.py --check --spec tenants/onboarding/gpu-coding-agents.yaml
+
+log "checking tenant offboarding plan"
+src/inference-gateway/.venv/bin/python scripts/tenant-offboard.py --check --spec tenants/onboarding/coding-agents.yaml
+src/inference-gateway/.venv/bin/python scripts/tenant-offboard.py --check --spec tenants/onboarding/regulated-offline-coding-agents.yaml
+src/inference-gateway/.venv/bin/python scripts/tenant-offboard.py --check --spec tenants/onboarding/gpu-coding-agents.yaml
+
+log "checking customer overlay configuration"
+src/inference-gateway/.venv/bin/python scripts/configure-customer-overlay.py --check
+
+log "checking model catalog governance"
+src/inference-gateway/.venv/bin/python scripts/model-catalog.py --check
+
+log "checking model provenance governance"
+src/inference-gateway/.venv/bin/python scripts/model-provenance.py --check
+
+log "checking eval suite syntax"
+src/inference-gateway/.venv/bin/python scripts/eval-suite.py --suite platform/evals/smoke-suite.yaml --check-config
+src/inference-gateway/.venv/bin/python scripts/eval-suite.py --suite platform/evals/coding-agent-suite.yaml --check-config
+src/inference-gateway/.venv/bin/python scripts/eval-suite.py --suite platform/evals/safety-suite.yaml --check-config
+
+if require_optional_or_full kubeconform "kubeconform is needed for Kubernetes schema validation."; then
+  kubeconform -summary -ignore-missing-schemas "${rendered_manifests[@]}"
+  mapfile -d '' manifest_files < <(
+    find \
+      deploy/clusters \
+      deploy/gitops \
+      deploy/backup/restore-drill/k8s \
+      deploy/backup/velero \
+      deploy/observability \
+      deploy/policies/kyverno/policies.yaml \
+      deploy/policies/kyverno/tests/resources \
+      deploy/sandbox \
+      platform/model-catalog/k8s \
+      tenants/examples \
+      -name '*.yaml' \
+      ! -path 'deploy/clusters/*/values/*' \
+      ! -name 'values*.yaml' \
+      ! -name 'Chart.yaml' \
+      -print0
+  )
+  if [[ "${#manifest_files[@]}" -gt 0 ]]; then
+    kubeconform -summary -ignore-missing-schemas "${manifest_files[@]}"
+  fi
+fi
+
+if require_optional_or_full kyverno "Kyverno CLI is needed for policy tests."; then
+  kyverno test deploy/policies/kyverno/tests
+fi
+
+if require_optional_or_full restore-drill "restore-drill validates drill config syntax."; then
+  restore-drill validate --config deploy/backup/restore-drill/drills/local-redis-aof.yaml
+fi
+
+if require_optional_or_full k6 "k6 is needed for load-test syntax validation."; then
+  k6 inspect loadtest/chat-completions.js >/dev/null
+fi
+
+if require_optional_or_full syft "Syft is needed for SBOM smoke validation."; then
+  syft dir:src/inference-gateway -o spdx-json >"$RENDER_DIR/inference-gateway.sbom.json"
+  syft dir:src/rag-service -o spdx-json >"$RENDER_DIR/rag-service.sbom.json"
+fi
+
+if require_optional_or_full argocd "Argo CD CLI is needed for GitOps client validation."; then
+  argocd version --client >/dev/null
+fi
+
+if require_optional_or_full cosign "Cosign is needed for image signature validation workflows."; then
+  cosign version >/dev/null
+fi
+
+if require_optional_or_full trivy "Trivy is needed for filesystem secret and config scanning."; then
+  trivy_output="$RENDER_DIR/trivy-fs.txt"
+  if ! ./scripts/repo-security-scan.sh >"$trivy_output"; then
+    cat "$trivy_output"
+    exit 1
+  fi
+fi
+
+log "static checks completed"

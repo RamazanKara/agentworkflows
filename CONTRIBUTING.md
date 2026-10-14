@@ -28,18 +28,23 @@ make repo-hygiene
 make docs-build
 ```
 
-CI runs one Ubuntu job on pushes to `main` or manual dispatch: Ruff lint, tooling,
-gateway, RAG and SDK unit tests, the console build, and an SDK import check. With
-Python 3.14 and Node.js 24, run the same checks locally:
+CI runs four parallel Ubuntu jobs on pushes to `main`, pull requests, and manual
+dispatch. The checks job lints the workflows (actionlint) and Python (Ruff), runs
+`make release-check`, `make static-checks` (Helm lint and renders, Compose config,
+YAML, API and configuration contracts, chart docs, governance checks, kubeconform and
+Kyverno policy tests) and the tooling tests. The other jobs run the gateway, Python
+SDK and RAG suites with the console build, the TypeScript SDK's build, lint and tests,
+and the console's headless Chromium tests. With Python 3.14 and Node.js 24, run the
+same checks locally:
 
 ```bash
-RAYON_NUM_THREADS=2 make -j2 lint
-make -j2 test-scripts test-gateway test-rag
-PYTHONPATH=sdk/python src/inference-gateway/.venv/bin/python -c 'from agentworkflows import GatewayClient; print(GatewayClient.__name__)'
+RAYON_NUM_THREADS=2 make lint release-check static-checks test-scripts
+make -j2 test-gateway test-rag
+make test-typescript test-console
 ```
 
-Full validation, browser/end-to-end tests, image builds, and security scans are
-local opt-in checks. `make validate-full` requires the strict toolchain described
+Full validation, the Trivy repository scan, image builds, and the Compose smoke test
+are local opt-in checks. `make validate-full` requires the strict toolchain described
 in the [developer workflow](docs/development.md). For a full check and the Docker
 Compose smoke test:
 

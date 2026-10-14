@@ -11,7 +11,7 @@ The Makefile provides defaults and puts managed tools from `.tools/bin` on
 | Docker Compose evaluation stack | `make compose-up`, [compose-smoke.sh](compose-smoke.sh), `make compose-down` (stack in [deploy/compose/](../deploy/compose/compose.yaml)) |
 | Local cluster lifecycle | [bootstrap.sh](bootstrap.sh), [quickstart.sh](quickstart.sh), [local-up.sh](local-up.sh), [sync.sh](sync.sh), [local-down.sh](local-down.sh) |
 | Service environments and tests | [bootstrap-python.sh](bootstrap-python.sh), [test-gateway.sh](test-gateway.sh), [test-rag.sh](test-rag.sh) |
-| Repository validation | [validate.sh](validate.sh), [quality.sh](quality.sh), [repo-hygiene.py](repo-hygiene.py), [paths.py](paths.py) |
+| Repository validation | [validate.sh](validate.sh), [static-checks.sh](static-checks.sh) (`make static-checks`), [quality.sh](quality.sh), [repo-hygiene.py](repo-hygiene.py), [paths.py](paths.py) |
 | Dependency locks | [relock.sh](relock.sh) (`make relock`), checked by [repo-hygiene.py](repo-hygiene.py) |
 | Production configuration checks | [production-check.py](production-check.py), with checks grouped in [production_checks/](production_checks/) |
 | Generated contracts and documentation | [api-contract.py](api-contract.py), [config-contract.py](config-contract.py), [chart-docs.py](chart-docs.py), [dashboard-check.py](dashboard-check.py), [docs-build.sh](docs-build.sh) |
@@ -50,8 +50,9 @@ make test-scripts
 ```
 
 The suite in [tests/](tests/) uses Python's standard-library `unittest` and Git.
-It runs as part of `make test` and `make validate`, before service environment setup
-in the validation gate.
+It runs as part of `make test` and `make validate` (after the static checks). When the
+gateway environment exists, the suite runs with its Python, so the chart render tests,
+which need PyYAML, Helm and built chart dependencies, run instead of being skipped.
 
 Use temporary directories and repositories for filesystem and Git behavior. Test
 observable outcomes such as a broken-link diagnostic or excluded generated file.

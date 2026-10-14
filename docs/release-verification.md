@@ -5,12 +5,14 @@ Use this checklist before trusting a public release in a customer-owned cluster.
 For a source checkout (package/chart version 0.9.1), run the local gate:
 
 ```bash
-make lint test-gateway test-scripts api-contract config-contract chart-docs
-make test-typescript test-console
+make lint release-check static-checks test-scripts
+make test-gateway test-typescript test-console
 ```
 
-Build Helm dependencies, then run `helm lint` and `helm template` for the charts
-being shipped. After a console build, repeat the screenshot captures with
+`make static-checks` builds the Helm dependencies, lints every chart and renders it
+with each cluster overlay, and checks the contracts and chart docs; `make release-check`
+confirms that every version reference names the same release. After a console build,
+repeat the screenshot captures with
 `npm test -- --grep 'release console layouts'` in `src/inference-gateway/console`.
 Screenshots use synthetic UI fixtures; the separate Compose smoke test exercises
 the live gateway.
@@ -29,7 +31,7 @@ installed Edge for Playwright. The dependency set is unchanged.
 | --- | --- |
 | Gateway suite (excluding `tests/live`) | **1,163 passed, 14 skipped**, with Git Bash first on `PATH`. |
 | Python SDK | **242 passed, 3 skipped**. |
-| TypeScript SDK | Build, lint and **93 tests** passed. |
+| TypeScript SDK | Build, lint and tests passed. |
 | Console | Production build passed; **91 Playwright tests** passed through Edge (`channel: 'msedge'`, `--lang=en-US`). |
 | Contracts | OpenAPI snapshot, configuration contract and chart docs passed. |
 | Script tests | **53 passed** with `helm` on `PATH`. |

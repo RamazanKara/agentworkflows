@@ -54,12 +54,13 @@ help:
 		'' \
 		'Validation:' \
 		'  make validate              Run the default repo validation gate' \
+		'  make static-checks         Helm, YAML, contract and governance checks without tests (about a minute)' \
 		'  make validate-full         Require the strict validation toolchain' \
 		'  make quality               Run Ruff lint, format check, and mypy' \
 		'  make lint                  Ruff lint services and scripts' \
 		'  make format                Apply Ruff format and autofixes' \
 		'  make typecheck             Run mypy on both services' \
-		'  make test                  Run tooling, service, and first-party SDK tests' \
+		'  make test                  Run tooling, service, both SDK, and console tests' \
 		'  make test-console          Build the web console and run headless Chromium checks' \
 		'  make test-typescript       Install, build, lint, and test the TypeScript SDK (two workers)' \
 		'  make test-scripts          Run repository tooling tests (Python + Git only)' \
@@ -395,15 +396,20 @@ production-check:
 validate:
 	./scripts/validate.sh
 
+.PHONY: static-checks
+static-checks:
+	./scripts/static-checks.sh
+
 validate-full: python-env
 	$(PYTHON) scripts/toolchain-doctor.py --profile strict --check
 	REQUIRE_FULL_TOOLCHAIN=1 ./scripts/validate.sh
 
-test: test-scripts test-gateway test-rag test-console
+test: test-scripts test-gateway test-rag test-typescript test-console
 
 .PHONY: test-typescript
 test-typescript:
-	cd sdk/typescript && npm ci --no-audit --no-fund --maxsockets=2 && npm run build && npm run lint && npm test
+	cd sdk/typescript && npm ci --no-audit --no-fund --maxsockets=2 && npm run build && npm run lint && npm test \
+		&& npm run --if-present check:package
 
 .PHONY: console-build test-console
 console-build:
@@ -412,8 +418,10 @@ console-build:
 test-console:
 	./scripts/test-console.sh
 
+# The gateway environment, when present, provides PyYAML so the chart render suites run too
+# (they also need Helm and built chart dependencies; `make static-checks` builds those).
 test-scripts:
-	python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+	$(if $(wildcard $(PYTHON)),$(PYTHON),python3) -m unittest discover -s scripts/tests -p 'test_*.py' -v
 
 test-gateway:
 	./scripts/test-gateway.sh

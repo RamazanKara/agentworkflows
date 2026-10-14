@@ -1,9 +1,12 @@
-# Local-only: make validate-full, make compose-smoke, image builds and security scripts (see CONTRIBUTING.md).
+# Local-only: make validate-full, make compose-smoke, image builds and the Trivy scan (see CONTRIBUTING.md).
+# Four parallel jobs; each restores the environments it builds, keyed on the exact Python
+# version and the hashed locks, so a run without lock changes skips every pip install.
 name: AgentWorkflows CI
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -13,35 +16,108 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  RAYON_NUM_THREADS: "2"
+
 jobs:
-  validate:
+  checks:
+    name: Lint, charts, contracts and tooling tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      RAYON_NUM_THREADS: "2"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        id: python
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: |
-            requirements-quality.lock
-            requirements-sdk-test.lock
-            src/inference-gateway/requirements-dev.lock
-            src/rag-service/requirements-dev.lock
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: |
+            .venv-quality
+            src/inference-gateway/.venv
+            .tools/bin
+          key: checks-${{ runner.os }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('requirements-quality.lock', 'src/inference-gateway/requirements-dev.lock', 'scripts/install-validation-tools.sh') }}
+      - name: Lint GitHub workflows
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
+      - name: Ruff lint
+        run: make lint
+      - name: Release version references
+        run: make release-check
+      - name: Install kubeconform and the Kyverno CLI
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          INSTALL_TOOLS: kubeconform kyverno
+        run: ./scripts/install-validation-tools.sh
+      - name: Charts, Compose, YAML, contracts, governance and policy tests
+        run: make static-checks
+      - name: Repository tooling tests
+        run: make test-scripts
+
+  python:
+    name: Gateway, Python SDK and RAG tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        id: python
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: src/inference-gateway/console/package-lock.json
-      - name: Lint
-        run: make -j2 lint
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: |
+            src/inference-gateway/.venv
+            src/rag-service/.venv
+          key: tests-${{ runner.os }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('src/inference-gateway/requirements-dev.lock', 'src/rag-service/requirements-dev.lock', 'requirements-sdk-test.lock') }}
       - name: Unit tests and console build
-        run: make -j2 test-scripts test-gateway test-rag
+        run: make -j2 test-gateway test-rag
       - name: SDK import check
         env:
           PYTHONPATH: sdk/python
         run: src/inference-gateway/.venv/bin/python -c 'from agentworkflows import GatewayClient; print(GatewayClient.__name__)'
+
+  typescript:
+    name: TypeScript SDK build, lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - run: make test-typescript
+
+  console:
+    name: Console in headless Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/inference-gateway/console/package-lock.json
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('src/inference-gateway/console/package-lock.json') }}
+      - name: Console build and browser tests
+        env:
+          PLAYWRIGHT_WITH_DEPS: "1"
+        run: make test-console
