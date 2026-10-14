@@ -10,9 +10,17 @@
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
     "./workflows": { "types": "./dist/workflows.d.ts", "default": "./dist/workflows.js" },
     "./activities": { "types": "./dist/activities.d.ts", "default": "./dist/activities.js" },
-    "./worker": { "types": "./dist/worker.d.ts", "default": "./dist/worker.js" }
+    "./worker": { "types": "./dist/worker.d.ts", "default": "./dist/worker.js" },
+    "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "typesVersions": {
+    "*": {
+      "workflows": ["dist/workflows.d.ts"],
+      "activities": ["dist/activities.d.ts"],
+      "worker": ["dist/worker.d.ts"]
+    }
+  },
+  "files": ["dist", "!dist/examples"],
   "engines": { "node": ">=22.12.0" },
   "repository": {
     "type": "git",
@@ -20,12 +28,13 @@
     "directory": "sdk/typescript"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "lint": "tsc --noEmit && eslint .",
     "test": "vitest run --maxWorkers=2",
+    "check:package": "node scripts/pack-check.mjs",
     "worker": "node dist/examples/worker.js",
     "smoke": "npm run build && node scripts/compose-smoke.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build && npm run check:package"
   },
   "dependencies": {
     "@temporalio/activity": "1.24.0",
