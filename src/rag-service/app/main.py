@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from time import perf_counter, time
@@ -379,28 +380,43 @@ def _emit_audit_record(event: dict[str, Any]) -> None:
     logging.getLogger("uvicorn.error").info(line)
 
 
-def _persist_audit_head(app: FastAPI) -> None:
-    """Write the current chain head to the durable store, best effort.
+def _audit_head_snapshot(app: FastAPI) -> ChainHead:
+    """Return the current chain head.
+
+    Call this on the event loop, where receipts are chained: the head hash and the record
+    count then always describe the same record. Read from a worker thread they could
+    straddle a receipt and pair record N's hash with count N+1, a head the verifier
+    rejects as a broken link between chains.
+    """
+    state = app.state
+    return ChainHead(chain_id=state.audit_chain_id, head=state.audit_prev_hash, count=state.audit_chain_count)
+
+
+def _persist_audit_head(app: FastAPI, head: ChainHead | None = None) -> None:
+    """Write a chain head snapshot to the durable store, best effort.
+
+    Safe to run in a worker thread when ``head`` was snapshotted on the event loop. Saves
+    are serialized and never move the stored head backwards, so a slow save that finishes
+    after the shutdown save cannot overwrite it with an older head.
 
     A head that cannot be persisted costs continuity for the next process, not this one,
     so a failure is logged rather than raised: retrieval must not stop because a head
     store is unreachable.
     """
     state = app.state
-    if state.audit_chain_count == getattr(state, "audit_head_persisted_count", None):
-        return
-    try:
-        state.chain_store.save(
-            ChainHead(
-                chain_id=state.audit_chain_id,
-                head=state.audit_prev_hash,
-                count=state.audit_chain_count,
-            )
-        )
-    except Exception:
-        logging.getLogger("uvicorn.error").exception("audit chain head could not be persisted")
-        return
-    state.audit_head_persisted_count = state.audit_chain_count
+    snapshot = head or _audit_head_snapshot(app)
+    with state.audit_head_lock:
+        persisted = getattr(state, "audit_head_persisted_count", None)
+        if persisted is not None and snapshot.count <= persisted:
+            return
+        try:
+            state.chain_store.save(snapshot)
+        except Exception:
+            logging.getLogger("uvicorn.error").exception("audit chain head could not be persisted")
+            return
+        # The snapshot's count, not the live one: a receipt chained while this save was in
+        # flight must still be persisted by the next tick.
+        state.audit_head_persisted_count = snapshot.count
 
 
 def open_audit_chain(app: FastAPI) -> dict[str, Any]:
@@ -486,7 +502,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         # retrieval path. See the gateway's equivalent for the tradeoff this makes.
         while True:
             await asyncio.sleep(app.state.settings.audit_chain_persist_interval_seconds)
-            await asyncio.to_thread(_persist_audit_head, app)
+            await asyncio.to_thread(_persist_audit_head, app, _audit_head_snapshot(app))
 
     persist_task = asyncio.ensure_future(_persist_loop())
     bootstrap = getattr(app.state.retriever, "bootstrap", None)
@@ -499,7 +515,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             )
     yield
     persist_task.cancel()
-    await asyncio.to_thread(_persist_audit_head, app)
+    await asyncio.to_thread(_persist_audit_head, app, _audit_head_snapshot(app))
     # Flush buffered spans. This must live here: with a lifespan configured, FastAPI never
     # runs on_shutdown handlers, so a registered shutdown hook silently never fired.
     tracer_provider = getattr(app.state, "tracer_provider", None)
@@ -538,6 +554,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # splice two unrelated chains together.
     app.state.audit_chain_id = f"{os.getenv('HOSTNAME', 'rag-service')}:{int(time())}:{uuid4().hex[:8]}"
     app.state.chain_store = build_chain_store(resolved)
+    app.state.audit_head_lock = threading.Lock()
     if resolved.retrieval_backend == "qdrant":
         embedding_provider = build_embedding_provider(
             resolved.embedding_provider,

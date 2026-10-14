@@ -211,6 +211,65 @@ def test_open_audit_chain_survives_an_unreadable_head_store(tmp_path):
     assert app.state.audit_chain_count == 1
 
 
+def test_a_receipt_chained_during_a_head_save_is_persisted_by_the_next_save(tmp_path):
+    from types import SimpleNamespace
+
+    from app.audit import chain_audit_event
+    from app.main import _audit_head_snapshot, _persist_audit_head
+
+    app = create_app(Settings(document_dir=_write_doc(tmp_path)))
+    open_audit_chain(app)
+    request = SimpleNamespace(app=app)
+    records = []
+
+    def chain_receipt():
+        event = {"event": "rag_query", "n": len(records)}
+        chain_audit_event(request, event)
+        records.append(event)
+
+    saved = []
+
+    class SlowStore:
+        def load(self):
+            return None
+
+        def save(self, head):
+            saved.append(head)
+            if len(saved) == 1:
+                # A retrieval is chained on the event loop while this save is in flight.
+                chain_receipt()
+
+    app.state.chain_store = SlowStore()
+    chain_receipt()
+
+    _persist_audit_head(app, _audit_head_snapshot(app))
+    _persist_audit_head(app, _audit_head_snapshot(app))
+
+    # The first save must not mark the in-flight receipt as persisted (it used to record the
+    # live count, so the second save was skipped and the stored head lagged until restart).
+    assert [head.count for head in saved] == [2, 3]
+    # Every stored head pairs a record's hash with that record's own position.
+    assert saved[0].head == records[0]["record_hash"]
+    assert saved[1].head == records[1]["record_hash"]
+
+
+def test_an_older_head_snapshot_never_overwrites_a_newer_stored_head(tmp_path):
+    from app.main import _audit_head_snapshot, _persist_audit_head
+
+    app = create_app(Settings(document_dir=_write_doc(tmp_path)))
+    open_audit_chain(app)
+    stale = _audit_head_snapshot(app)
+    newer = ChainHead(chain_id=stale.chain_id, head="f" * 64, count=stale.count + 1)
+    saved = []
+    app.state.chain_store.save = saved.append
+    app.state.audit_head_persisted_count = None
+
+    _persist_audit_head(app, newer)
+    _persist_audit_head(app, stale)
+
+    assert saved == [newer]
+
+
 def test_the_head_is_persisted_on_shutdown(tmp_path, caplog):
     caplog.set_level(logging.INFO, logger="agentworkflows.rag.audit")
     path = tmp_path / "head.json"
