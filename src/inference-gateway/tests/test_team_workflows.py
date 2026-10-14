@@ -58,9 +58,12 @@ def test_registration_reads_and_writes_need_an_unrestricted_admin(gateway):
 
 def test_registered_workflow_is_enforced_like_reviewed_policy(gateway):
     client, app = gateway
-    assert client.post(
-        "/v1/workflow-runs", headers=auth("builder"), json={"workflow": "Triage", "input": {"ticket": "T-1"}}
-    ).json()["detail"]["reason"] == "workflow_not_allowed"
+    assert (
+        client.post(
+            "/v1/workflow-runs", headers=auth("builder"), json={"workflow": "Triage", "input": {"ticket": "T-1"}}
+        ).json()["detail"]["reason"]
+        == "workflow_not_allowed"
+    )
     response = put(client, body={"input_schema": SCHEMA, "required_approvals": 2})
     assert response.status_code == 200, response.text
     assert response.headers["etag"] == '"1"'
@@ -90,12 +93,14 @@ def test_registered_workflow_is_enforced_like_reviewed_policy(gateway):
     assert initialized.json()["token_limit"] == 500 and initialized.json()["cost_limit_usd"] == 0.5
     step = {**auth("worker"), "X-Workflow-Run-ID": run_id, "X-Workflow-Step-ID": "draft"}
     allowed = client.post(
-        "/v1/chat/completions", headers=step,
+        "/v1/chat/completions",
+        headers=step,
         json={"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hi"}]},
     )
     assert allowed.status_code == 200, allowed.text
     denied = client.post(
-        "/v1/chat/completions", headers={**step, "X-Workflow-Step-ID": "other"},
+        "/v1/chat/completions",
+        headers={**step, "X-Workflow-Step-ID": "other"},
         json={"model": "backup", "max_tokens": 20, "messages": [{"role": "user", "content": "hi"}]},
     )
     assert denied.status_code == 403 and denied.json()["detail"]["reason"] == "workflow_model_denied"
@@ -164,7 +169,8 @@ def test_revision_checks_idempotency_replacement_and_removal(gateway):
     changed = put(client, revision=1, body={"cost_limit_usd": 0.25})
     assert changed.json()["revision"] == 2 and changed.json()["workflow"]["cost_limit_usd"] == 0.25
     override = client.patch(
-        "/v1/team/settings", headers={**auth("admin"), "If-Match": "2"},
+        "/v1/team/settings",
+        headers={**auth("admin"), "If-Match": "2"},
         json={"fields": {"workflows.Triage.token_limit": 100}},
     )
     assert override.status_code == 200, override.text
@@ -174,9 +180,12 @@ def test_revision_checks_idempotency_replacement_and_removal(gateway):
         "/v1/workflow-runs", headers=auth("builder"), json={"workflow": "Triage", "input": {"ticket": "T"}}
     ).json()
     run_headers = {**auth("worker"), "X-Workflow-ID": started["workflow_id"]}
-    assert client.put(
-        f"/v1/workflow-runs/{started['run_id']}", headers=run_headers, json={"workflow": "Triage"}
-    ).status_code == 200
+    assert (
+        client.put(
+            f"/v1/workflow-runs/{started['run_id']}", headers=run_headers, json={"workflow": "Triage"}
+        ).status_code
+        == 200
+    )
     step = {**auth("worker"), "X-Workflow-Run-ID": started["run_id"], "X-Workflow-Step-ID": "draft"}
     call = {"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hi"}]}
     assert client.post("/v1/chat/completions", headers=step, json=call).status_code == 200
@@ -224,9 +233,12 @@ def test_operators_can_keep_workflows_in_reviewed_policy(gateway):
     assert refused.status_code == 403 and refused.json()["detail"]["reason"] == "team_workflows_disabled"
     assert client.delete(f"{PATH}/Triage", headers={**auth("admin"), "If-Match": "1"}).status_code == 403
     assert "Triage" not in client.get("/v1/workflow-policies", headers=auth("viewer")).json()["workflows"]
-    assert client.post(
-        "/v1/workflow-runs", headers=auth("builder"), json={"workflow": "Triage", "input": {"ticket": "T"}}
-    ).status_code == 403
+    assert (
+        client.post(
+            "/v1/workflow-runs", headers=auth("builder"), json={"workflow": "Triage", "input": {"ticket": "T"}}
+        ).status_code
+        == 403
+    )
     app.state.sandbox_policy_set.policies["team"] = team
     assert "Triage" in client.get("/v1/workflow-policies", headers=auth("viewer")).json()["workflows"]
 

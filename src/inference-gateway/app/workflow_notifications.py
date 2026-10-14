@@ -188,9 +188,15 @@ async def notify_run(request: Request, row: dict[str, Any]) -> None:
                     "workflow": row["workflow"],
                     "run_id": run_id,
                     "console_url": f"{str(config.console_url).rstrip('/')}#run/{run_id}",
-                    **({"escalation": {
-                        field: escalation.get(field) for field in ("approver_role", "reviewers", "escalates_at")
-                    }} if event == ESCALATION_EVENT else {}),
+                    **(
+                        {
+                            "escalation": {
+                                field: escalation.get(field) for field in ("approver_role", "reviewers", "escalates_at")
+                            }
+                        }
+                        if event == ESCALATION_EVENT
+                        else {}
+                    ),
                 }
                 state = {
                     "attempts": attempt,
@@ -260,19 +266,31 @@ def register_notification_routes(app: FastAPI) -> None:
         spent = int(raw.get("cost", 0)) / 1_000_000_000
         required = approval["approval_required"] and spent >= approval["approval_threshold_usd"]
         result = {
-            "queued": required, "approval_required": required, "policy_version": 1 if body else None,
+            "queued": required,
+            "approval_required": required,
+            "policy_version": 1 if body else None,
             **{field: approval[field] for field in ("required_approvals", "approval_timeout_seconds", "approver_role")},
         }
         if not required:
             if body is None:
                 handle, _ = await execution(request, str(run_id))
                 accepted = await handle.execute_update(
-                    "review", args=[True, "team policy"], id=f"{run_id}:policy-approval", rpc_timeout=RPC_TIMEOUT,
+                    "review",
+                    args=[True, "team policy"],
+                    id=f"{run_id}:policy-approval",
+                    rpc_timeout=RPC_TIMEOUT,
                 )
                 if not accepted:
                     raise HTTPException(409, detail="The run is not waiting at its approval gate.")
-            await operation_receipt(request, str(run_id), "approval", approved=True, automatic=True,
-                                    approval_threshold_usd=approval["approval_threshold_usd"], cost_usd=spent)
+            await operation_receipt(
+                request,
+                str(run_id),
+                "approval",
+                approved=True,
+                automatic=True,
+                approval_threshold_usd=approval["approval_threshold_usd"],
+                cost_usd=spent,
+            )
             return result
         if approval.get("approval_escalation"):
             await open_gate(request, str(run_id))

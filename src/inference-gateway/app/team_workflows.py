@@ -377,4 +377,3 @@ def register_team_workflow_routes(app: FastAPI) -> None:
         response.headers["ETag"] = f'"{saved["revision"]}"'
         response.headers["Cache-Control"] = "no-store"
         return {"revision": saved["revision"], "removed": name}
-

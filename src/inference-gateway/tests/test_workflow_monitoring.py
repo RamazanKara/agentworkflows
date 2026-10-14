@@ -76,10 +76,18 @@ def test_timeline_content_is_read_in_one_batch(team_gateway, monkeypatch):
     store = app.state.budget_tracker.client
     base = f"{app.state.settings.sandbox_budget_key_prefix}:workflow:team:{run['run_id']}"
     for index in range(12):
-        store.rpush(base + ":timeline", json.dumps({
-            "action_type": "model_call", "workflow_step_id": f"step-{index}", "ts": time() + index,
-            "record_hash": f"receipt-{index}", "chain_id": "chain",
-        }))
+        store.rpush(
+            base + ":timeline",
+            json.dumps(
+                {
+                    "action_type": "model_call",
+                    "workflow_step_id": f"step-{index}",
+                    "ts": time() + index,
+                    "record_hash": f"receipt-{index}",
+                    "chain_id": "chain",
+                }
+            ),
+        )
     store.setex(content_key(base, "step-0"), 60, json.dumps({"input": "kept", "output": None}))
     store.hset(base + ":capture", "step-1", "redacted")
     reads = []
@@ -173,19 +181,22 @@ def notifications(app):
     team = app.state.sandbox_policy_set.policies["team"]
     app.state.sandbox_policy_set.policies["team"] = replace(
         team,
-        notifications=TeamNotifications.model_validate(
-            {"consoleUrl": "https://console.test/", "webhookEnv": "HOOK"}
-        ),
+        notifications=TeamNotifications.model_validate({"consoleUrl": "https://console.test/", "webhookEnv": "HOOK"}),
     )
 
 
 def internal(app):
     from starlette.requests import Request
 
-    return Request({
-        "type": "http", "path": "/v1/internal", "app": app, "headers": [],
-        "state": {"sandbox_id": "team", "sandbox_bound": True, "principal": {"role": "admin"}},
-    })
+    return Request(
+        {
+            "type": "http",
+            "path": "/v1/internal",
+            "app": app,
+            "headers": [],
+            "state": {"sandbox_id": "team", "sandbox_bound": True, "principal": {"role": "admin"}},
+        }
+    )
 
 
 def test_settled_notifications_skip_the_delivery_lock(team_gateway, monkeypatch):
@@ -221,14 +232,21 @@ def test_finished_run_receipts_are_scanned_for_slow_steps_once(team_gateway, mon
     notifications(app)
     store = app.state.budget_tracker.client
     rules = {"events": ["slow_step"], "channels": ["webhook"], "budget_threshold": 0.8, "slow_step_ms": 1000}
-    assert client.put(
-        "/v1/team/alert-rules", headers={**auth("admin"), "If-Match": "0"}, json=rules
-    ).status_code == 200
+    assert client.put("/v1/team/alert-rules", headers={**auth("admin"), "If-Match": "0"}, json=rules).status_code == 200
     run = start(client).json()
     base = f"{app.state.settings.sandbox_budget_key_prefix}:workflow:team:{run['run_id']}"
-    store.rpush(base + ":timeline", json.dumps({
-        "action_type": "model_call", "latency_ms": 10, "ts": time(), "record_hash": "receipt", "chain_id": "chain",
-    }))
+    store.rpush(
+        base + ":timeline",
+        json.dumps(
+            {
+                "action_type": "model_call",
+                "latency_ms": 10,
+                "ts": time(),
+                "record_hash": "receipt",
+                "chain_id": "chain",
+            }
+        ),
+    )
     reads = []
     original = app.state.storage.run_steps
 

@@ -22,27 +22,44 @@ def test_capture_settings_apply_to_future_steps_and_reset_to_inheritance(team_ga
     assert patch.json()["fields"][field]["value"] == "redacted"
     started = start(client).json()
     run_id = started["run_id"]
-    assert client.put(
-        f"/v1/workflow-runs/{run_id}", headers={**auth("worker"), "X-Workflow-ID": started["workflow_id"]},
-        json={"workflow": "ResearchWorkflow"},
-    ).status_code == 200
+    assert (
+        client.put(
+            f"/v1/workflow-runs/{run_id}",
+            headers={**auth("worker"), "X-Workflow-ID": started["workflow_id"]},
+            json={"workflow": "ResearchWorkflow"},
+        ).status_code
+        == 200
+    )
     base = f"{app.state.settings.sandbox_budget_key_prefix}:workflow:team:{run_id}"
     for step, mode in (("first", "redacted"), ("second", "none")):
         if mode == "none":
-            assert client.patch("/v1/team/settings", headers={**auth("admin"), "If-Match": "1"},
-                                json={"fields": {field: "none"}}).status_code == 200
-        response = client.post("/v1/chat/completions", headers={
-            **auth("worker"), "X-Workflow-Run-ID": run_id, "X-Workflow-Step-ID": step,
-        }, json={"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}]})
+            assert (
+                client.patch(
+                    "/v1/team/settings", headers={**auth("admin"), "If-Match": "1"}, json={"fields": {field: "none"}}
+                ).status_code
+                == 200
+            )
+        response = client.post(
+            "/v1/chat/completions",
+            headers={
+                **auth("worker"),
+                "X-Workflow-Run-ID": run_id,
+                "X-Workflow-Step-ID": step,
+            },
+            json={"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}]},
+        )
         assert response.status_code == 200, response.text
         raw = app.state.budget_tracker.client.get(content_key(base, step))
         assert (raw is not None) == (mode == "redacted")
     assert app.state.budget_tracker.client.get(content_key(base, "first"))
     reset = client.delete("/v1/team/settings/" + field, headers={**auth("admin"), "If-Match": "2"})
     assert reset.json()["fields"][field]["value"] == "redacted"
-    assert client.get("/v1/workflow-policies", headers=auth("viewer")).json()["workflows"]["ResearchWorkflow"][
-        "captureContent"
-    ] == "redacted"
+    assert (
+        client.get("/v1/workflow-policies", headers=auth("viewer")).json()["workflows"]["ResearchWorkflow"][
+            "captureContent"
+        ]
+        == "redacted"
+    )
 
 
 @pytest.mark.parametrize("mode", ["none", "redacted", "full"])
@@ -69,7 +86,8 @@ def test_step_capture_modes_are_separate_from_receipts(gateway, monkeypatch, cap
     with caplog.at_level(logging.INFO, logger="agentworkflows.audit"):
         if kind == "model":
             response = client.post(
-                "/v1/chat/completions", headers=headers,
+                "/v1/chat/completions",
+                headers=headers,
                 json={"model": "primary", "max_tokens": 1, "messages": [{"role": "user", "content": secret}]},
             )
         else:
@@ -109,7 +127,8 @@ def test_capture_truncates_utf8_after_redaction_and_preserves_dlp(gateway, monke
 
     monkeypatch.setattr(runtime, "chat_completions", chat)
     response = client.post(
-        "/v1/chat/completions", headers=headers,
+        "/v1/chat/completions",
+        headers=headers,
         json={"model": "primary", "max_tokens": 1, "messages": [{"role": "user", "content": secret}]},
     )
     assert response.status_code == 200, response.text
@@ -134,7 +153,8 @@ def test_run_content_visibility_and_expiry(team_gateway, role):
     assert client.put(path, headers=worker, json={"workflow": "ResearchWorkflow"}).status_code == 200
     headers = {**auth("worker"), "X-Workflow-Run-ID": run["run_id"], "X-Workflow-Step-ID": "model"}
     response = client.post(
-        "/v1/chat/completions", headers=headers,
+        "/v1/chat/completions",
+        headers=headers,
         json={"model": "primary", "max_tokens": 5, "messages": [{"role": "user", "content": "hello"}]},
     )
     assert response.status_code == 200, response.text
@@ -161,10 +181,19 @@ def test_capture_off_reason_and_team_default_overrides(team_gateway, tmp_path):
     step = client.get(f"/v1/workflow-runs/{run['run_id']}", headers=auth("viewer")).json()["timeline"][0]
     assert step["content"] is None and step["content_reason"] == "capture_off"
     policy = {"allowedProviders": [], "allowedModels": []}
-    manifest = {"apiVersion": "platform.ai/v1alpha1", "kind": "SandboxPolicySet", "spec": {"policies": [{
-        "sandboxId": "team", "captureContent": "redacted",
-        "workflows": {"Inherited": policy, "Disabled": {**policy, "captureContent": "none"}},
-    }]}}
+    manifest = {
+        "apiVersion": "platform.ai/v1alpha1",
+        "kind": "SandboxPolicySet",
+        "spec": {
+            "policies": [
+                {
+                    "sandboxId": "team",
+                    "captureContent": "redacted",
+                    "workflows": {"Inherited": policy, "Disabled": {**policy, "captureContent": "none"}},
+                }
+            ]
+        },
+    }
     path = tmp_path / "policies.json"
     path.write_text(json.dumps(manifest))
     app.state.sandbox_policy_set = SandboxPolicySet.from_path(path)
@@ -174,10 +203,14 @@ def test_capture_off_reason_and_team_default_overrides(team_gateway, tmp_path):
     assert WorkflowPolicy.model_validate(policy).capture_content == "none"
 
 
-@pytest.mark.parametrize("name, default", [
-    ("CONTENT_RETENTION_SECONDS", 604800), ("CONTENT_MAX_BYTES", 16384),
-    ("RUN_RECORD_RETENTION_SECONDS", 2592000),
-])
+@pytest.mark.parametrize(
+    "name, default",
+    [
+        ("CONTENT_RETENTION_SECONDS", 604800),
+        ("CONTENT_MAX_BYTES", 16384),
+        ("RUN_RECORD_RETENTION_SECONDS", 2592000),
+    ],
+)
 def test_retention_settings_defaults_and_environment(monkeypatch, name, default):
     monkeypatch.delenv(name, raising=False)
     assert getattr(Settings.from_env(), name.lower()) == default

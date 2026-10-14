@@ -240,7 +240,8 @@ async def describe_run(
                 if exc.status not in {RPCStatusCode.INVALID_ARGUMENT, RPCStatusCode.DEADLINE_EXCEEDED}:
                     raise
                 result["progress"] = {
-                    "stage": "worker_unavailable", "message": "Check the team's worker and task queue.",
+                    "stage": "worker_unavailable",
+                    "message": "Check the team's worker and task queue.",
                 }
         raw = await redis_call(request, "hgetall", run_key(request, run_id))
         team = (await read_settings(request)).team
@@ -337,15 +338,24 @@ async def start_run(request: Request, body: StartRun, *, trigger: dict[str, str]
             **{
                 field: getattr(team.workflows[body.workflow], field)
                 for field in (
-                    "approval_required", "approval_threshold_usd", "approver_role",
-                    "required_approvals", "approval_timeout_seconds",
+                    "approval_required",
+                    "approval_threshold_usd",
+                    "approver_role",
+                    "required_approvals",
+                    "approval_timeout_seconds",
                 )
             },
             **({"approval_escalation": escalation} if escalation else {}),
         },
         **origin,
-        **next(({"template": template} for template in settings.document.get("templates", {}).values()
-                if template["workflow"] == body.workflow), {}),
+        **next(
+            (
+                {"template": template}
+                for template in settings.document.get("templates", {}).values()
+                if template["workflow"] == body.workflow
+            ),
+            {},
+        ),
     }
     data = await storage_call(request, "save_intent", workflow_id, data)
     if data["fingerprint"] != fingerprint:
@@ -433,8 +443,10 @@ async def refresh_team_runs(request: Request, projects: Iterable[str]) -> dict[s
                     else:
                         failures += 1
                     continue
-                status = "awaiting_approval" if row.get("progress", {}).get("stage") == "awaiting_approval" else (
-                    row["status"]
+                status = (
+                    "awaiting_approval"
+                    if row.get("progress", {}).get("stage") == "awaiting_approval"
+                    else (row["status"])
                 )
                 counts[status] = counts.get(status, 0) + 1
             if len(ids) < 100:
@@ -443,7 +455,8 @@ async def refresh_team_runs(request: Request, projects: Iterable[str]) -> dict[s
     if failures:
         logging.getLogger("uvicorn.error").warning(
             "Run refresh unavailable for %d run(s) of team %s; check Temporal, Redis and notification receipts.",
-            failures, team_id,
+            failures,
+            team_id,
         )
     return counts
 
@@ -541,7 +554,9 @@ def register_operation_routes(app: FastAPI) -> None:
         return await start_run(request, body)
 
     @app.get(
-        "/v1/workflow-runs", tags=["workflows"], summary="List your project's runs, newest first",
+        "/v1/workflow-runs",
+        tags=["workflows"],
+        summary="List your project's runs, newest first",
         response_model=RunPage,
     )
     async def runs(
@@ -550,28 +565,45 @@ def register_operation_routes(app: FastAPI) -> None:
         offset: int = Query(0, ge=0),
         limit: int = Query(20, ge=1, le=100),
         cursor: str | None = Query(
-            None, min_length=1, max_length=2048,
+            None,
+            min_length=1,
+            max_length=2048,
             description="next_cursor from the previous page, with unchanged filters",
         ),
         workflow: str | None = Query(None, max_length=128),
         trigger: str | None = Query(
-            None, min_length=1, max_length=128,
+            None,
+            min_length=1,
+            max_length=128,
             description="Exact trigger name; requires workflow. Only launches recorded since v0.7.0 have provenance.",
         ),
         status: Literal[
-            "running", "awaiting_approval", "completed", "failed", "canceled", "terminated", "timed_out",
-            "continued_as_new"
+            "running",
+            "awaiting_approval",
+            "completed",
+            "failed",
+            "canceled",
+            "terminated",
+            "timed_out",
+            "continued_as_new",
         ]
         | None = None,
     ) -> dict[str, Any]:
         selected = project_access(request, project)
         if trigger and not workflow:
-            raise HTTPException(422, detail={
-                "reason": "trigger_workflow_required", "message": "Select a workflow when filtering by trigger.",
-            })
+            raise HTTPException(
+                422,
+                detail={
+                    "reason": "trigger_workflow_required",
+                    "message": "Select a workflow when filtering by trigger.",
+                },
+            )
         scope = {
-            "team": request.state.sandbox_id, "project": selected, "workflow": workflow,
-            "status": status, "trigger": trigger,
+            "team": request.state.sandbox_id,
+            "project": selected,
+            "workflow": workflow,
+            "status": status,
+            "trigger": trigger,
         }
         position = None
         # Page the underlying index before filtering, keeping Temporal fan-out bounded.
@@ -582,10 +614,13 @@ def register_operation_routes(app: FastAPI) -> None:
                 if offset or any(getattr(position, field) != value for field, value in scope.items()):
                     raise ValueError("cursor scope changed")
             except ValueError as exc:
-                raise HTTPException(422, detail={
-                    "reason": "run_cursor_invalid",
-                    "message": "Use next_cursor with the same project and filters, without a nonzero offset.",
-                }) from exc
+                raise HTTPException(
+                    422,
+                    detail={
+                        "reason": "run_cursor_invalid",
+                        "message": "Use next_cursor with the same project and filters, without a nonzero offset.",
+                    },
+                ) from exc
         ids = await storage_call(request, "page_runs", request.state.sandbox_id, selected, offset, limit + 1, position)
         limiter = asyncio.Semaphore(CONCURRENCY)
 
@@ -626,9 +661,17 @@ def register_operation_routes(app: FastAPI) -> None:
         return {
             "runs": rows,
             "next_offset": offset + limit - removed if len(ids) > limit and cursor is None else None,
-            "next_cursor": base64.urlsafe_b64encode(RunCursor(
-                **scope, created_at=ids[limit - 1][1], run_id=ids[limit - 1][0],
-            ).model_dump_json().encode()).decode() if len(ids) > limit else None,
+            "next_cursor": base64.urlsafe_b64encode(
+                RunCursor(
+                    **scope,
+                    created_at=ids[limit - 1][1],
+                    run_id=ids[limit - 1][0],
+                )
+                .model_dump_json()
+                .encode()
+            ).decode()
+            if len(ids) > limit
+            else None,
         }
 
     @app.post(
@@ -753,7 +796,11 @@ def register_operation_routes(app: FastAPI) -> None:
         if not await redis_call(request, "hget", votes, update_id):
             await redis_call(request, "hset", votes, update_id, "1")
             await operation_receipt(
-                request, str(run_id), "approval", approved=body.approved, update_id=update_id,
+                request,
+                str(run_id),
+                "approval",
+                approved=body.approved,
+                update_id=update_id,
                 **({"eligibility": "escalation"} if escalation else {}),
             )
         return {"run_id": str(run_id), "approved": body.approved, "reviewer": reviewer}

@@ -34,8 +34,13 @@ def test_terminal_runs_expire_at_close_time_without_extending_content(team_gatew
     deadline = int(execution.close_time.timestamp() + settings.run_record_retention_seconds)
     assert client.get(path, headers=auth("viewer")).status_code == 200
     for key in (
-        base, base + ":metadata", base + ":timeline", base + ":capture", base + ":notifications",
-        base + ":notification:failed:email", f"{settings.sandbox_budget_key_prefix}:start:{run['workflow_id']}",
+        base,
+        base + ":metadata",
+        base + ":timeline",
+        base + ":capture",
+        base + ":notifications",
+        base + ":notification:failed:email",
+        f"{settings.sandbox_budget_key_prefix}:start:{run['workflow_id']}",
     ):
         assert store.expires[key] == deadline
     assert store.ttl(content_key(base, "model")) == 100
@@ -47,7 +52,9 @@ def test_terminal_runs_expire_at_close_time_without_extending_content(team_gatew
     store.now = deadline + 1
     assert client.get(path, headers=auth("viewer")).status_code == 404
     assert client.get("/v1/workflow-runs", headers=auth("viewer")).json() == {
-        "runs": [], "next_offset": None, "next_cursor": None,
+        "runs": [],
+        "next_offset": None,
+        "next_cursor": None,
     }
     assert not store.data[f"{settings.sandbox_budget_key_prefix}:runs:team:default"]
 

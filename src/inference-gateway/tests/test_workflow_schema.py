@@ -25,20 +25,33 @@ SCHEMA = {
 }
 
 
-@pytest.mark.parametrize(("value", "field"), [
-    ([], "input"), ({}, "input.name"), ({"name": 12}, "input.name"),
-    ({"name": "ok", "count": True}, "input.count"), ({"name": "ok", "count": 1.5}, "input.count"),
-    ({"name": "ok", "price": "1"}, "input.price"), ({"name": "ok", "price": False}, "input.price"),
-    ({"name": "ok", "enabled": 1}, "input.enabled"), ({"name": "ok", "tags": ["a", 1]}, "input.tags"),
-    ({"name": "ok", "tags": "a"}, "input.tags"), ({"name": "ok", "mode": "other"}, "input.mode"),
-    ({"name": "ok", "extra": 1}, "input.extra"), ({"name": None}, "input.name"),
-])
+@pytest.mark.parametrize(
+    ("value", "field"),
+    [
+        ([], "input"),
+        ({}, "input.name"),
+        ({"name": 12}, "input.name"),
+        ({"name": "ok", "count": True}, "input.count"),
+        ({"name": "ok", "count": 1.5}, "input.count"),
+        ({"name": "ok", "price": "1"}, "input.price"),
+        ({"name": "ok", "price": False}, "input.price"),
+        ({"name": "ok", "enabled": 1}, "input.enabled"),
+        ({"name": "ok", "tags": ["a", 1]}, "input.tags"),
+        ({"name": "ok", "tags": "a"}, "input.tags"),
+        ({"name": "ok", "mode": "other"}, "input.mode"),
+        ({"name": "ok", "extra": 1}, "input.extra"),
+        ({"name": None}, "input.name"),
+    ],
+)
 def test_schema_validation_has_field_errors_before_any_start(team_gateway, value, field):
     client, app = team_gateway
     policy = app.state.sandbox_policy_set.policies["team"].workflows["ResearchWorkflow"]
-    app.state.sandbox_policy_set.policies["team"].workflows["FormWorkflow"] = WorkflowPolicy.model_validate({
-        **policy.model_dump(by_alias=True), "inputSchema": SCHEMA,
-    })
+    app.state.sandbox_policy_set.policies["team"].workflows["FormWorkflow"] = WorkflowPolicy.model_validate(
+        {
+            **policy.model_dump(by_alias=True),
+            "inputSchema": SCHEMA,
+        }
+    )
     response = start(client, workflow="FormWorkflow", input=value)
     assert response.status_code == 422, response.text
     body = response.json()
@@ -54,9 +67,12 @@ def test_schema_validation_has_field_errors_before_any_start(team_gateway, value
 def test_all_supported_types_and_discovery_preserve_schema(team_gateway):
     client, app = team_gateway
     old = app.state.sandbox_policy_set.policies["team"].workflows["ResearchWorkflow"]
-    app.state.sandbox_policy_set.policies["team"].workflows["ResearchWorkflow"] = WorkflowPolicy.model_validate({
-        **old.model_dump(by_alias=True), "inputSchema": SCHEMA,
-    })
+    app.state.sandbox_policy_set.policies["team"].workflows["ResearchWorkflow"] = WorkflowPolicy.model_validate(
+        {
+            **old.model_dump(by_alias=True),
+            "inputSchema": SCHEMA,
+        }
+    )
     discovered = client.get("/v1/workflow-policies", headers=auth("viewer")).json()
     assert discovered["workflows"]["ResearchWorkflow"]["inputSchema"] == SCHEMA
     value = {"name": "", "count": 1.0, "price": 1.5, "enabled": False, "tags": ["a", "b"], "mode": "fast"}
@@ -78,16 +94,21 @@ def test_no_schema_keeps_arbitrary_workflow_inputs(team_gateway):
     assert start(client, input="legacy string").status_code == 201
 
 
-@pytest.mark.parametrize("changes", [
-    {"type": "array"}, {"required": ["missing"]}, {"required": ["name", "name"]},
-    {"properties": {"x": {"type": "object"}}},
-    {"properties": {"x": {"type": "array", "items": {"type": "number"}}}},
-    {"properties": {"x": {"type": "array"}}},
-    {"properties": {"x": {"type": "string", "default": None}}},
-    {"properties": {"x": {"type": "integer", "enum": [True]}}},
-    {"properties": {"x": {"type": "string", "enum": ["yes"], "default": "no"}}},
-    {"properties": {"x": {"type": "boolean", "examples": ["yes"]}}},
-])
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"type": "array"},
+        {"required": ["missing"]},
+        {"required": ["name", "name"]},
+        {"properties": {"x": {"type": "object"}}},
+        {"properties": {"x": {"type": "array", "items": {"type": "number"}}}},
+        {"properties": {"x": {"type": "array"}}},
+        {"properties": {"x": {"type": "string", "default": None}}},
+        {"properties": {"x": {"type": "integer", "enum": [True]}}},
+        {"properties": {"x": {"type": "string", "enum": ["yes"], "default": "no"}}},
+        {"properties": {"x": {"type": "boolean", "examples": ["yes"]}}},
+    ],
+)
 def test_policy_rejects_unsupported_or_inconsistent_schemas(changes):
     with pytest.raises(ValidationError):
         InputSchema.model_validate({**SCHEMA, **changes})
@@ -98,9 +119,13 @@ def test_compose_templates_declare_schemas():
     team = SandboxPolicySet.from_path(path).policies["demo"]
     assert team.capture_content == "redacted"
     for name, field in [
-        ("ResearchWorkflow", "topic"), ("CodeReviewWorkflow", "diff"), ("SupportTriageWorkflow", "ticket"),
-        ("WeeklyReportWorkflow", "period"), ("IncidentSummaryWorkflow", "incident_id"),
-        ("DocumentQAWorkflow", "question"), ("FrameworkWorkflow", "topic"),
+        ("ResearchWorkflow", "topic"),
+        ("CodeReviewWorkflow", "diff"),
+        ("SupportTriageWorkflow", "ticket"),
+        ("WeeklyReportWorkflow", "period"),
+        ("IncidentSummaryWorkflow", "incident_id"),
+        ("DocumentQAWorkflow", "question"),
+        ("FrameworkWorkflow", "topic"),
     ]:
         schema = team.workflows[name].input_schema
         assert schema is not None

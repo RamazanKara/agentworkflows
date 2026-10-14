@@ -105,11 +105,7 @@ class RunRedis(FakeRedisBudgetStore):
                     if old.get("requested_limits") == "1"
                     else old["token_limit"] <= tokens and old["cost_limit"] <= cost
                 )
-                return int(
-                    limits_match
-                    and old["workflow"] == workflow
-                    and old["policy_required"] == required
-                )
+                return int(limits_match and old["workflow"] == workflow and old["policy_required"] == required)
             self.data[key] = {
                 "token_limit": tokens,
                 "cost_limit": cost,

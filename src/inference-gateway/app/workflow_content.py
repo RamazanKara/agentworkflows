@@ -31,7 +31,10 @@ async def capture_input(request: Request, settings: Settings, value: Any) -> Non
     if mode == "none":
         return
     request.state.step_content = {
-        "input": None, "output": None, "truncated": {"input": False, "output": False}, "redaction": mode
+        "input": None,
+        "output": None,
+        "truncated": {"input": False, "output": False},
+        "redaction": mode,
     }
     await capture_field(request, settings, "input", value)
 
@@ -53,8 +56,11 @@ async def capture_field(request: Request, settings: Settings, field: str, value:
         base = run_key(request)
         await redis_call(request, "hset", base + ":capture", request.state.workflow_step_id, content["redaction"])
         await redis_call(
-            request, "setex", content_key(base, request.state.workflow_step_id),
-            (await team_retention(request))["content_seconds"], json.dumps(content),
+            request,
+            "setex",
+            content_key(base, request.state.workflow_step_id),
+            (await team_retention(request))["content_seconds"],
+            json.dumps(content),
         )
     except HTTPException:
         # A failed content write must not cause a worker to repeat an already executed tool.
@@ -69,7 +75,8 @@ async def step_contents(request: Request, run_id: str, step_ids: list[str]) -> l
     rows = await redis_call(request, "mget", [content_key(base, step_id) for step_id in step_ids])
     modes = await redis_call(request, "hgetall", base + ":capture") if None in rows else {}
     return [
-        {"content": json.loads(raw)} if raw
+        {"content": json.loads(raw)}
+        if raw
         else {"content": None, "content_reason": "expired" if modes.get(step_id) else "capture_off"}
         for step_id, raw in zip(step_ids, rows, strict=True)
     ]

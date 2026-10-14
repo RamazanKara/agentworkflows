@@ -110,8 +110,15 @@ async def reserve_run(request: Request, tokens: int, cost: float) -> tuple[int, 
     amount = nanodollars(cost)
     policy = getattr(request.state, "workflow_policy", None)
     result = await redis_call(
-        request, "eval", RESERVE, 1, run_key(request), tokens, amount,
-        policy.token_limit if policy else -1, nanodollars(policy.cost_limit_usd) if policy else -1,
+        request,
+        "eval",
+        RESERVE,
+        1,
+        run_key(request),
+        tokens,
+        amount,
+        policy.token_limit if policy else -1,
+        nanodollars(policy.cost_limit_usd) if policy else -1,
     )
     if result == -1:
         raise AdmissionPolicyError("workflow_run_missing", "Initialize this run with PUT /v1/workflow-runs/{run_id}.")

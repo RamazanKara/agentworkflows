@@ -57,8 +57,13 @@ def summarize(
         row = groups.setdefault(
             (step["step_id"] or "", step["action"]),
             {
-                "step_id": step["step_id"] or "", "action": step["action"], "name": step_name(step),
-                "calls": 0, "duration_ms": 0.0, "tokens": 0, "cost_usd": 0.0,
+                "step_id": step["step_id"] or "",
+                "action": step["action"],
+                "name": step_name(step),
+                "calls": 0,
+                "duration_ms": 0.0,
+                "tokens": 0,
+                "cost_usd": 0.0,
             },
         )
         row["calls"] += 1
@@ -128,7 +133,8 @@ def workflow_row(name: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
     finished = [run for run in runs if run["outcome"] in FINISHED]
     elapsed = [run["summary"]["elapsed_seconds"] for run in finished if run["summary"]["elapsed_seconds"] is not None]
     reviews = [
-        run["summary"]["review_seconds"] for run in runs
+        run["summary"]["review_seconds"]
+        for run in runs
         if run["summary"]["review_seconds"] is not None and not run["summary"]["review_open"]
     ]
     costs = [run["summary"]["cost_usd"] for run in finished]
@@ -154,13 +160,17 @@ def workflow_row(name: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
         "average_cost_usd": sum(costs) / len(costs) if costs else None,
         "total_cost_usd": sum(run["summary"]["cost_usd"] for run in runs),
         "slowest_step": {
-            "step_id": slowest[0], "name": slowest[1]["name"], "action": slowest[1]["action"],
+            "step_id": slowest[0],
+            "name": slowest[1]["name"],
+            "action": slowest[1]["action"],
             "median_ms": median(slowest[1]["ms"]),
         }
         if slowest
         else None,
         "costliest_step": {
-            "step_id": costliest[0], "name": costliest[1]["name"], "action": costliest[1]["action"],
+            "step_id": costliest[0],
+            "name": costliest[1]["name"],
+            "action": costliest[1]["action"],
             "average_cost_usd": sum(costliest[1]["cost"]) / len(costliest[1]["cost"]),
         }
         if costliest and sum(costliest[1]["cost"]) > 0
@@ -261,8 +271,10 @@ def register_insight_routes(app: FastAPI) -> None:
                 "workflow": row["workflow"],
                 "outcome": kind,
                 "summary": summarize(
-                    row["created_at"], [normalize_event(event) for event in events],
-                    now=end if live else None, waiting=kind == "awaiting_approval",
+                    row["created_at"],
+                    [normalize_event(event) for event in events],
+                    now=end if live else None,
+                    waiting=kind == "awaiting_approval",
                 ),
             }
 

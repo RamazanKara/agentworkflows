@@ -52,11 +52,21 @@ def test_configuration_is_admin_only_revision_checked_validated_and_audited(gate
     empty = {"revision": 0, "escalations": [], "available_channels": []}
     assert client.get(LIST, headers=auth("admin")).json() == empty
     assert escalate(client, 1).status_code == 409
-    missing = client.put(PATH.replace("ResearchWorkflow", "Unknown"), headers={**auth("admin"), "If-Match": "0"},
-                         json={"after_seconds": 60})
+    missing = client.put(
+        PATH.replace("ResearchWorkflow", "Unknown"),
+        headers={**auth("admin"), "If-Match": "0"},
+        json={"after_seconds": 60},
+    )
     assert missing.status_code == 404 and missing.json()["detail"]["reason"] == "workflow_not_found"
-    for body in ({"after_seconds": 59}, {"after_seconds": 604741}, {"after_seconds": "60"},
-                 {"approver_role": "admin"}, {"reviewers": [" "]}, {"channels": ["sms"]}, {"unknown": 1}):
+    for body in (
+        {"after_seconds": 59},
+        {"after_seconds": 604741},
+        {"after_seconds": "60"},
+        {"approver_role": "admin"},
+        {"reviewers": [" "]},
+        {"channels": ["sms"]},
+        {"unknown": 1},
+    ):
         assert escalate(client, 0, **body).status_code == 422, body
     unavailable = escalate(client, 0, channels=["slack"])
     assert unavailable.status_code == 422 and unavailable.json()["detail"]["fields"][0]["field"] == "channels"
@@ -71,9 +81,10 @@ def test_configuration_is_admin_only_revision_checked_validated_and_audited(gate
     assert body["revision"] == 2
     assert body["escalation"]["reviewers"] == ["maya", "leo"] and body["escalation"]["effective"] is True
     assert body["escalation"]["updated_by"] == "admin" and body["escalation"]["channels"] is None
-    assert escalate(client, 2, after_seconds=1800, approver_role="approver", reviewers=["maya", "leo"]).json()[
-        "revision"
-    ] == 2
+    assert (
+        escalate(client, 2, after_seconds=1800, approver_role="approver", reviewers=["maya", "leo"]).json()["revision"]
+        == 2
+    )
     events = [json.loads(row.message) for row in caplog.records if row.name == "agentworkflows.audit"]
     changed = [event for event in events if event["action_type"] == "approval_escalation_changed"]
     assert len(changed) == 1 and changed[0]["escalation"]["after_seconds"] == 1800
@@ -83,7 +94,8 @@ def test_configuration_is_admin_only_revision_checked_validated_and_audited(gate
     assert update(client, {WORKFLOW + "approval_timeout_seconds": 600}, 2).status_code == 200
     assert client.get(LIST, headers=auth("admin")).json()["escalations"][0]["effective"] is False
     assert client.delete(PATH, headers={**auth("admin"), "If-Match": "3"}).json() == {
-        "revision": 4, "removed": "ResearchWorkflow",
+        "revision": 4,
+        "removed": "ResearchWorkflow",
     }
     assert client.delete(PATH, headers={**auth("admin"), "If-Match": "4"}).status_code == 404
     assert app.state.storage.get_settings("other") is None
@@ -146,9 +158,12 @@ def test_named_reviewers_and_runs_keep_the_escalation_they_started_with(gateway)
 def test_monitor_escalates_once_and_notifies_the_chosen_destination(gateway, monkeypatch):
     client, app, clock = gateway
     team = app.state.sandbox_policy_set.policies["team"]
-    app.state.sandbox_policy_set.policies["team"] = replace(team, notifications=TeamNotifications.model_validate(
-        {"consoleUrl": "https://console.test/", "slackWebhookEnv": "SLACK", "webhookEnv": "HOOK"}
-    ))
+    app.state.sandbox_policy_set.policies["team"] = replace(
+        team,
+        notifications=TeamNotifications.model_validate(
+            {"consoleUrl": "https://console.test/", "slackWebhookEnv": "SLACK", "webhookEnv": "HOOK"}
+        ),
+    )
     rules = {"events": ["failed"], "channels": ["slack"], "budget_threshold": 0.8, "slow_step_ms": 1000}
     assert client.put("/v1/team/alert-rules", headers={**auth("admin"), "If-Match": "0"}, json=rules).status_code == 200
     assert escalate(client, 1, approver_role="approver", reviewers=["leo"], channels=["webhook"]).status_code == 200
@@ -175,9 +190,10 @@ def test_monitor_escalates_once_and_notifies_the_chosen_destination(gateway, mon
 def test_finished_reviews_and_silent_escalations_send_nothing(gateway, monkeypatch, finished):
     client, app, clock = gateway
     team = app.state.sandbox_policy_set.policies["team"]
-    app.state.sandbox_policy_set.policies["team"] = replace(team, notifications=TeamNotifications.model_validate(
-        {"consoleUrl": "https://console.test/", "webhookEnv": "HOOK"}
-    ))
+    app.state.sandbox_policy_set.policies["team"] = replace(
+        team,
+        notifications=TeamNotifications.model_validate({"consoleUrl": "https://console.test/", "webhookEnv": "HOOK"}),
+    )
     channels = [] if finished == "silent" else None
     assert escalate(client, 0, channels=channels).status_code == 200
     sent = []
@@ -199,10 +215,15 @@ def test_finished_reviews_and_silent_escalations_send_nothing(gateway, monkeypat
 def test_removing_a_registered_workflow_removes_its_escalation(gateway):
     client, app, _ = gateway
     body = {"allowed_models": ["primary"], "approver_role": "admin", "cost_limit_usd": 0.5}
-    assert client.put("/v1/team/workflows/Triage", headers={**auth("admin"), "If-Match": "0"},
-                      json=body).status_code == 200
-    escalation = client.put("/v1/team/workflows/Triage/approval-escalation",
-                            headers={**auth("admin"), "If-Match": "1"}, json={"after_seconds": 600})
+    assert (
+        client.put("/v1/team/workflows/Triage", headers={**auth("admin"), "If-Match": "0"}, json=body).status_code
+        == 200
+    )
+    escalation = client.put(
+        "/v1/team/workflows/Triage/approval-escalation",
+        headers={**auth("admin"), "If-Match": "1"},
+        json={"after_seconds": 600},
+    )
     assert escalation.status_code == 200
     assert client.delete("/v1/team/workflows/Triage", headers={**auth("admin"), "If-Match": "2"}).status_code == 200
     assert "Triage" not in app.state.storage.get_settings("team")["approval_escalations"]

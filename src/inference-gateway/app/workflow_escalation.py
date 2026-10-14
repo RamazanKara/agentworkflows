@@ -29,14 +29,17 @@ class ApprovalEscalation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     after_seconds: int = Field(
-        ge=60, le=604740, strict=True,
+        ge=60,
+        le=604740,
+        strict=True,
         description="Seconds a review may wait before it escalates; shorter than the approval timeout.",
     )
     approver_role: Literal["approver"] | None = Field(
         default=None, description="Let every approver review once escalated (for workflows that need an admin)."
     )
     reviewers: list[Reviewer] = Field(
-        default_factory=list, max_length=20,
+        default_factory=list,
+        max_length=20,
         description="Identities (OIDC subject or managed key ID) with an approver role who may review once escalated.",
     )
     channels: list[Channel] | None = Field(
@@ -126,8 +129,11 @@ async def escalate_if_due(
 ) -> bool:
     """Write the escalation receipt and queue its notice once, for a review still waiting past its deadline."""
     if (
-        not state or not waiting or state["recorded_at"] is not None
-        or state["escalates_at"] is None or time() < state["escalates_at"]
+        not state
+        or not waiting
+        or state["recorded_at"] is not None
+        or state["escalates_at"] is None
+        or time() < state["escalates_at"]
     ):
         return False
     now = time()
@@ -138,8 +144,14 @@ async def escalate_if_due(
 
     request.state.workflow_name = workflow
     await operation_receipt(
-        request, run_id, EVENT, principal=POLICY_PRINCIPAL, after_seconds=state["after_seconds"],
-        approver_role=state["approver_role"], reviewers=state["reviewers"], escalates_at=state["escalates_at"],
+        request,
+        run_id,
+        EVENT,
+        principal=POLICY_PRINCIPAL,
+        after_seconds=state["after_seconds"],
+        approver_role=state["approver_role"],
+        reviewers=state["reviewers"],
+        escalates_at=state["escalates_at"],
     )
     if state["channels"] != []:
         await queue_event(request, run_id, EVENT)
@@ -149,7 +161,8 @@ async def escalate_if_due(
 
 def escalation_admits(state: dict[str, Any] | None, principal: dict[str, Any], reviewer: str | None) -> bool:
     return bool(
-        state and state["escalated"]
+        state
+        and state["escalated"]
         and (principal.get("role") == state["approver_role"] or (reviewer and reviewer in state["reviewers"]))
     )
 
@@ -237,28 +250,39 @@ def register_escalation_routes(app: FastAPI) -> None:
             )
         policy = settings.team.workflows.get(name) if settings.team else None
         if policy is None:
-            raise HTTPException(404, detail={
-                "reason": "workflow_not_found", "message": "Choose a workflow from GET /v1/workflow-policies.",
-            })
+            raise HTTPException(
+                404,
+                detail={
+                    "reason": "workflow_not_found",
+                    "message": "Choose a workflow from GET /v1/workflow-policies.",
+                },
+            )
         errors = []
         if body.after_seconds >= policy.approval_timeout_seconds:
-            errors.append({
-                "field": "after_seconds",
-                "message": f"Escalate before the approval timeout of {policy.approval_timeout_seconds} seconds.",
-            })
+            errors.append(
+                {
+                    "field": "after_seconds",
+                    "message": f"Escalate before the approval timeout of {policy.approval_timeout_seconds} seconds.",
+                }
+            )
         config = settings.team.notifications if settings.team else None
         available = channels(config) if config else []
         if body.channels and set(body.channels) - set(available):
-            errors.append({
-                "field": "channels",
-                "message": "Ask your operator to configure the selected notification destinations.",
-            })
+            errors.append(
+                {
+                    "field": "channels",
+                    "message": "Ask your operator to configure the selected notification destinations.",
+                }
+            )
         if errors:
-            raise HTTPException(422, detail={
-                "reason": "approval_escalation_invalid",
-                "message": " ".join(f"{error['field']}: {error['message']}" for error in errors),
-                "fields": errors,
-            })
+            raise HTTPException(
+                422,
+                detail={
+                    "reason": "approval_escalation_invalid",
+                    "message": " ".join(f"{error['field']}: {error['message']}" for error in errors),
+                    "fields": errors,
+                },
+            )
         escalations = dict(settings.document.get("approval_escalations") or {})
         existing = escalations.get(name)
         config_row = body.model_dump()
@@ -268,8 +292,13 @@ def register_escalation_routes(app: FastAPI) -> None:
             row = {**config_row, "updated_by": principal.get("sub") or principal.get("key_id"), "updated_at": time()}
             escalations[name] = row
             saved = await save_team_document(
-                request, settings.document, {"approval_escalations": escalations},
-                "approval_escalation_changed", workflow=name, escalation=config_row, replaced=existing is not None,
+                request,
+                settings.document,
+                {"approval_escalations": escalations},
+                "approval_escalation_changed",
+                workflow=name,
+                escalation=config_row,
+                replaced=existing is not None,
             )
             revision = saved["revision"]
         response.headers["ETag"] = f'"{revision}"'
@@ -297,13 +326,20 @@ def register_escalation_routes(app: FastAPI) -> None:
             )
         escalations = dict(settings.document.get("approval_escalations") or {})
         if name not in escalations:
-            raise HTTPException(404, detail={
-                "reason": "approval_escalation_missing", "message": "This workflow has no approval escalation.",
-            })
+            raise HTTPException(
+                404,
+                detail={
+                    "reason": "approval_escalation_missing",
+                    "message": "This workflow has no approval escalation.",
+                },
+            )
         del escalations[name]
         saved = await save_team_document(
-            request, settings.document, {"approval_escalations": escalations},
-            "approval_escalation_removed", workflow=name,
+            request,
+            settings.document,
+            {"approval_escalations": escalations},
+            "approval_escalation_removed",
+            workflow=name,
         )
         response.headers["ETag"] = f'"{saved["revision"]}"'
         response.headers["Cache-Control"] = "no-store"
