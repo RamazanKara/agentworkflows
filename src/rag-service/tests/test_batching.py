@@ -23,6 +23,7 @@ class _EmbeddingServer:
 
     def __init__(self, shuffle=False, drop_one=False):
         self.batches = []
+        self.read_timeouts = []
         self.shuffle = shuffle
         self.drop_one = drop_one
 
@@ -30,6 +31,7 @@ class _EmbeddingServer:
         body = json.loads(request.content)
         inputs = body["input"]
         self.batches.append(len(inputs))
+        self.read_timeouts.append(request.extensions["timeout"]["read"])
         data = [{"index": index, "embedding": [float(len(text)), float(index)]} for index, text in enumerate(inputs)]
         if self.shuffle:
             random.Random(7).shuffle(data)
@@ -59,6 +61,8 @@ def test_embed_many_sends_bounded_batches_and_keeps_input_order(monkeypatch):
     assert server.batches == [EMBEDDING_BATCH_SIZE, EMBEDDING_BATCH_SIZE, 75 - 2 * EMBEDDING_BATCH_SIZE]
     # The server answered each batch shuffled; vectors still line up with their inputs.
     assert [vector[0] for vector in vectors] == [float(length) for length in range(1, 76)]
+    # A batch gets the time its inputs had one by one (1 s each here).
+    assert server.read_timeouts == [float(size) for size in server.batches]
 
 
 def test_embed_many_rejects_a_response_with_missing_items(monkeypatch):
@@ -76,6 +80,7 @@ def test_embed_many_async_batches_too():
     vectors = asyncio.run(provider.embed_many_async(["a", "bb", "ccc"]))
 
     assert server.batches == [3]
+    assert server.read_timeouts == [3.0]
     assert vectors == [[1.0, 0.0], [2.0, 1.0], [3.0, 2.0]]
 
 

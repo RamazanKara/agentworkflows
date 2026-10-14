@@ -238,12 +238,25 @@ class OpenAICompatibleEmbeddingProvider:
         response.raise_for_status()
         return self._parse(response.json())
 
+    def _batch_timeout(self, size: int) -> float:
+        """Return the timeout for one batch request: the per-input timeout times its inputs.
+
+        The configured timeout was sized for one input per request (the chart passes the
+        vector store's 1 s). A CPU-hosted model can take longer than that for 32 inputs,
+        and the batch must not fail where the same inputs sent one by one would not.
+        """
+        return self.timeout_seconds * size
+
     def embed_many(self, values: list[str]) -> list[list[float]]:
         """Embed many texts over one connection, ``EMBEDDING_BATCH_SIZE`` inputs per request."""
         vectors: list[list[float]] = []
         with httpx.Client(timeout=self.timeout_seconds) as client:
             for batch in _batches(values, EMBEDDING_BATCH_SIZE):
-                response = client.post(f"{self.base_url}/v1/embeddings", json={"model": self.model, "input": batch})
+                response = client.post(
+                    f"{self.base_url}/v1/embeddings",
+                    json={"model": self.model, "input": batch},
+                    timeout=self._batch_timeout(len(batch)),
+                )
                 response.raise_for_status()
                 vectors.extend(self._parse_many(response.json(), len(batch)))
         return vectors
@@ -253,7 +266,9 @@ class OpenAICompatibleEmbeddingProvider:
         vectors: list[list[float]] = []
         for batch in _batches(values, EMBEDDING_BATCH_SIZE):
             response = await self._client().post(
-                f"{self.base_url}/v1/embeddings", json={"model": self.model, "input": batch}
+                f"{self.base_url}/v1/embeddings",
+                json={"model": self.model, "input": batch},
+                timeout=self._batch_timeout(len(batch)),
             )
             response.raise_for_status()
             vectors.extend(self._parse_many(response.json(), len(batch)))

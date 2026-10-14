@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -440,28 +441,51 @@ def delete_source(
     }
 
 
+def _env_default(names: tuple[str, ...], default: str) -> str:
+    """Return the first set environment variable, else ``default`` (argparse applies the type)."""
+    for name in names:
+        value = os.getenv(name)
+        if value is not None:
+            return value
+    return default
+
+
 def main() -> int:
-    """Parse CLI arguments, then check, write, or delete manifest chunks in Qdrant."""
+    """Parse CLI arguments, then check, write, or delete manifest chunks in Qdrant.
+
+    Connection and embedding options fall back to the service's environment variables
+    (QDRANT_URL, RAG_EMBEDDING_PROVIDER, ...), so the CLI can run with the same environment
+    as the service it feeds.
+    """
     parser = argparse.ArgumentParser(
         description="Validate, ingest, or purge platform.ai/v1alpha1 RAG source manifests in Qdrant.",
     )
-    parser.add_argument("--source", type=Path)
+    parser.add_argument("--source", type=Path, help="RagSourceManifest YAML path.")
     parser.add_argument("--source-id", default="", help="Source id to purge with --delete.")
     parser.add_argument("--older-than-days", type=int, default=0, help="Age threshold for --purge.")
     parser.add_argument("--backend", choices=("qdrant",), default="qdrant")
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--check", action="store_true")
-    mode.add_argument("--write", action="store_true")
+    mode.add_argument("--check", action="store_true", help="Validate and summarize without writing.")
+    mode.add_argument("--write", action="store_true", help="Write chunks into Qdrant.")
     mode.add_argument("--delete", action="store_true", help="Delete all points for --source-id from Qdrant.")
     mode.add_argument("--purge", action="store_true", help="Delete points older than --older-than-days.")
-    parser.add_argument("--qdrant-url", default="")
-    parser.add_argument("--collection", default="agentworkflows")
-    parser.add_argument("--collection-version", default="v1")
-    parser.add_argument("--dimensions", type=int, default=384)
-    parser.add_argument("--timeout-seconds", type=float, default=5.0)
-    parser.add_argument("--embedding-provider", default="hash")
-    parser.add_argument("--embedding-base-url", default="")
-    parser.add_argument("--embedding-model", default="hash-text-v1")
+    parser.add_argument("--qdrant-url", default=_env_default(("QDRANT_URL", "VECTOR_STORE_URL"), ""))
+    parser.add_argument(
+        "--collection", default=_env_default(("QDRANT_COLLECTION", "VECTOR_COLLECTION"), "agentworkflows")
+    )
+    parser.add_argument(
+        "--collection-version",
+        default=_env_default(("QDRANT_COLLECTION_VERSION", "VECTOR_COLLECTION_VERSION"), "v1"),
+    )
+    parser.add_argument("--dimensions", type=int, default=_env_default(("QDRANT_VECTOR_DIMENSIONS",), "384"))
+    parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=_env_default(("QDRANT_TIMEOUT_SECONDS", "VECTOR_TIMEOUT_SECONDS"), "5"),
+    )
+    parser.add_argument("--embedding-provider", default=_env_default(("RAG_EMBEDDING_PROVIDER",), "hash"))
+    parser.add_argument("--embedding-base-url", default=_env_default(("RAG_EMBEDDING_BASE_URL",), ""))
+    parser.add_argument("--embedding-model", default=_env_default(("RAG_EMBEDDING_MODEL",), "hash-text-v1"))
     parser.add_argument("--chunk-chars", type=int, default=1200)
     parser.add_argument("--overlap-chars", type=int, default=120)
     parser.add_argument(
@@ -470,17 +494,27 @@ def main() -> int:
         help="With --write, keep chunks of these sources that this run did not write "
         "(from removed files or shortened documents).",
     )
+    parser.add_argument("--status-file", type=Path, help="Also write the JSON summary to this path.")
     args = parser.parse_args()
     try:
-        return _run(args)
+        summary = _run(args)
     except (ValueError, OSError, httpx.HTTPError) as exc:
         # A bad manifest, an unreadable document or an unreachable store is an operator
         # error with a clear cause, not a crash: report it without a traceback.
         raise SystemExit(f"error: {exc}") from None
+    rendered = json.dumps(summary, indent=2, sort_keys=True) + "\n"
+    print(rendered, end="")
+    if args.status_file:
+        args.status_file.parent.mkdir(parents=True, exist_ok=True)
+        args.status_file.write_text(rendered, encoding="utf-8")
+    return 0
 
 
-def _run(args: argparse.Namespace) -> int:
-    """Run the mode selected on the command line; raises SystemExit for invalid arguments."""
+def _run(args: argparse.Namespace) -> dict[str, Any]:
+    """Run the mode selected on the command line and return its summary.
+
+    Raises SystemExit for invalid arguments.
+    """
     if args.dimensions <= 0:
         raise SystemExit("--dimensions must be greater than zero")
     if not args.collection_version.strip():
@@ -490,22 +524,20 @@ def _run(args: argparse.Namespace) -> int:
         if not args.source_id.strip():
             raise SystemExit("--source-id is required with --delete")
         if not args.qdrant_url:
-            raise SystemExit("--qdrant-url is required with --delete")
-        delete_summary = delete_source(
+            raise SystemExit("--qdrant-url or QDRANT_URL is required with --delete")
+        return delete_source(
             args.source_id.strip(),
             args.qdrant_url,
             args.collection,
             args.timeout_seconds,
             args.collection_version,
         )
-        print(json.dumps(delete_summary, indent=2, sort_keys=True))
-        return 0
 
     if args.purge:
         if args.older_than_days <= 0:
             raise SystemExit("--older-than-days must be greater than zero with --purge")
         if not args.qdrant_url:
-            raise SystemExit("--qdrant-url is required with --purge")
+            raise SystemExit("--qdrant-url or QDRANT_URL is required with --purge")
         cutoff_epoch = int(datetime.now(UTC).timestamp()) - args.older_than_days * 86400
         purge_summary = delete_older_than(
             cutoff_epoch,
@@ -515,8 +547,7 @@ def _run(args: argparse.Namespace) -> int:
             args.collection_version,
         )
         purge_summary["older_than_days"] = args.older_than_days
-        print(json.dumps(purge_summary, indent=2, sort_keys=True))
-        return 0
+        return purge_summary
 
     if not args.source:
         raise SystemExit("--source is required with --check or --write")
@@ -524,6 +555,8 @@ def _run(args: argparse.Namespace) -> int:
         raise SystemExit("--chunk-chars must be greater than zero")
     if args.overlap_chars < 0 or args.overlap_chars >= args.chunk_chars:
         raise SystemExit("--overlap-chars must be zero or less than --chunk-chars")
+    if args.write and not args.qdrant_url:
+        raise SystemExit("--qdrant-url or QDRANT_URL is required with --write")
 
     sources = load_manifest(args.source)
     for warning in owner_warnings(sources):
@@ -538,6 +571,7 @@ def _run(args: argparse.Namespace) -> int:
     )
     summary: dict[str, Any] = {
         "status": "checked",
+        "manifest": str(args.source),
         "backend": args.backend,
         "embedding_provider": provider.name,
         "embedding_model": provider.model,
@@ -549,8 +583,6 @@ def _run(args: argparse.Namespace) -> int:
         "collection_version": args.collection_version,
     }
     if args.write:
-        if not args.qdrant_url:
-            raise SystemExit("--qdrant-url is required with --write")
         written_at = datetime.now(UTC)
         summary.update(
             upsert_chunks(
@@ -575,8 +607,7 @@ def _run(args: argparse.Namespace) -> int:
                 )
             )
         summary["status"] = "written"
-    print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0
+    return summary
 
 
 if __name__ == "__main__":

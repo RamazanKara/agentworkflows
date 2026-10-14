@@ -248,6 +248,31 @@ def test_prune_filter_is_scoped_to_the_manifest_sources_and_version(tmp_path, mo
     assert any(condition["key"] == "ingestedAtEpoch" for condition in prune["must"])
 
 
+def test_cli_falls_back_to_the_service_environment_and_writes_a_status_file(tmp_path, monkeypatch):
+    manifest = _manifest(tmp_path)
+    (tmp_path / "docs" / "guide.md").write_text("Guide text.", encoding="utf-8")
+    store = _Store()
+    seen_hosts = []
+
+    def recording(request):
+        seen_hosts.append(request.url.host)
+        return store(request)
+
+    real_client = httpx.Client
+    monkeypatch.setattr(ingest.httpx, "Client", lambda *a, **k: real_client(transport=httpx.MockTransport(recording)))
+    monkeypatch.setenv("QDRANT_URL", "http://qdrant.from-env:6333")
+    monkeypatch.setenv("QDRANT_VECTOR_DIMENSIONS", "8")
+    status = tmp_path / "out" / "status.json"
+    monkeypatch.setattr("sys.argv", ["ingest", "--source", str(manifest), "--write", "--status-file", str(status)])
+
+    assert ingest.main() == 0
+
+    assert set(seen_hosts) == {"qdrant.from-env"}
+    summary = json.loads(status.read_text(encoding="utf-8"))
+    assert summary["status"] == "written"
+    assert summary["dimensions"] == 8
+
+
 def test_results_from_previously_ingested_chunks_name_their_document(tmp_path, monkeypatch):
     # Chunks ingested before document_id/title were stamped: the result used to carry the
     # point UUID as id and title, and the manifest source path (often absolute) as source.
