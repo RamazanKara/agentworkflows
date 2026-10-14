@@ -4,6 +4,102 @@ export interface ChatCompletion {
   [key: string]: unknown;
 }
 
+/** A chat message in the OpenAI format, such as `{ role: 'user', content: 'hello' }`. */
+export type ChatMessage = Record<string, unknown>;
+
+/** Request fields beyond the messages, with the API's names (`max_tokens`, `temperature`, `tools`, ...). */
+export interface InferenceParams {
+  /** Omit to use the gateway's default route. */
+  model?: string;
+  [field: string]: unknown;
+}
+
+export interface MessagesParams extends InferenceParams {
+  system?: string | Record<string, unknown>[];
+}
+
+export interface ResponseParams extends InferenceParams {
+  /** Keep the response on the gateway; needs RESPONSES_STORE_ENABLED and a sandbox-bound credential. */
+  store?: boolean;
+  previous_response_id?: string;
+}
+
+/** A JSON object returned by an OpenAI- or Anthropic-compatible endpoint; fields follow that API. */
+export interface ApiObject {
+  id?: string;
+  object?: string;
+  [field: string]: unknown;
+}
+
+export interface ApiList<T = ApiObject> {
+  object?: 'list';
+  data: T[];
+  [field: string]: unknown;
+}
+
+export interface BatchOptions {
+  endpoint?: string;
+  completionWindow?: string;
+  metadata?: Record<string, string>;
+}
+
+/** `actionType` values the gateway records on the agent-action receipt chain. */
+export type ReceiptAction =
+  | 'egress_denied' | 'egress_allowed' | 'tool_exec' | 'file_write' | 'credential_request' | 'workspace_lifecycle';
+
+export interface TeamInfo {
+  team_id: string;
+  role: Role;
+  projects: string[];
+  providers: string[];
+  cost_limit_usd: number | null;
+  soft_cost_limit_usd: number | null;
+  capture_content: CaptureMode;
+  project_budgets: Record<string, unknown>;
+  model_routes: Record<string, string>;
+  notifications: { channels: string[]; budget_threshold: number } | null;
+  /** Present for admins: whether each provider's credential is configured. */
+  provider_configuration?: Record<string, { environment_variable: string; configured: boolean }>;
+  [field: string]: unknown;
+}
+
+export interface SandboxUsage {
+  sandbox_id: string;
+  currency: string;
+  estimated_cost: number;
+  usage: Record<string, unknown>;
+  providers: Record<string, Record<string, unknown>>;
+  [field: string]: unknown;
+}
+
+export interface WorkflowTrigger {
+  workflow: string;
+  name: string;
+  kind: 'cron' | 'webhook';
+  project: string | null;
+  cron: string | null;
+  paused: boolean;
+  configuration_paused: boolean;
+  /** Cron triggers: the next three fire times (ISO-8601). */
+  next_fire_at?: string[];
+  /** Webhook triggers: the delivery path and whether its secret is configured. */
+  url?: string;
+  secret_configured?: boolean;
+  error?: string;
+}
+
+export interface TriggerList {
+  triggers: WorkflowTrigger[];
+  [field: string]: unknown;
+}
+
+export interface TriggerState {
+  workflow: string;
+  name: string;
+  paused: boolean;
+  [field: string]: unknown;
+}
+
 export type Role = 'admin' | 'builder' | 'approver' | 'viewer';
 
 export interface TeamSSO {
@@ -143,7 +239,7 @@ export interface RunBudget {
 }
 
 export interface Call {
-  kind: 'model' | 'tool' | 'approval_waiting';
+  kind: 'model' | 'tool' | 'agent' | 'container' | 'approval_waiting';
   payload: Record<string, unknown>;
   budget: RunBudget;
   tool: string;
