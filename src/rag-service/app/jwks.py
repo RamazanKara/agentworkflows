@@ -12,6 +12,7 @@ last-known-good cache, 503-vs-401 distinction, and algorithm allowlist are owned
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 from dataclasses import dataclass
@@ -105,6 +106,7 @@ class JwksCache:
         self._negative_until = 0.0
         self._last_forced_refresh = 0.0
         self._keys: list[dict[str, Any]] = []
+        self._inflight: asyncio.Task[list[dict[str, Any]]] | None = None
 
     def _negative_cache_seconds(self) -> float:
         # Derived from the configured cache TTL (no new env contract): a small
@@ -128,7 +130,25 @@ class JwksCache:
             # Cold-start outage: fail fast inside the backoff window instead of letting
             # every request make its own fetch against an issuer that is down.
             raise JwksUnavailableError("JWKS document could not be fetched (backing off)")
-        return await self._fetch()
+        return await self._fetch_once()
+
+    async def _fetch_once(self) -> list[dict[str, Any]]:
+        """Share one in-flight JWKS fetch among every request that found the cache expired.
+
+        Without it, the moment the TTL lapsed each concurrent request started its own
+        fetch, so a busy service sent the issuer a burst of identical requests on every
+        refresh. The fetch is shielded: a waiter that is cancelled (its client went away)
+        must not cancel the fetch the others are waiting on.
+        """
+        loop = asyncio.get_running_loop()
+        task = self._inflight
+        if task is None or task.done() or task.get_loop() is not loop:
+            task = loop.create_task(self._fetch())
+            # Retrieve a failure even when every waiter was cancelled, so it is not logged
+            # as an exception nobody handled.
+            task.add_done_callback(lambda done: done.cancelled() or done.exception())
+            self._inflight = task
+        return await asyncio.shield(task)
 
     async def refresh_for_unknown_kid(self) -> list[dict[str, Any]]:
         """Re-fetch the JWKS early because a token named a ``kid`` the cache does not hold.
@@ -143,7 +163,7 @@ class JwksCache:
             return self._keys
         self._last_forced_refresh = now
         try:
-            return await self._fetch()
+            return await self._fetch_once()
         except JwksUnavailableError:
             return self._keys
 
