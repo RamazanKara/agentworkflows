@@ -2123,7 +2123,7 @@
 <p>Queries return retrieved document excerpts, a query SHA-256 fingerprint, optional context, and OpenAI-compatible <code>grounded_messages</code> that can be passed to the inference gateway. Audit logs record the query length and hash in place of raw query text.</p>
 <p>When <code>auth.enabled</code> is true, <code>POST /v1/rag/query</code> and <code>GET /v1/rag/documents</code> require <code>X-API-Key</code> or <code>Authorization: Bearer</code>. Health and metrics remain unauthenticated for Kubernetes probes and scraping.</p>
 <p>When <code>auth.jwt.enabled</code> is true (see "Trust boundary" below), the service additionally verifies its own audience-bound bearer token (JWKS/issuer/audience/exp/nbf) and derives the caller's tenant from the verified claim. With both enabled, send the API key in <code>X-API-Key</code> and the JWT in <code>Authorization: Bearer</code>; the service reads a JWT-shaped bearer value as a JWT. <code>auth.jwt.audience</code> is required whenever JWT verification is on, so a token minted for another service (for example the gateway) is rejected.</p>
-<p>The local profile uses lexical retrieval. Customer values can switch to the Qdrant vector-store profile with <code>retrieval.backend=qdrant</code>; see <code>runbooks/vector-rag.md</code> for storage, network, and collection operations.</p>
+<p>The local profile uses lexical retrieval: a BM25 index over the knowledge directory, built at startup, that weighs rare terms above common ones, normalizes for document length, boosts matches in a document's title or file name, and ignores English question words such as "how do I". It reads words in any script (CJK text is matched by character pairs) and folds English plurals. Customer values can switch to the Qdrant vector-store profile with <code>retrieval.backend=qdrant</code>; see <code>runbooks/vector-rag.md</code> for storage, network, and collection operations.</p>
 <h2 id="local-validation">Local Validation<a class="headerlink" href="#local-validation" title="Permanent link">&para;</a></h2>
 <p>Deploy the local stack, then run:</p>
 <div class="highlight"><pre><span></span><code>make rag-smoke
@@ -2138,6 +2138,7 @@
       ...
 </code></pre></div>
 <p>For customer clusters, prefer environment-specific values or a chart override sourced from the customer's internal Git repository.</p>
+<p>The service reads <code>.md</code>, <code>.markdown</code> and <code>.txt</code> files at startup. A file that is not valid UTF-8 is loaded with replacement characters and a file that cannot be read is skipped; both are logged with the file name instead of stopping the service. A document's id is its path without the extension, with <code>/</code> turned into <code>-</code>; when two paths map to the same id (<code>a/b.md</code> and <code>a-b.md</code>), the later one gets a numeric suffix and a warning is logged.</p>
 <h2 id="source-metadata-and-ingestion">Source Metadata And Ingestion<a class="headerlink" href="#source-metadata-and-ingestion" title="Permanent link">&para;</a></h2>
 <p>Customer document ingestion starts with a <code>platform.ai/v1alpha1</code> <code>RagSourceManifest</code>:</p>
 <div class="highlight"><pre><span></span><code>apiVersion: platform.ai/v1alpha1
@@ -2151,8 +2152,8 @@ spec:
       owner: platform-team
       embeddingModel: hash-text-v1
 </code></pre></div>
-<p>Validate a source manifest locally without writing vectors:</p>
-<div class="highlight"><pre><span></span><code>src/inference-gateway/.venv/bin/python scripts/rag-ingest.py \
+<p>Validate a source manifest locally without writing vectors. This runs the same ingestion CLI as the chart's ingestion Job (<code>make test-rag</code> creates the service virtualenv):</p>
+<div class="highlight"><pre><span></span><code>PYTHONPATH=src/rag-service src/rag-service/.venv/bin/python -m app.ingest \
   --source platform/rag/sources/platform-knowledge.yaml \
   --backend qdrant \
   --collection-version v1 \
@@ -2160,12 +2161,20 @@ spec:
 </code></pre></div>
 <p>Write to Qdrant only after source ownership, classification, retention class, and embedding model have been approved:</p>
 <div class="highlight"><pre><span></span><code>QDRANT_URL=http://qdrant-vector-store.vector.svc.cluster.local:6333 \
-src/inference-gateway/.venv/bin/python scripts/rag-ingest.py \
+PYTHONPATH=src/rag-service src/rag-service/.venv/bin/python -m app.ingest \
   --source platform/rag/sources/platform-knowledge.yaml \
   --backend qdrant \
   --collection-version v1 \
   --write
 </code></pre></div>
+<p>Options not given on the command line fall back to the service's environment variables (<code>QDRANT_URL</code>, <code>QDRANT_COLLECTION</code>, <code>QDRANT_VECTOR_DIMENSIONS</code>, <code>RAG_EMBEDDING_PROVIDER</code>, <code>RAG_EMBEDDING_BASE_URL</code>, <code>RAG_EMBEDDING_MODEL</code>); <code>--status-file</code> also writes the JSON summary to a file.</p>
+<p>What <code>--write</code> does:</p>
+<ul>
+<li>Chunks each document at roughly <code>--chunk-chars</code>, ending chunks on a paragraph, line, sentence, or word break. Every chunk records its document's id (the knowledge-directory rule, unique across the manifest), title, and path, which is what query results show.</li>
+<li>Embeds 32 chunks per embedding request and writes 256 points per Qdrant upsert, so large corpora stay under Qdrant's request size limit. A batch request gets <code>--timeout-seconds</code> per input.</li>
+<li>After every batch has been written, deletes the chunks of the manifest's sources (in that collection version) that this run did not write: chunks of files removed from a source and the tail chunks of documents that got shorter. A failed run deletes nothing. Pass <code>--no-prune</code> to keep them. Removing a whole source from the manifest still needs <code>--delete --source-id &lt;id&gt;</code>.</li>
+</ul>
+<p>A manifest field that is empty or not a plain value, a YAML syntax error, or a document that is not UTF-8 fails the run with <code>error: ...</code> naming the field or file. The CLI warns when a source's <code>owner</code> is not a sandbox id (lowercase letters, digits, hyphens), because tenant-isolated retrieval could never return those documents.</p>
 <p>The Helm chart can run an optional ingestion Job when <code>sourceManifest.enabled=true</code> and <code>ingestion.enabled=true</code>.
 The service stores <code>collection_version</code> in each Qdrant point and filters queries by <code>retrieval.vectorStore.collectionVersion</code>, which lets operators stage re-ingestion or embedding-model migrations in the same collection with old and new vectors kept apart.</p>
 <h2 id="per-tenant-isolation">Per-Tenant Isolation<a class="headerlink" href="#per-tenant-isolation" title="Permanent link">&para;</a></h2>
@@ -2173,7 +2182,8 @@ The service stores <code>collection_version</code> in each Qdrant point and filt
 <ul>
 <li><strong>Both backends enforce it.</strong> The Qdrant path appends an <code>owner</code> match to the query filter; the lexical path stamps its on-disk corpus with the service's default sandbox id (<code>DEFAULT_SANDBOX_ID</code>) and applies the same owner scoping.</li>
 <li><strong>Fail-closed, always.</strong> A query returns only documents that match the caller's tenant. A tenant assertion requires an <em>explicit</em> <code>X-Sandbox-ID</code>: a request that falls back to <code>DEFAULT_SANDBOX_ID</code> returns an empty result set. Every search is tenant-filtered.</li>
-<li><strong>Ingest stamps the owner.</strong> Set each source's <code>owner</code> in the <code>RagSourceManifest</code> to the owning tenant/sandbox id (see <code>scripts/rag-ingest.py</code>). The bootstrap knowledge corpus is stamped <code>owner=platform-team</code>; with isolation on, those platform documents stay scoped to <code>platform-team</code> by design (the service logs this at startup).</li>
+<li><strong>Ingest stamps the owner.</strong> Set each source's <code>owner</code> in the <code>RagSourceManifest</code> to the owning tenant/sandbox id (the ingestion CLI warns when it is not one). The bootstrap knowledge corpus is stamped <code>owner=platform-team</code>; with isolation on, those platform documents stay scoped to <code>platform-team</code> by design, in both query results and the document listing (the service logs this at startup).</li>
+<li><strong>Scores are per tenant.</strong> The lexical backend keeps one index per owner under isolation, so the term statistics behind a caller's scores never include another tenant's documents.</li>
 </ul>
 <p>The bundled <strong>local lexical lab</strong> ships with isolation <strong>off</strong> (<code>retrieval.tenantIsolation.enabled: false</code>) because it serves shared platform documents to every caller as a single tenant. <strong>Set <code>retrieval.tenantIsolation.enabled: true</code> for multi-tenant / customer profiles</strong> (the customer values file does; confirm it when handing off).</p>
 <p><strong>Trust boundary.</strong> By default the tenant id is the client-asserted <code>X-Sandbox-ID</code> header, set by a trusted upstream: the inference gateway derives <code>X-Sandbox-ID</code> from a verified JWT tenant claim (<code>JWT_TENANT_CLAIM</code>, rejecting mismatches), or a workspace egress proxy stamps it. Under header-trust the shared RAG API key authenticates the caller and the trusted upstream sets the tenant, so keep the RAG service reachable only via the gateway or a header-stamping proxy, and use the shared API key as an authentication control.</p>
@@ -2199,6 +2209,8 @@ curl -sS -H 'Content-Type: application/json' \
 </code></pre></div>
 <p>If results are empty, confirm the knowledge ConfigMap contains relevant <code>.md</code> or <code>.txt</code> documents and the deployment has rolled out.</p>
 <p>If the backend is <code>qdrant</code>, also confirm the <code>vector</code> namespace service is reachable, the collection name, collection version, and vector dimensions match the RAG values, and the Qdrant PVC is bound.</p>
+<p>A query that cannot reach Qdrant or the embedding endpoint, or gets a malformed answer from either, returns <code>503 vector_store_unavailable</code> with <code>Retry-After: 5</code>. <code>/healthz</code> reports the knowledge bootstrap under <code>vector_store.last_sync_status</code>, and <code>last_sync_error</code> gives the error type and HTTP status (the full error, with URLs, is in the service log). A failed bootstrap is retried by later queries at most every 5 seconds, and it does not block searching a collection that already exists.</p>
+<p>A startup error from invalid configuration names the environment variables involved, for example <code>default_top_k (DEFAULT_TOP_K) must not exceed max_top_k (MAX_TOP_K)</code>. Endpoint URLs must include <code>http://</code> or <code>https://</code>, and timeouts must be finite positive numbers.</p>
 
 
 
