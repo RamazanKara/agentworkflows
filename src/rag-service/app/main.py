@@ -495,7 +495,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             await bootstrap()
         except VectorStoreError:
             logging.getLogger("uvicorn.error").warning(
-                "vector store bootstrap failed at startup; readiness will report not_ready until it recovers"
+                "vector store bootstrap failed at startup; queries retry it and /healthz reports last_sync_status"
             )
     yield
     persist_task.cancel()

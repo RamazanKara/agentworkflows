@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
+import math
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
@@ -13,6 +18,10 @@ import httpx
 
 from app.embeddings import EmbeddingProvider, HashEmbeddingProvider, tokenize
 from app.reranker import NoopReranker, RerankerProvider
+
+LOGGER = logging.getLogger("agentworkflows.rag")
+# How long a failed knowledge bootstrap waits before the next attempt.
+BOOTSTRAP_RETRY_SECONDS = 5.0
 
 
 @dataclass(frozen=True)
@@ -43,6 +52,45 @@ class RetrievalResult:
 
 class VectorStoreError(RuntimeError):
     """Raised when the vector store cannot be reached or bootstrapped."""
+
+
+def _query_points(payload: Any) -> list[dict[str, Any]]:
+    """Return the point objects of a Qdrant query response.
+
+    Accepts both the ``/points/query`` shape (``result.points``) and the older search
+    shape (``result`` is the list). Anything else is a vector-store fault, reported as
+    VectorStoreError (503) rather than surfacing as an AttributeError (500).
+    """
+    result = payload.get("result") if isinstance(payload, dict) else None
+    if isinstance(result, dict):
+        result = result.get("points")
+    if not isinstance(result, list):
+        raise VectorStoreError("qdrant query returned an unexpected response shape")
+    return [point for point in result if isinstance(point, dict)]
+
+
+def _finite_score(value: Any) -> float:
+    """Return a point's similarity score, treating a missing or non-numeric one as zero."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return 0.0
+    try:
+        score = float(value)
+    except OverflowError:
+        return 0.0
+    return score if math.isfinite(score) else 0.0
+
+
+def _describe_error(exc: Exception) -> str:
+    """Summarize a failure for the unauthenticated ``/healthz`` body.
+
+    httpx messages embed the request URL, which names internal hosts; the status line or
+    exception type is what an operator needs there, and the full error goes to the log.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"{type(exc).__name__}: HTTP {exc.response.status_code}"
+    if isinstance(exc, httpx.HTTPError):
+        return type(exc).__name__
+    return f"{type(exc).__name__}: {exc}"
 
 
 def _title_from_content(path: Path, content: str) -> str:
@@ -220,6 +268,8 @@ class QdrantRetriever:
         self.tenant_isolation_enabled = tenant_isolation_enabled
         self.tenant_field = tenant_field
         self._bootstrapped = False
+        self._bootstrap_lock = asyncio.Lock()
+        self._bootstrap_retry_at = 0.0
         self._async_client: httpx.AsyncClient | None = None
         self.last_sync_status = "pending" if bootstrap_from_knowledge else "disabled"
         self.last_sync_error = ""
@@ -345,17 +395,31 @@ class QdrantRetriever:
         self.last_sync_error = ""
 
     async def _ensure_bootstrapped(self) -> None:
+        """Sync the local knowledge corpus into the collection once, raising VectorStoreError on failure.
+
+        One attempt runs at a time, and a failed attempt is not retried for
+        ``BOOTSTRAP_RETRY_SECONDS``: during an outage a burst of queries otherwise queued
+        a full bootstrap each (every document re-embedded and re-uploaded) behind one another.
+        """
         if self._bootstrapped or not self.bootstrap_from_knowledge:
             return
-        try:
-            client = self._client()
-            await self._ensure_collection(client)
-            await self._upsert_documents(client)
+        async with self._bootstrap_lock:
+            if self._bootstrapped:
+                return
+            if monotonic() < self._bootstrap_retry_at:
+                raise VectorStoreError("qdrant bootstrap failed recently; waiting before the next attempt")
+            try:
+                client = self._client()
+                await self._ensure_collection(client)
+                await self._upsert_documents(client)
+            except (httpx.HTTPError, ValueError, IndexError) as exc:
+                # ValueError/IndexError: a malformed or wrong-dimension embedding response.
+                self._bootstrap_retry_at = monotonic() + BOOTSTRAP_RETRY_SECONDS
+                self.last_sync_status = "failed"
+                self.last_sync_error = _describe_error(exc)
+                LOGGER.warning("knowledge bootstrap into qdrant failed: %s", exc)
+                raise VectorStoreError("qdrant bootstrap failed") from exc
             self._bootstrapped = True
-        except httpx.HTTPError as exc:
-            self.last_sync_status = "failed"
-            self.last_sync_error = str(exc)
-            raise VectorStoreError("qdrant bootstrap failed") from exc
 
     async def bootstrap(self) -> None:
         """Eagerly bootstrap the collection at startup so reachability surfaces early.
@@ -428,7 +492,11 @@ class QdrantRetriever:
         terms = set(tokenize(query))
         if not terms:
             return []
-        await self._ensure_bootstrapped()
+        # Bootstrap copies the local corpus into the collection; it is not a precondition
+        # for searching it. A store that is really down still fails the search below (503),
+        # while a store that only rejected the sync keeps serving what it holds.
+        with contextlib.suppress(VectorStoreError):
+            await self._ensure_bootstrapped()
         try:
             vector = await self.embedding_provider.embed_async(query)
         except (httpx.HTTPError, ValueError, IndexError) as exc:
@@ -449,21 +517,12 @@ class QdrantRetriever:
             )
             response.raise_for_status()
             payload = response.json()
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, ValueError) as exc:
+            # ValueError: a 200 whose body is not JSON (a proxy error page, a truncated body).
             raise VectorStoreError("qdrant query failed") from exc
 
-        result = payload.get("result", {})
-        if isinstance(result, dict):
-            points = result.get("points", [])
-        elif isinstance(result, list):
-            points = result
-        else:
-            points = []
-
         matches: list[RetrievalResult] = []
-        for point in points:
-            if not isinstance(point, dict):
-                continue
+        for point in _query_points(payload):
             point_payload = point.get("payload") or {}
             if not isinstance(point_payload, dict):
                 point_payload = {}
@@ -471,7 +530,7 @@ class QdrantRetriever:
             source = str(point_payload.get("source") or "qdrant")
             doc_id = str(point_payload.get("document_id") or point_payload.get("id") or point.get("id"))
             title = str(point_payload.get("title") or doc_id)
-            combined = self._hybrid_score(float(point.get("score") or 0.0), terms, content)
+            combined = self._hybrid_score(_finite_score(point.get("score")), terms, content)
             matches.append(
                 RetrievalResult(
                     document=KnowledgeDocument(
