@@ -66,8 +66,13 @@ ensure_service_venv() {
   if [[ -x "${dir}/.venv/bin/python" && "$(cat "$stamp" 2>/dev/null)" == "$digest" ]]; then
     return 0
   fi
+  require_cmd python3 "Install Python 3.12 or newer with venv support."
+  python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 12))' \
+    || die "Python 3.12 or newer is required; python3 is $(python3 --version 2>&1)."
   log "installing $(basename "$dir") dependencies from requirements-dev.lock"
-  python3 -m venv --clear "${dir}/.venv"
-  "${dir}/.venv/bin/python" -m pip install --quiet --require-hashes -r "$lock"
+  python3 -m venv --clear "${dir}/.venv" \
+    || die "python3 -m venv failed; install your distribution's venv package (for example python3-venv)."
+  "${dir}/.venv/bin/python" -m pip install --quiet --require-hashes -r "$lock" \
+    || die "installing ${lock#"$(repo_root)/"} failed (pip's error is above); the next run starts the environment over."
   echo "$digest" >"$stamp"
 }
