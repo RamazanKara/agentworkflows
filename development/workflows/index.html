@@ -2671,7 +2671,8 @@ approval waits, then verifies that each completed model call ran once. See <a hr
    and select <strong>Start run</strong>. Optional inputs such as the model and budgets sit under
    <strong>More options</strong>. The run's detail page refreshes while the workflow is active.</li>
 <li>Open <strong>Approvals</strong>, read the draft, then <strong>Approve</strong> or <strong>Reject</strong>. Approval allows
-   the configured publish tool to run; rejection finishes without publishing.</li>
+   the configured publish tool to run; rejection finishes without publishing, so the console
+   asks you to confirm it first.</li>
 <li>Open the run from <strong>Workflow runs</strong>. Model steps preview their answer; expand
    <strong>Prompt and response</strong> (model steps) or <strong>Arguments and result</strong> (tool steps) to read the
    captured content with redaction/truncation notes. <strong>Receipt</strong> and <strong>Step logs</strong> show
@@ -3649,6 +3650,12 @@ receipt and queues the notice exactly once.</p>
 run they also show the caller's <code>approval_access</code>: <code>eligible</code>, <code>via</code> (<code>role</code> or <code>escalation</code>), and
 <code>eligible_at</code> when escalation will admit the caller later. A vote before that time returns <code>403</code>
 with the time it opens.</p>
+<p>In the console, <strong>Approvals</strong> opens on <strong>Ready for you</strong>: the waiting drafts you may decide now,
+including escalated ones. <strong>All waiting</strong> lists every draft; one that escalation will open to you
+says when. Waiting runs show when their review escalates, and an <strong>Escalated</strong> mark once it has;
+run timelines and the audit log name escalation receipts and votes made through escalation. Team
+admins set, edit and remove escalation per workflow in <strong>Team settings → Approval escalation</strong>,
+which flags an escalation the approval expiry would overtake.</p>
 <p>API: <code>GET /v1/team/approval-escalations</code>; <code>PUT</code> and <code>DELETE
 /v1/team/workflows/{name}/approval-escalation</code> with the current <code>If-Match</code> revision (unrestricted
 team admin). PUT takes <code>after_seconds</code>, optional <code>approver_role</code> (<code>approver</code>), <code>reviewers</code> (up to
