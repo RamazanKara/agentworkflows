@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable, Iterator
+from concurrent.futures import Future, ThreadPoolExecutor
 from time import time as time
 from typing import Annotated, Any
 
@@ -66,22 +67,49 @@ class AuditVerification(BaseModel):
     boundaries: list[AuditPosition] = Field(default_factory=list)
 
 
+# Audit rows are written by one dedicated thread. Off the event loop, because the store
+# is a synchronous Redis or Postgres client and every governed request appends a row: a
+# slow store used to stall every other request while it waited. One thread, because the
+# store records arrival order (the Redis stream id, the Postgres serial) and the team view
+# verifier reports two rows that arrive out of chain order as tampering.
+_WRITER = ThreadPoolExecutor(max_workers=1, thread_name_prefix="audit-view")
+
+
 def view_enabled(request: Request) -> bool:
     return (
         get_storage(request).backend == "postgres" or request.app.state.budget_tracker.backend == "redis"
     ) and request.app.state.settings.audit_log_enabled
 
 
+def _store(storage: Any, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None, retention: Any) -> None:
+    try:
+        storage.append_audit(event, sequence, entry, retention)
+    except Exception:
+        # Keep the original log available during an outage; advancing the view head
+        # before the write makes a lost append visible to subsequent verification. The
+        # driver error is not logged: it can carry connection strings or SQL text.
+        message = "audit view event could not be stored" if entry is not None else "audit event could not be stored"
+        logging.getLogger("uvicorn.error").error(message)
+
+
+def _team_retention(request: Request, team: str) -> int | None:
+    """The team's audit retention, when this request already read the team's settings."""
+    cached = getattr(request.state, "team_settings", None)
+    if cached is None or cached[0] != team:
+        return None
+    from app.team_data import retention_values
+
+    return retention_values(request.app.state.settings, cached[1].document)["audit_seconds"]
+
+
 def append_audit_view(request: Request, event: dict[str, Any]) -> None:
     if not view_enabled(request):
         return
-    if not event.get("sandbox_id"):
-        try:
-            get_storage(request).append_audit(event, request.app.state.audit_chain_count, None)
-        except Exception:
-            logging.getLogger("uvicorn.error").error("audit event could not be stored")
-        return
     state = request.app.state
+    storage = get_storage(request)
+    if not event.get("sandbox_id"):
+        request.state.audit_write = _WRITER.submit(_store, storage, event, state.audit_chain_count, None, None)
+        return
     if not hasattr(state, "audit_view_heads"):
         state.audit_view_heads = {}
     team = event["sandbox_id"]
@@ -97,12 +125,31 @@ def append_audit_view(request: Request, event: dict[str, Any]) -> None:
     # without retaining or disclosing another team's receipts to bridge those links.
     entry["view_prev_hash"], entry["view_hash"] = advance_chain(previous, entry)
     state.audit_view_heads[team] = (count + 1, entry["view_hash"])
-    try:
-        get_storage(request).append_audit(event, state.audit_chain_count, entry)
-    except Exception:
-        # Keep the original log available during an outage; advancing the view head
-        # before the write makes a lost append visible to subsequent verification.
-        logging.getLogger("uvicorn.error").error("audit view event could not be stored")
+    request.state.audit_write = _WRITER.submit(
+        _store, storage, event, state.audit_chain_count, entry, _team_retention(request, team)
+    )
+
+
+async def audit_written(request: Request) -> None:
+    """Wait until the audit rows this request queued are stored.
+
+    Rows from one writer thread land in submission order, so the request's last row being
+    done means all of its rows are. Responses wait here, which keeps a team admin's read of
+    the audit view consistent with the calls it has already seen answered.
+    """
+    future: Future[None] | None = getattr(request.state, "audit_write", None)
+    if future is not None and not future.done():
+        await asyncio.wrap_future(future)
+
+
+async def flush_audit_view() -> None:
+    """Wait for every queued audit row, for shutdown and before erasing a team's records."""
+    await asyncio.wrap_future(_WRITER.submit(lambda: None))
+
+
+def wait_for_audit_view() -> None:
+    """Blocking :func:`flush_audit_view` for synchronous callers such as tests."""
+    _WRITER.submit(lambda: None).result()
 
 
 def read_entries(request: Request, cursor: str | None = None, oldest_first: bool = False) -> Iterator[dict[str, Any]]:

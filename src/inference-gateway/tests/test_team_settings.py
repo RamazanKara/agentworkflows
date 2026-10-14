@@ -373,3 +373,24 @@ def test_effective_layer_does_not_mutate_yaml(settings_gateway):
     assert settings.team.workflows["ResearchWorkflow"].approval_required is False
     assert team.workflows["ResearchWorkflow"].approval_required is True
     assert routing.resolve("research", "").model_id == "primary"
+
+
+def test_a_governed_call_reads_team_settings_once(settings_gateway, monkeypatch):
+    # Routing, the team cost reservation and the audit view each consult the settings;
+    # every read used to be its own storage round trip and policy rebuild.
+    client, app = settings_gateway
+    storage = app.state.storage
+    original = storage.get_settings
+    reads = []
+
+    def get_settings(team):
+        reads.append(team)
+        return original(team)
+
+    monkeypatch.setattr(storage, "get_settings", get_settings)
+    assert chat(client).status_code == 200
+    assert reads == ["team"]
+    # A change made by the same request is not hidden by the cached copy.
+    reads.clear()
+    assert update(client, {"cost_limit_usd": 0.5}).status_code == 200
+    assert client.get(PATH, headers=auth("admin")).json()["fields"]["cost_limit_usd"]["value"] == 0.5

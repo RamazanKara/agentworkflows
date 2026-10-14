@@ -704,6 +704,8 @@ async def settle_and_audit(
         runtime_status_code=runtime_status_code,
         error=error,
     )
+    from app.audit_view import audit_written
     from app.workflow_operations import record_step
 
     await record_step(request)
+    await audit_written(request)

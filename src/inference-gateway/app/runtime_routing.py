@@ -13,6 +13,7 @@ from app.metrics import RUNTIME_FALLBACKS, SHADOW_REQUESTS
 from app.request_context import _runtime_headers
 from app.runtime_client import RuntimeClient
 from app.settings import AdmissionPolicyError
+from app.team_settings import forget_team_settings
 from app.workflow_budget import load_run_policy, model_charge, reserve_run, settle_run_model
 
 
@@ -89,6 +90,10 @@ async def _chat_with_fallback(
         workflow_call = bool(getattr(request.state, "workflow_run_id", None))
         reservation = None
         if workflow_call:
+            if index:
+                # The previous attempt may have run for minutes: re-read the team's settings
+                # so a workflow policy tightened meanwhile governs the fallback.
+                forget_team_settings(request)
             await load_run_policy(request)
             effective = route_settings(
                 effective_settings(request, request.app.state.sandbox_policy_set, request.app.state.settings), candidate

@@ -19,6 +19,7 @@ from app.audit import (
     open_audit_chain,
     persist_audit_head,
 )
+from app.audit_view import flush_audit_view
 from app.batch_api import register_batch_routes
 from app.batchstore import BatchStoreError, build_batch_store
 from app.body_limit import RequestBodyLimitMiddleware
@@ -148,6 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         task = getattr(app.state, "audit_persist_task", None)
         if task is not None:
             task.cancel()
+        await flush_audit_view()
         await asyncio.to_thread(persist_audit_head, app)
 
     app.router.add_event_handler("startup", _audit_chain_startup)

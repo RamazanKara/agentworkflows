@@ -395,6 +395,10 @@ def register_team_data_routes(app: FastAPI) -> None:
                 for key in await asyncio.to_thread(app.state.object_store.list_keys, team + "/"):
                     await asyncio.to_thread(app.state.object_store.delete, key)
                 await asyncio.to_thread(app.state.batch_store.delete_team, team)
+            from app.audit_view import flush_audit_view
+
+            # A row still queued for this team would otherwise land after the erasure.
+            await flush_audit_view()
             await storage_call(request, "delete_team", team)
             for key in await redis_team_keys(request):
                 await redis_call(request, "delete", key)

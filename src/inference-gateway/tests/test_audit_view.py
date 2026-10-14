@@ -1,12 +1,15 @@
 # ruff: noqa: F811
+import asyncio
 import json
 import logging
+import threading
 from dataclasses import replace
 from time import time
 
+import httpx
 import pytest
 from app.audit import AUDIT_GENESIS, chain_audit_event, emit_audit_record
-from app.audit_view import APPEND
+from app.audit_view import APPEND, wait_for_audit_view
 from app.settings import Settings
 from fastapi import Request
 from redis.exceptions import ConnectionError
@@ -37,6 +40,7 @@ def record(app, **fields):
     request.state.sandbox_id = event["sandbox_id"]
     chain_audit_event(request, event)
     emit_audit_record(event)
+    wait_for_audit_view()
     return event
 
 
@@ -255,3 +259,42 @@ def test_audit_store_failure_logs_no_driver_payload(team_gateway, monkeypatch, c
     assert errors and all(entry.exc_info is None for entry in errors)
     assert "could not be stored" in caplog.text
     assert "private-password" not in caplog.text and "private-prompt" not in caplog.text
+
+
+def test_rows_are_stored_off_the_event_loop_before_the_response(team_gateway, monkeypatch):
+    # The store is a synchronous client. Appending on the event loop stalled every other
+    # request for a full Redis or Postgres round trip on each governed call.
+    client, app = team_gateway
+    storage = app.state.storage
+    original = storage.append_audit
+    threads = []
+
+    def append(*args):
+        threads.append(threading.current_thread().name)
+        original(*args)
+
+    monkeypatch.setattr(storage, "append_audit", append)
+    response = client.post("/v1/chat/completions", headers=auth("builder"), json={
+        "model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}],
+    })
+    assert response.status_code == 200, response.text
+    assert threads and all(name.startswith("audit-view") for name in threads)
+    # The row is already readable when the caller sees the answer.
+    events = client.get(PATH, headers=auth("admin")).json()["events"]
+    assert events[0]["event"]["request_id"] == response.headers["x-request-id"]
+
+
+def test_concurrent_requests_keep_the_team_view_verifiable(team_gateway):
+    client, app = team_gateway
+    body = {"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hello"}]}
+
+    async def burst():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://gateway") as http:
+            return await asyncio.gather(
+                *(http.post("/v1/chat/completions", headers=auth("builder"), json=body) for _ in range(25))
+            )
+
+    assert all(response.status_code == 200 for response in asyncio.run(burst()))
+    result = verify(client)
+    assert result["ok"] is True and result["checked"] == 25

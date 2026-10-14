@@ -24,6 +24,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.audit_view import audit_written
 from app.budget import BudgetBackendError, backend_call
 from app.console_auth import AUTH_PATHS
 from app.jwt_auth import JwksUnavailableError
@@ -120,6 +121,8 @@ class RequestContextMiddleware:
         async def send_recording(message: Message) -> None:
             if message["type"] == "http.response.start":
                 outcome.status_code = message["status"]
+                # Answer only once this request's audit rows are stored (see audit_written).
+                await audit_written(request)
             await send(message)
 
         path = request.url.path

@@ -275,7 +275,10 @@ class PostgresStorage:
                 )
             return deadline
 
-    def append_audit(self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None) -> None:
+    def append_audit(
+        self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None, retention: int | None = None
+    ) -> None:
+        # Retention is applied when the view is read and trimmed, from the team's stored settings.
         with self.pool.connection() as connection:
             connection.execute(
                 "INSERT INTO aw_audit_events (scope, team, chain_id, sequence, event, entry) "

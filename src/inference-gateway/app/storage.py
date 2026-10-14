@@ -34,7 +34,9 @@ class Storage(Protocol):
     def get_snapshot(self, team: str, run_id: str) -> dict[str, Any] | None: ...
     def save_snapshot(self, team: str, run_id: str, snapshot: dict[str, Any]) -> None: ...
     def expire_run(self, team: str, run_id: str, deadline: int) -> int: ...
-    def append_audit(self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None) -> None: ...
+    def append_audit(
+        self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None, retention: int | None = None
+    ) -> None: ...
     def audit_entries(self, team: str, cursor: str | None, oldest_first: bool) -> Any: ...
 
 
@@ -224,18 +226,25 @@ class RedisStorage:
     def expire_run(self, team: str, run_id: str, deadline: int) -> int:
         return deadline
 
-    def append_audit(self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None) -> None:
+    def append_audit(
+        self, event: dict[str, Any], sequence: int, entry: dict[str, Any] | None, retention: int | None = None
+    ) -> None:
+        """Append a team view row; ``retention`` saves the settings read when the caller knows it."""
         from app.audit_view import APPEND, MAX_EVENTS
         from app.team_data import retention_values
 
         if entry is not None:
+            if retention is None:
+                retention = retention_values(self.state.settings, self.get_settings(event["sandbox_id"]))[
+                    "audit_seconds"
+                ]
             self.client.eval(
                 APPEND,
                 1,
                 f"{self.prefix}:audit:{event['sandbox_id']}",
                 json.dumps(entry, sort_keys=True),
                 MAX_EVENTS,
-                retention_values(self.state.settings, self.get_settings(event["sandbox_id"]))["audit_seconds"],
+                retention,
             )
 
     def audit_entries(self, team: str, cursor: str | None, oldest_first: bool) -> Any:

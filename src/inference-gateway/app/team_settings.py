@@ -60,15 +60,33 @@ class EffectiveTeamSettings:
 
 
 async def effective_team_settings(request: Request) -> EffectiveTeamSettings:
-    team = request.app.state.sandbox_policy_set.policies.get(request.state.sandbox_id)
+    """Return the team's settings, read from storage at most once per request.
+
+    A governed call consults them for routing, the team cost reservation, its
+    settlement, and the audit view's retention. Each read was a storage round trip plus
+    a rebuild of every workflow policy, so the first result is kept on the request and
+    dropped again whenever this request writes the document.
+    """
+    sandbox_id = request.state.sandbox_id
+    cached = getattr(request.state, "team_settings", None)
+    if cached is not None and cached[0] == sandbox_id:
+        return cached[1]
+    team = request.app.state.sandbox_policy_set.policies.get(sandbox_id)
     routing = request.app.state.model_routing_policy
     document = {"revision": 0, "updated_by": None, "updated_at": None, "overrides": {}}
     # Legacy memory-backed sandboxes keep their YAML-only behavior.
     if team and (
         request.app.state.storage.backend == "postgres" or request.app.state.budget_tracker.backend == "redis"
     ):
-        document = await storage_call(request, "get_settings", request.state.sandbox_id) or document
-    return layer_settings(team, routing, document)
+        document = await storage_call(request, "get_settings", sandbox_id) or document
+    settings = layer_settings(team, routing, document)
+    request.state.team_settings = (sandbox_id, settings)
+    return settings
+
+
+def forget_team_settings(request: Request) -> None:
+    """Drop this request's cached team settings after it changed the stored document."""
+    request.state.team_settings = None
 
 
 def registered_policies(team: SandboxPolicy | None, document: dict[str, Any]) -> dict[str, WorkflowPolicy]:
@@ -242,9 +260,13 @@ async def change_settings(
         "updated_at": time(),
         "overrides": overrides,
     }
-    if current.document["revision"] != revision or not await storage_call(
-        request, "change_settings", request.state.sandbox_id, revision, document,
-    ):
+    try:
+        saved = current.document["revision"] == revision and await storage_call(
+            request, "change_settings", request.state.sandbox_id, revision, document,
+        )
+    finally:
+        forget_team_settings(request)
+    if not saved:
         raise HTTPException(
             409,
             detail={
@@ -286,7 +308,11 @@ async def save_team_document(
         **current, **changes, "revision": current["revision"] + 1,
         "updated_at": time(), "updated_by": principal.get("sub") or principal.get("key_id"),
     }
-    if not await storage_call(request, "change_settings", request.state.sandbox_id, current["revision"], document):
+    try:
+        saved = await storage_call(request, "change_settings", request.state.sandbox_id, current["revision"], document)
+    finally:
+        forget_team_settings(request)
+    if not saved:
         raise HTTPException(409, detail="Team configuration changed. Reload before trying again.")
     event = {
         "event": action, "action_type": action, "chain_id": request.app.state.audit_chain_id,
