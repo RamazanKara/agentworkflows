@@ -13,10 +13,22 @@ from uuid import UUID, uuid4
 
 import httpx
 
-from agentworkflows import GatewayClient, GatewayError, __version__
+import agentworkflows
+from agentworkflows import GatewayClient, GatewayError
 from agentworkflows.acceptance import DEADLINE_SECONDS, AcceptanceError, first_approved_run
 from agentworkflows.scaffold import TEMPLATES, init_project
 from agentworkflows.types import TeamSettingValue
+
+
+class VersionAction(argparse.Action):
+    """Print the installed version; package metadata is read only when asked."""
+
+    def __init__(self, option_strings: list[str], dest: str, **kwargs: Any) -> None:
+        super().__init__(option_strings, dest, nargs=0, help="show program's version number and exit")
+
+    def __call__(self, parser: argparse.ArgumentParser, *args: Any) -> None:
+        sys.stdout.write(f"{parser.prog} {agentworkflows.__version__}\n")
+        parser.exit()
 
 
 def workflow_input(value: str) -> object:
@@ -84,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Run governed workflows, review approvals, and inspect team usage through AgentWorkflows.",
         epilog="Set AGENTWORKFLOWS_API_KEY and AGENTWORKFLOWS_URL (default: http://127.0.0.1:8080).",
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("--version", action=VersionAction)
     commands = parser.add_subparsers(dest="command", required=True)
     init = commands.add_parser("init", help="Create an editable workflow project; no key or server required.")
     init.add_argument("directory", nargs="?", default=".", type=Path, help="New or empty directory (default: current).")

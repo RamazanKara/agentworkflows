@@ -524,6 +524,29 @@ def test_custom_transport_and_default_headers():
     assert seen["traceparent"].startswith("00-aaaa")
 
 
+def test_readiness_probe_has_its_own_short_timeout():
+    timeouts = []
+
+    def handler(request):
+        timeouts.append(request.extensions["timeout"]["read"])
+        if len(timeouts) == 2:
+            raise httpx.ReadTimeout("no answer", request=request)
+        return httpx.Response(503)
+
+    with GatewayClient("http://gateway.test", timeout=120, transport=httpx.MockTransport(handler)) as client:
+        assert client.ready() is False
+        assert client.ready(timeout=0.5) is False
+    assert timeouts == [5.0, 0.5]
+
+
+def test_invitations_list_is_typed_and_read_with_retries(monkeypatch):
+    responses = iter([httpx.Response(503), httpx.Response(200, json=[{"id": "inv"}])])
+    _mock_transport(monkeypatch, lambda request: next(responses))
+    with GatewayClient("http://gateway.test", api_key="admin-key") as client:
+        monkeypatch.setattr(client, "_sleep", lambda _: None)
+        assert client.invitations() == [{"id": "inv"}]
+
+
 @pytest.mark.parametrize(
     ("method", "args", "options", "verb", "path", "body"),
     [

@@ -26,15 +26,13 @@ official ``openai`` / ``anthropic`` SDKs at the gateway instead (see docs/client
 from __future__ import annotations
 
 import json
+import sys
 import time
 from collections.abc import Iterator, Mapping, Sequence
-from importlib import metadata
 from types import TracebackType
 from typing import Any, Unpack
 from urllib.parse import quote
 from uuid import UUID, uuid4
-
-from temporalio import workflow as _workflow
 
 from agentworkflows.types import (
     AuditFilters,
@@ -58,7 +56,14 @@ from agentworkflows.types import (
     WorkflowRegistrationOptions,
 )
 
-with _workflow.unsafe.imports_passed_through():
+if "temporalio" in sys.modules:
+    # Workers import workflow modules again inside Temporal's sandbox; share the host's httpx with it.
+    # The CLI and plain clients skip importing Temporal, which dominates their start-up time.
+    from temporalio import workflow as _workflow
+
+    with _workflow.unsafe.imports_passed_through():
+        import httpx
+else:
     import httpx
 
 __all__ = [
@@ -68,11 +73,21 @@ __all__ = [
     "GatewayStreamError",
     "__version__",
 ]
+__version__: str
 
-try:
-    __version__ = metadata.version("agentworkflows")
-except metadata.PackageNotFoundError:  # running from a source checkout
-    __version__ = "0+unknown"
+
+def __getattr__(name: str) -> str:
+    # Package metadata is slow to import; most commands never print the version.
+    if name == "__version__":
+        from importlib import metadata
+
+        try:
+            version = metadata.version("agentworkflows")
+        except metadata.PackageNotFoundError:  # running from a source checkout
+            version = "0+unknown"
+        globals()["__version__"] = version
+        return version
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # Retryable upstream statuses: 429 (rate limited / budget) and 5xx (transient server/runtime).
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
@@ -100,7 +115,9 @@ def _parse_retry_after(value: str | None) -> int | None:
 
 def _workflow_name(workflow: type) -> str:
     """Return a workflow class's Temporal type name, as registered by ``@workflow.defn``."""
-    definition = _workflow._Definition.from_class(workflow)
+    from temporalio import workflow as temporal_workflow
+
+    definition = temporal_workflow._Definition.from_class(workflow)
     if definition is None or not definition.name:
         raise TypeError("Pass a workflow type name or a class decorated with @workflow.defn.")
     return definition.name
@@ -546,7 +563,9 @@ class GatewayClient:
         return self._get("/v1/team")
 
     def invitations(self) -> list[dict[str, Any]]:
-        return self._get("/v1/team/invitations")
+        """List the team's pending invitations (admin only)."""
+        result: list[dict[str, Any]] = self._request("GET", "/v1/team/invitations").json()
+        return result
 
     def create_invitation(self, name: str, **options: Unpack[KeyOptions]) -> dict[str, Any]:
         """Return a one-day, single-use token; share it through a trusted channel."""
@@ -860,10 +879,14 @@ class GatewayClient:
         """Return this sandbox's budget usage, limits, and window TTL."""
         return self._get("/v1/sandbox/budget")
 
-    def ready(self) -> bool:
-        """Return whether the gateway reports itself and its runtimes ready (``/readyz``)."""
+    def ready(self, timeout: float = 5.0) -> bool:
+        """Return whether the gateway reports itself and its runtimes ready (``/readyz``).
+
+        A probe answers quickly or not at all: ``timeout`` (seconds) replaces the client's
+        request timeout, so an unresponsive gateway reads as not ready instead of blocking.
+        """
         try:
-            response = self._client.get("/readyz")
+            response = self._client.get("/readyz", timeout=timeout)
         except httpx.HTTPError:
             return False
         return response.status_code == 200
