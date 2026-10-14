@@ -413,9 +413,21 @@ cosign verify "$IMAGE_REPO/inference-gateway:$RELEASE" \
 cosign verify "$IMAGE_REPO/rag-service:$RELEASE" \
   --certificate-identity "$RELEASE_IDENTITY" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+cosign verify "$IMAGE_REPO/workflow-worker:$RELEASE" \
+  --certificate-identity "$RELEASE_IDENTITY" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 Release images are also multi-arch (`linux/amd64` and `linux/arm64`); the signature covers the manifest list, so the same `cosign verify` works on Apple Silicon and arm64 (Graviton/Ampere) clusters.
+
+From the next release on, each image also carries an SPDX SBOM and a SLSA build provenance
+attestation in the registry, per platform:
+
+```bash
+docker buildx imagetools inspect "$IMAGE_REPO/inference-gateway:$RELEASE" --format '{{ json .SBOM }}'
+docker buildx imagetools inspect "$IMAGE_REPO/inference-gateway:$RELEASE" --format '{{ json .Provenance }}'
+```
 
 ## Chart Signatures
 

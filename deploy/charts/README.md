@@ -15,7 +15,9 @@ helm template agentworkflows deploy/charts/inference-gateway --values deploy/clu
 | Local | `deploy/clusters/local/values/*.yaml` | kind-based lab with Ollama and local service profiles. |
 | Customer | `deploy/clusters/customer/values/*.yaml` | Provider-neutral customer-owned Kubernetes profile with vLLM and optional GPU values. |
 
-CI packages charts as OCI artifacts for tagged and main-branch image releases.
+The release workflow packages every chart as a signed OCI artifact for each version tag, with
+the tag's image digests bound into the defaults. `make static-checks` lints and renders all
+charts with the local and customer values.
 
 `deploy/charts/workflows` installs the official Temporal chart, dedicated PostgreSQL, and
 the Python example worker next to the gateway. Run `helm dependency update deploy/charts/workflows`
