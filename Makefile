@@ -51,6 +51,9 @@ help:
 		'  make agent-sandbox-install Install the vendored agent-sandbox controller' \
 		'  make agent-sandbox-smoke   Run hardened agent-sandbox workspace smoke test' \
 		'  make agent-sandbox-demo    Demo: isolated workspace, fail-closed egress, evidence' \
+		'  make local-down            Delete the local kind cluster' \
+		'  make toolchain-install     Install the pinned validation CLIs into .tools/bin' \
+		'  make toolchain-doctor      Report missing or mismatched tools (TOOLCHAIN_PROFILE=strict)' \
 		'' \
 		'Validation:' \
 		'  make validate              Run the default repo validation gate' \
@@ -59,11 +62,14 @@ help:
 		'  make quality               Run Ruff lint, format check, and mypy' \
 		'  make lint                  Ruff lint services and scripts' \
 		'  make format                Apply Ruff format and autofixes' \
-		'  make typecheck             Run mypy on both services' \
+		'  make format-check          Check Ruff formatting without changing files' \
+		'  make typecheck             Run mypy on both services and the Python SDK' \
 		'  make test                  Run tooling, service, both SDK, and console tests' \
+		'  make test-gateway          Build the console, then run the gateway and Python SDK tests' \
+		'  make test-rag              Run the RAG service tests' \
 		'  make test-console          Build the web console and run headless Chromium checks' \
 		'  make test-typescript       Install, build, lint, and test the TypeScript SDK (two workers)' \
-		'  make test-scripts          Run repository tooling tests (Python + Git only)' \
+		'  make test-scripts          Run repository tooling tests (chart render tests also need Helm)' \
 		'  make coverage              Report test coverage with enforced floors' \
 		'  make fuzz                  Mutate security-critical parser inputs' \
 		'  make production-check      Run static production-readiness checks' \
@@ -76,9 +82,16 @@ help:
 		'  make chart-docs            Check generated Helm chart value tables' \
 		'  make api-contract          Check service OpenAPI contracts' \
 		'  make config-contract       Check service runtime config contracts' \
+		'  make api-contract-update   Regenerate a snapshot after an intended change (likewise' \
+		'                             config-contract-update, chart-docs-update, dashboard-update)' \
 		'  make loadtest-local        Run k6 against an ephemeral local gateway' \
 		'  make clean                 Remove generated output and service test environments' \
 		'  make clean-all             Also remove downloaded tools and tooling environments' \
+		'' \
+		'Documentation:' \
+		'  make docs-install          Install the pinned MkDocs toolchain into .venv-docs' \
+		'  make docs-serve            Preview the documentation site locally' \
+		'  make docs-build            Build the site strictly, as the docs workflow does' \
 		'' \
 		'Releases:' \
 		'  make release-prep RELEASE_VERSION=X.Y.Z  Move every version reference to X.Y.Z (needs helm)' \
@@ -100,12 +113,21 @@ help:
 		'  make customer-overlay      Configure customer GitOps overlay' \
 		'  make tenant-onboard        Generate tenant onboarding artifacts' \
 		'  make tenant-onboard-regulated Generate regulated/offline tenant artifacts' \
-		'  make tenant-onboard-gpu    Generate GPU coding-agent tenant artifacts'
+		'  make tenant-onboard-gpu    Generate GPU coding-agent tenant artifacts' \
+		'' \
+		'Every target, including the report and check variants: make help-all'
 
+.PHONY: help-all agent-sandbox-install agent-sandbox-smoke agent-sandbox-demo
+help-all:
+	@grep -oE '^[a-z0-9][a-z0-9_-]*:' $(firstword $(MAKEFILE_LIST)) | tr -d ':' | sort | tr '\n' ' ' | fmt -w 100
+
+# Also removes the built console and vendored chart dependencies; the umbrella's Chart.lock is tracked.
 clean:
 	rm -rf .coverage coverage.xml htmlcov .pytest_cache .ruff_cache .mypy_cache
 	rm -rf .out site docs/runbooks dist build
 	rm -rf src/inference-gateway/.venv src/rag-service/.venv
+	rm -rf src/inference-gateway/app/console deploy/charts/*/charts
+	find deploy/charts -mindepth 2 -maxdepth 2 -name Chart.lock ! -path 'deploy/charts/agentworkflows/*' -delete
 	find . -path ./.git -prune -o -type d -name __pycache__ -prune -exec rm -rf {} +
 	find . -path ./.git -prune -o -type d -name .pytest_cache -prune -exec rm -rf {} +
 	find . -path ./.git -prune -o -type d -name .ruff_cache -prune -exec rm -rf {} +
