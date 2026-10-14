@@ -770,6 +770,36 @@ def test_rag_query_rejects_blank_query_after_trimming(tmp_path):
     assert response.json()["detail"]["reason"] == "empty_query"
 
 
+def test_rag_query_rejects_lone_surrogate_as_422_not_500(tmp_path):
+    write_doc(tmp_path, "agents.md", "# Coding Agents\nUse the gateway.")
+    client = TestClient(
+        create_app(Settings(document_dir=tmp_path, retrieval_tenant_isolation_enabled=False)),
+        raise_server_exceptions=False,
+    )
+
+    response = client.post(
+        "/v1/rag/query",
+        content=b'{"query": "\\ud800 gateway"}',
+        headers={"Content-Type": "application/json"},
+    )
+
+    # The validation error used to echo the surrogate back and fail to encode (500).
+    assert response.status_code == 422
+    detail = response.json()["detail"][0]
+    assert detail["loc"] == ["body", "query"]
+    assert detail["input"] == "? gateway"
+
+
+def test_rag_query_accepts_non_ascii_text(tmp_path):
+    write_doc(tmp_path, "de.md", "# Übersicht\nDie Größe der Datei ist begrenzt.")
+    client = TestClient(create_app(Settings(document_dir=tmp_path, retrieval_tenant_isolation_enabled=False)))
+
+    response = client.post("/v1/rag/query", json={"query": "Größe"})
+
+    assert response.status_code == 200
+    assert response.json()["query_sha256"] == hashlib.sha256("Größe".encode()).hexdigest()
+
+
 def test_rag_query_rejects_explicit_zero_limits(tmp_path):
     write_doc(tmp_path, "agents.md", "# Coding Agents\nUse the gateway.")
     client = TestClient(create_app(Settings(document_dir=tmp_path)))

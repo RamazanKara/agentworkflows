@@ -16,6 +16,8 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel, Field
@@ -132,6 +134,27 @@ def _traceparent_from_header(request: Request) -> str | None:
 def _hash_query(query: str) -> str:
     """Return the SHA-256 hex digest of the query for redacted audit logging."""
     return hashlib.sha256(query.encode("utf-8")).hexdigest()
+
+
+def _json_safe(value: Any) -> Any:
+    """Replace characters UTF-8 cannot encode (lone surrogates) so a body always serializes."""
+    if isinstance(value, str):
+        return value.encode("utf-8", "replace").decode("utf-8")
+    if isinstance(value, dict):
+        return {_json_safe(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+async def _request_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Return FastAPI's usual 422 body, made safe to encode.
+
+    The default handler echoes the rejected input. A JSON string escape such as ``"\\ud800"``
+    decodes to a lone surrogate that pydantic rejects, and echoing it back made the 422
+    itself fail to encode, so the client saw an unhandled 500 instead.
+    """
+    return JSONResponse(status_code=422, content={"detail": _json_safe(jsonable_encoder(exc.errors()))})
 
 
 def _auth_required(path: str) -> bool:
@@ -506,6 +529,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=_lifespan,
     )
     app.add_middleware(RequestBodyLimitMiddleware, max_bytes=resolved.max_request_body_bytes)
+    app.add_exception_handler(RequestValidationError, _request_validation_error)  # type: ignore[arg-type]
     app.state.settings = resolved
     app.state.audit_prev_hash = AUDIT_GENESIS
     app.state.audit_chain_count = 0
