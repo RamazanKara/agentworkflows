@@ -3,6 +3,8 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: 'console.spec.ts',
+  // Every test signs in on its own page with its own routes, so tests in the one spec file can share the workers.
+  fullyParallel: true,
   workers: 2,
   timeout: 30000,
   // Dates render in the browser's locale and time zone; pin both so results match on every machine.
