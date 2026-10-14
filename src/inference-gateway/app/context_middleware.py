@@ -31,6 +31,7 @@ from app.jwt_auth import JwksUnavailableError
 from app.metrics import RATE_LIMIT_FAIL_OPEN
 from app.metrics import sandbox_label as _sandbox_label
 from app.request_context import (
+    GatewayJSONResponse,
     _api_key_from_request,
     _auth_required,
     _error_envelope,
@@ -309,7 +310,7 @@ def _workflow_step_path(path: str) -> bool:
 
 
 def _error_response(exc: StarletteHTTPException) -> JSONResponse:
-    return JSONResponse(
+    return GatewayJSONResponse(
         status_code=exc.status_code,
         content=_error_envelope(exc.status_code, exc.detail),
         headers=getattr(exc, "headers", None),

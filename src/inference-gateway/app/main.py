@@ -8,6 +8,8 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, start_http_server
@@ -40,7 +42,7 @@ from app.metrics import REQUESTS
 from app.objectstore import build_object_store
 from app.policy import ModelRoutingPolicy, SandboxPolicySet
 from app.ratelimit import build_rate_limiter
-from app.request_context import _auth_required, _error_envelope, _install_openapi_contract
+from app.request_context import GatewayJSONResponse, _auth_required, _error_envelope, _install_openapi_contract
 from app.response_store import ResponseStoreError, build_response_store
 from app.responses_api import register_responses_routes
 from app.runtime_client import RuntimeClient
@@ -74,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_tags=OPENAPI_TAGS,
         docs_url="/docs",
         redoc_url=None,
+        default_response_class=GatewayJSONResponse,
     )
     # Added before the request_context middleware below, so it runs inside it: only
     # authenticated, rate-limit-admitted requests take a concurrency slot.
@@ -234,13 +237,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         # Reshape every raised HTTPException - and FastAPI's own 404/405 - into the
         # OpenAI-style error envelope while preserving the handler's headers (WWW-Authenticate,
-        # Retry-After, ...). Pydantic 422 validation errors go through FastAPI's separate
-        # RequestValidationError handler and are intentionally left in their default shape.
-        return JSONResponse(
+        # Retry-After, ...). Pydantic 422 validation errors go through the separate
+        # RequestValidationError handler below and keep FastAPI's default shape.
+        return GatewayJSONResponse(
             status_code=exc.status_code,
             content=_error_envelope(exc.status_code, exc.detail),
             headers=getattr(exc, "headers", None),
         )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # FastAPI's default body, rendered so an echoed lone surrogate cannot turn the 422 into a 500.
+        return GatewayJSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
 
     @app.exception_handler(ResponseStoreError)
     @app.exception_handler(BatchStoreError)
@@ -248,7 +256,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Files, batches, and stored-response reads run outside the governance rail; a
         # Redis outage there is still a retryable 503, never a bare 500.
         logging.getLogger("uvicorn.error").warning("state store unavailable: %s", type(exc).__name__)
-        return JSONResponse(
+        return GatewayJSONResponse(
             status_code=503,
             content=_error_envelope(503, state_backend_unavailable_detail(request)),
             headers={"Retry-After": "5"},

@@ -809,6 +809,16 @@ class Settings:
         request proceeds and :meth:`apply_prompt_secret_mode` redacts or records the
         match before the payload is forwarded. The blocked-term denylist always rejects.
         """
+        if not text.isascii():
+            try:
+                text.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                # A JSON escape such as "\ud800" parses to a lone surrogate. No runtime can be
+                # sent it as UTF-8, so the call would otherwise fail later as a misleading 502.
+                raise AdmissionPolicyError(
+                    "invalid_unicode",
+                    "input contains an unpaired UTF-16 surrogate escape (\\ud800-\\udfff); send valid Unicode text",
+                ) from exc
         if self.prompt_secret_detection_enabled and self.prompt_secret_mode == "block":
             pattern = self.matched_secret_pattern(text)
             if pattern is not None:

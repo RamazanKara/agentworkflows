@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import json
 import re
 from time import time
 from typing import Any
@@ -35,6 +36,21 @@ _ERROR_TYPE_BY_STATUS = {
     422: "invalid_request_error",
     429: "rate_limit_error",
 }
+
+
+class GatewayJSONResponse(JSONResponse):
+    """A JSON response that cannot fail to encode.
+
+    A JSON escape such as ``"\\ud800"`` decodes to a lone surrogate, which UTF-8 cannot
+    represent. Starlette's JSONResponse raised on it, so a 422 echoing the rejected input,
+    an error message quoting a requested model name, or a runtime reply carrying one turned
+    into an unhandled 500. Such characters are rendered as ``?`` instead.
+    """
+
+    def render(self, content: Any) -> bytes:
+        return json.dumps(content, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode(
+            "utf-8", "replace"
+        )
 
 
 def _error_type(status: int) -> str:

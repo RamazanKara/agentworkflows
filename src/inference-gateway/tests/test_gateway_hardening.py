@@ -339,3 +339,57 @@ def test_batches_record_their_submitter(tmp_path):
 
     record = app.state.batch_store.get_batch("team-a", created.json()["id"])
     assert record.submitted_by == "api_key:alice-key"
+
+
+LONE_SURROGATE = "\\ud800"  # the JSON escape, as a client would send it
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        # Rejected by validation: the 422 echoes the input back.
+        ("/v1/embeddings", '{"messages": [{"role": "user", "content": "%s"}]}'),
+        ("/v1/messages", '{"model": "%s", "messages": []}'),
+        ("/v1/chat/completions", '{"input": "%s"}'),
+    ],
+)
+def test_lone_surrogates_in_rejected_input_are_a_422_not_a_500(path, body):
+    client = TestClient(create_app(_tool_settings()), raise_server_exceptions=False)
+    response = client.post(
+        path, content=(body % LONE_SURROGATE).encode(), headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        '{"messages": [{"role": "user", "content": "hi %s"}]}',
+        '{"messages": [{"role": "user", "content": "hi"}], "tools": [{"name": "%s"}]}',
+        '{"model": "%s", "messages": [{"role": "user", "content": "hi"}]}',
+    ],
+)
+def test_lone_surrogates_are_refused_before_the_runtime(body):
+    # They parse from JSON but cannot be encoded as UTF-8 for the runtime call, which then
+    # failed as a misleading 502 (or, quoted in an error message, as a 500).
+    app = create_app(_tool_settings(allowed_models=("default-model",)))
+    fake = FakeRuntimeClient(response={"choices": [{"message": {"content": "ok"}}]})
+    app.state.runtime_client = fake
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post(
+        "/v1/chat/completions",
+        content=(body % LONE_SURROGATE).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code in {400, 403}
+    assert response.json()["error"]["code"] in {"invalid_unicode", "model_not_allowed"}
+    assert fake.calls == 0
+
+
+def test_lone_surrogates_in_a_runtime_reply_do_not_break_the_response():
+    app = create_app(_tool_settings())
+    app.state.runtime_client = FakeRuntimeClient(response={"choices": [{"message": {"content": "x\ud800y"}}]})
+    response = TestClient(app).post("/v1/chat/completions", json={"messages": [{"role": "user", "content": "hi"}]})
+    assert response.status_code == 200
+    assert response.json()["choices"][0]["message"]["content"] == "x?y"
