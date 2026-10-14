@@ -24,10 +24,11 @@ class TeamAlertRules(AlertRules):
     available_channels: list[Channel]
 
 
-async def effective_alert_rules(request: Request) -> tuple[Any, AlertRules]:
+async def effective_alert_rules(request: Request, settings: Any = None) -> tuple[Any, AlertRules]:
+    """Team alert rules, or the defaults for the operator's destinations; ``settings`` skips a re-read."""
     from app.workflow_notifications import channels
 
-    settings = await effective_team_settings(request)
+    settings = settings or await effective_team_settings(request)
     config = settings.team.notifications if settings.team else None
     rules = settings.document.get("alert_rules") or {
         "events": ["awaiting_approval", "failed", "budget_threshold"],

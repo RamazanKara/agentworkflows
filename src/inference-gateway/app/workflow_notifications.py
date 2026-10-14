@@ -100,27 +100,37 @@ async def send_notification(config: TeamNotifications, channel: str, payload: di
         response.raise_for_status()
 
 
+def settled(state: dict[str, Any]) -> bool:
+    """Delivered, out of attempts, or backing off: nothing to send on this pass."""
+    return bool(state.get("delivered")) or state.get("attempts", 0) >= 5 or state.get("next_at", 0) > time()
+
+
 async def notify_run(request: Request, row: dict[str, Any]) -> None:
     from app.alert_rules import effective_alert_rules
+    from app.workflow_operations import read_settings
+    from app.workflow_retention import TERMINAL_STATES
 
-    settings, rules = await effective_alert_rules(request)
+    settings, rules = await effective_alert_rules(request, await read_settings(request))
     team = settings.team
     config = team.notifications if team else None
     if not config:
         return
     run_id = row["run_id"]
+    events = await redis_call(request, "hgetall", run_key(request, run_id) + ":notifications")
+    wanted = []
     status = row.get("progress", {}).get("stage", row["status"])
     if row["status"] in {"failed", "timed_out"}:
         status = "failed"
     if status in {"awaiting_approval", "failed"}:
-        await queue_event(request, run_id, status)
+        wanted.append(status)
     budget = row["budget"]
     if any(
         budget[limit] and budget[used] >= budget[limit] * rules.budget_threshold
         for used, limit in (("tokens", "token_limit"), ("cost_usd", "cost_limit_usd"))
     ):
-        await queue_event(request, run_id, "budget_threshold")
-    if "slow_step" in rules.events:
+        wanted.append("budget_threshold")
+    # "0" records that a finished run had no slow step, so its receipts are not scanned again.
+    if "slow_step" in rules.events and events.get("slow_step") not in {"0", "1"}:
         from app.storage import storage_call
 
         steps = await storage_call(request, "run_steps", request.state.sandbox_id, run_id)
@@ -129,21 +139,30 @@ async def notify_run(request: Request, row: dict[str, Any]) -> None:
             for step in steps
             if step.get("action_type") in {"model_call", "tool_exec"}
         ):
-            await queue_event(request, run_id, "slow_step")
-    events = await redis_call(request, "hgetall", run_key(request, run_id) + ":notifications")
-    for event in events:
-        if event not in rules.events:
+            wanted.append("slow_step")
+        elif row["status"] in TERMINAL_STATES:
+            await redis_call(request, "hset", run_key(request, run_id) + ":notifications", "slow_step", "0")
+            events["slow_step"] = "0"
+    for event in wanted:
+        if events.get(event) != "1":
+            await queue_event(request, run_id, event)
+            events[event] = "1"
+    for event, queued in events.items():
+        if queued != "1" or event not in rules.events:
             continue
         for channel in channels(config):
             if channel not in rules.channels:
                 continue
             key = run_key(request, run_id) + f":notification:{event}:{channel}"
+            # Most retained runs are long settled; read before taking the delivery lock.
+            if settled(json.loads(await redis_call(request, "get", key) or "{}")):
+                continue
             claim = str(uuid4())
             if not await redis_call(request, "eval", CLAIM, 1, key + ":lock", claim):
                 continue
             try:
                 state = json.loads(await redis_call(request, "get", key) or "{}")
-                if state.get("delivered") or state.get("attempts", 0) >= 5 or state.get("next_at", 0) > time():
+                if settled(state):
                     continue
                 attempt = state.get("attempts", 0) + 1
                 identifier = hashlib.sha256(key.encode()).hexdigest()

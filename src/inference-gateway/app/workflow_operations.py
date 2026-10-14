@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+from collections.abc import Awaitable, Iterable
 from datetime import timedelta
 from time import time
 from typing import Any, Literal
@@ -31,6 +32,8 @@ from app.workflow_insights import event_charge, summarize
 from app.workflow_retention import TERMINAL_STATES, retain_run
 
 RPC_TIMEOUT = timedelta(seconds=10)
+# Run reads fan out to Temporal and storage; bound them so one listing cannot exhaust a storage pool.
+CONCURRENCY = 8
 
 # Find the first older (score, UUID) pair atomically, even if the cursor's run expired.
 RUN_PAGE = """
@@ -118,6 +121,44 @@ async def save_metadata(request: Request, run_id: str, data: dict[str, Any]) -> 
     await storage_call(request, "save_run", request.state.sandbox_id, run_id, data)
 
 
+async def gather_all[T](calls: Iterable[Awaitable[T]]) -> list[T]:
+    """Await every call in order; the first failure is raised only after all of them settle."""
+    results = await asyncio.gather(*calls, return_exceptions=True)
+    for result in results:
+        if isinstance(result, BaseException):
+            raise result
+    return results  # type: ignore[return-value]
+
+
+async def read_settings(request: Request) -> Any:
+    """Team settings, read once per request: run listings describe many runs of one team."""
+    settings = getattr(request.state, "workflow_team_settings", None)
+    if settings is None:
+        settings = request.state.workflow_team_settings = await effective_team_settings(request)
+    return settings
+
+
+async def run_snapshot(request: Request, run_id: str) -> dict[str, Any] | None:
+    snapshot = await storage_call(request, "get_snapshot", request.state.sandbox_id, run_id)
+    if snapshot is None and request.app.state.storage.backend == "redis":
+        raw = await redis_call(request, "get", run_key(request, run_id) + ":snapshot")
+        snapshot = json.loads(raw) if raw else None
+    return snapshot
+
+
+async def keep_snapshot(request: Request, run_id: str, result: dict[str, Any], deadline: int | None) -> None:
+    """Keep a finished run's description so later reads skip Temporal until retention expires."""
+    await storage_call(request, "save_snapshot", request.state.sandbox_id, run_id, result)
+    seconds = int((deadline or 0) - time())
+    if request.app.state.storage.backend != "redis" or seconds <= 0:
+        return
+    try:
+        encoded = json.dumps(result, allow_nan=False)
+    except (TypeError, ValueError):
+        return
+    await redis_call(request, "setex", run_key(request, run_id) + ":snapshot", seconds, encoded)
+
+
 async def record_step(request: Request) -> None:
     event = getattr(request.state, "audit_event", None)
     if not event or not getattr(request.state, "workflow_run_id", None):
@@ -137,9 +178,12 @@ async def execution(request: Request, run_id: str) -> tuple[Any, dict[str, Any]]
     return client.get_workflow_handle(data["workflow_id"], run_id=run_id), data
 
 
-async def describe_run(request: Request, run_id: str, *, timeline: bool = True) -> dict[str, Any]:
-    data = await run_metadata(request, run_id)
-    result = await storage_call(request, "get_snapshot", request.state.sandbox_id, run_id)
+async def describe_run(
+    request: Request, run_id: str, *, timeline: bool = True, data: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Describe a run; ``data`` is its already-read metadata, ``timeline`` adds receipts and content."""
+    data = data or await run_metadata(request, run_id)
+    result = await run_snapshot(request, run_id)
     if result is None:
         client = await temporal_client(request.app)
         handle = client.get_workflow_handle(data["workflow_id"], run_id=run_id)
@@ -149,6 +193,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
             if exc.status == RPCStatusCode.NOT_FOUND and request.app.state.storage.backend == "postgres":
                 await retain_run(request, run_id, data, None)
             raise
+        deadline = None
         if description.status.name.lower() in TERMINAL_STATES:
             deadline = await retain_run(request, run_id, data, description.close_time)
             if deadline <= time():
@@ -190,7 +235,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
                     "stage": "worker_unavailable", "message": "Check the team's worker and task queue.",
                 }
         raw = await redis_call(request, "hgetall", run_key(request, run_id))
-        team = (await effective_team_settings(request)).team
+        team = (await read_settings(request)).team
         policy = team.workflows.get(data["workflow"]) if team else None
         result["budget"] = {
             "tokens": int(raw.get("tokens", 0)),
@@ -198,7 +243,7 @@ async def describe_run(request: Request, run_id: str, *, timeline: bool = True) 
             **effective_run_limits(raw, policy),
         }
         if result["status"] in TERMINAL_STATES:
-            await storage_call(request, "save_snapshot", request.state.sandbox_id, run_id, result)
+            await keep_snapshot(request, run_id, result, deadline)
     if not timeline:
         result.pop("result", None)
     if timeline:
@@ -324,6 +369,126 @@ async def operation_receipt(request: Request, run_id: str, action: str, **fields
     await record_step(request)
 
 
+RUN_STATUSES = ("running", "completed", "failed", "canceled", "timed_out", "terminated", "awaiting_approval")
+
+
+async def refresh_team_runs(request: Request, projects: Iterable[str]) -> dict[str, int]:
+    """Describe a team's retained runs, deliver their notifications, and count them by status."""
+    from app.workflow_notifications import notify_run
+
+    team_id = request.state.sandbox_id
+    counts: dict[str, int] = {}
+    failures = 0
+    limiter = asyncio.Semaphore(CONCURRENCY)
+
+    async def load(run_id: str) -> dict[str, Any] | Exception:
+        async with limiter:
+            try:
+                return await describe_run(request, run_id, timeline=False)
+            except (HTTPException, RPCError, OSError) as exc:
+                return exc
+
+    for project in projects:
+        offset = 0
+        while True:
+            ids = await storage_call(request, "page_runs", team_id, project, offset, 100)
+            rows = await gather_all(load(run_id) for run_id, _ in ids)
+            removed = 0
+            # Notifications go out one run at a time so their receipts keep a stable order.
+            for (run_id, _), row in zip(ids, rows, strict=True):
+                if not isinstance(row, Exception):
+                    try:
+                        await notify_run(request, row)
+                    except (HTTPException, RPCError, OSError) as exc:
+                        row = exc
+                if isinstance(row, Exception):
+                    if not await storage_call(request, "get_run", team_id, run_id):
+                        await storage_call(request, "remove_run_index", team_id, project, run_id)
+                        removed += 1
+                    else:
+                        failures += 1
+                    continue
+                status = "awaiting_approval" if row.get("progress", {}).get("stage") == "awaiting_approval" else (
+                    row["status"]
+                )
+                counts[status] = counts.get(status, 0) + 1
+            if len(ids) < 100:
+                break
+            offset += 100 - removed
+    if failures:
+        logging.getLogger("uvicorn.error").warning(
+            "Run refresh unavailable for %d run(s) of team %s; check Temporal, Redis and notification receipts.",
+            failures, team_id,
+        )
+    return counts
+
+
+async def refresh_workflow_metrics(app: FastAPI) -> None:
+    """One monitoring pass: reconcile schedules, refresh run status gauges and deliver notifications."""
+    from app.metrics import TEAM_COST_LIMIT, TEAM_SPEND, WORKFLOW_RUNS, WORKFLOW_STATUS_REFRESH
+    from app.team_budget import team_cost_report
+    from app.team_data import enter_team_request, leave_team_request
+    from app.workflow_triggers import reconcile_schedules
+
+    for team in app.state.sandbox_policy_set.policies.values():
+        request = Request(
+            {
+                "type": "http",
+                "path": "/v1/internal",
+                "app": app,
+                "headers": [],
+                "state": {"sandbox_id": team.sandbox_id, "sandbox_bound": True, "principal": {"role": "admin"}},
+            }
+        )
+        try:
+            entered = await enter_team_request(request)
+        except HTTPException as exc:
+            if exc.status_code == 409:
+                from app.metrics import forget_team_metrics
+
+                forget_team_metrics(team.sandbox_id)
+                getattr(app.state, "audit_view_heads", {}).pop(team.sandbox_id, None)
+                continue
+            raise
+        try:
+            try:
+                await reconcile_schedules(request)
+            except (HTTPException, RPCError, OSError):
+                logging.getLogger("uvicorn.error").warning(
+                    "Schedule configuration unavailable; check Temporal and team cron expressions."
+                )
+            counts = await refresh_team_runs(request, team.projects)
+            report = await team_cost_report(request)
+            if report:
+                TEAM_SPEND.labels(team.sandbox_id).set(report["reserved_and_spent_usd"])
+                TEAM_COST_LIMIT.labels(team.sandbox_id).set(report["cost_limit_usd"] or 0)
+            for status in RUN_STATUSES:
+                WORKFLOW_RUNS.labels(team.sandbox_id, status).set(counts.get(status, 0))
+        finally:
+            if entered:
+                await leave_team_request(request)
+    WORKFLOW_STATUS_REFRESH.set(time())
+
+
+async def monitor_workflows(app: FastAPI, interval: float = 30) -> None:
+    from app.state_migrations import migrate_run_retention
+
+    migrated = False
+    while True:
+        try:
+            if not migrated:
+                migrated = await migrate_run_retention(app)
+            await refresh_workflow_metrics(app)
+        except (HTTPException, RPCError, OSError):
+            logging.getLogger("uvicorn.error").warning(
+                "Workflow metrics refresh unavailable; check Temporal and Redis."
+            )
+        except Exception:
+            # Keep monitoring alive: a dead loop would silently stop notifications and run metrics.
+            logging.getLogger("uvicorn.error").exception("Workflow metrics refresh failed; retrying next interval.")
+        await asyncio.sleep(interval)
+
+
 def register_operation_routes(app: FastAPI) -> None:
     @app.exception_handler(RPCError)
     async def temporal_error(request: Request, exc: RPCError) -> Any:
@@ -397,27 +562,37 @@ def register_operation_routes(app: FastAPI) -> None:
                     "message": "Use next_cursor with the same project and filters, without a nonzero offset.",
                 }) from exc
         ids = await storage_call(request, "page_runs", request.state.sandbox_id, selected, offset, limit + 1, position)
+        limiter = asyncio.Semaphore(CONCURRENCY)
+
+        async def load(run_id: str) -> dict[str, Any] | None:
+            async with limiter:
+                try:
+                    metadata = await run_metadata(request, run_id)
+                    if workflow and (
+                        metadata["workflow"] != workflow
+                        or (trigger and (metadata.get("trigger") or {}).get("name") != trigger)
+                    ):
+                        return None
+                    return await describe_run(request, run_id, timeline=False, data=metadata)
+                except HTTPException as exc:
+                    if exc.status_code != 404 or exc.detail.get("reason") != "workflow_run_missing":
+                        raise
+                    return {}
+                except RPCError as exc:
+                    if exc.status != RPCStatusCode.NOT_FOUND:
+                        raise
+                    # Retained Redis metadata may outlive Temporal retention.
+                    return None
+
         rows = []
         removed = 0
-        for run_id, _ in ids[:limit]:
-            try:
-                if workflow:
-                    metadata = await run_metadata(request, run_id)
-                    if metadata["workflow"] != workflow or (
-                        trigger and (metadata.get("trigger") or {}).get("name") != trigger
-                    ):
-                        continue
-                row = await describe_run(request, run_id, timeline=False)
-            except HTTPException as exc:
-                if exc.status_code != 404 or exc.detail.get("reason") != "workflow_run_missing":
-                    raise
+        loaded = await gather_all(load(run_id) for run_id, _ in ids[:limit])
+        for (run_id, _), row in zip(ids[:limit], loaded, strict=True):
+            if row == {}:
                 await storage_call(request, "remove_run_index", request.state.sandbox_id, selected, run_id)
                 removed += 1
                 continue
-            except RPCError as exc:
-                if exc.status != RPCStatusCode.NOT_FOUND:
-                    raise
-                # Retained Redis metadata may outlive Temporal retention.
+            if row is None:
                 continue
             waiting = row.get("progress", {}).get("stage") == "awaiting_approval"
             if status and ("awaiting_approval" if waiting else row["status"]) != status:
@@ -530,104 +705,8 @@ def register_operation_routes(app: FastAPI) -> None:
         await operation_receipt(request, str(run_id), "approval", approved=body.approved, update_id=update_id)
         return {"run_id": str(run_id), "approved": body.approved, "reviewer": reviewer}
 
-    async def refresh_metrics() -> None:
-        from app.metrics import TEAM_COST_LIMIT, TEAM_SPEND, WORKFLOW_RUNS, WORKFLOW_STATUS_REFRESH
-        from app.state_migrations import migrate_run_retention
-        from app.team_budget import team_cost_report
-        from app.team_data import enter_team_request, leave_team_request
-        from app.workflow_notifications import notify_run
-        from app.workflow_triggers import reconcile_schedules
-
-        migrated = False
-        while True:
-            try:
-                if not migrated:
-                    migrated = await migrate_run_retention(app)
-                for team in app.state.sandbox_policy_set.policies.values():
-                    counts: dict[str, int] = {}
-                    request = Request(
-                        {
-                            "type": "http",
-                            "path": "/v1/internal",
-                            "app": app,
-                            "headers": [],
-                            "state": {
-                                "sandbox_id": team.sandbox_id,
-                                "sandbox_bound": True,
-                                "principal": {"role": "admin"},
-                            },
-                        }
-                    )
-                    try:
-                        entered = await enter_team_request(request)
-                    except HTTPException as exc:
-                        if exc.status_code == 409:
-                            from app.metrics import forget_team_metrics
-
-                            forget_team_metrics(team.sandbox_id)
-                            getattr(app.state, "audit_view_heads", {}).pop(team.sandbox_id, None)
-                            continue
-                        raise
-                    try:
-                        try:
-                            await reconcile_schedules(request)
-                        except (HTTPException, RPCError, OSError):
-                            logging.getLogger("uvicorn.error").warning(
-                                "Schedule configuration unavailable; check Temporal and team cron expressions."
-                            )
-                        for project in team.projects:
-                            offset = 0
-                            while True:
-                                ids = await storage_call(request, "page_runs", team.sandbox_id, project, offset, 100)
-                                removed = 0
-                                for run_id, _ in ids:
-                                    try:
-                                        row = await describe_run(request, run_id, timeline=False)
-                                        await notify_run(request, row)
-                                    except (HTTPException, RPCError, OSError):
-                                        if not await storage_call(request, "get_run", team.sandbox_id, run_id):
-                                            await storage_call(
-                                                request, "remove_run_index", team.sandbox_id, project, run_id,
-                                            )
-                                            removed += 1
-                                            continue
-                                        logging.getLogger("uvicorn.error").warning(
-                                            "Run refresh unavailable; check Temporal, Redis and notification receipts."
-                                        )
-                                        continue
-                                    status = row["status"]
-                                    if row.get("progress", {}).get("stage") == "awaiting_approval":
-                                        status = "awaiting_approval"
-                                    counts[status] = counts.get(status, 0) + 1
-                                if len(ids) < 100:
-                                    break
-                                offset += 100 - removed
-                        report = await team_cost_report(request)
-                        if report:
-                            TEAM_SPEND.labels(team.sandbox_id).set(report["reserved_and_spent_usd"])
-                            TEAM_COST_LIMIT.labels(team.sandbox_id).set(report["cost_limit_usd"] or 0)
-                        for status in (
-                            "running",
-                            "completed",
-                            "failed",
-                            "canceled",
-                            "timed_out",
-                            "terminated",
-                            "awaiting_approval",
-                        ):
-                            WORKFLOW_RUNS.labels(team.sandbox_id, status).set(counts.get(status, 0))
-                    finally:
-                        if entered:
-                            await leave_team_request(request)
-                WORKFLOW_STATUS_REFRESH.set(time())
-            except (HTTPException, RPCError, OSError):
-                logging.getLogger("uvicorn.error").warning(
-                    "Workflow metrics refresh unavailable; check Temporal and Redis."
-                )
-            await asyncio.sleep(30)
-
     async def startup() -> None:
-        app.state.workflow_metrics_task = asyncio.create_task(refresh_metrics())
+        app.state.workflow_metrics_task = asyncio.create_task(monitor_workflows(app))
 
     async def shutdown() -> None:
         app.state.workflow_metrics_task.cancel()

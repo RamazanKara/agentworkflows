@@ -198,7 +198,7 @@ class WorkflowInsights(BaseModel):
 
 
 def register_insight_routes(app: FastAPI) -> None:
-    from app.workflow_operations import describe_run
+    from app.workflow_operations import describe_run, gather_all, run_metadata
 
     @app.get(
         "/v1/workflow-insights",
@@ -242,9 +242,10 @@ def register_insight_routes(app: FastAPI) -> None:
         async def load(run_id: str) -> dict[str, Any] | None:
             async with limiter:
                 try:
-                    row = await describe_run(request, run_id, timeline=False)
-                    if workflow and row["workflow"] != workflow:
+                    metadata = await run_metadata(request, run_id)
+                    if workflow and metadata["workflow"] != workflow:
                         return None
+                    row = await describe_run(request, run_id, timeline=False, data=metadata)
                     events = await storage_call(request, "run_steps", request.state.sandbox_id, run_id)
                 except HTTPException as exc:
                     if exc.status_code == 404:
@@ -265,7 +266,7 @@ def register_insight_routes(app: FastAPI) -> None:
                 ),
             }
 
-        loaded = await asyncio.gather(*(load(run_id) for run_id in run_ids))
+        loaded = await gather_all(load(run_id) for run_id in run_ids)
         grouped: dict[str, list[dict[str, Any]]] = {}
         for row in loaded:
             if row:
