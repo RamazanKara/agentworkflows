@@ -128,6 +128,20 @@ def test_tenant_from_claims_rejects_missing_claim():
         verifier.tenant_from_claims(claims)
 
 
+@pytest.mark.parametrize("value", [True, False, 1.5, ["team-a"], {"id": "team-a"}])
+def test_tenant_from_claims_rejects_non_string_claims(value):
+    verifier = _verifier(jwt_tenant_claim="sandbox_id")
+    claims = _verify(verifier, _hs256(_claims(sandbox_id=value)))
+    with pytest.raises(JwtAuthError, match="must be a string"):
+        verifier.tenant_from_claims(claims)
+
+
+def test_tenant_from_claims_accepts_integer_tenant_ids():
+    verifier = _verifier(jwt_tenant_claim="org_id")
+    claims = _verify(verifier, _hs256(_claims(org_id=4711)))
+    assert verifier.tenant_from_claims(claims) == "4711"
+
+
 def test_tenant_from_claims_reads_configured_claim_name():
     verifier = _verifier(jwt_tenant_claim="azp")
     claims = _verify(verifier, _hs256(_claims(azp="team-z")))

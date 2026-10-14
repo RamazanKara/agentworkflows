@@ -61,4 +61,8 @@ class JwtVerifier(JwtVerifierCore):
         raw = claims.get(claim_name)
         if raw is None or not str(raw).strip():
             raise JwtAuthError(f"jwt is missing the tenant claim '{claim_name}'")
+        # Strings and integer ids name a tenant. Anything else is stringified into something
+        # that may still pass the sandbox-id check, e.g. ``true`` -> "True" -> tenant "true".
+        if isinstance(raw, bool) or not isinstance(raw, str | int):
+            raise JwtAuthError(f"jwt tenant claim '{claim_name}' must be a string")
         return str(raw).strip()
