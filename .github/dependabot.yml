@@ -45,17 +45,25 @@ updates:
       services:
         patterns: ["*"]
 
-  # Base-image digests for the two service Dockerfiles.
+  # Base-image digests for the service and worker Dockerfiles. Python and Node.js minor and
+  # major moves are deliberate toolchain changes (CI, the production checks and the console
+  # build pin the same versions), so only digest and patch updates come from here.
   - package-ecosystem: docker
     directories:
       - "/src/inference-gateway"
       - "/src/rag-service"
+      - "/sdk/python"
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
     commit-message:
       prefix: "fix(deps)"
     labels: [dependencies, docker]
+    ignore:
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      - dependency-name: node
+        update-types: [version-update:semver-major, version-update:semver-minor]
     groups:
       base-images:
         patterns: ["*"]
