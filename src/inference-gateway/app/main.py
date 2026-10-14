@@ -55,6 +55,8 @@ from app.tracing import configure_metrics, configure_tracing
 from app.workflow_api import register_workflow_routes
 
 SERVICE_VERSION = "0.9.1"
+# A hung Temporal frontend must not outlast the kubelet readiness probe timeout.
+TEMPORAL_READY_TIMEOUT_SECONDS = 2.0
 OPENAPI_DESCRIPTION = (
     "OpenAI-compatible private inference gateway with sandbox traceability, "
     "admission controls, budget enforcement, redacted audit events, and "
@@ -346,7 +348,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 return bool(await temporal.service_client.check_health())
 
             try:
-                reachable = await asyncio.wait_for(temporal_ready(), timeout=2)
+                reachable = await asyncio.wait_for(temporal_ready(), timeout=TEMPORAL_READY_TIMEOUT_SECONDS)
             except Exception:
                 reachable = False
             dependencies["temporal"] = {"status": "ok" if reachable else "unavailable"}

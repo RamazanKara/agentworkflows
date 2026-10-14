@@ -27,7 +27,8 @@ def test_temporal_readiness_and_independent_liveness(healthy):
         assert client.get("/healthz").status_code == 200
 
 
-def test_temporal_readiness_is_bounded_and_redacts_failures():
+def test_temporal_readiness_is_bounded_and_redacts_failures(monkeypatch):
+    monkeypatch.setattr("app.main.TEMPORAL_READY_TIMEOUT_SECONDS", 0.05)
     app = create_app(_tool_settings(temporal_address="temporal:7233"))
     app.state.runtime_client = FakeRuntimeClient()
 
