@@ -26,7 +26,7 @@ Validate the source manifest, embedding provider, and chunk plan before writing 
 `--check` mode loads and validates the manifest, builds chunks, and prints a summary:
 
 ```bash
-python3 scripts/rag-ingest.py --check \
+src/rag-service/.venv/bin/python scripts/rag-ingest.py --check \
   --source platform/rag/sources/manifest.yaml \
   --collection "$QDRANT_COLLECTION" \
   --collection-version v2 \
@@ -44,7 +44,7 @@ Run the ingestion against Qdrant. `ensure_collection` creates the collection if 
 when the existing collection's dimensions equal `--dimensions`:
 
 ```bash
-python3 scripts/rag-ingest.py --write \
+src/rag-service/.venv/bin/python scripts/rag-ingest.py --write \
   --source platform/rag/sources/manifest.yaml \
   --qdrant-url "$QDRANT_URL" \
   --collection "$QDRANT_COLLECTION" \

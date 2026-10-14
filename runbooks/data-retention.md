@@ -80,23 +80,23 @@ Before handoff, confirm:
 
 ## Erasing a RAG Source (Right-to-Erasure)
 
-Ingestion is upsert-only, so a source's vectors stay in Qdrant until you delete them,
-including after the source leaves the manifest. To purge a source's vectors (right-to-erasure or source decommission), delete by
+`--write` prunes stale chunks only for the sources in the manifest it ingests, so a source's
+vectors stay in Qdrant after the source leaves the manifest until you delete them. To purge a source's vectors (right-to-erasure or source decommission), delete by
 `source_id`:
 
 ```bash
 # Purge across all collection versions:
-python scripts/rag-ingest.py --delete --source-id <source-id> \
+src/rag-service/.venv/bin/python scripts/rag-ingest.py --delete --source-id <source-id> \
   --qdrant-url "$QDRANT_URL" --collection "$QDRANT_COLLECTION"
 
 # Or scope the delete to one collection version:
-python scripts/rag-ingest.py --delete --source-id <source-id> \
+src/rag-service/.venv/bin/python scripts/rag-ingest.py --delete --source-id <source-id> \
   --qdrant-url "$QDRANT_URL" --collection "$QDRANT_COLLECTION" --collection-version v2
 ```
 
 This issues a filtered Qdrant `points/delete` on the `source_id` payload field written at
-ingest time. To re-index a source after a content change, run `--delete --source-id <id>`
-followed by `--write`. Record the deletion in the retention evidence for the environment.
+ingest time. Re-ingesting a changed source with `--write` replaces its chunks and deletes the ones the
+new content no longer produces; `--no-prune` keeps them. Record the deletion in the retention evidence for the environment.
 
 ## Age-Based Retention Purge
 
@@ -104,7 +104,7 @@ Ingested chunks carry an `ingestedAtEpoch` timestamp, so the `retentionDays` pol
 enforced by purging points older than the retention window (run on a schedule, e.g. a CronJob):
 
 ```bash
-python scripts/rag-ingest.py --purge --older-than-days 180 \
+src/rag-service/.venv/bin/python scripts/rag-ingest.py --purge --older-than-days 180 \
   --qdrant-url "$QDRANT_URL" --collection "$QDRANT_COLLECTION"
 ```
 
