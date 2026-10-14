@@ -146,3 +146,44 @@ def test_get_missing_batch_and_file_404():
     assert client.post("/v1/batches/batch-nope/cancel").status_code == 404
     assert client.get("/v1/files/file-nope").status_code == 404
     assert client.get("/v1/files/file-nope/content").status_code == 404
+
+
+def test_file_content_is_streamed_not_read_whole(monkeypatch, tmp_path):
+    # A batch file may be 100 MB; downloading it used to read the whole object into memory.
+    from app import batch_api
+
+    chunked = batch_api._chunked
+    monkeypatch.setattr(batch_api, "_chunked", lambda lines: chunked(lines, 300))
+    client = _client(batch_object_store_backend="filesystem", batch_object_store_root=str(tmp_path))
+    store = client.app.state.object_store
+
+    def whole_object_read(key):
+        raise AssertionError("file content must be streamed")
+
+    lines = [b'{"custom_id":"%d","method":"POST","url":"/v1/chat/completions","body":{}}\n' % i for i in range(40)]
+    file_id = _upload(client, content=b"".join(lines)).json()["id"]
+    monkeypatch.setattr(store, "get", whole_object_read)
+    with client.stream("GET", f"/v1/files/{file_id}/content", headers={"Accept-Encoding": "identity"}) as response:
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/jsonl")
+        body = response.read()
+    assert body == b"".join(lines)
+
+
+def test_file_whose_content_vanished_is_a_404():
+    client = _client()
+    file_id = _upload(client).json()["id"]
+    client.app.state.object_store.delete(f"local-lab/{file_id}")
+    response = client.get(f"/v1/files/{file_id}/content")
+    assert response.status_code == 404
+    assert response.json()["detail"]["reason"] == "file_content_missing"
+
+
+def test_chunked_groups_lines_into_bounded_chunks():
+    from app.batch_api import _chunked
+
+    lines = [b"x" * 10 + b"\n"] * 10
+    chunks = list(_chunked(iter(lines), size=30))
+    assert b"".join(chunks) == b"".join(lines)
+    assert all(len(chunk) <= 30 + 11 for chunk in chunks) and len(chunks) == 4
+    assert list(_chunked(iter([]))) == []

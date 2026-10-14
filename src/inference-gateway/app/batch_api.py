@@ -15,12 +15,14 @@ from __future__ import annotations
 import asyncio
 import codecs
 import secrets
+from collections.abc import AsyncIterator, Iterator
 from time import time
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.concurrency import iterate_in_threadpool
 from starlette.datastructures import UploadFile
 
 from app.admission import BATCH_ALLOWED_ENDPOINTS
@@ -67,6 +69,18 @@ def _submitter(request: Request) -> str | None:
         if value:
             return f"{principal.get('auth', 'unknown')}:{value}"
     return None
+
+
+def _chunked(lines: Iterator[bytes], size: int = 256 * 1024) -> Iterator[bytes]:
+    """Group an object's lines into chunks of about ``size`` bytes for streaming."""
+    buffer = bytearray()
+    for line in lines:
+        buffer += line
+        if len(buffer) >= size:
+            yield bytes(buffer)
+            buffer.clear()
+    if buffer:
+        yield bytes(buffer)
 
 
 def _error(status: int, reason: str, message: str) -> HTTPException:
@@ -183,11 +197,21 @@ def register_batch_routes(app: FastAPI, settings: Settings) -> None:
         record = await asyncio.to_thread(request.app.state.batch_store.get_file, _tenant(request), file_id)
         if record is None:
             raise _error(404, "file_not_found", f"no file with id '{file_id}'")
+        # Streamed in bounded chunks: a batch file can be up to BATCH_MAX_FILE_BYTES (100 MB by
+        # default), and reading it whole held that much memory per concurrent download.
+        chunks = _chunked(request.app.state.object_store.open_lines(record.object_key))
         try:
-            data = await asyncio.to_thread(request.app.state.object_store.get, record.object_key)
+            first = await asyncio.to_thread(next, chunks, b"")
         except ObjectNotFound as exc:
             raise _error(404, "file_content_missing", "file content is no longer available") from exc
-        return Response(content=data, media_type="application/jsonl")
+
+        async def content() -> AsyncIterator[bytes]:
+            if first:
+                yield first
+            async for chunk in iterate_in_threadpool(chunks):
+                yield chunk
+
+        return StreamingResponse(content(), media_type="application/jsonl")
 
     @app.delete("/v1/files/{file_id}", tags=["files"], summary="Delete a file", operation_id="deleteFile")
     async def delete_file(request: Request, file_id: str) -> dict[str, Any]:
