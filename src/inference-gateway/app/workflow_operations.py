@@ -636,7 +636,22 @@ def register_operation_routes(app: FastAPI) -> None:
     async def cancel(request: Request, run_id: UUID) -> dict[str, Any]:
         require_role(request, "admin", "builder")
         handle, _ = await execution(request, str(run_id))
-        await handle.cancel(rpc_timeout=RPC_TIMEOUT)
+        try:
+            await handle.cancel(rpc_timeout=RPC_TIMEOUT)
+        except RPCError as exc:
+            # Temporal answers NOT_FOUND for a closed execution too; only a missing one is a 404.
+            if exc.status != RPCStatusCode.NOT_FOUND:
+                raise
+            status = (await handle.describe(rpc_timeout=RPC_TIMEOUT)).status.name.lower()
+            if status == "running":
+                raise
+            raise HTTPException(
+                409,
+                detail={
+                    "reason": "workflow_not_cancellable",
+                    "message": f"This run already finished as {status}; inspect it, or retry it if it failed.",
+                },
+            ) from None
         await operation_receipt(request, str(run_id), "cancel")
         return {"run_id": str(run_id), "status": "cancellation_requested"}
 
