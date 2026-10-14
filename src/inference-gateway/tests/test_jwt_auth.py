@@ -255,6 +255,47 @@ def test_unknown_kid_refresh_is_rate_limited(monkeypatch):
     assert len(fetches) == 2  # the initial fetch plus one early refresh
 
 
+def test_concurrent_requests_share_one_jwks_refresh(monkeypatch):
+    # When the TTL lapsed, every concurrent request used to start its own fetch.
+    fetches = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        fetches.append(1)
+        await asyncio.sleep(0.05)
+        return httpx.Response(200, json={"keys": [_oct_jwk()]})
+
+    _mock_async_client(monkeypatch, handler)
+    cache = JwksCache(_jwks_settings())
+
+    async def burst():
+        return await asyncio.gather(*(cache.keys() for _ in range(20)))
+
+    results = asyncio.run(burst())
+    assert len(fetches) == 1
+    assert all(keys[0]["kid"] == "test-key" for keys in results)
+    cache._expires_at = 0.0
+    asyncio.run(burst())
+    assert len(fetches) == 2
+
+
+def test_a_cancelled_waiter_does_not_cancel_the_shared_jwks_refresh(monkeypatch):
+    async def handler(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0.05)
+        return httpx.Response(200, json={"keys": [_oct_jwk()]})
+
+    _mock_async_client(monkeypatch, handler)
+    cache = JwksCache(_jwks_settings())
+
+    async def scenario():
+        impatient = asyncio.ensure_future(cache.keys())
+        patient = asyncio.ensure_future(cache.keys())
+        await asyncio.sleep(0.01)
+        impatient.cancel()
+        return await patient
+
+    assert asyncio.run(scenario())[0]["kid"] == "test-key"
+
+
 def test_cold_jwks_outage_fails_fast_inside_the_backoff(monkeypatch):
     fetches = []
 
