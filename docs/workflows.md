@@ -366,8 +366,8 @@ The CLI uses these endpoints with `Authorization: Bearer <team-key>`:
 | `GET /v1/workflow-policies` | Discover approved workflow types, limits, capture mode, and input schemas |
 | `POST /v1/workflow-runs` | Start with `workflow`, JSON `input`, optional `project` and UUID `request_id` |
 | `GET /v1/workflow-runs?project=briefing&offset=0&limit=20&status=awaiting_approval` | Page through project runs; optional `status` and `workflow` filters |
-| `GET /v1/workflow-runs/{run_id}` | Status, draft, budget, step timeline with receipt IDs |
-| `POST /v1/workflow-runs/{run_id}/cancel` | Request cancellation of this exact execution |
+| `GET /v1/workflow-runs/{run_id}` | Status, draft, budget, step timeline with receipt IDs; `?timeline=false` returns status only |
+| `POST /v1/workflow-runs/{run_id}/cancel` | Request cancellation of this exact execution; a finished run returns `409 workflow_not_cancellable` |
 | `POST /v1/workflow-runs/{run_id}/retry` | Start a fresh execution after failure/cancellation |
 | `POST /v1/workflow-runs/{run_id}/approve` | Submit `{"approved":true}` or `false` |
 | `GET /v1/usage` | Token/request window usage and monthly team/project spend by provider and workflow |
@@ -471,8 +471,10 @@ Recreate the gateway after configuration changes. It reconciles
 [Temporal Schedules](https://docs.temporal.io/develop/python/workflows/schedules).
 Expressions use UTC, overlap policy is **SKIP**, and the catch-up window is
 five minutes. The SDK worker registers the scheduled-launch workflow; it keeps
-the schedule action open until the target run ends. Each launch goes through the same
-governed start API. Redis persists interactive pauses across restarts; `paused: true` in
+the schedule action open until the target run ends, reading the run's status after 30 seconds
+and then backing off to every five minutes, and continues as new when Temporal suggests it, so
+a run that waits days for review never outgrows its schedule's history. It records only the
+run's ID and status, never its content. Each launch goes through the same governed start API. Redis persists interactive pauses across restarts; `paused: true` in
 configuration keeps a trigger paused, and only a configuration change by the admin resumes it.
 Removing a cron trigger removes its managed schedule on the next reconciliation. Schedule
 errors appear in the console; check Temporal and the gateway log for invalid expressions.
@@ -508,7 +510,8 @@ is accepted once regardless of delivery ID or destination.
 Identical GitHub payload bytes are treated as retries. The triage example needs only the
 webhook secret.
 
-Completed delivery IDs return `409 webhook_replayed`; concurrent delivery and ambiguous
+Completed delivery IDs return `409 webhook_replayed` for eight days; afterwards a resent
+delivery returns its original run. Concurrent delivery and ambiguous
 Temporal failures use the same deterministic run ID. After a `503`, retry with the same
 delivery ID/body and a fresh timestamp/signature. Each delivery ID accepts only its original input.
 Keep Redis trigger state, run start intents and Temporal history together in backups;
@@ -782,6 +785,7 @@ Registration narrows what your operator already approved for the team:
 ```sh
 agentworkflows workflows list
 agentworkflows workflows register TicketTriageWorkflow   --model gpt-4.1-mini --tool team.search --cost-limit 2 --reviewers 1   --input-schema @ticket-schema.json
+agentworkflows workflows register ReleaseWorkflow --model gpt-4.1-mini --approver-role admin --approval-timeout 2d
 agentworkflows runs start TicketTriageWorkflow --input '{"ticket": "Password reset blocks sign-in."}'
 agentworkflows workflows remove TicketTriageWorkflow
 ```
@@ -974,6 +978,60 @@ policies require the upgraded workers. Temporal patch
 markers preserve replay of already-started legacy gates with their original single
 reviewer and seven-day timeout. Configure a fresh run to try the new policy; see the
 [two-reviewer Quickstart](quickstart.md#try-a-two-reviewer-policy).
+
+### Approval escalation
+
+A review that waits too long can escalate. Escalation is off until a team admin configures it
+for a workflow; it then applies to runs started afterwards. When a run's draft is still waiting
+`after_seconds` after the run reached its approval gate, the gateway:
+
+- lets more reviewers vote: every approver (`approver_role: approver`, for workflows whose
+  `approverRole` is `admin`) and the identities in `reviewers` (OIDC subjects or managed key IDs
+  that hold the approver role). Admins and the workflow's own approver role keep their access.
+- writes one `approval_escalated` receipt to the run timeline, signed by the policy principal
+  `approval-escalation`. A vote that escalation made possible carries `eligibility: escalation`
+  in its `approval` receipt.
+- sends an `approval_escalated` notice that names who may now review, through the team's
+  alert-rule channels or the escalation's own `channels`. `channels: []` escalates silently.
+  The notice is delivered like other notifications, with retries and receipts, even when the
+  team's alert rules do not list the event.
+
+```bash
+agentworkflows workflows escalation set ReleaseNotesWorkflow --after 4h --all-approvers \
+  --reviewer maya@example.com --channel slack
+agentworkflows workflows escalation list
+agentworkflows workflows escalation remove ReleaseNotesWorkflow
+agentworkflows runs pending          # waiting runs you may review now, including escalated ones
+```
+
+`after_seconds` is 60 to 604740 and must be shorter than the workflow's approval timeout;
+`escalation list` marks an escalation `effective: false` if a later timeout change ends reviews
+first. Quorum, expiry, and the one-vote-per-identity rule are unchanged: an escalated reviewer's
+vote counts toward `requiredApprovals` like any other, and the review still expires at
+`expires_at`.
+
+The run's start saves the escalation with its other approval fields, and the gateway records the
+moment the run reached its gate. Eligibility follows from those two durable values at the
+deadline itself, so a busy monitor or an offline worker cannot delay it, and gateway replicas
+agree. Escalation needs no worker change: workflow histories are unchanged, and runs already
+waiting on existing workers escalate if they were started with an escalation configured. The
+monitor (about every 30 seconds) or the first escalated vote, whichever comes first, writes the
+receipt and queues the notice exactly once.
+
+Run inspection and listings show `approval_escalation` with the configuration and
+`waiting_since`, `escalates_at`, `escalated` and `recorded_at` (the receipt time). For a waiting
+run they also show the caller's `approval_access`: `eligible`, `via` (`role` or `escalation`), and
+`eligible_at` when escalation will admit the caller later. A vote before that time returns `403`
+with the time it opens.
+
+API: `GET /v1/team/approval-escalations`; `PUT` and `DELETE
+/v1/team/workflows/{name}/approval-escalation` with the current `If-Match` revision (unrestricted
+team admin). PUT takes `after_seconds`, optional `approver_role` (`approver`), `reviewers` (up to
+20) and `channels`. Changes are audited as `approval_escalation_changed` and
+`approval_escalation_removed`; removing a team-registered workflow removes its escalation.
+`GET /v1/workflow-policies` shows each workflow's `approvalEscalation`. Python:
+`approval_escalations()`, `set_approval_escalation(workflow, after_seconds=..., ...)`,
+`remove_approval_escalation(workflow)` and `review_queue()`.
 
 ## Invite teammates without company sign-in
 

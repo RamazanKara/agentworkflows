@@ -40,6 +40,9 @@ data export/erasure and telemetry status, including access rules and version hea
 | `runs export --status completed --output runs.jsonl` | Export full retained run details as JSON Lines; status/output are optional |
 | `runs inspect RUN_ID` | Status, draft, completed result, budget, and timeline including opt-in step content |
 | `runs approve RUN_ID` | Approve as your authenticated identity; `--reject` rejects instead |
+| `runs pending --workflow WORKFLOW` | Waiting runs you may review now, through your role or an approval escalation |
+| `workflows escalation set WORKFLOW --after 4h --all-approvers --reviewer ID` | Escalate reviews that wait too long; `--channel` picks the notice's destination, `--no-notify` sends none |
+| `workflows escalation list` / `workflows escalation remove WORKFLOW` | Inspect or stop approval escalation (unrestricted admin only) |
 | `runs cancel RUN_ID` | Request cancellation; the run stops from its current step onward |
 | `runs retry RUN_ID` | Start a new execution after failure/cancellation; steps run again in the new execution |
 | `triggers list` | Inspect configured schedules, webhook endpoints and pause state |
@@ -189,6 +192,7 @@ Export errors propagate through each SDK's existing error and read-retry handlin
 | `TEMPORAL_ADDRESS` | `localhost:7233` for the worker |
 | `TEMPORAL_NAMESPACE` | `default` for the worker |
 | `TEMPORAL_TASK_QUEUE` | Optional existing override; must match the gateway's team queue |
+| `AGENTWORKFLOWS_HEALTH_ADDRESS` | `0.0.0.0:8081`; where the worker serves `/healthz` and `/readyz` as `host:port`, or `off` for a local worker |
 
 ## Workflow SDK
 
@@ -268,7 +272,10 @@ with GatewayClient("http://127.0.0.1:8080", api_key="YOUR_ADMIN_KEY") as gateway
         output.writelines(gateway.export_audit(event_type="team_settings_changed"))
 ```
 
-Admin mutations surface ambiguous HTTP failures and read timeouts to the caller for review. Settings
+Calls that change state (admin changes, uploads, deletions, receipts, votes, and run
+cancel/retry) retry only when the gateway provably did not act: a refused connection, 429 or
+503. Other failures and read timeouts surface to the caller for review. `start_run` retries
+broadly, because its `request_id` makes every attempt start the same run. Settings
 conflicts and validation failures surface as `GatewayError` with the original
 status and structured detail; settings field errors are in `detail["fields"]`.
 
@@ -332,6 +339,22 @@ vote can leave the run waiting for other reviewers; inspect the run to see its c
 Each reviewer counts once, no matter how many times they vote. See [approval policies](workflows.md#approval-policies)
 for identity, replay, automatic decisions and upgrade boundaries.
 
+Escalate reviews that wait too long, then work through your review queue:
+
+```python
+listing = client.approval_escalations()
+client.set_approval_escalation(
+    "ReleaseNotesWorkflow", after_seconds=4 * 3600, approver_role="approver",
+    reviewers=["maya@example.com"], channels=["slack"], revision=listing["revision"],
+)
+for run in reviewer.review_queue(workflow="ReleaseNotesWorkflow"):
+    print(run["run_id"], run["approval_access"]["via"], run["progress"]["draft"][:80])
+```
+
+`approval_access` (`ApprovalAccess` in `agentworkflows.types`) says whether the caller may vote
+now and why; `approval_escalation` (`RunEscalation`) gives the escalation's deadline and state.
+See [approval escalation](workflows.md#approval-escalation) for who becomes eligible and when.
+
 ## Team adoption APIs
 
 | Task | Python | TypeScript | HTTP |
@@ -344,6 +367,7 @@ for identity, replay, automatic decisions and upgrade boundaries.
 | Prove an install | `first_approved_run(client, approvers=[...], deadline=300, allow_paid=False)` (`agentworkflows.acceptance`), CLI `agentworkflows check` | `firstApprovedRun(client, { approvers, deadlineSeconds, allowPaid })` | the console's first-run path: onboarding, template install, run, approval, audit verify |
 | Run insights | `workflow_insights(days=7, project=None, workflow=None)` | `workflowInsights({ days, project, workflow })` | `GET /v1/workflow-insights` |
 | Register your own workflow | `team_workflows()`, `register_workflow(cls_or_name, models=[...], **options)`, `remove_workflow(cls_or_name)` | `teamWorkflows()`, `registerWorkflow(name, models, options?, revision?)`, `removeWorkflow(name, revision?)` | `GET /v1/team/workflows`, `PUT/DELETE /v1/team/workflows/{name}` |
+| Approval escalation | `approval_escalations()`, `set_approval_escalation(workflow, after_seconds=..., **options)`, `remove_approval_escalation(workflow)`, `review_queue()` | not yet available | `GET /v1/team/approval-escalations`, `PUT/DELETE /v1/team/workflows/{name}/approval-escalation` |
 | Deployment settings | `deployment()` | `deployment()` | `GET /v1/team/deployment` |
 
 Invitation creation and redemption run once per call, since the response holds the only
