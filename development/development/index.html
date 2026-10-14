@@ -2277,7 +2277,7 @@ assets first. For a local frontend loop, run <code>npm run dev</code> in the con
 a gateway on port 8080; Vite proxies <code>/v1</code> to it.</p>
 <p><code>make test-console</code> builds and runs headless Chromium checks against local API fixtures
 with at most two workers. <code>make test</code> and <code>make validate</code> include them. On Linux, install
-browser libraries once with <code>cd src/inference-gateway/console &amp;&amp; npm ci &amp;&amp; npx playwright install --with-deps chromium</code>.
+browser libraries once with <code>make test-console PLAYWRIGHT_WITH_DEPS=1</code> (uses sudo).
 <code>make compose-smoke</code> additionally tests the real gateway, Temporal worker, and local provider
 fakes from the browser, entirely on local fakes. Keep the API contract snapshot
 current with <code>make api-contract-update</code> when changing filters or other endpoint parameters.</p>
@@ -2285,8 +2285,8 @@ current with <code>make api-contract-update</code> when changing filters or othe
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span><span class="nb">test</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>quality
 </code></pre></div>
-<p><code>make test</code> runs repository tooling tests, gateway tests, first-party SDK tests, and
-RAG tests. The service test scripts create their own environments under
+<p><code>make test</code> runs repository tooling tests, gateway tests, both first-party SDKs' tests,
+RAG tests and the console checks. The service test scripts create their own environments under
 <code>src/inference-gateway/.venv</code> and <code>src/rag-service/.venv</code>.</p>
 <p><code>make quality</code> installs Ruff and mypy into <code>.venv-quality</code>. It lints the repository's
 Python code, checks formatting under <code>src/</code>, and type-checks each service separately.
@@ -2329,7 +2329,7 @@ The targets use these environments directly, so there is nothing to activate.</p
 </tr>
 <tr>
 <td>Helm charts or cluster values</td>
-<td><code>make chart-docs</code>, <code>make config-contract</code>, <code>make production-check</code></td>
+<td><code>make static-checks</code>, <code>make test-scripts</code></td>
 <td>Chart value tables and configuration contracts</td>
 </tr>
 <tr>
@@ -2346,9 +2346,11 @@ The targets use these environments directly, so there is nothing to activate.</p
 </table>
 <p>After focused checks, run <code>make validate</code> for the default repository gate. It also
 requires Helm and uses available optional tools for schema, policy, and security
-checks. CI runs <code>make validate-full</code>, which requires the strict toolchain, then
-<code>make eval-local</code> and <code>make coverage</code>. The documentation site has its own strict
-build workflow.</p>
+checks. <code>make static-checks</code> runs just its test-free part (Helm lint and renders,
+YAML, contracts, chart docs and governance checks) in about a minute. CI runs the
+static checks and the tooling, gateway, SDK, RAG and console suites on every push and
+pull request; <code>make validate-full</code>, <code>make eval-local</code> and <code>make coverage</code> stay local.
+The documentation site has its own strict build workflow.</p>
 <p>See <a href="../getting-started/">getting started</a> for toolchain profiles and
 <a href="../proof/">evidence and validation</a> for release evidence requirements.</p>
 <h2 id="run-a-focused-test">Run a focused test<a class="headerlink" href="#run-a-focused-test" title="Permanent link">&para;</a></h2>

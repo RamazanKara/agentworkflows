@@ -1428,6 +1428,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#cut-a-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cut a release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#helm-oci" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2139,6 +2150,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#cut-a-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cut a release
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#helm-oci" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2229,11 +2251,24 @@
 revision through four channels. Commands below target v0.9.1. Images are built from the
 tagged commit and signed by digest, Helm charts embed those image digests, the Python and
 TypeScript SDKs are attached to the GitHub release, and versioned documentation is retained by <code>mike</code>.</p>
+<h2 id="cut-a-release">Cut a release<a class="headerlink" href="#cut-a-release" title="Permanent link">&para;</a></h2>
+<p>One command moves every version reference (SDK and console manifests, chart versions and
+image tags, Compose and GitOps revisions, <code>CUSTOMER_REVISION</code>, API contracts and the guides
+that quote the release) and refreshes the umbrella chart's <code>Chart.lock</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>make<span class="w"> </span>release-prep<span class="w"> </span><span class="nv">RELEASE_VERSION</span><span class="o">=</span><span class="m">1</span>.2.3<span class="w">   </span><span class="c1"># needs helm on PATH</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>make<span class="w"> </span>release-check<span class="w">                        </span><span class="c1"># every reference agrees; also run by CI on each push</span>
+</code></pre></div>
+<p>Add a <code>## v1.2.3 - YYYY-MM-DD</code> section to <code>CHANGELOG.md</code> (its text becomes the GitHub release
+notes), review <code>git diff</code>, commit, and push the <code>v1.2.3</code> tag. The release workflow first runs
+<code>scripts/release-prep.py --check</code> against the tag and stops before publishing anything if a
+reference disagrees. It then builds and signs the three images in parallel, attaches the SDKs,
+and packages the charts with the new image digests. Each packaged chart is rendered to prove it
+uses those digests, and its <code>values.yaml</code> keeps the comments shown by <code>helm show values</code>.</p>
 <h2 id="helm-oci">Helm OCI<a class="headerlink" href="#helm-oci" title="Permanent link">&para;</a></h2>
 <p>The umbrella chart is the recommended public entry point:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>pull<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.9.1
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>install<span class="w"> </span>agentworkflows<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--version<span class="w"> </span><span class="m">0</span>.9.1<span class="w"> </span>--namespace<span class="w"> </span>ai-platform<span class="w"> </span>--create-namespace
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>pull<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.9.1
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>helm<span class="w"> </span>install<span class="w"> </span>agentworkflows<span class="w"> </span>oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--version<span class="w"> </span><span class="m">0</span>.9.1<span class="w"> </span>--namespace<span class="w"> </span>ai-platform<span class="w"> </span>--create-namespace
 </code></pre></div>
 <p>Release CI publishes <code>artifacthub-repo.yml</code> to the chart repository's special
 <code>artifacthub.io</code> OCI tag. To finish discoverability, a maintainer must register
@@ -2241,7 +2276,7 @@ TypeScript SDKs are attached to the GitHub release, and versioned documentation 
 control panel, copy the assigned <code>repositoryID</code> into <code>artifacthub-repo.yml</code>, and cut the next
 release.</p>
 <h2 id="python-package">Python package<a class="headerlink" href="#python-package" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.1/agentworkflows-0.9.1-py3-none-any.whl
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.1/agentworkflows-0.9.1-py3-none-any.whl
 </code></pre></div>
 <p>The wheel, source archive, TypeScript SDK package (<code>agentworkflows-sdk-*.tgz</code>) and
 <code>sdk-checksums.txt</code> are attached to each GitHub release.

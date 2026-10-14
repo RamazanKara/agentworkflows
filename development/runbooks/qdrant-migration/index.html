@@ -2154,7 +2154,7 @@ coexist in one collection and retrieval filters to the active one.</p>
 <h2 id="1-dry-run-no-writes">1. Dry Run (no writes)<a class="headerlink" href="#1-dry-run-no-writes" title="Permanent link">&para;</a></h2>
 <p>Validate the source manifest, embedding provider, and chunk plan before writing to Qdrant. The
 <code>--check</code> mode loads and validates the manifest, builds chunks, and prints a summary:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python3<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--check<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>src/rag-service/.venv/bin/python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--check<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--source<span class="w"> </span>platform/rag/sources/manifest.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--collection<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_COLLECTION</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--collection-version<span class="w"> </span>v2<span class="w"> </span><span class="se">\</span>
@@ -2167,7 +2167,7 @@ collection is rejected at write time by <code>ensure_collection</code>, so catch
 <h2 id="2-write-the-new-version">2. Write The New Version<a class="headerlink" href="#2-write-the-new-version" title="Permanent link">&para;</a></h2>
 <p>Run the ingestion against Qdrant. <code>ensure_collection</code> creates the collection if needed and writes
 when the existing collection's dimensions equal <code>--dimensions</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python3<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--write<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>src/rag-service/.venv/bin/python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--write<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--source<span class="w"> </span>platform/rag/sources/manifest.yaml<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--qdrant-url<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_URL</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--collection<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_COLLECTION</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>

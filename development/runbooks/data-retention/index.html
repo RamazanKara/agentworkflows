@@ -2206,24 +2206,24 @@ existing earlier deadlines stay in place.</p>
 <li>model governance reports are retained with model approval evidence</li>
 </ul>
 <h2 id="erasing-a-rag-source-right-to-erasure">Erasing a RAG Source (Right-to-Erasure)<a class="headerlink" href="#erasing-a-rag-source-right-to-erasure" title="Permanent link">&para;</a></h2>
-<p>Ingestion is upsert-only, so a source's vectors stay in Qdrant until you delete them,
-including after the source leaves the manifest. To purge a source's vectors (right-to-erasure or source decommission), delete by
+<p><code>--write</code> prunes stale chunks only for the sources in the manifest it ingests, so a source's
+vectors stay in Qdrant after the source leaves the manifest until you delete them. To purge a source's vectors (right-to-erasure or source decommission), delete by
 <code>source_id</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Purge across all collection versions:</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--delete<span class="w"> </span>--source-id<span class="w"> </span>&lt;source-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>src/rag-service/.venv/bin/python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--delete<span class="w"> </span>--source-id<span class="w"> </span>&lt;source-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--qdrant-url<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_URL</span><span class="s2">"</span><span class="w"> </span>--collection<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_COLLECTION</span><span class="s2">"</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Or scope the delete to one collection version:</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--delete<span class="w"> </span>--source-id<span class="w"> </span>&lt;source-id&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>src/rag-service/.venv/bin/python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--delete<span class="w"> </span>--source-id<span class="w"> </span>&lt;source-id&gt;<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>--qdrant-url<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_URL</span><span class="s2">"</span><span class="w"> </span>--collection<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_COLLECTION</span><span class="s2">"</span><span class="w"> </span>--collection-version<span class="w"> </span>v2
 </code></pre></div>
 <p>This issues a filtered Qdrant <code>points/delete</code> on the <code>source_id</code> payload field written at
-ingest time. To re-index a source after a content change, run <code>--delete --source-id &lt;id&gt;</code>
-followed by <code>--write</code>. Record the deletion in the retention evidence for the environment.</p>
+ingest time. Re-ingesting a changed source with <code>--write</code> replaces its chunks and deletes the ones the
+new content no longer produces; <code>--no-prune</code> keeps them. Record the deletion in the retention evidence for the environment.</p>
 <h2 id="age-based-retention-purge">Age-Based Retention Purge<a class="headerlink" href="#age-based-retention-purge" title="Permanent link">&para;</a></h2>
 <p>Ingested chunks carry an <code>ingestedAtEpoch</code> timestamp, so the <code>retentionDays</code> policy can be
 enforced by purging points older than the retention window (run on a schedule, e.g. a CronJob):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--purge<span class="w"> </span>--older-than-days<span class="w"> </span><span class="m">180</span><span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>src/rag-service/.venv/bin/python<span class="w"> </span>scripts/rag-ingest.py<span class="w"> </span>--purge<span class="w"> </span>--older-than-days<span class="w"> </span><span class="m">180</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--qdrant-url<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_URL</span><span class="s2">"</span><span class="w"> </span>--collection<span class="w"> </span><span class="s2">"</span><span class="nv">$QDRANT_COLLECTION</span><span class="s2">"</span>
 </code></pre></div>
 <p>This deletes every point whose <code>ingestedAtEpoch</code> is older than the cutoff (optionally scoped
