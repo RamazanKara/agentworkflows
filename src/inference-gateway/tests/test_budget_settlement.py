@@ -13,6 +13,9 @@ import logging
 
 import pytest
 from app.budget import (
+    REDIS_SETTLE_AND_RECORD_SCRIPT,
+    REDIS_SETTLE_SCRIPT,
+    REDIS_USAGE_SCRIPT,
     BudgetReservation,
     BudgetUsage,
     InMemorySandboxBudgetTracker,
@@ -210,6 +213,40 @@ def test_redis_settle_skips_an_expired_window_without_recreating_the_key():
 
     assert tracker.settle(reservation, {"total_tokens": 12}) is None
     assert store.data == {}
+
+
+def test_redis_settlement_and_provider_usage_share_one_round_trip(caplog):
+    # A governed call that reports usage used to settle its reservation and record its
+    # provider counters as two separate scripts against the same key.
+    caplog.set_level(logging.INFO, logger="agentworkflows.audit")
+    settings = _budget_settings(sandbox_budget_backend="redis", usd_per_1k_tokens=2.0)
+    client, app, _ = _client(
+        settings, response=_chat_response(usage={"prompt_tokens": 4, "completion_tokens": 6, "total_tokens": 10})
+    )
+    store = FakeRedisBudgetStore()
+    scripts = []
+    original = store.eval
+
+    def counting_eval(script, *args):
+        scripts.append(script)
+        return original(script, *args)
+
+    store.eval = counting_eval
+    app.state.budget_tracker = RedisSandboxBudgetTracker(settings, client=store)
+    response = client.post(
+        "/v1/chat/completions",
+        headers={"X-Sandbox-ID": "one-trip"},
+        json={"messages": [{"role": "user", "content": "hi"}], "max_tokens": 500},
+    )
+
+    assert response.status_code == 200
+    assert scripts.count(REDIS_SETTLE_AND_RECORD_SCRIPT) == 1
+    assert REDIS_SETTLE_SCRIPT not in scripts and REDIS_USAGE_SCRIPT not in scripts
+    assert _receipts(caplog)[-1]["budget_settlement"]["settled_estimated_tokens"] == 10
+    snapshot = app.state.budget_tracker.snapshot("one-trip", settings)
+    assert snapshot["usage"]["estimated_tokens"] == 10
+    assert snapshot["providers"]["ollama"]["total_tokens"] == 10
+    assert snapshot["providers"]["ollama"]["estimated_cost"] == pytest.approx(0.02)
 
 
 # --- endpoint behavior -----------------------------------------------------------------

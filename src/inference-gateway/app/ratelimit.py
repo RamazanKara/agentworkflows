@@ -68,8 +68,26 @@ class InMemoryRateLimiter:
         return True, 0
 
 
+REDIS_RATE_LIMIT_SCRIPT = """
+local count = redis.call('INCR', KEYS[1])
+local ttl = redis.call('TTL', KEYS[1])
+if ttl < 0 then
+  -- A fresh window, or a counter that lost its expiry: (re)arm it so a stuck key can
+  -- never turn into a permanent lockout for the sandbox.
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return {count, ttl}
+"""
+
+
 class RedisRateLimiter:
-    """Distributed fixed-window rate limiter backed by Redis INCR/EXPIRE."""
+    """Distributed fixed-window rate limiter backed by Redis INCR/EXPIRE.
+
+    The increment and the expiry run as one script: a single round trip on every governed
+    request instead of two or three, and no window in which a crash between INCR and
+    EXPIRE can leave a counter that never expires.
+    """
 
     backend = "redis"
 
@@ -104,16 +122,8 @@ class RedisRateLimiter:
         limit, window = _limit_and_window(resolved)
         if limit <= 0 or window <= 0:
             return True, 0
-        redis_key = self._key(key)
         try:
-            count = int(self.client.incr(redis_key))
-            ttl = self.client.ttl(redis_key) if hasattr(self.client, "ttl") else -1
-            if not isinstance(ttl, int) or ttl < 0:
-                # Fresh window - or a counter that lost its expiry (e.g. a crash between
-                # INCR and EXPIRE): (re)arm the TTL so a stuck key can never turn into a
-                # permanent lockout for the sandbox.
-                self.client.expire(redis_key, window)
-                ttl = window
+            count, ttl = (int(value) for value in self.client.eval(REDIS_RATE_LIMIT_SCRIPT, 1, self._key(key), window))
         except _RATE_LIMIT_BACKEND_ERRORS as exc:
             raise BudgetBackendError("rate limit backend is unavailable") from exc
         if count > limit:

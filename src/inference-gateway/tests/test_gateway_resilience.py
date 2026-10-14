@@ -327,6 +327,34 @@ class _CountingRedis:
     def expire(self, key, window):
         self.expirations[key] = window
 
+    def eval(self, script, numkeys, key, window):
+        from app.ratelimit import REDIS_RATE_LIMIT_SCRIPT
+
+        assert script == REDIS_RATE_LIMIT_SCRIPT
+        count = self.incr(key)
+        if self.ttl(key) < 0:
+            self.expire(key, window)
+        return [count, self.ttl(key)]
+
+
+def test_redis_rate_limit_check_is_one_round_trip():
+    from app.ratelimit import RedisRateLimiter
+
+    settings = _tool_settings(rate_limit_enabled=True, rate_limit_requests_per_window=1, rate_limit_window_seconds=60)
+    fake = _CountingRedis()
+    calls = []
+    original = fake.eval
+
+    class OnlyEval:
+        def eval(self, *args):
+            calls.append(args[2])
+            return original(*args)
+
+    limiter = RedisRateLimiter(settings, client=OnlyEval())
+    assert limiter.check("team-a") == (True, 0)
+    assert limiter.check("team-a") == (False, 60)
+    assert calls == [f"{settings.sandbox_budget_key_prefix}:ratelimit:team-a"] * 2
+
 
 def test_rate_limit_backend_outage_returns_503_not_500():
     # A Redis outage on the rate-limit path must degrade to a retryable 503 with

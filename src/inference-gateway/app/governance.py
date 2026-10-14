@@ -607,7 +607,12 @@ def record_budget_reservation(reservation: BudgetReservation | None, settings: S
         SANDBOX_BUDGET_LIMIT.labels(_sandbox_label(reservation.sandbox_id), budget_type).set(limits[budget_type])
 
 
-async def settle_budget(request: Request, runtime_response: dict[str, Any] | None) -> None:
+async def settle_budget(
+    request: Request,
+    runtime_response: dict[str, Any] | None,
+    *,
+    provider_usage: tuple[str, dict[str, Any], float] | None = None,
+) -> None:
     """Reconcile this request's budget reservation against the runtime's measured usage.
 
     Admission has to charge before the model runs, so it charges the worst case (the full
@@ -621,18 +626,44 @@ async def settle_budget(request: Request, runtime_response: dict[str, Any] | Non
     served call into an error. And a runtime that reported no usage leaves the reservation
     standing rather than refunding it, so a request that burns runtime capacity and then
     fails late is still charged; over-charging is recoverable, free capacity is not.
+
+    ``provider_usage`` (provider, usage, cost) is added to the sandbox's per-provider
+    counters as well; a Redis tracker writes both in one round trip. A failure to record
+    it is noted on the receipt as ``usage_accounting``.
     """
+    tracker: SandboxBudgetTracker = request.app.state.budget_tracker
     reservation = getattr(request.state, "budget_reservation_object", None)
-    if reservation is None or getattr(request.state, "budget_settled", False):
+    settle = reservation is not None and not getattr(request.state, "budget_settled", False)
+    combined = settle and provider_usage is not None and callable(getattr(tracker, "settle_and_record", None))
+    if provider_usage is not None and not combined:
+        try:
+            await backend_call(tracker, tracker.record_usage, request.state.sandbox_id, *provider_usage)
+        except BudgetBackendError:
+            request.state.usage_accounting = "backend_unavailable"
+    if not settle:
         return
     # Guard before the await: the streaming and non-streaming paths both reach here, and
     # a second settlement would refund the same reservation twice.
     request.state.budget_settled = True
-    tracker: SandboxBudgetTracker = request.app.state.budget_tracker
+    usage = (runtime_response or {}).get("usage")
     try:
-        settlement = await backend_call(tracker, tracker.settle, reservation, (runtime_response or {}).get("usage"))
+        if combined and provider_usage is not None:
+            provider, recorded_usage, cost = provider_usage
+            settlement = await backend_call(
+                tracker,
+                tracker.settle_and_record,  # type: ignore[attr-defined]
+                reservation,
+                usage,
+                provider,
+                recorded_usage,
+                cost,
+            )
+        else:
+            settlement = await backend_call(tracker, tracker.settle, reservation, usage)
     except BudgetBackendError:
         BUDGET_SETTLEMENTS.labels("backend_unavailable").inc()
+        if combined:
+            request.state.usage_accounting = "backend_unavailable"
         return
     except Exception:
         # Deliberately broad: settlement runs after the response is committed, so letting
@@ -673,7 +704,6 @@ async def settle_and_audit(
     streaming and non-streaming paths alike, so hanging settlement off that single point
     keeps the correction and its evidence from ever diverging.
     """
-    await settle_budget(request, runtime_response)
     usage = (runtime_response or {}).get("usage")
     selected = getattr(request.state, "selected_route", None)
     if selected and selected.input_usd_per_1k_tokens is not None:
@@ -681,16 +711,14 @@ async def settle_and_audit(
             "input_usd_per_1k_tokens": selected.input_usd_per_1k_tokens,
             "output_usd_per_1k_tokens": selected.output_usd_per_1k_tokens,
         }
+    provider_usage = None
     if getattr(request.state, "cache_status", None) == "HIT":
         request.state.usage_cost = 0.0
     elif isinstance(usage, dict) and actual_total_tokens(usage) is not None:
         cost = record_estimated_cost(settings, request.state.sandbox_id, backend, usage, selected)
         request.state.usage_cost = cost
-        tracker: SandboxBudgetTracker = request.app.state.budget_tracker
-        try:
-            await backend_call(tracker, tracker.record_usage, request.state.sandbox_id, backend, usage, cost)
-        except BudgetBackendError:
-            request.state.usage_accounting = "backend_unavailable"
+        provider_usage = (backend, usage, cost)
+    await settle_budget(request, runtime_response, provider_usage=provider_usage)
     from app.team_budget import settle_team_cost
 
     try:

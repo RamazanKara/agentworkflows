@@ -425,6 +425,44 @@ return 1
 """
 
 
+# REDIS_SETTLE_SCRIPT followed by REDIS_USAGE_SCRIPT on the same key, so a governed call
+# that reports usage reconciles its reservation and its provider counters in one round trip.
+REDIS_SETTLE_AND_RECORD_SCRIPT = """
+local key = KEYS[1]
+local ttl = tonumber(ARGV[1])
+local reserved = tonumber(ARGV[2])
+local actual = tonumber(ARGV[3])
+local result = {0, 0, 0, 0}
+-- A rolled-over (expired) window holds nothing to settle; the usage below recreates the
+-- key with the window TTL, exactly as REDIS_USAGE_SCRIPT does on its own.
+if redis.call('EXISTS', key) == 1 then
+  local current = tonumber(redis.call('HGET', key, 'estimated_tokens') or '0')
+  local refund = reserved - actual
+  if refund < 0 then
+    refund = 0
+  end
+  if refund > current then
+    refund = current
+  end
+  local overrun = actual - reserved
+  if overrun < 0 then
+    overrun = 0
+  end
+  local settled = current - refund + overrun
+  redis.call('HSET', key, 'estimated_tokens', settled)
+  result = {1, refund, overrun, settled}
+end
+local existing_ttl = redis.call('TTL', key)
+for i = 4, #ARGV, 2 do
+  redis.call('HINCRBYFLOAT', key, ARGV[i], ARGV[i + 1])
+end
+if ttl > 0 and existing_ttl < 0 then
+  redis.call('EXPIRE', key, ttl)
+end
+return result
+"""
+
+
 def provider_usage_delta(usage: dict[str, Any], cost: float) -> dict[str, Any]:
     return {
         "requests": 1,
@@ -588,6 +626,31 @@ class RedisSandboxBudgetTracker:
             )
         except _BUDGET_BACKEND_ERRORS as exc:
             raise BudgetBackendError("sandbox budget backend is unavailable") from exc
+        return self._settlement(reservation, actual, result)
+
+    def settle_and_record(
+        self,
+        reservation: BudgetReservation,
+        usage: dict[str, Any] | None,
+        provider: str,
+        provider_usage: dict[str, Any],
+        cost: float,
+    ) -> BudgetSettlement | None:
+        """:meth:`settle` plus :meth:`record_usage` for the same sandbox in one script."""
+        actual = actual_total_tokens(usage)
+        if actual is None:
+            self.record_usage(reservation.sandbox_id, provider, provider_usage, cost)
+            return None
+        args: list[Any] = [self.settings.sandbox_budget_window_seconds, reservation.estimated_tokens, actual]
+        for name, value in provider_usage_delta(provider_usage, cost).items():
+            args.extend((f"provider.{provider}.{name}", value))
+        try:
+            result = self.client.eval(REDIS_SETTLE_AND_RECORD_SCRIPT, 1, self._key(reservation.sandbox_id), *args)
+        except _BUDGET_BACKEND_ERRORS as exc:
+            raise BudgetBackendError("sandbox budget backend is unavailable") from exc
+        return self._settlement(reservation, actual, result)
+
+    def _settlement(self, reservation: BudgetReservation, actual: int, result: Any) -> BudgetSettlement | None:
         if not int(result[0]):
             return None
         return BudgetSettlement(
