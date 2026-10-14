@@ -2191,9 +2191,10 @@ test('insights keep the period in the address and sort by any column', async ({ 
   });
   await login(page, 'viewer', '/console/#insights?days=30');
   await expect(page.getByLabel('Period', { exact: true })).toHaveValue('30');
-  expect(queries).toEqual(['?days=30']);
   const names = page.locator('.insights-table tbody th');
   await expect(names).toHaveText([/^Research/, /^Code review/]);
+  // The select can show the period before its request goes out; the rows prove it landed.
+  expect(queries).toEqual(['?days=30']);
   await expect(page.getByRole('columnheader', { name: 'Outcomes' })).toHaveAttribute('aria-sort', 'descending');
   await page.getByRole('button', { name: 'Cost per run', exact: true }).click();
   await expect(page.getByRole('columnheader', { name: 'Cost per run' })).toHaveAttribute('aria-sort', 'descending');
