@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from math import ceil
@@ -32,6 +34,19 @@ class BudgetBackendError(RuntimeError):
     Lets the gateway return a 503 (retry later) when the shared budget store is down rather
     than surfacing the raw driver error as an unhandled 500.
     """
+
+
+async def backend_call[T](store: Any, method: Callable[..., T], *args: Any) -> T:
+    """Call a governance store method without stalling the event loop.
+
+    Redis-backed stores use a synchronous client, so their calls run on a worker thread
+    where a slow Redis cannot block other requests. The in-memory stores only take a
+    process-local lock for microseconds; a thread hop would cost more than the call, so
+    they run inline.
+    """
+    if getattr(store, "backend", None) == "memory":
+        return method(*args)
+    return await asyncio.to_thread(method, *args)
 
 
 @dataclass

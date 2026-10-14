@@ -1,7 +1,6 @@
 """OpenAI-compatible inference gateway with auth, admission, budgets, and runtime routing."""
 
 import asyncio
-import hashlib
 import logging
 import os
 from time import time
@@ -23,56 +22,32 @@ from app.audit import (
 from app.batch_api import register_batch_routes
 from app.batchstore import BatchStoreError, build_batch_store
 from app.body_limit import RequestBodyLimitMiddleware
-from app.budget import (
-    BudgetBackendError,
-    build_sandbox_budget_tracker,
-)
+from app.budget import build_sandbox_budget_tracker
 from app.cache import build_response_cache
 from app.concurrency import ConcurrencyLimitMiddleware
-from app.console_auth import AUTH_PATHS, register_auth_routes
+from app.console_auth import register_auth_routes
 from app.container_api import register_container_routes
+from app.context_middleware import RequestContextMiddleware
 from app.governance import state_backend_unavailable_detail
 from app.inference_api import register_inference_routes
-from app.jwt_auth import JwksUnavailableError, JwtVerifier
+from app.jwt_auth import JwtVerifier
 from app.key_records import KeyRecordSet
 from app.managed_keys import register_key_routes
 from app.messages_api import register_messages_routes
-from app.metrics import (
-    RATE_LIMIT_FAIL_OPEN,
-    REQUESTS,
-)
-from app.metrics import (
-    sandbox_label as _sandbox_label,
-)
+from app.metrics import REQUESTS
 from app.objectstore import build_object_store
 from app.policy import ModelRoutingPolicy, SandboxPolicySet
 from app.ratelimit import build_rate_limiter
-from app.request_context import (
-    _api_key_from_request,
-    _auth_required,
-    _error_envelope,
-    _install_openapi_contract,
-    _jwks_unavailable_response,
-    _rate_limit_backend_unavailable_response,
-    _rate_limited_response,
-    _request_id_from_header,
-    _traceparent_from_header,
-    authenticate_credential,
-)
+from app.request_context import _auth_required, _error_envelope, _install_openapi_contract
 from app.response_store import ResponseStoreError, build_response_store
 from app.responses_api import register_responses_routes
 from app.runtime_client import RuntimeClient
 from app.sandbox_api import register_sandbox_routes
-from app.sessions import SESSION_COOKIE, bind_session, refresh_cookies
-from app.settings import (
-    Settings,
-    validate_sandbox_id,
-)
+from app.settings import Settings
 from app.state_migrations import migrate
 from app.storage import RedisStorage
-from app.tracing import configure_metrics, configure_tracing, measure_request, trace_request
-from app.workflow_api import bind_workflow, register_workflow_routes
-from app.workflow_credentials import bind_step_credential
+from app.tracing import configure_metrics, configure_tracing
+from app.workflow_api import register_workflow_routes
 
 SERVICE_VERSION = "0.9.1"
 OPENAPI_DESCRIPTION = (
@@ -210,7 +185,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
     app.state.runtime_client.storage = app.state.storage
     app.state.runtime_client.sandbox_policies = app.state.sandbox_policy_set
-    from app.teams import authorize_team_request, register_team_routes
+    from app.teams import register_team_routes
 
     register_team_routes(app)
     register_key_routes(app)
@@ -248,189 +223,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # queued tail every time a pod stops, losing the last requests' traces.
         app.router.add_event_handler("shutdown", app.state.tracer_provider.shutdown)
 
-    @app.middleware("http")
-    async def request_context(request: Request, call_next):
-        try:
-            request.state.request_id = _request_id_from_header(request)
-            request.state.sandbox_id = validate_sandbox_id(
-                request.headers.get("x-sandbox-id", resolved.default_sandbox_id)
-            )
-            request.state.traceparent = _traceparent_from_header(request)
-            bind_workflow(request)
-            request.state.principal = None
-            # True only when the sandbox id comes from a verified binding (an API-key record
-            # with a sandbox, or a JWT tenant claim) rather than the client-asserted header.
-            request.state.sandbox_bound = False
-            # Per-key budget overrides (from a matched API-key record) folded into the
-            # request's effective settings; empty for flat keys and unauthenticated paths.
-            request.state.key_budget_updates = {}
-        except ValueError as exc:
-            # A request header failed validation. The message is a controlled, developer-authored
-            # validation string describing the malformed header (e.g. the sandbox-id charset rule);
-            # it carries no stack trace or server internals, so returning it as an actionable 400 is
-            # correct API behavior, not information disclosure. Also logged for server-side triage.
-            reason = str(exc)
-            logging.getLogger("uvicorn.error").warning("rejected malformed request header: %s", reason)
-            return JSONResponse(status_code=400, content={"detail": reason})
-
-        async def dispatch() -> Response:
-            from app.workflow_triggers import bind_webhook
-
-            if request.url.path in AUTH_PATHS:
-                if resolved.rate_limit_enabled and request.url.path != "/v1/auth/config":
-                    # Unauthenticated callers cannot choose their throttle bucket through a team header.
-                    peer = request.client.host if request.client else "unknown"
-                    key = "auth:" + hashlib.sha256(peer.encode()).hexdigest()
-                    try:
-                        allowed, retry_after = await asyncio.to_thread(app.state.rate_limiter.check, key)
-                    except BudgetBackendError:
-                        response = _rate_limit_backend_unavailable_response(request)
-                    else:
-                        response = None if allowed else _rate_limited_response(request, retry_after)
-                    if response is not None:
-                        response.headers["Cache-Control"] = "no-store"
-                        return response
-                response = await call_next(request)
-                response.headers["Cache-Control"] = "no-store"
-                response.headers["Referrer-Policy"] = "no-referrer"
-                return response
-
-            try:
-                webhook_credential = await bind_webhook(request)
-                step_credential = False if webhook_credential else await bind_step_credential(request)
-            except StarletteHTTPException as exc:
-                return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
-            if (
-                not step_credential
-                and not webhook_credential
-                and (
-                    resolved.api_key_auth_enabled or resolved.jwt_auth_enabled or resolved.oidc_issuer
-                    or request.cookies.get(SESSION_COOKIE)
-                    or (_api_key_from_request(request, resolved) or "").startswith("aw_")
-                )
-                and _auth_required(request.url.path)
-            ):
-                try:
-                    if _api_key_from_request(request, resolved):
-                        auth_error = await authenticate_credential(request)
-                    elif request.cookies.get(SESSION_COOKIE) and (
-                        resolved.admin_console_enabled or resolved.oidc_issuer
-                    ):
-                        auth_error = await bind_session(request)
-                    else:
-                        auth_error = await authenticate_credential(request)
-                except JwksUnavailableError:
-                    return _jwks_unavailable_response(request)
-                except StarletteHTTPException as exc:
-                    return JSONResponse(
-                        status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail)
-                    )
-                if auth_error is not None:
-                    return auth_error
-
-            try:
-                authorize_team_request(request)
-            except StarletteHTTPException as exc:
-                if isinstance(exc.detail, dict):
-                    exc.detail["request_id"] = request.state.request_id
-                return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
-
-            # Short-window per-sandbox throttle (distinct from the cumulative budget):
-            # bounds burst abuse. Checked after sandbox binding so the limit applies to
-            # the authenticated tenant, not the spoofable header. The check runs on a
-            # worker thread because the Redis client is synchronous; a slow (not down)
-            # Redis must not stall the whole event loop.
-            if resolved.rate_limit_enabled and _auth_required(request.url.path):
-                try:
-                    allowed, retry_after = await asyncio.to_thread(
-                        request.app.state.rate_limiter.check, request.state.sandbox_id
-                    )
-                except BudgetBackendError:
-                    # Deliberate availability-vs-enforcement tradeoff. Fail closed by default
-                    # (503, matching the budget tracker); when RATE_LIMIT_FAIL_OPEN is set,
-                    # admit the request instead so a Redis outage does not take down all
-                    # traffic - recorded via a warning log and a metric so the degraded
-                    # window is visible. Budgets are unaffected and stay fail-closed.
-                    if not resolved.rate_limit_fail_open:
-                        return _rate_limit_backend_unavailable_response(request)
-                    RATE_LIMIT_FAIL_OPEN.labels(_sandbox_label(request.state.sandbox_id)).inc()
-                    logging.getLogger("uvicorn.error").warning(
-                        "rate limit backend unavailable; failing open (RATE_LIMIT_FAIL_OPEN=1) "
-                        "for sandbox %s request %s",
-                        request.state.sandbox_id,
-                        request.state.request_id,
-                    )
-                else:
-                    if not allowed:
-                        return _rate_limited_response(request, retry_after)
-
-            # Bounded concurrency is enforced by ConcurrencyLimitMiddleware inside this one.
-            if getattr(request.state, "workflow_run_id", None) and not (
-                request.url.path in {"/v1/chat/completions", "/v1/messages", "/v1/tools"}
-                or (request.url.path.startswith("/v1/tools/") and request.url.path.endswith("/call"))
-                or (request.url.path.startswith("/v1/agents/") and request.url.path.endswith(("/start", "/finish")))
-                or (request.url.path.startswith("/v1/workflow-runs/") and request.url.path.endswith("/resolve"))
-            ):
-                return JSONResponse(
-                    status_code=400,
-                    content={"detail": "Workflow steps support chat, messages, tools, and container agents."},
-                )
-            from app.team_data import enter_team_request, leave_team_request
-
-            try:
-                entered = await enter_team_request(request)
-            except StarletteHTTPException as exc:
-                return JSONResponse(status_code=exc.status_code, content=_error_envelope(exc.status_code, exc.detail))
-            try:
-                response = await call_next(request)
-            except BaseException:
-                if entered:
-                    await leave_team_request(request)
-                raise
-            if entered:
-                body = response.body_iterator
-
-                async def leased_body():
-                    try:
-                        async for chunk in body:
-                            yield chunk
-                    finally:
-                        await leave_team_request(request)
-
-                response.body_iterator = leased_body()
-            refresh_cookies(request, response)
-            if request.url.path.startswith("/console"):
-                response.headers["Content-Security-Policy"] = (
-                    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
-                    "img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
-                )
-                response.headers["X-Content-Type-Options"] = "nosniff"
-            if request.url.path.startswith(("/v1/", "/console")):
-                response.headers["Cache-Control"] = "no-store"
-            response.headers["X-Request-ID"] = request.state.request_id
-            response.headers["X-Sandbox-ID"] = request.state.sandbox_id
-            if request.state.traceparent:
-                response.headers["traceparent"] = request.state.traceparent
-            if getattr(request.state, "cache_status", None):
-                response.headers["X-Cache"] = request.state.cache_status
-            for header, value in getattr(request.state, "budget_headers", {}).items():
-                response.headers[header] = value
-            if getattr(request.state, "output_guardrail_action", None):
-                response.headers["X-Output-Guardrail"] = request.state.output_guardrail_action
-            if getattr(request.state, "prompt_guardrail_action", None):
-                response.headers["X-Prompt-Guardrail"] = request.state.prompt_guardrail_action
-            if getattr(request.state, "dropped_params", None):
-                # Fields the parameter policy did not forward (app/params.py), so a client can
-                # see why a runtime-specific option had no effect.
-                response.headers["X-Dropped-Params"] = ",".join(request.state.dropped_params)
-            return response
-
-        tracer = request.app.state.tracer
-        async def traced():
-            return await trace_request(tracer, request, dispatch) if tracer else await dispatch()
-        if request.app.state.otel_metrics:
-            return await measure_request(request.app.state.otel_metrics, request, traced)
-        return await traced()
+    # Inside the body limit, outside the concurrency limit: only authenticated,
+    # rate-limit-admitted requests take a concurrency slot.
+    app.add_middleware(RequestContextMiddleware, settings=resolved)
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:

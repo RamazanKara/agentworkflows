@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import csv
 import hashlib
 import io
@@ -727,3 +728,62 @@ def test_run_list_shows_whether_a_completed_run_was_rejected(team_gateway):
     assert rows[published["run_id"]]["outcome"] == "published"
     assert rows[rejected["run_id"]]["outcome"] == "rejected"
     assert "result" not in rows[rejected["run_id"]]
+
+
+def asgi_post(app, path, body, headers, send):
+    """Drive one POST through the raw ASGI app so a test controls the client side of the socket."""
+    raw = json.dumps(body).encode()
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": path,
+        "raw_path": path.encode(),
+        "query_string": b"",
+        "root_path": "",
+        "headers": [
+            (b"content-type", b"application/json"),
+            (b"content-length", str(len(raw)).encode()),
+            *((name.lower().encode(), value.encode()) for name, value in headers.items()),
+        ],
+        "client": ("127.0.0.1", 50000),
+        "server": ("gateway", 80),
+    }
+    messages = [{"type": "http.request", "body": raw, "more_body": False}]
+
+    async def receive():
+        return messages.pop(0) if messages else {"type": "http.disconnect"}
+
+    async def run():
+        with contextlib.suppress(Exception):
+            await app(scope, receive, send)
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("stream", [False, True])
+def test_team_lease_is_released_when_the_client_leaves_before_the_body(team_gateway, stream):
+    # Erasure waits for the team's in-flight requests to drain. The lease used to be
+    # released from a wrapper around the response body, so a client that disconnected
+    # before the first body byte left the counter raised and the team could never be erased.
+    _client, app = team_gateway
+    team = app.state.sandbox_policy_set.policies["team"]
+    app.state.sandbox_policy_set.policies["team"] = replace(team, allow_streaming=True)
+
+    async def stream_chunks(payload, **kwargs):
+        yield b'data: {"choices":[{"index":0,"delta":{"content":"ok"}}]}\n\n'
+
+    app.state.runtime_client.stream_chat_completions = stream_chunks
+    sent = []
+
+    async def disconnected(message):
+        sent.append(message["type"])
+        raise OSError("client disconnected")
+
+    body = {"model": "primary", "max_tokens": 20, "messages": [{"role": "user", "content": "hi"}], "stream": stream}
+    asgi_post(app, "/v1/chat/completions", body, auth("builder"), disconnected)
+    assert sent[0] == "http.response.start"
+    active = f"{app.state.settings.sandbox_budget_key_prefix}:team-data:team:active"
+    assert active not in app.state.budget_tracker.client.data
