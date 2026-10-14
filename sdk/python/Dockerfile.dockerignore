@@ -1,0 +1,8 @@
+# The worker image builds from the repository root but needs only the SDK package and its
+# lock. BuildKit already sends just the COPY sources; this also keeps local bytecode out and
+# stops the legacy builder from uploading every virtualenv and node_modules tree.
+*
+!sdk/python/requirements.lock
+!sdk/python/agentworkflows
+**/__pycache__
+**/*.py[cod]

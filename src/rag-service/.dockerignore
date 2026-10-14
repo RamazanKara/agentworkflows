@@ -1,7 +1,8 @@
 .venv/
 .pytest_cache/
-__pycache__/
+# Patterns match from the context root, so nested caches need **/.
+**/__pycache__/
 tests/
-*.pyc
-*.pyo
-*.log
+**/*.pyc
+**/*.pyo
+**/*.log
