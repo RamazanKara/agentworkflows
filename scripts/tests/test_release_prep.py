@@ -109,7 +109,7 @@ class BumpTests(unittest.TestCase):
             self.assertIsNone(stale.search(path.read_text(encoding="utf-8")), path)
         self.assertIn(f"CUSTOMER_REVISION=v{self.new}", self.read("README.md"))
         self.assertIn(
-            f"/v{self.new}/agentworkflows-{self.new}-py3-none-any.whl", self.read("sdk/python/tests/test_cli.py")
+            f"/v{self.new}/agentworkflows-{self.new}-py3-none-any.whl", self.read("sdk/README.md")
         )
         self.assertIn(f"agentworkflows-sdk-{self.new}.tgz", self.read("docs/quickstart-typescript.md"))
 

@@ -59,7 +59,6 @@ PROSE = (
     "docs/*.md",
     "sdk/README.md",
     "deploy/clusters/customer/README.md",
-    "sdk/python/tests/test_cli.py",
 )
 
 

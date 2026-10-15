@@ -4,7 +4,7 @@ import agentworkflows
 import httpx
 import pytest
 from agentworkflows.cli import main
-from agentworkflows.scaffold import TEMPLATES
+from agentworkflows.scaffold import SDK_VERSION, TEMPLATES
 
 
 @pytest.mark.parametrize(
@@ -218,7 +218,8 @@ def test_init_creates_editable_project_offline(monkeypatch, tmp_path, capsys, te
     assert "@input_schema(" in (target / "workflow.py").read_text()
     assert "worker.py" in (target / "README.md").read_text()
     assert f"templates/#{template}" in (target / "README.md").read_text()
-    assert "releases/download/v0.9.1/agentworkflows-0.9.1-py3-none-any.whl" in (target / "requirements.txt").read_text()
+    wheel = f"releases/download/v{SDK_VERSION}/agentworkflows-{SDK_VERSION}-py3-none-any.whl"
+    assert wheel in (target / "requirements.txt").read_text()
     assert "--input '@input.json'" in capsys.readouterr().out
     before = {p.name: p.read_bytes() for p in target.iterdir()}
     with pytest.raises(SystemExit) as exc:
