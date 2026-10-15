@@ -2347,9 +2347,10 @@ The targets use these environments directly, so there is nothing to activate.</p
 <p>After focused checks, run <code>make validate</code> for the default repository gate. It also
 requires Helm and uses available optional tools for schema, policy, and security
 checks. <code>make static-checks</code> runs just its test-free part (Helm lint and renders,
-YAML, contracts, chart docs and governance checks) in about a minute. CI runs the
-static checks and the tooling, gateway, SDK, RAG and console suites on every push and
-pull request; <code>make validate-full</code>, <code>make eval-local</code> and <code>make coverage</code> stay local.
+YAML, contracts, chart docs and governance checks) in about a minute. CI runs lint,
+format and type checks and the tooling, gateway, SDK and RAG suites on every push to
+<code>main</code>; the static checks, the console browser tests, <code>make validate-full</code>,
+<code>make eval-local</code> and <code>make coverage</code> stay local.
 The documentation site has its own strict build workflow.</p>
 <p>See <a href="../getting-started/">getting started</a> for toolchain profiles and
 <a href="../proof/">evidence and validation</a> for release evidence requirements.</p>
