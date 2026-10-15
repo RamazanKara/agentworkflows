@@ -1,5 +1,143 @@
 # Changelog
 
+## v0.10.0 - 2026-10-15
+
+A platform-wide overhaul: approval escalation, a gateway that adds a third of its former
+per-request overhead, a faster and sturdier console, TypeScript SDK parity with Python,
+BM25 retrieval, faster run listings and insights, and a release pipeline that checks every
+version reference before it publishes. Images, charts and SDKs are version 0.10.0.
+
+### Behaviour changes to know about
+
+- A workflow attempt that no provider processed (connect error, 429, 503 or an adapter
+  refusal) now gives its run budget back; ambiguous failures keep the charge.
+- The gateway gzips JSON, JavaScript and CSS responses over 1 KiB for clients that accept
+  it. Event streams, images and fonts are untouched.
+- `rag-ingest --write` deletes the stale chunks of the sources it ingests; pass
+  `--no-prune` for the old upsert-only behaviour.
+- The TypeScript client retries state-changing calls when the gateway provably did not act
+  (refused connection, 429 or 503) and rejects non-http(s) base URLs.
+
+### Gateway
+
+- Lower overhead per request, measured against a bare FastAPI app with a fake runtime:
+  1879 to 559 µs by default, 2474 to 730 µs on the governed path and 3090 to 986 µs when
+  streaming. A team chat request makes 9 Redis round trips instead of 14: the rate limiter
+  is one atomic script, budget settlement and provider usage share one, and team settings
+  are read once per request.
+- A client that disconnected before the response body no longer leaks the team request
+  lease, which could leave the team impossible to erase.
+- Team audit-view rows are written off the event loop in chain order, so a slow Redis or
+  Postgres no longer stalls every request, and audit chain heads are saved from a
+  consistent snapshot, which prevents false broken-link findings after a restart.
+- Stream receipts record a client disconnect as 499 and a mid-stream error as 500 instead
+  of 200. A provider-key store outage returns a retryable 503, lone UTF-16 surrogates are a
+  4xx, and malformed headers get the standard error envelope.
+- The in-memory rate-limit and budget maps drop finished windows, an expired JWKS cache
+  sends one refresh to the identity provider, and batch file downloads stream.
+- Console assets are cached as immutable and gzipped, so the console's script reaches the
+  browser at under a third of its size and is not downloaded again on a repeat visit.
+
+### Approval escalation
+
+- Team admins can escalate a workflow's approvals that wait too long. After `after_seconds`
+  the review notifies the team's alert channels (or channels chosen for the escalation) and
+  opens to more reviewers: every approver, or named reviewer identities. The escalation and
+  every vote it admits are receipted. Nothing changes unless escalation is configured, and
+  in-flight runs on existing workers escalate too.
+- API: `GET /v1/team/approval-escalations` and `PUT`/`DELETE
+  /v1/team/workflows/{name}/approval-escalation`. Run views include `approval_escalation`
+  and the caller's `approval_access`.
+- Python SDK and CLI: `approval_escalations()`, `set_approval_escalation()`,
+  `remove_approval_escalation()`, `review_queue()`, `workflows escalation list|set|remove`
+  and `runs pending`. TypeScript: `approvalEscalations()`, `setApprovalEscalation()`,
+  `removeApprovalEscalation()` and `reviewQueue()`.
+- Console: Approvals opens on "Ready for you", the drafts you can decide now; "All waiting"
+  shows the rest and when escalation opens a draft to you. Runs show when they escalate and
+  an Escalated mark, timelines and the audit log name escalation receipts and votes, and
+  Team settings has an escalation editor that flags an escalation the approval expiry would
+  overtake.
+
+### Console
+
+- Each page loads on demand: the shell script is 246 kB instead of 374 kB (78 kB instead of
+  110 kB gzipped), and Inter ships only its Latin and Latin Extended files (133 kB instead of
+  218 kB). A 10-page admin session makes 24 API calls instead of 34.
+- A failed refresh no longer blanks a run page or stops its auto-refresh. Polling pauses in
+  hidden tabs and waits for each answer. Pages that fail to load offer Try again instead of
+  showing Loading forever, and a page whose code fails to load offers a reload.
+- Saving alert rules, retention or an escalation and then team settings on the same page no
+  longer fails with a stale-revision conflict, nor does registering a workflow right after a
+  template install.
+- Rejecting a draft asks for confirmation, focus moves to the next draft after a decision,
+  and leaving with unsaved team settings, an uncopied API key or an uncopied invitation link
+  asks first. Workflow result links open only http(s) addresses.
+- Run filters and the Insights period live in the address, Insights and Costs tables sort by
+  column, Members & keys has a search box, and the audit log pages back to newer events.
+- Clearer error messages, including a separate one for gateway errors.
+
+### Workflows and Python SDK
+
+- Finished runs are served from a snapshot. Listing 100 runs takes 78 ms instead of 688 ms,
+  insights over 120 runs 111 ms instead of 235 ms, and the 30-second monitor scales with live
+  runs instead of retained ones (107 ms instead of 1365 ms for 120 runs). A run timeline
+  reads its step content in one batch.
+- Fixed: scheduled triggers waiting on a long review hit Temporal's history limit after about
+  38 hours and copied run content into schedule history. Polling now backs off from 30
+  seconds to 5 minutes, continues as new and stores only the run ID and status. Both SDKs.
+- Signed webhook replay records expire after 8 days instead of being kept forever.
+- Cancelling a finished run returns `409 workflow_not_cancellable` instead of a 404, and a
+  retried vote no longer writes a duplicate approval receipt.
+- `agentworkflows --help` starts in 106 ms instead of 274 ms.
+- The Python client no longer repeats run, cancel, retry, delete, pause or install calls
+  after an ambiguous 5xx or timeout. Container steps reject workspace names that are not
+  Kubernetes names, and `AGENTWORKFLOWS_HEALTH_ADDRESS` sets or turns off the worker's
+  health endpoint.
+
+### TypeScript SDK
+
+- `GatewayClient` matches the Python client: chat and streaming, completions, embeddings,
+  moderations, batch, Messages, Files, Batch and Responses APIs, receipts, team, usage and
+  readiness, with `sandboxId`, `headers`, `retryBackoffMs`, `signal`, `fetch` and per-call
+  `withOptions()`.
+- `WorkflowGateway.agent()` runs OpenAI, Anthropic and other framework agents as governed
+  steps, and `WorkflowGateway.container()` runs container steps with the Python SDK's
+  workspace checks.
+- Typed `GatewayTimeoutError`, transport error codes that are safe to log, and state-changing
+  calls that retry only when the gateway provably did not act.
+- `runWorker` serves the chart's health probes on request. Subpath types work for consumers
+  on `moduleResolution: node`, and every pack checks CommonJS and ESM imports.
+
+### RAG service
+
+- Lexical retrieval ranks with BM25 in any script. On the docs corpus, recall@3 went from
+  0.17 to 0.96 and a query takes 0.3 ms instead of 12 ms. Hybrid scoring ignores stopwords,
+  and the grounded context includes every retrieved document.
+- Ingest batches embeddings and Qdrant upserts (5x faster on 627 chunks, with request bodies
+  capped near 1 MB), stamps chunks with their document, and `--write` prunes the stale chunks
+  of the sources it ingests (`--no-prune` keeps them). `scripts/rag-ingest.py` now runs this
+  same CLI.
+- Malformed vector-store or embedding responses return 503 with `Retry-After`, a lone
+  surrogate in a query returns 422, a bad knowledge file or failing bootstrap no longer takes
+  the service down, non-string tenant claims are refused, and settings errors name their
+  environment variables.
+- The audit chain head is persisted from a consistent snapshot, so audit-verify no longer
+  falsely flags a link across restarts.
+
+### Release, CI and deployment
+
+- `make release-prep RELEASE_VERSION=X.Y.Z` moves every version reference at once and `make
+  release-check` proves they agree. The release workflow checks before it publishes, builds
+  the three images in parallel, and attaches SBOM and provenance attestations.
+- Fixed: the umbrella chart's lock still pinned 0.9.0, and published charts lost their
+  `values.yaml` comments.
+- CI's single job now also covers the TypeScript SDK and its package check, Ruff
+  formatting, and mypy for the gateway, RAG service and Python SDK. `make static-checks`
+  runs the Helm, Compose, contract and policy checks locally in about a minute.
+- Multi-stage images are smaller (worker 334 to 307 MB) and rebuild in seconds when only the
+  revision changes. Bundled PostgreSQL has startup and liveness probes, Temporal jobs have
+  resource requests, and Compose services report healthy faster.
+
 ## v0.9.1 - 2026-10-10
 
 A redesigned team console. Images, charts and SDKs are version 0.9.1; workflow templates

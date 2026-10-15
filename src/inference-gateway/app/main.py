@@ -54,7 +54,7 @@ from app.storage import RedisStorage
 from app.tracing import configure_metrics, configure_tracing
 from app.workflow_api import register_workflow_routes
 
-SERVICE_VERSION = "0.9.1"
+SERVICE_VERSION = "0.10.0"
 # A hung Temporal frontend must not outlast the kubelet readiness probe timeout.
 TEMPORAL_READY_TIMEOUT_SECONDS = 2.0
 OPENAPI_DESCRIPTION = (

@@ -45,9 +45,9 @@ Gemini. Keep provider keys on the server and workflow code in Python or TypeScri
 - **Platform engineers:** provide shared model access with scoped roles, budgets, and retained evidence.
 
 The platform is self-hosted and built for cloud providers; local models and GPUs are optional. The current
-release is **v0.9.1**. Images and Helm charts are on GHCR; the Python wheel, source
+release is **v0.10.0**. Images and Helm charts are on GHCR; the Python wheel, source
 archive and TypeScript SDK are assets of the
-[GitHub release](https://github.com/RamazanKara/agentworkflows/releases/tag/v0.9.1).
+[GitHub release](https://github.com/RamazanKara/agentworkflows/releases/tag/v0.10.0).
 
 ## 60-second console quickstart
 
@@ -59,7 +59,7 @@ cd agentworkflows
 docker compose -f deploy/compose/compose.yaml up -d --wait workflow-worker
 ```
 
-Compose pulls the published v0.9.1 images. The walkthrough runs on your laptop with simulated
+Compose pulls the published v0.10.0 images. The walkthrough runs on your laptop with simulated
 models, so you can start without a cloud key, GPU, or Kubernetes cluster. Once the stack is ready:
 
 1. Open [the console](http://127.0.0.1:8080/console/) and sign in with `local-development-only`.
@@ -143,7 +143,7 @@ Report vulnerabilities through [SECURITY.md](SECURITY.md).
 | Run a workflow | [Quickstart](docs/quickstart.md) · [Template gallery](docs/templates.md) |
 | Build your workflow | [Concepts](docs/concepts.md) · [SDK reference](docs/sdk-reference.md) |
 | Deploy for a team | [Helm install](docs/install-kubernetes.md) · [Single-tenant reference](docs/single-tenant.md) · [Production checklist](docs/kubernetes-production-checklist.md) |
-| Deploy with GitOps | Generate the Argo CD overlay pinned to this release: `make customer-overlay CUSTOMER_REPO_URL=<your-repo> CUSTOMER_REVISION=v0.9.1` ([guide](docs/getting-started.md#customer-owned-kubernetes)) |
+| Deploy with GitOps | Generate the Argo CD overlay pinned to this release: `make customer-overlay CUSTOMER_REPO_URL=<your-repo> CUSTOMER_REVISION=v0.10.0` ([guide](docs/getting-started.md#customer-owned-kubernetes)) |
 | Operate and recover | [Runbooks](runbooks/README.md) · [Release verification](docs/release-verification.md) |
 | Track the product | [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) |
 

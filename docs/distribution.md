@@ -1,7 +1,7 @@
 # Distribution and discovery
 
 The tag-only release workflow (`.github/workflows/release.yml`) publishes one tagged source
-revision through four channels. Commands below target v0.9.1. Images are built from the
+revision through four channels. Commands below target v0.10.0. Images are built from the
 tagged commit and signed by digest, Helm charts embed those image digests, the Python and
 TypeScript SDKs are attached to the GitHub release, and versioned documentation is retained by `mike`.
 
@@ -28,9 +28,9 @@ uses those digests, and its `values.yaml` keeps the comments shown by `helm show
 The umbrella chart is the recommended public entry point:
 
 ```bash
-helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.9.1
+helm pull oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows --version 0.10.0
 helm install agentworkflows oci://ghcr.io/ramazankara/agentworkflows/charts/agentworkflows \
-  --version 0.9.1 --namespace ai-platform --create-namespace
+  --version 0.10.0 --namespace ai-platform --create-namespace
 ```
 
 Release CI publishes `artifacthub-repo.yml` to the chart repository's special
@@ -42,7 +42,7 @@ release.
 ## Python package
 
 ```bash
-python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.9.1/agentworkflows-0.9.1-py3-none-any.whl
+python -m pip install https://github.com/RamazanKara/agentworkflows/releases/download/v0.10.0/agentworkflows-0.10.0-py3-none-any.whl
 ```
 
 The wheel, source archive, TypeScript SDK package (`agentworkflows-sdk-*.tgz`) and
