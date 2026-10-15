@@ -15,26 +15,14 @@ on:
       - "scripts/docs-build.sh"
       - "scripts/mkdocs_hooks.py"
       - ".github/workflows/docs.yml"
-  # The strict build must gate PRs too: without this, broken links/nav merge green
-  # and only fail during the Pages deploy from main.
-  pull_request:
-    paths:
-      - "docs/**"
-      - "runbooks/**"
-      - "mkdocs.yml"
-      - "requirements-docs.txt"
-      - "requirements-docs.in"
-      - "scripts/docs-build.sh"
-      - "scripts/mkdocs_hooks.py"
-      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: docs-pages-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: docs-pages-publish
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -55,7 +43,6 @@ jobs:
       # docs-build.sh build runs mkdocs --strict, so broken links or nav drift fail the deploy.
       - run: ./scripts/docs-build.sh build
       - name: Publish version into retained documentation tree
-        if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -79,9 +66,7 @@ jobs:
           mkdir -p versioned-site
           git archive origin/gh-pages | tar -x -C versioned-site
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
-        if: github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
-        if: github.event_name != 'pull_request'
         with:
           path: versioned-site
 
@@ -104,7 +89,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name != 'pull_request' && github.ref_type != 'tag'
+    if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

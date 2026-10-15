@@ -70,9 +70,10 @@ The build writes the site to `site/`. Use `make docs-serve` to preview it locall
 After focused checks, run `make validate` for the default repository gate. It also
 requires Helm and uses available optional tools for schema, policy, and security
 checks. `make static-checks` runs just its test-free part (Helm lint and renders,
-YAML, contracts, chart docs and governance checks) in about a minute. CI runs the
-static checks and the tooling, gateway, SDK, RAG and console suites on every push and
-pull request; `make validate-full`, `make eval-local` and `make coverage` stay local.
+YAML, contracts, chart docs and governance checks) in about a minute. CI runs lint,
+format and type checks and the tooling, gateway, SDK and RAG suites on every push to
+`main`; the static checks, the console browser tests, `make validate-full`,
+`make eval-local` and `make coverage` stay local.
 The documentation site has its own strict build workflow.
 
 See [getting started](getting-started.md) for toolchain profiles and

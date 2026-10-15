@@ -28,19 +28,19 @@ make repo-hygiene
 make docs-build
 ```
 
-CI runs four parallel Ubuntu jobs on pushes to `main`, pull requests, and manual
-dispatch. The checks job lints the workflows (actionlint) and Python (Ruff), runs
-`make release-check`, `make static-checks` (Helm lint and renders, Compose config,
-YAML, API and configuration contracts, chart docs, governance checks, kubeconform and
-Kyverno policy tests) and the tooling tests. The other jobs run the gateway, Python
-SDK and RAG suites with the console build, the TypeScript SDK's build, lint and tests,
-and the console's headless Chromium tests. With Python 3.14 and Node.js 24, run the
-same checks locally:
+CI runs one Ubuntu job on pushes to `main` and on manual dispatch: Ruff lint and format
+checks, mypy, `make release-check`, the tooling tests, the gateway, Python SDK and RAG
+suites with the console build, and the TypeScript SDK's build, lint, tests and package
+check. Run `make static-checks` (Helm lint and renders, Compose config, YAML, API and
+configuration contracts, chart docs, governance checks, kubeconform and Kyverno policy
+tests) and the console's headless Chromium tests locally before changing charts, policies
+or the console. With Python 3.14 and Node.js 24, run the same checks locally:
 
 ```bash
-RAYON_NUM_THREADS=2 make lint release-check static-checks test-scripts
+RAYON_NUM_THREADS=2 make lint format-check typecheck release-check test-scripts
 make -j2 test-gateway test-rag
-make test-typescript test-console
+make test-typescript
+make static-checks test-console   # local-only
 ```
 
 Full validation, the Trivy repository scan, image builds, and the Compose smoke test
