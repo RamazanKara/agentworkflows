@@ -1,10 +1,10 @@
 # Built from the repository root; Dockerfile.dockerignore beside this file limits the context
 # to the SDK package and its lock.
-FROM registry.k8s.io/kubectl:v1.36.5@sha256:0667e3f3e6ef435d7cd4c16684244703ebd67314c17511c2a9f87ea44f6cdf6b AS kubectl
+FROM registry.k8s.io/kubectl:v1.37.2@sha256:fe049faa65ae483ac200009a949a68fa4c9985daea12c9cb1195c9c7965301fc AS kubectl
 
 # Install the locked dependencies into a separate prefix and strip debug symbols from their
 # native extensions. Only that prefix reaches the runtime; binutils stays here.
-FROM python:3.14-alpine@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72 AS deps
+FROM python:3.14-alpine@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2 AS deps
 WORKDIR /build
 COPY sdk/python/requirements.lock requirements.lock
 RUN apk add --no-cache binutils \
@@ -12,7 +12,7 @@ RUN apk add --no-cache binutils \
        --prefix=/install --require-hashes -r requirements.lock \
     && find /install -type f -name '*.so*' -exec strip --strip-unneeded {} +
 
-FROM python:3.14-alpine@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72
+FROM python:3.14-alpine@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
