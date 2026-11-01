@@ -1,6 +1,6 @@
 # Install the locked runtime dependencies into a separate prefix and strip debug symbols
 # from their native extensions. Only that prefix reaches the runtime; binutils stays here.
-FROM python:3.14-alpine@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72 AS deps
+FROM python:3.14-alpine@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2 AS deps
 WORKDIR /build
 COPY requirements.lock .
 RUN apk add --no-cache binutils \
@@ -8,7 +8,7 @@ RUN apk add --no-cache binutils \
        --prefix=/install --require-hashes -r requirements.lock \
     && find /install -type f -name '*.so*' -exec strip --strip-unneeded {} +
 
-FROM python:3.14-alpine@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72 AS runtime
+FROM python:3.14-alpine@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
